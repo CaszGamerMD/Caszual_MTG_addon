@@ -19,7 +19,7 @@ public final class HandBlock extends BaseEntityBlock {
  public static final MapCodec<HandBlock> CODEC=MapCodec.unit(()->new HandBlock(BlockBehaviour.Properties.of()));
  public HandBlock(Properties p){super(p);}
  @Override protected MapCodec<? extends BaseEntityBlock> codec(){return CODEC;}
- @Override protected net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state){return net.minecraft.world.level.block.RenderShape.MODEL;}
+ @Override public net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state){return net.minecraft.world.level.block.RenderShape.MODEL;}
  @Override public @Nullable BlockEntity newBlockEntity(BlockPos pos,BlockState state){return new HandBlockEntity(pos,state);}
  @Override protected InteractionResult useWithoutItem(BlockState state,Level level,BlockPos pos,Player player,BlockHitResult hit){
   if(player instanceof ServerPlayer sp)HandLogic.open(sp,pos);
