@@ -1,0 +1,36 @@
+name: Build MTG Companion
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+
+      - name: Make Gradle executable
+        run: chmod +x ./gradlew
+
+      - name: Build and verify
+        run: ./gradlew clean build --stacktrace
+
+      - name: Upload packaged mod
+        uses: actions/upload-artifact@v4
+        with:
+          name: mtgcompanion-${{ github.sha }}
+          path: build/libs/mtgcompanion-*.jar
+          if-no-files-found: error
+          retention-days: 30
