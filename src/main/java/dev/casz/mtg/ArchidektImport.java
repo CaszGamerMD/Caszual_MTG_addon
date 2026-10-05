@@ -29,8 +29,10 @@ public final class ArchidektImport {
   HttpRequest request=HttpRequest.newBuilder(URI.create("https://archidekt.com/api/decks/"+id+"/"))
    .timeout(Duration.ofSeconds(20)).header("Accept","application/json").header("User-Agent","MTGCompanion/0.5.0 (Minecraft MTGCard addon)").GET().build();
   return HTTP.sendAsync(request,HttpResponse.BodyHandlers.ofByteArray()).thenApply(response->{
-   if(response.statusCode()==401||response.statusCode()==403)throw new CompletionException(new IllegalArgumentException("That Archidekt deck is not publicly accessible."));
-   if(response.statusCode()!=200)throw new CompletionException(new IllegalArgumentException("Archidekt returned HTTP "+response.statusCode()+"."));
+   if(response.statusCode()==401||response.statusCode()==403)throw new CompletionException(new IllegalArgumentException("That Archidekt deck is private or unavailable. Public and unlisted decks are supported."));
+   if(response.statusCode()==404)throw new CompletionException(new IllegalArgumentException("Archidekt could not find that deck. Check the link, or make sure the deck is public/unlisted rather than private."));
+   if(response.statusCode()==429)throw new CompletionException(new IllegalArgumentException("Archidekt is rate-limiting requests right now. Try the import again shortly."));
+   if(response.statusCode()!=200)throw new CompletionException(new IllegalArgumentException("Archidekt returned HTTP "+response.statusCode()+". Public and unlisted decks should work; private decks require authentication and are not supported."));
    byte[] bytes=response.body();if(bytes.length>8*1024*1024)throw new CompletionException(new IllegalArgumentException("Archidekt deck response is too large."));
    try{return parse(new String(bytes,StandardCharsets.UTF_8));}
    catch(RuntimeException e){throw new CompletionException(e);}
