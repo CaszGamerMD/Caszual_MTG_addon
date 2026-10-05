@@ -28,6 +28,7 @@ public final class ArchidektImportCheck {
   check(result.text().contains("2 Kinjalli's Caller (XLN) 18"),"main card retained with printing");
   check(!result.text().contains("Side Card")&&!result.text().contains("Maybe Card")&&!result.text().contains("Mixed Maybe"),"sideboard and maybeboard excluded");
   boolean bad=false;try{ArchidektImport.deckId("https://example.com/decks/27061166/nope");}catch(IllegalArgumentException e){bad=true;}check(bad,"foreign URL rejected");
+  check(ArchidektImport.deckId("https://www.archidekt.com/decks/27061166/day_one_dino?foo=bar#section")==27061166L,"www/query/fragment URL accepted");
   System.out.println("PASS: Archidekt main-deck-only importer");
  }
 }
