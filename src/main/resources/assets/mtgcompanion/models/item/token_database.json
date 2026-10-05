@@ -1,1 +1,3 @@
-{"parent":"mtgcompanion:block/token_database"}
+{
+  "parent": "mtgcompanion:block/token_database"
+}

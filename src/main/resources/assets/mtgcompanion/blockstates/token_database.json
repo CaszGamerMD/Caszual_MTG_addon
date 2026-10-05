@@ -1,1 +1,7 @@
-{"variants":{"":{"model":"mtgcompanion:block/token_database"}}}
+{
+  "variants": {
+    "": {
+      "model": "mtgcompanion:block/token_database"
+    }
+  }
+}

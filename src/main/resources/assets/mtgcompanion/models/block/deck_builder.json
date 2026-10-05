@@ -1,1 +1,12 @@
-{"parent":"minecraft:block/cube","textures":{"particle":"mtgcompanion:block/deck_builder_side","down":"mtgcompanion:block/deck_builder_top","up":"mtgcompanion:block/deck_builder_top","north":"mtgcompanion:block/deck_builder_front","south":"mtgcompanion:block/deck_builder_side","east":"mtgcompanion:block/deck_builder_side","west":"mtgcompanion:block/deck_builder_side"}}
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "mtgcompanion:block/deck_builder_side",
+    "down": "mtgcompanion:block/deck_builder_top",
+    "up": "mtgcompanion:block/deck_builder_top",
+    "north": "mtgcompanion:block/deck_builder_front",
+    "south": "mtgcompanion:block/deck_builder_side",
+    "east": "mtgcompanion:block/deck_builder_side",
+    "west": "mtgcompanion:block/deck_builder_side"
+  }
+}

@@ -1,1 +1,7 @@
-{"variants":{"":{"model":"mtgcompanion:block/deck_builder"}}}
+{
+  "variants": {
+    "": {
+      "model": "mtgcompanion:block/deck_builder"
+    }
+  }
+}

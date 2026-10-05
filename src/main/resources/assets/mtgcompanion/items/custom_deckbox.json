@@ -1,1 +1,6 @@
-{"model":{"type":"minecraft:model","model":"mtgcard:item/deckbox"}}
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "mtgcard:item/deckbox"
+  }
+}

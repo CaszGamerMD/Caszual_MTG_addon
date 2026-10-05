@@ -1,1 +1,12 @@
-{"parent":"minecraft:block/cube","textures":{"particle":"mtgcompanion:block/land_database_side","down":"mtgcompanion:block/land_database_top","up":"mtgcompanion:block/land_database_top","north":"mtgcompanion:block/land_database_front","south":"mtgcompanion:block/land_database_side","east":"mtgcompanion:block/land_database_side","west":"mtgcompanion:block/land_database_side"}}
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "mtgcompanion:block/land_database_side",
+    "down": "mtgcompanion:block/land_database_top",
+    "up": "mtgcompanion:block/land_database_top",
+    "north": "mtgcompanion:block/land_database_front",
+    "south": "mtgcompanion:block/land_database_side",
+    "east": "mtgcompanion:block/land_database_side",
+    "west": "mtgcompanion:block/land_database_side"
+  }
+}

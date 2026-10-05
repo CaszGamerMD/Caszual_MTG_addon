@@ -1,1 +1,12 @@
-{"parent":"minecraft:block/cube","textures":{"particle":"mtgcompanion:block/token_database_side","down":"mtgcompanion:block/token_database_top","up":"mtgcompanion:block/token_database_top","north":"mtgcompanion:block/token_database_front","south":"mtgcompanion:block/token_database_side","east":"mtgcompanion:block/token_database_side","west":"mtgcompanion:block/token_database_side"}}
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "mtgcompanion:block/token_database_side",
+    "down": "mtgcompanion:block/token_database_top",
+    "up": "mtgcompanion:block/token_database_top",
+    "north": "mtgcompanion:block/token_database_front",
+    "south": "mtgcompanion:block/token_database_side",
+    "east": "mtgcompanion:block/token_database_side",
+    "west": "mtgcompanion:block/token_database_side"
+  }
+}

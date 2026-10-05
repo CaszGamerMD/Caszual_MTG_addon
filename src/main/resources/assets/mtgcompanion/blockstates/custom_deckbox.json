@@ -3,23 +3,23 @@
     "facing=north,spin=north,open=false": {
       "model": "mtgcard:block/deckbox_closed"
     },
-    "facing=north,spin=north,open=true": {
-      "model": "mtgcard:block/deckbox_open"
-    },
     "facing=north,spin=east,open=false": {
       "model": "mtgcard:block/deckbox_closed"
-    },
-    "facing=north,spin=east,open=true": {
-      "model": "mtgcard:block/deckbox_open"
     },
     "facing=north,spin=south,open=false": {
       "model": "mtgcard:block/deckbox_closed"
     },
-    "facing=north,spin=south,open=true": {
-      "model": "mtgcard:block/deckbox_open"
-    },
     "facing=north,spin=west,open=false": {
       "model": "mtgcard:block/deckbox_closed"
+    },
+    "facing=north,spin=north,open=true": {
+      "model": "mtgcard:block/deckbox_open"
+    },
+    "facing=north,spin=east,open=true": {
+      "model": "mtgcard:block/deckbox_open"
+    },
+    "facing=north,spin=south,open=true": {
+      "model": "mtgcard:block/deckbox_open"
     },
     "facing=north,spin=west,open=true": {
       "model": "mtgcard:block/deckbox_open"
@@ -28,28 +28,28 @@
       "model": "mtgcard:block/deckbox_closed",
       "y": 180
     },
-    "facing=south,spin=north,open=true": {
-      "model": "mtgcard:block/deckbox_open",
-      "y": 180
-    },
     "facing=south,spin=east,open=false": {
       "model": "mtgcard:block/deckbox_closed",
-      "y": 180
-    },
-    "facing=south,spin=east,open=true": {
-      "model": "mtgcard:block/deckbox_open",
       "y": 180
     },
     "facing=south,spin=south,open=false": {
       "model": "mtgcard:block/deckbox_closed",
       "y": 180
     },
-    "facing=south,spin=south,open=true": {
+    "facing=south,spin=west,open=false": {
+      "model": "mtgcard:block/deckbox_closed",
+      "y": 180
+    },
+    "facing=south,spin=north,open=true": {
       "model": "mtgcard:block/deckbox_open",
       "y": 180
     },
-    "facing=south,spin=west,open=false": {
-      "model": "mtgcard:block/deckbox_closed",
+    "facing=south,spin=east,open=true": {
+      "model": "mtgcard:block/deckbox_open",
+      "y": 180
+    },
+    "facing=south,spin=south,open=true": {
+      "model": "mtgcard:block/deckbox_open",
       "y": 180
     },
     "facing=south,spin=west,open=true": {
@@ -60,28 +60,28 @@
       "model": "mtgcard:block/deckbox_closed",
       "y": 270
     },
-    "facing=west,spin=north,open=true": {
-      "model": "mtgcard:block/deckbox_open",
-      "y": 270
-    },
     "facing=west,spin=east,open=false": {
       "model": "mtgcard:block/deckbox_closed",
-      "y": 270
-    },
-    "facing=west,spin=east,open=true": {
-      "model": "mtgcard:block/deckbox_open",
       "y": 270
     },
     "facing=west,spin=south,open=false": {
       "model": "mtgcard:block/deckbox_closed",
       "y": 270
     },
-    "facing=west,spin=south,open=true": {
+    "facing=west,spin=west,open=false": {
+      "model": "mtgcard:block/deckbox_closed",
+      "y": 270
+    },
+    "facing=west,spin=north,open=true": {
       "model": "mtgcard:block/deckbox_open",
       "y": 270
     },
-    "facing=west,spin=west,open=false": {
-      "model": "mtgcard:block/deckbox_closed",
+    "facing=west,spin=east,open=true": {
+      "model": "mtgcard:block/deckbox_open",
+      "y": 270
+    },
+    "facing=west,spin=south,open=true": {
+      "model": "mtgcard:block/deckbox_open",
       "y": 270
     },
     "facing=west,spin=west,open=true": {
@@ -92,28 +92,28 @@
       "model": "mtgcard:block/deckbox_closed",
       "y": 90
     },
-    "facing=east,spin=north,open=true": {
-      "model": "mtgcard:block/deckbox_open",
-      "y": 90
-    },
     "facing=east,spin=east,open=false": {
       "model": "mtgcard:block/deckbox_closed",
-      "y": 90
-    },
-    "facing=east,spin=east,open=true": {
-      "model": "mtgcard:block/deckbox_open",
       "y": 90
     },
     "facing=east,spin=south,open=false": {
       "model": "mtgcard:block/deckbox_closed",
       "y": 90
     },
-    "facing=east,spin=south,open=true": {
+    "facing=east,spin=west,open=false": {
+      "model": "mtgcard:block/deckbox_closed",
+      "y": 90
+    },
+    "facing=east,spin=north,open=true": {
       "model": "mtgcard:block/deckbox_open",
       "y": 90
     },
-    "facing=east,spin=west,open=false": {
-      "model": "mtgcard:block/deckbox_closed",
+    "facing=east,spin=east,open=true": {
+      "model": "mtgcard:block/deckbox_open",
+      "y": 90
+    },
+    "facing=east,spin=south,open=true": {
+      "model": "mtgcard:block/deckbox_open",
       "y": 90
     },
     "facing=east,spin=west,open=true": {
@@ -125,18 +125,8 @@
       "x": 270,
       "y": 0
     },
-    "facing=up,spin=north,open=true": {
-      "model": "mtgcard:block/deckbox_open",
-      "x": 270,
-      "y": 0
-    },
     "facing=up,spin=east,open=false": {
       "model": "mtgcard:block/deckbox_closed",
-      "x": 270,
-      "y": 90
-    },
-    "facing=up,spin=east,open=true": {
-      "model": "mtgcard:block/deckbox_open",
       "x": 270,
       "y": 90
     },
@@ -145,15 +135,25 @@
       "x": 270,
       "y": 180
     },
-    "facing=up,spin=south,open=true": {
-      "model": "mtgcard:block/deckbox_open",
-      "x": 270,
-      "y": 180
-    },
     "facing=up,spin=west,open=false": {
       "model": "mtgcard:block/deckbox_closed",
       "x": 270,
       "y": 270
+    },
+    "facing=up,spin=north,open=true": {
+      "model": "mtgcard:block/deckbox_open",
+      "x": 270,
+      "y": 0
+    },
+    "facing=up,spin=east,open=true": {
+      "model": "mtgcard:block/deckbox_open",
+      "x": 270,
+      "y": 90
+    },
+    "facing=up,spin=south,open=true": {
+      "model": "mtgcard:block/deckbox_open",
+      "x": 270,
+      "y": 180
     },
     "facing=up,spin=west,open=true": {
       "model": "mtgcard:block/deckbox_open",
@@ -165,18 +165,8 @@
       "x": 90,
       "y": 0
     },
-    "facing=down,spin=north,open=true": {
-      "model": "mtgcard:block/deckbox_open",
-      "x": 90,
-      "y": 0
-    },
     "facing=down,spin=east,open=false": {
       "model": "mtgcard:block/deckbox_closed",
-      "x": 90,
-      "y": 90
-    },
-    "facing=down,spin=east,open=true": {
-      "model": "mtgcard:block/deckbox_open",
       "x": 90,
       "y": 90
     },
@@ -185,15 +175,25 @@
       "x": 90,
       "y": 180
     },
-    "facing=down,spin=south,open=true": {
-      "model": "mtgcard:block/deckbox_open",
-      "x": 90,
-      "y": 180
-    },
     "facing=down,spin=west,open=false": {
       "model": "mtgcard:block/deckbox_closed",
       "x": 90,
       "y": 270
+    },
+    "facing=down,spin=north,open=true": {
+      "model": "mtgcard:block/deckbox_open",
+      "x": 90,
+      "y": 0
+    },
+    "facing=down,spin=east,open=true": {
+      "model": "mtgcard:block/deckbox_open",
+      "x": 90,
+      "y": 90
+    },
+    "facing=down,spin=south,open=true": {
+      "model": "mtgcard:block/deckbox_open",
+      "x": 90,
+      "y": 180
     },
     "facing=down,spin=west,open=true": {
       "model": "mtgcard:block/deckbox_open",

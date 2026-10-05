@@ -1,1 +1,3 @@
-{"parent":"mtgcompanion:block/land_database"}
+{
+  "parent": "mtgcompanion:block/land_database"
+}

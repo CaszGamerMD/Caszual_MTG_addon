@@ -1,1 +1,6 @@
-{"model":{"type":"minecraft:model","model":"mtgcompanion:item/land_database"}}
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "mtgcompanion:item/land_database"
+  }
+}

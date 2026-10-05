@@ -1,1 +1,7 @@
-{"variants":{"":{"model":"mtgcompanion:block/land_database"}}}
+{
+  "variants": {
+    "": {
+      "model": "mtgcompanion:block/land_database"
+    }
+  }
+}

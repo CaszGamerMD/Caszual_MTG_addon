@@ -1,1 +1,3 @@
-{"parent":"mtgcompanion:block/deck_builder"}
+{
+  "parent": "mtgcompanion:block/deck_builder"
+}

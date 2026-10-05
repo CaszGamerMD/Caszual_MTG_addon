@@ -1,1 +1,7 @@
-{"variants":{"":{"model":"mtgcompanion:block/community_database"}}}
+{
+  "variants": {
+    "": {
+      "model": "mtgcompanion:block/community_database"
+    }
+  }
+}
