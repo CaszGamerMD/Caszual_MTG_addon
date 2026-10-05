@@ -1,10 +1,10 @@
-# MTG Companion 0.5.2 — expanded test build
+# MTG Companion 0.6.0 — expanded test build
 
 A separate addon for Minecraft **26.2 Fabric**, built against **MTGCard 1.7.0-26.2**.
 
 ## Install
 
-Put `mtgcompanion-0.5.2.jar` in the `mods` folder on both the server and every player's client. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+Put `mtgcompanion-0.6.0.jar` in the `mods` folder on both the server and every player's client. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
 
 ## Blocks and counter tool
 
@@ -15,6 +15,15 @@ All four database/builder blocks are in the Functional Blocks creative tab and h
 - **Community Card Collection:** purple. Insert an MTGCard deckbox into the dedicated slot, or shift-click it from your inventory. Deposit contents moves regular cards into the shared collection while leaving lands, tokens, and other items in the box. Select a card and choose a quantity, then Selected into box withdraws available copies into empty main slots. Fill box from search takes matching stored cards until the box is full. Take to inventory withdraws the selected card directly. Withdrawals consume actual shared stock; they never create free regular cards. Closing returns the deckbox to your inventory (or drops it by you if the inventory is full).
 - **Deck Builder:** blue. Place any database blocks within four blocks in each direction. Place an empty MTGCard deckbox directly against any face of the builder. The builder shows the linked database kinds when checking the list. You can also paste an **Archidekt deck URL** and import it directly; only cards in the main deck are imported. Sideboard and Maybeboard entries are ignored. Archidekt printing/set information is preserved when available. **Public and unlisted decks are supported** when Archidekt allows anonymous access to the deck URL; private decks are not supported because the addon does not store or request Archidekt login credentials. A failed URL import leaves the currently loaded deck untouched.
 - **Card Counter:** right-click a placed MTGCard card with this tool. Set a named total, select a counter to use +1/−1, or set zero/remove to delete it. Supports up to 16 named counter types per card and totals up to 1,000,000. When looking at a placed card, a readable HUD shows its counter labels and totals. Uses MTGCard's existing counter metadata. Visible markers sit directly on the placed card and grow into piles as counter totals increase. Each counter type contributes up to 12 visible markers, with up to six types represented; exact totals remain in the HUD. Default markers are provided when no MTGCard counter icon was selected. Hidden cards retain MTGCard's normal visibility rules.
+
+
+## Card Hand
+
+The **Card Hand** block links to the nearest MTGCard Deck Control within 8 blocks. The player who places it becomes the owner and can add or remove online players from its viewer list. Hand card data is sent only to authorized viewers unless **Reveal to all** is enabled.
+
+Once linked, normal Deck Control draws — including redstone draws — are routed into the Hand instead of being ejected into the world. If no linked Hand is available, MTGCard's normal draw behavior remains unchanged. The Hand holds up to 30 cards.
+
+The Deck Control gains **Discard Random from Hand**. It chooses a card server-side and sends it into the MTGCard Graveyard touching the Deck Control. The Hand screen has the same random-discard action. If the Graveyard is missing or full, no card is removed.
 
 ## Grid view and artwork
 
