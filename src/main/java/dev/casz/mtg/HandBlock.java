@@ -1,7 +1,9 @@
 package dev.casz.mtg;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.*;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -14,7 +16,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 public final class HandBlock extends BaseEntityBlock {
+ public static final MapCodec<HandBlock> CODEC=MapCodec.unit(()->new HandBlock(BlockBehaviour.Properties.of()));
  public HandBlock(Properties p){super(p);}
+ @Override protected MapCodec<? extends BaseEntityBlock> codec(){return CODEC;}
  @Override protected net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state){return net.minecraft.world.level.block.RenderShape.MODEL;}
  @Override public @Nullable BlockEntity newBlockEntity(BlockPos pos,BlockState state){return new HandBlockEntity(pos,state);}
  @Override protected InteractionResult useWithoutItem(BlockState state,Level level,BlockPos pos,Player player,BlockHitResult hit){
