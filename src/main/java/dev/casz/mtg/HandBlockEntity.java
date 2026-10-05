@@ -26,7 +26,8 @@ public final class HandBlockEntity extends BlockEntity implements Container {
 
  public UUID owner(){return owner;}
  public void ensureOwner(Player player){if(owner==null){owner=player.getUUID();viewers.add(owner);viewerNames.put(owner,player.getGameProfile().name());changed();}}
- public boolean canView(Player player){return revealAll||owner!=null&&(owner.equals(player.getUUID())||viewers.contains(player.getUUID()));}
+ public boolean isAuthorized(Player player){return owner!=null&&(owner.equals(player.getUUID())||viewers.contains(player.getUUID()));}
+ public boolean canView(Player player){return revealAll||isAuthorized(player);}
  public boolean canManage(Player player){return owner!=null&&owner.equals(player.getUUID());}
  public boolean revealAll(){return revealAll;}
  public void revealAll(boolean value){revealAll=value;changed();}
