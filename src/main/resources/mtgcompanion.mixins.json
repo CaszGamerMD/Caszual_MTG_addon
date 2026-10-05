@@ -1,0 +1,1 @@
+{"required":true,"package":"dev.casz.mtg.mixin","compatibilityLevel":"JAVA_25","mixins":["DeckboxMaterialMixin"],"injectors":{"defaultRequire":1}}
