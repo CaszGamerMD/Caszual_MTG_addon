@@ -46,7 +46,7 @@ public final class HandLogic {
   DeckControlBlockEntity best=null;double bestD=Double.MAX_VALUE;
   for(BlockPos p:BlockPos.betweenClosed(from.offset(-LINK_RANGE,-LINK_RANGE,-LINK_RANGE),from.offset(LINK_RANGE,LINK_RANGE,LINK_RANGE))){
    if(!player.level().hasChunkAt(p))continue;
-   if(player.level().getBlockEntity(p) instanceof DeckControlBlockEntity dc){double d=p.distSqr(from);if(d<bestD){best=dc;bestD=d;}}
+   if(player.level().getBlockEntity(p) instanceof DeckControlBlockEntity dc){long dx=p.getX()-from.getX(),dy=p.getY()-from.getY(),dz=p.getZ()-from.getZ();double d=(double)dx*dx+(double)dy*dy+(double)dz*dz;if(d<bestD){best=dc;bestD=d;}}
   }
   return best;
  }
