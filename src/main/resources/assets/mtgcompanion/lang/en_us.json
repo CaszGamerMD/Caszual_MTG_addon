@@ -4,5 +4,6 @@
   "block.mtgcompanion.community_database": "Community Card Collection",
   "block.mtgcompanion.deck_builder": "Deck Builder",
   "item.mtgcompanion.counter": "Card Counter",
-  "block.mtgcompanion.custom_deckbox": "Custom Deckbox"
+  "block.mtgcompanion.custom_deckbox": "Custom Deckbox",
+  "block.mtgcompanion.hand_block": "Card Hand"
 }
