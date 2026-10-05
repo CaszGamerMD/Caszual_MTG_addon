@@ -18,7 +18,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .import/part* | base64 -d > /tmp/mtg.zip
+          {
+            cat .import/part000
+            cat .import/part001
+            cat .import/fix002_0
+            cat .import/fix002_1
+            cat .import/fix002_2
+            cat .import/fix002_3
+            cat .import/part003
+            cat .import/part004
+            cat .import/part005
+            cat .import/part006
+            cat .import/part007
+            cat .import/part008
+            cat .import/part009
+            cat .import/part010
+            cat .import/part011
+            cat .import/part012
+            cat .import/part013
+          } | base64 -d > /tmp/mtg.zip
+          unzip -t /tmp/mtg.zip
           rm -rf /tmp/mtg-import
           mkdir -p /tmp/mtg-import
           unzip -q /tmp/mtg.zip -d /tmp/mtg-import
