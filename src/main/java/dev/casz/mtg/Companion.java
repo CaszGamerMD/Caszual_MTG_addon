@@ -4,6 +4,7 @@ import net.fabricmc.fabric.api.menu.v1.ExtendedMenuType;
 import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.fabricmc.fabric.api.networking.v1.*;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.core.*;
 import net.minecraft.core.registries.*;
 import net.minecraft.resources.*;
@@ -34,6 +35,7 @@ public final class Companion implements ModInitializer {
   ServerPlayConnectionEvents.DISCONNECT.register((h,s)->ServerLogic.close(h.player));
   CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(CUSTOM_BOX);});
   UseEntityCallback.EVENT.register((p,l,hand,e,hit)->{if(e instanceof CardDisplayEntity c&&p.getItemInHand(hand).is(COUNTER)){if(p instanceof ServerPlayer sp)ServerLogic.openCounter(sp,c);return InteractionResult.SUCCESS;}return InteractionResult.PASS;});
+  UseBlockCallback.EVENT.register((p,l,hand,hit)->{if(l.getBlockState(hit.getBlockPos()).is(CUSTOM_BOX)&&p.isShiftKeyDown()&&p.getItemInHand(hand).getItem() instanceof BlockItem)return CUSTOM_BOX.applyMaterial(p.getItemInHand(hand),l,hit.getBlockPos(),p);return InteractionResult.PASS;});
  }
  static final class BankBlock extends Block {
   final int kind; BankBlock(BlockBehaviour.Properties p,int kind){super(p);this.kind=kind;}
