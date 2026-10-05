@@ -2,8 +2,17 @@ plugins {
     id 'net.fabricmc.fabric-loom' version "${loom_version}"
 }
 base { archivesName = 'mtgcompanion' }
+
+repositories {
+    maven {
+        name = 'CurseMaven'
+        url = 'https://www.cursemaven.com'
+        content { includeGroup 'curse.maven' }
+    }
+}
+
 dependencies {
-    implementation files("libs/MtgCard-fabric-1.7.0-26.2.jar")
+    modImplementation "curse.maven:mtgcard-1459416:8893701"
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
