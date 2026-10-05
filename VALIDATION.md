@@ -1,0 +1,13 @@
+# Validation — 0.4.0
+
+Built with Java 25, Gradle 9.7.1, Loom 1.18.2, Minecraft 26.2, Fabric API 0.161.0+26.2 and Loader 0.19.5 against the supplied MTGCard 1.7.0-26.2 jar.
+
+- Build and decklist parser checks pass. Catalogue checks cover Commander legality, identity and produced-mana restrictions, combined selected colors, optional token filters, numeric power/toughness validation, and grid hit testing/scroll boundaries.
+- CPU model checks pass: selected material replaces spruce-panel sprites, UV proportions and positions are preserved, and the brown/gold trim quad is unchanged.
+- Jar packaging regression passes: entrypoints and regular classes remain outside reserved mixin packages.
+- Headless Fabric client bootstrap loads the actual addon jar, both entrypoint classes, community screen and transformed MTGCard renderer. A counter total of five creates five markers; a total of fifty caps at twelve. The new item-layer accessor and common deckbox material mixin also load. No game window was opened.
+- Dedicated flat-world server integration passes: stock accumulation/depletion, SavedData codec, strict Token type classification (emblems excluded), infinite templates, unique UIDs, counter metadata, produced-mana filters and persistence, bulk deposits preserving lands/tokens/special slots, persisted withdrawals limited by available stock and main-slot capacity, repeat-deposit protection, complete/partial/missing deck statuses, missing quantities in shopping lists, and network encoding of missing entries without an item stack. Custom deckbox checks cover native block-entity support, applying materials from an item, consuming one material block in survival, preserving card storage identity while retexturing, material components and storage IDs in loot, client update tags and render snapshots, and pickup/placement restoring contents and texture. Additional 0.4.0 integration checks cover off-color production independently of color identity, banned lands, combined token oracle/P/T filters, retained artwork oracle IDs, and encoding both optional search fields. Server stops cleanly.
+
+Test sources are in tests/ClientBootstrap.java, tests/CustomModelChecks.java, tests/IntegrationChecks.java, tests/check_mixin_packaging.py and src/test/java/dev/casz/mtg/DeckListCheck.java and CatalogueCheck.java.
+
+Not verified here: rendered UI layout, actual mouse/shift-click interactions, native file picker, multiplayer deck assembly/races, live Scryfall responses, artwork fetching, or the remainder of the user's modpack. The shopping-list button exports/copies text; direct store ordering is not implemented.
