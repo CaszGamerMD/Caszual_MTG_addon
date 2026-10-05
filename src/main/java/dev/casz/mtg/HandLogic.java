@@ -21,11 +21,11 @@ public final class HandLogic {
   HandBlockEntity hand=get(player,req.pos());if(hand==null)return;hand.ensureOwner(player);
   switch(req.action()){
    case "refresh" -> reply(player,hand,"Refreshed.");
-   case "reveal" -> {if(!hand.canView(player)){reply(player,hand,"You are not allowed to reveal this hand.");return;}hand.revealAll(!hand.revealAll());reply(player,hand,hand.revealAll()?"Hand revealed to everyone.":"Hand is private again.");}
-   case "link" -> {if(!hand.canManage(player)){reply(player,hand,"Only the hand owner can change its Deck Control link.");return;}DeckControlBlockEntity dc=nearestControl(player,hand.getBlockPos());if(dc==null){reply(player,hand,"No Deck Control found within "+LINK_RANGE+" blocks.");return;}hand.linkedControl(dc.getBlockPos());reply(player,hand,"Linked to Deck Control at "+shortPos(dc.getBlockPos())+".");}
+   case "reveal" -> {if(!hand.isAuthorized(player)){reply(player,hand,"Only selected hand players can change reveal mode.");return;}hand.revealAll(!hand.revealAll());reply(player,hand,hand.revealAll()?"Hand revealed to everyone.":"Hand is private again.");}
+   case "link" -> {if(!hand.canManage(player)){reply(player,hand,"Only the hand owner can change its Deck Control link.");return;}DeckControlBlockEntity dc=nearestControl(player,hand.getBlockPos());if(dc==null){reply(player,hand,"No Deck Control found within "+LINK_RANGE+" blocks.");return;}HandBlockEntity existing=findLinked(dc);if(existing!=null&&existing!=hand){reply(player,hand,"That Deck Control is already linked to another Hand block.");return;}hand.linkedControl(dc.getBlockPos());reply(player,hand,"Linked to Deck Control at "+shortPos(dc.getBlockPos())+".");}
    case "add_viewer" -> addViewer(player,hand,req.text());
    case "remove_viewer" -> {if(!hand.canManage(player)){reply(player,hand,"Only the hand owner can remove viewers.");return;}if(hand.removeViewer(req.text().trim()))reply(player,hand,"Viewer removed.");else reply(player,hand,"That viewer is not on this hand.");}
-   case "discard_random" -> {if(!hand.canView(player)){reply(player,hand,"You cannot use this hand.");return;}String result=discardRandom(player,hand);reply(player,hand,result);}
+   case "discard_random" -> {if(!hand.isAuthorized(player)){reply(player,hand,"You can view this revealed hand, but only selected players can use it.");return;}String result=discardRandom(player,hand);reply(player,hand,result);}
   }
  }
 
@@ -62,7 +62,7 @@ public final class HandLogic {
 
  /** @return true when the normal MTGCard draw was consumed by a linked hand. */
  public static boolean routeDraw(DeckControlBlockEntity control){
-  HandBlockEntity hand=findLinked(control);if(hand==null||hand.cardCount()>=HandBlockEntity.SIZE)return false;
+  HandBlockEntity hand=findLinked(control);if(hand==null)return false;if(hand.cardCount()>=HandBlockEntity.SIZE)return true;
   var drawn=control.takeTopCards(1);if(drawn.isEmpty())return true;
   ItemStack card=drawn.getFirst();if(hand.addCard(card))return true;
   control.putCardsOnBottom(drawn);return true;
@@ -84,7 +84,7 @@ public final class HandLogic {
 
  static void reply(ServerPlayer player,HandBlockEntity hand,String message){
   boolean visible=hand.canView(player);String linked=hand.linkedControl()==null?"Not linked":shortPos(hand.linkedControl());
-  ServerPlayNetworking.send(player,new HandWire.Reply(hand.getBlockPos(),message,visible,hand.canManage(player),hand.revealAll(),hand.cardCount(),linked,hand.viewerNames(),visible?hand.visibleCards():java.util.List.of()));
+  boolean authorized=hand.isAuthorized(player);ServerPlayNetworking.send(player,new HandWire.Reply(hand.getBlockPos(),message,visible,authorized,hand.canManage(player),hand.revealAll(),hand.cardCount(),linked,hand.canManage(player)?hand.viewerNames():java.util.List.of(),visible?hand.visibleCards():java.util.List.of()));
  }
  static String shortPos(BlockPos p){return p.getX()+", "+p.getY()+", "+p.getZ();}
  private HandLogic(){}
