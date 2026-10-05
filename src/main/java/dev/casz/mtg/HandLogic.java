@@ -20,7 +20,7 @@ public final class HandLogic {
  public static void handle(ServerPlayer player,HandWire.Request req){
   HandBlockEntity hand=get(player,req.pos());if(hand==null)return;hand.ensureOwner(player);
   switch(req.action()){
-   case "refresh" -> reply(player,hand,"Refreshed.");
+   case "refresh" -> reply(player,hand,"");
    case "reveal" -> {if(!hand.isAuthorized(player)){reply(player,hand,"Only selected hand players can change reveal mode.");return;}hand.revealAll(!hand.revealAll());reply(player,hand,hand.revealAll()?"Hand revealed to everyone.":"Hand is private again.");}
    case "link" -> {if(!hand.canManage(player)){reply(player,hand,"Only the hand owner can change its Deck Control link.");return;}DeckControlBlockEntity dc=nearestControl(player,hand.getBlockPos());if(dc==null){reply(player,hand,"No Deck Control found within "+LINK_RANGE+" blocks.");return;}HandBlockEntity existing=findLinked(dc);if(existing!=null&&existing!=hand){reply(player,hand,"That Deck Control is already linked to another Hand block.");return;}hand.linkedControl(dc.getBlockPos());reply(player,hand,"Linked to Deck Control at "+shortPos(dc.getBlockPos())+".");}
    case "add_viewer" -> addViewer(player,hand,req.text());
