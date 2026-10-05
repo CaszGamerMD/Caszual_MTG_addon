@@ -30,3 +30,9 @@ tasks.register('verifyCatalogue', JavaExec) {
     mainClass = 'dev.casz.mtg.CatalogueCheck'
 }
 tasks.named('check') { dependsOn verifyCatalogue }
+tasks.register('verifyArchidekt', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.casz.mtg.ArchidektImportCheck'
+}
+tasks.named('check') { dependsOn verifyArchidekt }
