@@ -1,6 +1,4 @@
 package dev.casz.mtg;
-import com.spider.mtgcard.util.TcgCardMeta;
-import net.minecraft.world.item.ItemStack;
 import java.util.*;
 import java.util.regex.*;
 
@@ -10,7 +8,7 @@ public final class DeckList {
   public boolean hasPrinting(){return !set.isBlank()&&!collector.isBlank();}
   public String label(){return hasPrinting()?name+" ("+set.toUpperCase(Locale.ROOT)+") "+collector:name;}
   public String shopLine(int qty){return qty+" "+name+(hasPrinting()?" ["+set.toUpperCase(Locale.ROOT)+"] "+collector:"");}
-  public boolean exactPrinting(ItemStack card){if(!hasPrinting()||card.isEmpty())return !hasPrinting();var meta=TcgCardMeta.read(card);return set.equalsIgnoreCase(meta.set())&&collector.equalsIgnoreCase(meta.collectorNumber());}
+  public boolean exactPrinting(String cardSet,String cardCollector){return !hasPrinting()||set.equalsIgnoreCase(cardSet)&&collector.equalsIgnoreCase(cardCollector);}
  }
  public record Parsed(List<Line> lines,List<String> errors) {}
  private static final Pattern ENTRY=Pattern.compile("^(\\d+)\\s*[xX]?\\s+(.+)$");
