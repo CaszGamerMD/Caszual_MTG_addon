@@ -30,7 +30,7 @@ public final class HandBlock extends BaseEntityBlock {
   if(placer instanceof Player p&&level.getBlockEntity(pos) instanceof HandBlockEntity hand)hand.ensureOwner(p);
  }
  @Override protected void affectNeighborsAfterRemoval(BlockState state,ServerLevel level,BlockPos pos,boolean moved){
-  if(level.getBlockEntity(pos) instanceof HandBlockEntity hand)Containers.dropContents(level,pos,hand);
+  if(level.getBlockState(pos).getBlock()!=this&&level.getBlockEntity(pos) instanceof HandBlockEntity hand)Containers.dropContents(level,pos,hand);
   super.affectNeighborsAfterRemoval(state,level,pos,moved);
  }
 }
