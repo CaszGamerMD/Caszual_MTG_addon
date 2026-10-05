@@ -35,6 +35,7 @@ public final class ServerLogic {
     case "withdraw" -> {if(s.kind<3)withdraw(p,s,req.text(),req.amount());}
     case "box_deposit", "box_withdraw", "box_fill" -> {if(s.kind==2&&p.containerMenu instanceof CommunityMenu menu){Banks bank=Banks.get(p.level().getServer());int count=req.action().equals("box_deposit")?DeckboxTransfer.deposit(p,menu.deckbox(),bank):DeckboxTransfer.withdraw(p,menu.deckbox(),bank,req.action().equals("box_fill")?null:req.text(),s.query,Math.clamp(req.amount(),1,99));menu.broadcastChanges();reply(p,s,"Transferred "+count+" cards. Lands and tokens stay in the box during deposits.","");}}
     case "import" -> {if(s.kind==3){var list=DeckList.parse(req.text());if(!list.errors().isEmpty()){reply(p,s,"Import rejected: "+list.errors().getFirst(),String.join("\n",list.errors()));return;}if(list.lines().isEmpty()){reply(p,s,"No cards in the list.","");return;}s.deck=req.text();s.statuses=list.lines().stream().map(line->new Wire.Row(line.label(),ItemStack.EMPTY,-1,line.quantity())).toList();reply(p,s,"Loaded "+list.lines().size()+" card entries. Checking availability…","");resolveLands(p,s,()->plan(p,s,false,req.amount()));}}
+    case "import_url" -> {if(s.kind==3)importArchidekt(p,s,req.text(),req.amount());}
     case "plan" -> {if(s.kind==3)plan(p,s,false,req.amount());}
     case "build" -> {if(s.kind==3)plan(p,s,true,req.amount());}
     case "counter" -> {if(s.kind==4)editCounter(p,s,req.text(),req.amount());}
@@ -67,6 +68,19 @@ public final class ServerLogic {
  }
  static Set<Integer> links(ServerPlayer p,Session s){Set<Integer> kinds=new HashSet<>();for(BlockPos at:BlockPos.betweenClosed(s.pos.offset(-4,-4,-4),s.pos.offset(4,4,4)))if(p.level().hasChunkAt(at)){int kind=Companion.kind(p.level().getBlockState(at).getBlock());if(kind>=0&&kind<3)kinds.add(kind);}return kinds;}
  static DeckboxBlockEntity output(ServerPlayer p,Session s){for(Direction d:Direction.values()){BlockPos at=s.pos.relative(d);if(p.level().hasChunkAt(at)&&p.level().getBlockEntity(at) instanceof DeckboxBlockEntity db)return db;}return null;}
+ static void importArchidekt(ServerPlayer p,Session s,String url,int flags){
+  if(s.busy){reply(p,s,"Working on the previous request…",s.report);return;}
+  long revision=s.revision;s.busy=true;reply(p,s,"Loading Archidekt main deck…","");
+  ArchidektImport.fetch(url).whenComplete((result,error)->p.level().getServer().execute(()->{
+   if(!valid(p,s)||s.revision!=revision)return;s.busy=false;
+   if(error!=null){Throwable cause=error instanceof CompletionException&&error.getCause()!=null?error.getCause():error;reply(p,s,"Archidekt import failed: "+cause.getMessage(),"");return;}
+   var parsed=DeckList.parse(result.text());if(!parsed.errors().isEmpty()){reply(p,s,"Archidekt import rejected: "+parsed.errors().getFirst(),"");return;}
+   s.deck=result.text();s.statuses=parsed.lines().stream().map(line->new Wire.Row(line.label(),ItemStack.EMPTY,-1,line.quantity())).toList();
+   reply(p,s,"Loaded "+result.cards()+" main-deck cards from "+(result.deckName().isBlank()?"Archidekt":result.deckName())+". Sideboard and Maybeboard ignored.","");
+   resolveLands(p,s,()->plan(p,s,false,flags));
+  }));
+ }
+
  static void resolveLands(ServerPlayer p,Session s,Runnable done){Set<Integer> linked=links(p,s);if(!linked.contains(0)&&!linked.contains(1)){done.run();return;}
   Banks b=Banks.get(p.level().getServer());List<String> unknown=DeckList.parse(s.deck).lines().stream().map(DeckList.Line::name).filter(name->b.entries.values().stream().noneMatch(e->DeckList.normalize(TcgCardMeta.displayName(e.card())).equals(DeckList.normalize(name)))).limit(100).toList();
   if(unknown.isEmpty()){done.run();return;}s.busy=true;reply(p,s,"Resolving land/token names…","");int revision=s.revision;
