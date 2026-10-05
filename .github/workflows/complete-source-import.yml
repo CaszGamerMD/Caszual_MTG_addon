@@ -1,0 +1,32 @@
+name: Complete source import
+
+on:
+  push:
+    paths:
+      - '.import/ready'
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reconstruct and import MTG Companion source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .import/part* | base64 -d > /tmp/mtg.zip
+          rm -rf /tmp/mtg-import
+          mkdir -p /tmp/mtg-import
+          unzip -q /tmp/mtg.zip -d /tmp/mtg-import
+          cp -a /tmp/mtg-import/MTGCompanion/. .
+          chmod +x gradlew
+          rm -rf .import
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Import MTG Companion 0.4.0 source"
+          git push
