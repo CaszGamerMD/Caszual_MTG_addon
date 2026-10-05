@@ -10,7 +10,7 @@ import net.minecraft.world.item.ItemStack;
 public final class HandScreen extends LegacyScreen {
  HandWire.Reply data;EditBox playerName;int x,y,w,h,scroll,selected=-1,ticks;String message="";
  HandScreen(HandWire.Reply data){super(Component.literal("Card Hand"));this.data=data;}
- void update(HandWire.Reply reply){data=reply;if(!reply.message().isBlank())message=reply.message();if(selected>=reply.cards().size())selected=-1;rebuildWidgets();}
+ void update(HandWire.Reply reply){boolean controlsChanged=data.authorized()!=reply.authorized()||data.canManage()!=reply.canManage()||data.revealAll()!=reply.revealAll();data=reply;if(!reply.message().isBlank())message=reply.message();if(selected>=reply.cards().size())selected=-1;if(controlsChanged)rebuildWidgets();}
  @Override protected void init(){if(applyAutoFitGuiScale(640,520))return;w=Math.min(width-16,640);h=Math.min(height-16,520);x=(width-w)/2;y=(height-h)/2;clearWidgets();
   button("Refresh",x+12,y+32,72,()->send("refresh",""));
   if(data.authorized())button(data.revealAll()?"Hide from all":"Reveal to all",x+90,y+32,112,()->send("reveal",""));
