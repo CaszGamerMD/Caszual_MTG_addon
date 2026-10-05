@@ -13,14 +13,14 @@ public final class HandScreen extends LegacyScreen {
  void update(HandWire.Reply reply){data=reply;message=reply.message();if(selected>=reply.cards().size())selected=-1;rebuildWidgets();}
  @Override protected void init(){if(applyAutoFitGuiScale(640,520))return;w=Math.min(width-16,640);h=Math.min(height-16,520);x=(width-w)/2;y=(height-h)/2;clearWidgets();
   button("Refresh",x+12,y+32,72,()->send("refresh",""));
-  if(data.visible())button(data.revealAll()?"Hide from all":"Reveal to all",x+90,y+32,112,()->send("reveal",""));
+  if(data.authorized())button(data.revealAll()?"Hide from all":"Reveal to all",x+90,y+32,112,()->send("reveal",""));
   if(data.canManage()){
    button("Link Deck Control",x+208,y+32,124,()->send("link",""));
    playerName=addRenderableWidget(new EditBox(font,x+12,y+58,150,20,Component.literal("Player")));playerName.setMaxLength(32);playerName.setHint(Component.literal("Online player name"));
    button("Add viewer",x+168,y+58,86,()->send("add_viewer",playerName.getValue()));
    button("Remove viewer",x+260,y+58,102,()->send("remove_viewer",playerName.getValue()));
   }
-  if(data.visible())button("Random → Graveyard",x+368,y+58,142,()->send("discard_random",""));
+  if(data.authorized())button("Random → Graveyard",x+368,y+58,142,()->send("discard_random",""));
   button("Done",x+w-84,y+h-30,72,this::onClose);
  }
  void button(String label,int bx,int by,int bw,Runnable run){addRenderableWidget(Button.builder(Component.literal(label),b->run.run()).bounds(bx,by,bw,20).build());}
