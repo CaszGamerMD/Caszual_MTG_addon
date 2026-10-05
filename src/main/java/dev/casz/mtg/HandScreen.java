@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
 public final class HandScreen extends LegacyScreen {
- HandWire.Reply data;EditBox playerName;int x,y,w,h,scroll,selected=-1;String message="";
+ HandWire.Reply data;EditBox playerName;int x,y,w,h,scroll,selected=-1,ticks;String message="";
  HandScreen(HandWire.Reply data){super(Component.literal("Card Hand"));this.data=data;}
  void update(HandWire.Reply reply){data=reply;message=reply.message();if(selected>=reply.cards().size())selected=-1;rebuildWidgets();}
  @Override protected void init(){if(applyAutoFitGuiScale(640,520))return;w=Math.min(width-16,640);h=Math.min(height-16,520);x=(width-w)/2;y=(height-h)/2;clearWidgets();
@@ -25,6 +25,7 @@ public final class HandScreen extends LegacyScreen {
  }
  void button(String label,int bx,int by,int bw,Runnable run){addRenderableWidget(Button.builder(Component.literal(label),b->run.run()).bounds(bx,by,bw,20).build());}
  void send(String action,String text){ClientPlayNetworking.send(new HandWire.Request(data.pos(),action,text));message="Working…";}
+ @Override public void tick(){super.tick();if(++ticks%20==0)ClientPlayNetworking.send(new HandWire.Request(data.pos(),"refresh",""));}
  @Override public boolean isPauseScreen(){return false;}
  @Override public boolean mouseScrolled(double mx,double my,double dx,double dy){if(!data.visible())return true;int rows=(data.cards().size()+4)/5;scroll=Math.clamp(scroll-(int)Math.signum(dy),0,Math.max(0,rows-3));return true;}
  @Override public boolean mouseClicked(MouseButtonEvent e,boolean twice){if(data.visible()){int gx=x+12,gy=y+112,cw=78,ch=112;int relX=(int)e.x()-gx,relY=(int)e.y()-gy;if(relX>=0&&relY>=0&&relX<5*cw&&relY<3*ch){int col=relX/cw,row=relY/ch,at=(scroll+row)*5+col;if(at>=0&&at<data.cards().size()){selected=at;return true;}}}return super.mouseClicked(e,twice);}
