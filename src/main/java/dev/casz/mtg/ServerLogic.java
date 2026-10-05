@@ -76,6 +76,7 @@ public final class ServerLogic {
   chain.whenComplete((models,error)->p.level().getServer().execute(()->{if(!valid(p,s)||s.revision!=revision)return;s.busy=false;if(models!=null)for(var model:models){ItemStack card=CardStackBuilders.buildScryfallStackFromModel(model,false);int kind=Banks.kind(card);if(kind<2&&linked.contains(kind))b.add(card,kind,1);}done.run();}));
  }
  record Pick(String key,ItemStack card,boolean commander){}
+ static boolean exactPrinting(DeckList.Line line,ItemStack card){if(!line.hasPrinting())return true;var meta=TcgCardMeta.read(card);return line.exactPrinting(meta.set(),meta.collectorNumber());}
  static void plan(ServerPlayer p,Session s,boolean build,int flags){if(s.deck.isBlank()){reply(p,s,"Import a decklist first.","");return;}Set<Integer> linked=links(p,s);
   Banks b=Banks.get(p.level().getServer());var lines=DeckList.parse(s.deck).lines();Map<String,Long> available=new HashMap<>();for(var e:b.entries.entrySet())available.put(e.getKey(),e.getValue().count());List<Pick> picks=new ArrayList<>();List<String> missing=new ArrayList<>();List<Wire.Row> statuses=new ArrayList<>();StringBuilder summary=new StringBuilder();int requested=0,missingCount=0;
   boolean commanderFirst=(flags&2)!=0;
