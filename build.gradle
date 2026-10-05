@@ -1,0 +1,32 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+base { archivesName = 'mtgcompanion' }
+dependencies {
+    implementation files("libs/MtgCard-fabric-1.7.0-26.2.jar")
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') { expand version: project.version }
+}
+tasks.withType(JavaCompile).configureEach { options.release = 25 }
+java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_25; targetCompatibility = JavaVersion.VERSION_25 }
+tasks.register('verifyDeckLists', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.casz.mtg.DeckListCheck'
+}
+tasks.named('check') { dependsOn verifyDeckLists }
+tasks.register('writeRuntimeClasspath') { doLast { file('build/runtime-classpath.txt').text = sourceSets.main.runtimeClasspath.asPath } }
+
+// Parser checks use an explicit Java harness rather than JUnit.
+tasks.named("test") { enabled = false }
+tasks.register('verifyCatalogue', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.casz.mtg.CatalogueCheck'
+}
+tasks.named('check') { dependsOn verifyCatalogue }
