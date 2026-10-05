@@ -1,0 +1,20 @@
+# Gradle
+.gradle/
+build/
+
+# Local dependency jars
+libs/*.jar
+!libs/README.txt
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Minecraft run directories
+run/
+runs/
