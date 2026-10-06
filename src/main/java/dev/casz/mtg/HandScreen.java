@@ -11,7 +11,7 @@ public final class HandScreen extends LegacyScreen {
  HandWire.Reply data;EditBox playerName;int x,y,w,h,scroll,selected=-1,ticks;String message="";
  HandScreen(HandWire.Reply data){super(Component.literal("Card Hand"));this.data=data;}
  void update(HandWire.Reply reply){boolean controlsChanged=data.authorized()!=reply.authorized()||data.canManage()!=reply.canManage()||data.revealAll()!=reply.revealAll();data=reply;if(!reply.message().isBlank())message=reply.message();if(selected>=reply.cards().size())selected=-1;if(controlsChanged)rebuildWidgets();}
- @Override protected void init(){if(applyAutoFitGuiScale(640,520))return;w=Math.min(width-16,640);h=Math.min(height-16,520);x=(width-w)/2;y=(height-h)/2;clearWidgets();
+ @Override protected void init(){if(applyAutoFitGuiScale(640,520))return;w=Math.max(1,width-16);h=Math.max(1,height-16);x=(width-w)/2;y=(height-h)/2;clearWidgets();
   button("Refresh",x+12,y+32,72,()->send("refresh",""));
   if(data.authorized())button(data.revealAll()?"Hide from all":"Reveal to all",x+90,y+32,112,()->send("reveal",""));
   if(data.canManage()){
@@ -27,8 +27,10 @@ public final class HandScreen extends LegacyScreen {
  void send(String action,String text){ClientPlayNetworking.send(new HandWire.Request(data.pos(),action,text));message="Working…";}
  @Override public void tick(){super.tick();if(++ticks%20==0)ClientPlayNetworking.send(new HandWire.Request(data.pos(),"refresh",""));}
  @Override public boolean isPauseScreen(){return false;}
- @Override public boolean mouseScrolled(double mx,double my,double dx,double dy){if(!data.visible())return true;int rows=(data.cards().size()+4)/5;scroll=Math.clamp(scroll-(int)Math.signum(dy),0,Math.max(0,rows-3));return true;}
- @Override public boolean mouseClicked(MouseButtonEvent e,boolean twice){if(data.visible()){int gx=x+12,gy=y+112,cw=78,ch=112;int relX=(int)e.x()-gx,relY=(int)e.y()-gy;if(relX>=0&&relY>=0&&relX<5*cw&&relY<3*ch){int col=relX/cw,row=relY/ch,at=(scroll+row)*5+col;if(at>=0&&at<data.cards().size()){selected=at;return true;}}}return super.mouseClicked(e,twice);}
+ int gridCols(){return Math.max(3,Math.min(8,(w-150)/78));}
+ int gridRows(){return Math.max(2,(h-156)/112);}
+ @Override public boolean mouseScrolled(double mx,double my,double dx,double dy){if(!data.visible())return true;int cols=gridCols(),visibleRows=gridRows(),rows=(data.cards().size()+cols-1)/cols;scroll=Math.clamp(scroll-(int)Math.signum(dy),0,Math.max(0,rows-visibleRows));return true;}
+ @Override public boolean mouseClicked(MouseButtonEvent e,boolean twice){if(data.visible()){int gx=x+12,gy=y+112,cw=78,ch=112,cols=gridCols(),rows=gridRows();int relX=(int)e.x()-gx,relY=(int)e.y()-gy;if(relX>=0&&relY>=0&&relX<cols*cw&&relY<rows*ch){int col=relX/cw,row=relY/ch,at=(scroll+row)*cols+col;if(at>=0&&at<data.cards().size()){selected=at;return true;}}}return super.mouseClicked(e,twice);}
  @Override public void render(GuiGraphics g,int mx,int my,float delta){
   g.fill(0,0,width,height,0xC0080E18);g.fill(x,y,x+w,y+h,0xFF152032);g.drawString(font,title,x+12,y+12,0xFFFFFFFF);
   String privacy=data.revealAll()?"REVEALED TO ALL":data.visible()?"PRIVATE · YOU CAN VIEW":"PRIVATE · HIDDEN";
@@ -36,8 +38,8 @@ public final class HandScreen extends LegacyScreen {
   if(data.canManage())g.drawString(font,"Viewers: "+(data.viewers().isEmpty()?"none":String.join(", ",data.viewers())),x+12,y+100,0xFF9CADC6);
   if(!data.visible()){g.drawCenteredString(font,"This hand is private.",x+w/2,y+220,0xFFFFFFFF);g.drawCenteredString(font,"The owner can add you as a viewer or reveal the hand.",x+w/2,y+242,0xFF9CADC6);}
   else{
-   int gx=x+12,gy=y+112,cw=78,ch=112;
-   for(int row=0;row<3;row++)for(int col=0;col<5;col++){int at=(scroll+row)*5+col;if(at>=data.cards().size())continue;int cx=gx+col*cw,cy=gy+row*ch;g.fill(cx,cy,cx+72,cy+106,at==selected?0xFF4B729F:0xFF22324B);ClientCompanion.art(g,data.cards().get(at),0,cx+3,cy+3,66,100);}
+   int gx=x+12,gy=y+112,cw=78,ch=112,cols=gridCols(),rows=gridRows();
+   for(int row=0;row<rows;row++)for(int col=0;col<cols;col++){int at=(scroll+row)*cols+col;if(at>=data.cards().size())continue;int cx=gx+col*cw,cy=gy+row*ch;g.fill(cx,cy,cx+72,cy+106,at==selected?0xFF4B729F:0xFF22324B);ClientCompanion.art(g,data.cards().get(at),0,cx+3,cy+3,66,100);}
    if(selected>=0&&selected<data.cards().size()){ItemStack card=data.cards().get(selected);ClientCompanion.art(g,card,0,x+w-116,y+112,104,145);}
   }
   if(!message.isBlank())g.drawString(font,font.plainSubstrByWidth(message,w-110),x+12,y+h-22,0xFFFFDA8A);
