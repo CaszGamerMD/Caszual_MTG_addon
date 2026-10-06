@@ -1,0 +1,107 @@
+{
+  "textures": {
+    "card": "mtgcard:item/card",
+    "edge": "minecraft:block/black_concrete"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        15.35,
+        2
+      ],
+      "to": [
+        4.7,
+        15.53,
+        5.8
+      ],
+      "shade": false,
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#card"
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        5.2,
+        15.43,
+        1.6
+      ],
+      "to": [
+        7.9,
+        15.61,
+        5.4
+      ],
+      "shade": false,
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#card"
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        8.4,
+        15.51,
+        2.1
+      ],
+      "to": [
+        11.100000000000001,
+        15.69,
+        5.9
+      ],
+      "shade": false,
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#card"
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        }
+      }
+    }
+  ]
+}
