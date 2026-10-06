@@ -19,8 +19,8 @@ public final class CommunityMenu extends AbstractContainerMenu {
  final SimpleContainer box=new SimpleContainer(1);
  final Player owner;
  public CommunityMenu(int sync,Inventory inv,OpenData data){super(Companion.COMMUNITY_MENU,sync);pos=data.pos.immutable();owner=inv.player;
-  addSlot(new Slot(box,0,442,396){public boolean mayPlace(ItemStack s){return s.getItem() instanceof DeckboxBlockItem;}public int getMaxStackSize(){return 1;}});
-  addStandardInventorySlots(inv,12,408);
+  addSlot(new Slot(box,0,442,306){public boolean mayPlace(ItemStack s){return s.getItem() instanceof DeckboxBlockItem;}public int getMaxStackSize(){return 1;}});
+  addStandardInventorySlots(inv,12,318);
  }
  public static ExtendedMenuProvider<OpenData> provider(BlockPos at){return new ExtendedMenuProvider<>(){
   public OpenData getScreenOpeningData(ServerPlayer p){return new OpenData(at);}
