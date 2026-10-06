@@ -14,7 +14,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import java.util.*;
 
 public final class HandBlockEntity extends BlockEntity implements Container {
- public static final int SIZE=30;
+ public static final int SIZE=100;
  private final List<ItemStack> cards=new ArrayList<>(Collections.nCopies(SIZE,ItemStack.EMPTY));
  private UUID owner;
  private final LinkedHashSet<UUID> viewers=new LinkedHashSet<>();
