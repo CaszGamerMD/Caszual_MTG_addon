@@ -19,6 +19,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
 import com.spider.mtgcard.display.CardDisplayEntity;
+import com.spider.mtgcard.deckcontrol.DeckControlBlockEntity;
 import com.spider.mtgcard.api.DeckControlActionRegistry;
 import com.spider.mtgcard.api.TcgGameRegistry;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -40,10 +41,14 @@ public final class Companion implements ModInitializer {
   com.spider.mtgcard.registry.ModBlockEntities.init();com.spider.mtgcard.registry.ModBlockEntities.DECKBOX.addValidBlock(CUSTOM_BOX);
   PayloadTypeRegistry.serverboundPlay().register(Wire.Request.TYPE,Wire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(Wire.Reply.TYPE,Wire.Reply.CODEC);PayloadTypeRegistry.serverboundPlay().register(HandWire.Request.TYPE,HandWire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(HandWire.Reply.TYPE,HandWire.Reply.CODEC);
   ServerPlayNetworking.registerGlobalReceiver(Wire.Request.TYPE,(req,ctx)->ServerLogic.handle(ctx.player(),req));ServerPlayNetworking.registerGlobalReceiver(HandWire.Request.TYPE,(req,ctx)->HandLogic.handle(ctx.player(),req));
-  ServerPlayConnectionEvents.DISCONNECT.register((h,s)->ServerLogic.close(h.player));
+  ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);});
   CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(CUSTOM_BOX);e.accept(HAND);});
   UseEntityCallback.EVENT.register((p,l,hand,e,hit)->{if(e instanceof CardDisplayEntity c&&p.getItemInHand(hand).is(COUNTER)){if(p instanceof ServerPlayer sp)ServerLogic.openCounter(sp,c);return InteractionResult.SUCCESS;}return InteractionResult.PASS;});
-  UseBlockCallback.EVENT.register((p,l,hand,hit)->{if(l.getBlockState(hit.getBlockPos()).is(CUSTOM_BOX)&&p.isShiftKeyDown()&&p.getItemInHand(hand).getItem() instanceof BlockItem)return CUSTOM_BOX.applyMaterial(p.getItemInHand(hand),l,hit.getBlockPos(),p);return InteractionResult.PASS;});
+  UseBlockCallback.EVENT.register((p,l,hand,hit)->{
+   if(p instanceof ServerPlayer sp&&l.getBlockEntity(hit.getBlockPos()) instanceof DeckControlBlockEntity&&HandLogic.completePendingLink(sp,hit.getBlockPos()))return InteractionResult.SUCCESS;
+   if(l.getBlockState(hit.getBlockPos()).is(CUSTOM_BOX)&&p.isShiftKeyDown()&&p.getItemInHand(hand).getItem() instanceof BlockItem)return CUSTOM_BOX.applyMaterial(p.getItemInHand(hand),l,hit.getBlockPos(),p);
+   return InteractionResult.PASS;
+  });
   DeckControlActionRegistry.register(DeckControlActionRegistry.simple(TcgGameRegistry.MTG,id("hand_discard_random"),Component.literal("Discard Random from Hand"),65,ctx->ctx.player().sendSystemMessage(Component.literal(HandLogic.discardRandom(ctx.deckControl())))));
  }
  static final class BankBlock extends Block {
