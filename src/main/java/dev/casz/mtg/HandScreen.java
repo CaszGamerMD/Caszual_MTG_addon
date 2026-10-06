@@ -22,7 +22,7 @@ public final class HandScreen extends LegacyScreen {
   button("Refresh",x+12,y+32,72,()->send("refresh",""));
   if(data.authorized())button(data.revealAll()?"Hide from all":"Reveal to all",x+90,y+32,112,()->send("reveal",""));
   if(data.canManage()){
-   button("Link Deck Control",x+208,y+32,124,()->send("link",""));
+   button("Link Deck Control",x+208,y+32,124,()->{send("link","");onClose();});
    playerName=addRenderableWidget(new EditBox(font,x+12,y+58,150,20,Component.literal("Player")));playerName.setMaxLength(32);playerName.setHint(Component.literal("Online player name"));
    button("Add viewer",x+168,y+58,86,()->send("add_viewer",playerName.getValue()));
    button("Remove viewer",x+260,y+58,102,()->send("remove_viewer",playerName.getValue()));
