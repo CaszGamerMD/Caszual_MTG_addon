@@ -14,13 +14,24 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 public final class HandBlock extends BaseEntityBlock {
  public static final MapCodec<HandBlock> CODEC=MapCodec.unit(()->new HandBlock(BlockBehaviour.Properties.of()));
+ private static final VoxelShape SHAPE=Shapes.or(
+  Block.box(2,0,2,14,3,14),
+  Block.box(4,3,4,12,12,12),
+  Block.box(1,12,1,15,16,15)
+ );
  public HandBlock(Properties p){super(p);}
  @Override protected MapCodec<? extends BaseEntityBlock> codec(){return CODEC;}
  @Override public net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state){return net.minecraft.world.level.block.RenderShape.MODEL;}
+ @Override protected VoxelShape getShape(BlockState state,BlockGetter level,BlockPos pos,CollisionContext context){return SHAPE;}
+ @Override protected VoxelShape getCollisionShape(BlockState state,BlockGetter level,BlockPos pos,CollisionContext context){return SHAPE;}
+ @Override protected boolean useShapeForLightOcclusion(BlockState state){return true;}
  @Override public @Nullable BlockEntity newBlockEntity(BlockPos pos,BlockState state){return new HandBlockEntity(pos,state);}
  @Override protected InteractionResult useWithoutItem(BlockState state,Level level,BlockPos pos,Player player,BlockHitResult hit){
   if(player instanceof ServerPlayer sp)HandLogic.open(sp,pos);
