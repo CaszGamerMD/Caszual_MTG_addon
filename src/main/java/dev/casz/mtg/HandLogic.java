@@ -9,10 +9,14 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class HandLogic {
  private static final int LINK_RANGE=8;
  private static final SecureRandom RANDOM=new SecureRandom();
+ private static final Map<UUID,BlockPos> PENDING_LINKS=new ConcurrentHashMap<>();
 
  public static void open(ServerPlayer player,BlockPos pos){
   HandBlockEntity hand=get(player,pos);if(hand==null)return;hand.ensureOwner(player);reply(player,hand,"Hand ready.");
@@ -33,7 +37,7 @@ public final class HandLogic {
   switch(req.action()){
    case "refresh" -> reply(player,hand,"");
    case "reveal" -> {if(!hand.isAuthorized(player)){reply(player,hand,"Only selected hand players can change reveal mode.");return;}hand.revealAll(!hand.revealAll());reply(player,hand,hand.revealAll()?"Hand revealed to everyone.":"Hand is private again.");}
-   case "link" -> {if(!hand.canManage(player)){reply(player,hand,"Only the hand owner can change its Deck Control link.");return;}DeckControlBlockEntity dc=nearestControl(player,hand.getBlockPos());if(dc==null){reply(player,hand,"No Deck Control found within "+LINK_RANGE+" blocks.");return;}HandBlockEntity existing=findLinked(dc);if(existing!=null&&existing!=hand){reply(player,hand,"That Deck Control is already linked to another Hand block.");return;}hand.linkedControl(dc.getBlockPos());reply(player,hand,"Linked to Deck Control at "+shortPos(dc.getBlockPos())+".");}
+   case "link" -> {if(!hand.canManage(player)){reply(player,hand,"Only the hand owner can change its Deck Control link.");return;}PENDING_LINKS.put(player.getUUID(),hand.getBlockPos().immutable());reply(player,hand,"Link mode armed. Right-click the Deck Control you want to use.");}
    case "add_viewer" -> addViewer(player,hand,req.text());
    case "remove_viewer" -> {if(!hand.canManage(player)){reply(player,hand,"Only the hand owner can remove viewers.");return;}if(hand.removeViewer(req.text().trim()))reply(player,hand,"Viewer removed.");else reply(player,hand,"That viewer is not on this hand.");}
    case "discard_random" -> {
@@ -109,14 +113,25 @@ public final class HandLogic {
   return player.level().getBlockEntity(pos) instanceof HandBlockEntity h?h:null;
  }
 
- static DeckControlBlockEntity nearestControl(ServerPlayer player,BlockPos from){
-  DeckControlBlockEntity best=null;double bestD=Double.MAX_VALUE;
-  for(BlockPos p:BlockPos.betweenClosed(from.offset(-LINK_RANGE,-LINK_RANGE,-LINK_RANGE),from.offset(LINK_RANGE,LINK_RANGE,LINK_RANGE))){
-   if(!player.level().hasChunkAt(p))continue;
-   if(player.level().getBlockEntity(p) instanceof DeckControlBlockEntity dc){long dx=p.getX()-from.getX(),dy=p.getY()-from.getY(),dz=p.getZ()-from.getZ();double d=(double)dx*dx+(double)dy*dy+(double)dz*dz;if(d<bestD){best=dc;bestD=d;}}
+ public static boolean completePendingLink(ServerPlayer player,BlockPos controlPos){
+  BlockPos handPos=PENDING_LINKS.remove(player.getUUID());
+  if(handPos==null)return false;
+  if(!(player.level().getBlockEntity(handPos) instanceof HandBlockEntity hand)){player.sendSystemMessage(Component.literal("That Card Hand is no longer available."));return true;}
+  if(!hand.canManage(player)){player.sendSystemMessage(Component.literal("Only the Card Hand owner can change its Deck Control link."));return true;}
+  if(!(player.level().getBlockEntity(controlPos) instanceof DeckControlBlockEntity control)){return false;}
+  long dx=controlPos.getX()-handPos.getX(),dy=controlPos.getY()-handPos.getY(),dz=controlPos.getZ()-handPos.getZ();
+  if(Math.abs(dx)>LINK_RANGE||Math.abs(dy)>LINK_RANGE||Math.abs(dz)>LINK_RANGE){
+   player.sendSystemMessage(Component.literal("That Deck Control is too far from the Card Hand (max "+LINK_RANGE+" blocks per axis)."));
+   return true;
   }
-  return best;
+  HandBlockEntity existing=findLinked(control);
+  if(existing!=null&&existing!=hand){player.sendSystemMessage(Component.literal("That Deck Control is already linked to another Card Hand."));return true;}
+  hand.linkedControl(controlPos);
+  player.sendSystemMessage(Component.literal("Card Hand linked to Deck Control at "+shortPos(controlPos)+"."));
+  return true;
  }
+ public static void clearPendingLink(ServerPlayer player){PENDING_LINKS.remove(player.getUUID());}
+
 
  public static HandBlockEntity findLinked(DeckControlBlockEntity control){
   if(control==null||control.getLevel()==null)return null;BlockPos at=control.getBlockPos();
