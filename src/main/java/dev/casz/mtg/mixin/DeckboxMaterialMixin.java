@@ -14,7 +14,20 @@ import org.spongepowered.asm.mixin.injection.callback.*;
 public abstract class DeckboxMaterialMixin implements BoxMaterial {
  @Unique private volatile String companion$skin=BoxMaterial.DEFAULT;
  @Unique public String companion$material(){return companion$skin;}
- @Unique public void companion$material(String value){companion$skin=BoxMaterial.safe(value);var self=(DeckboxBlockEntity)(Object)this;self.setChanged();self.sync();}
+ @Unique public void companion$material(String value){
+  String next=BoxMaterial.safe(value);
+  if(next.equals(companion$skin))return;
+  companion$skin=next;
+  var self=(DeckboxBlockEntity)(Object)this;
+  self.setChanged();
+  self.sync();
+  var level=self.getLevel();
+  if(level!=null){
+   var pos=self.getBlockPos();
+   var state=self.getBlockState();
+   level.sendBlockUpdated(pos,state,state,3);
+  }
+ }
  public Object getRenderData(){return companion$skin;}
  @Inject(method="loadAdditional",at=@At("TAIL"),remap=false)
  private void companion$load(ValueInput input,CallbackInfo ci){companion$skin=BoxMaterial.safe(input.getStringOr("CompanionMaterial",BoxMaterial.DEFAULT));}
