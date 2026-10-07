@@ -4,6 +4,12 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.*;
 import net.fabricmc.fabric.api.client.screen.v1.*;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import net.fabricmc.fabric.api.event.player.UseEntityCallback;
+import net.fabricmc.fabric.api.event.player.UseItemCallback;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -25,7 +31,32 @@ public final class ClientCompanion implements ClientModInitializer {
   net.minecraft.client.gui.screens.MenuScreens.register(Companion.COMMUNITY_MENU,CommunityScreen::new);
   ClientPlayNetworking.registerGlobalReceiver(Wire.Reply.TYPE,(reply,ctx)->{if(reply.kind()==2){if(ctx.client().gui.screen() instanceof CommunityScreen screen&&screen.getMenu().pos.equals(reply.pos()))screen.update(reply);return;}if(ctx.client().gui.screen() instanceof BankScreen screen&&screen.pos.equals(reply.pos())&&screen.kind==reply.kind())screen.update(reply);else if(!(ctx.client().gui.screen() instanceof BankScreen))ctx.client().gui.setScreen(new BankScreen(reply));});
   ClientPlayNetworking.registerGlobalReceiver(HandWire.Reply.TYPE,(reply,ctx)->{if(ctx.client().gui.screen() instanceof HandScreen screen&&screen.data.pos().equals(reply.pos()))screen.update(reply);else if(reply.message().equals("Hand ready."))ctx.client().gui.setScreen(new HandScreen(reply));});
-  ClientPlayConnectionEvents.DISCONNECT.register((h,c)->previews.clear());
+  AttackEntityCallback.EVENT.register((player,level,hand,entity,hit)->{
+   if(!player.getItemInHand(hand).is(Companion.TARGETING_STAFF))return InteractionResult.PASS;
+   if(level.isClientSide()){
+    StaffTargets.mark(entity,StaffTargets.Color.WHITE);
+    player.displayClientMessage(Component.literal("Target marked white."),true);
+   }
+   return InteractionResult.SUCCESS;
+  });
+  UseEntityCallback.EVENT.register((player,level,hand,entity,hit)->{
+   if(!player.getItemInHand(hand).is(Companion.TARGETING_STAFF))return InteractionResult.PASS;
+   if(level.isClientSide()){
+    StaffTargets.mark(entity,StaffTargets.Color.ORANGE);
+    player.displayClientMessage(Component.literal("Target marked orange."),true);
+   }
+   return InteractionResult.SUCCESS;
+  });
+  UseItemCallback.EVENT.register((player,level,hand)->{
+   ItemStack held=player.getItemInHand(hand);
+   if(!held.is(Companion.TARGETING_STAFF))return InteractionResultHolder.pass(held);
+   if(level.isClientSide()){
+    StaffTargets.clear();
+    player.displayClientMessage(Component.literal("MTG Staff highlights cleared."),true);
+   }
+   return InteractionResultHolder.success(held);
+  });
+  ClientPlayConnectionEvents.DISCONNECT.register((h,c)->{previews.clear();StaffTargets.clear();});
   ScreenEvents.AFTER_INIT.register((mc,screen,w,h)->{if(!(screen instanceof AbstractContainerScreen<?>))return;Preview state=new Preview();previews.put(screen,state);
    ScreenKeyboardEvents.allowKeyPress(screen).register((s,event)->{if(event.key()==GLFW.GLFW_KEY_V){var slot=((ContainerAccess)s).companion$getHoveredSlot();if(slot!=null&&CardItemRegistry.isCard(slot.getItem())&&!StackData.readHidden(slot.getItem())){state.card=slot.getItem().copy();state.face=TcgCardMeta.read(state.card).face();state.shown=true;return false;}}if(event.key()==GLFW.GLFW_KEY_F&&state.shown){state.face=(state.face+1)%Math.max(1,TcgCardMeta.faceCount(state.card));return false;}return true;});
    ScreenKeyboardEvents.allowKeyRelease(screen).register((s,event)->{if(event.key()==GLFW.GLFW_KEY_V){state.shown=false;return false;}return true;});
