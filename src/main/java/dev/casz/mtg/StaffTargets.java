@@ -1,10 +1,10 @@
 package dev.casz.mtg;
 
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
+import net.minecraft.world.scores.TeamColor;
 import java.util.*;
 
 public final class StaffTargets {
@@ -54,7 +54,7 @@ public final class StaffTargets {
   String name=color==Color.WHITE?WHITE_TEAM:ORANGE_TEAM;
   PlayerTeam team=board.getPlayerTeam(name);
   if(team==null)team=board.addPlayerTeam(name);
-  team.setColor(color==Color.WHITE?ChatFormatting.WHITE:ChatFormatting.GOLD);
+  team.setColor(Optional.of(color==Color.WHITE?TeamColor.WHITE:TeamColor.GOLD));
   return team;
  }
  private StaffTargets(){}
