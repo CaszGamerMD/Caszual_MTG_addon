@@ -9,7 +9,6 @@ import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -35,7 +34,6 @@ public final class ClientCompanion implements ClientModInitializer {
    if(!player.getItemInHand(hand).is(Companion.TARGETING_STAFF))return InteractionResult.PASS;
    if(level.isClientSide()){
     StaffTargets.mark(entity,StaffTargets.Color.WHITE);
-    player.displayClientMessage(Component.literal("Target marked white."),true);
    }
    return InteractionResult.SUCCESS;
   });
@@ -43,18 +41,16 @@ public final class ClientCompanion implements ClientModInitializer {
    if(!player.getItemInHand(hand).is(Companion.TARGETING_STAFF))return InteractionResult.PASS;
    if(level.isClientSide()){
     StaffTargets.mark(entity,StaffTargets.Color.ORANGE);
-    player.displayClientMessage(Component.literal("Target marked orange."),true);
    }
    return InteractionResult.SUCCESS;
   });
   UseItemCallback.EVENT.register((player,level,hand)->{
    ItemStack held=player.getItemInHand(hand);
-   if(!held.is(Companion.TARGETING_STAFF))return InteractionResultHolder.pass(held);
+   if(!held.is(Companion.TARGETING_STAFF))return InteractionResult.PASS;
    if(level.isClientSide()){
     StaffTargets.clear();
-    player.displayClientMessage(Component.literal("MTG Staff highlights cleared."),true);
    }
-   return InteractionResultHolder.success(held);
+   return InteractionResult.SUCCESS;
   });
   ClientPlayConnectionEvents.DISCONNECT.register((h,c)->{previews.clear();StaffTargets.clear();});
   ScreenEvents.AFTER_INIT.register((mc,screen,w,h)->{if(!(screen instanceof AbstractContainerScreen<?>))return;Preview state=new Preview();previews.put(screen,state);
