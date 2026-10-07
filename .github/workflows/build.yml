@@ -2,7 +2,7 @@ name: Build MTG Companion
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feature/mtg-targeting-staff ]
   workflow_dispatch:
 
 jobs:
