@@ -5,6 +5,8 @@ import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.fabricmc.fabric.api.networking.v1.*;
 import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
+import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.core.*;
 import net.minecraft.core.registries.*;
@@ -42,9 +44,26 @@ public final class Companion implements ModInitializer {
   com.spider.mtgcard.registry.ModBlockEntities.init();com.spider.mtgcard.registry.ModBlockEntities.DECKBOX.addValidBlock(CUSTOM_BOX);
   PayloadTypeRegistry.serverboundPlay().register(Wire.Request.TYPE,Wire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(Wire.Reply.TYPE,Wire.Reply.CODEC);PayloadTypeRegistry.serverboundPlay().register(HandWire.Request.TYPE,HandWire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(HandWire.Reply.TYPE,HandWire.Reply.CODEC);
   ServerPlayNetworking.registerGlobalReceiver(Wire.Request.TYPE,(req,ctx)->ServerLogic.handle(ctx.player(),req));ServerPlayNetworking.registerGlobalReceiver(HandWire.Request.TYPE,(req,ctx)->HandLogic.handle(ctx.player(),req));
-  ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);});
+  ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);StaffTargets.clearAllForDisconnect(h.player);});
   CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(HAND);});
-  UseEntityCallback.EVENT.register((p,l,hand,e,hit)->{if(e instanceof CardDisplayEntity c&&p.getItemInHand(hand).is(COUNTER)){if(p instanceof ServerPlayer sp)ServerLogic.openCounter(sp,c);return InteractionResult.SUCCESS;}return InteractionResult.PASS;});
+  UseEntityCallback.EVENT.register((p,l,hand,e,hit)->{
+   if(p.getItemInHand(hand).is(TARGETING_STAFF)){
+    if(!l.isClientSide()&&p instanceof ServerPlayer sp)StaffTargets.mark(sp,e,StaffTargets.Color.ORANGE);
+    return InteractionResult.SUCCESS;
+   }
+   if(e instanceof CardDisplayEntity c&&p.getItemInHand(hand).is(COUNTER)){if(p instanceof ServerPlayer sp)ServerLogic.openCounter(sp,c);return InteractionResult.SUCCESS;}
+   return InteractionResult.PASS;
+  });
+  AttackEntityCallback.EVENT.register((p,l,hand,e,hit)->{
+   if(!p.getItemInHand(hand).is(TARGETING_STAFF))return InteractionResult.PASS;
+   if(!l.isClientSide()&&p instanceof ServerPlayer sp)StaffTargets.mark(sp,e,StaffTargets.Color.WHITE);
+   return InteractionResult.SUCCESS;
+  });
+  UseItemCallback.EVENT.register((p,l,hand)->{
+   if(!p.getItemInHand(hand).is(TARGETING_STAFF))return InteractionResult.PASS;
+   if(!l.isClientSide()&&p instanceof ServerPlayer sp)StaffTargets.clear(sp);
+   return InteractionResult.SUCCESS;
+  });
   UseBlockCallback.EVENT.register((p,l,hand,hit)->{
    if(p instanceof ServerPlayer sp&&l.getBlockEntity(hit.getBlockPos()) instanceof DeckControlBlockEntity&&HandLogic.completePendingLink(sp,hit.getBlockPos()))return InteractionResult.SUCCESS;
    if(l.getBlockState(hit.getBlockPos()).is(CUSTOM_BOX)&&p.isShiftKeyDown()&&p.getItemInHand(hand).getItem() instanceof BlockItem)return CUSTOM_BOX.applyMaterial(p.getItemInHand(hand),l,hit.getBlockPos(),p);
