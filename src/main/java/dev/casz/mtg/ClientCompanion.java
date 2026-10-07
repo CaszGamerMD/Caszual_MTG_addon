@@ -5,6 +5,7 @@ import net.fabricmc.fabric.api.client.networking.v1.*;
 import net.fabricmc.fabric.api.client.screen.v1.*;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.SectionPos;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.item.ItemStack;
@@ -25,6 +26,10 @@ public final class ClientCompanion implements ClientModInitializer {
   net.minecraft.client.gui.screens.MenuScreens.register(Companion.COMMUNITY_MENU,CommunityScreen::new);
   ClientPlayNetworking.registerGlobalReceiver(Wire.Reply.TYPE,(reply,ctx)->{if(reply.kind()==2){if(ctx.client().gui.screen() instanceof CommunityScreen screen&&screen.getMenu().pos.equals(reply.pos()))screen.update(reply);return;}if(ctx.client().gui.screen() instanceof BankScreen screen&&screen.pos.equals(reply.pos())&&screen.kind==reply.kind())screen.update(reply);else if(!(ctx.client().gui.screen() instanceof BankScreen))ctx.client().gui.setScreen(new BankScreen(reply));});
   ClientPlayNetworking.registerGlobalReceiver(HandWire.Reply.TYPE,(reply,ctx)->{if(ctx.client().gui.screen() instanceof HandScreen screen&&screen.data.pos().equals(reply.pos()))screen.update(reply);else if(reply.message().equals("Hand ready."))ctx.client().gui.setScreen(new HandScreen(reply));});
+  ClientPlayNetworking.registerGlobalReceiver(DeckboxRefreshWire.Refresh.TYPE,(refresh,ctx)->{
+   var pos=refresh.pos();
+   if(ctx.client().level!=null)ctx.client().level.setSectionDirtyWithNeighbors(SectionPos.blockToSectionCoord(pos.getX()),SectionPos.blockToSectionCoord(pos.getY()),SectionPos.blockToSectionCoord(pos.getZ()));
+  });
   ClientPlayConnectionEvents.DISCONNECT.register((h,cx)->previews.clear());
   ScreenEvents.AFTER_INIT.register((mc,screen,w,h)->{if(!(screen instanceof AbstractContainerScreen<?>))return;Preview state=new Preview();previews.put(screen,state);
    ScreenKeyboardEvents.allowKeyPress(screen).register((s,event)->{if(event.key()==GLFW.GLFW_KEY_V){var slot=((ContainerAccess)s).companion$getHoveredSlot();if(slot!=null&&CardItemRegistry.isCard(slot.getItem())&&!StackData.readHidden(slot.getItem())){state.card=slot.getItem().copy();state.face=TcgCardMeta.read(state.card).face();state.shown=true;return false;}}if(event.key()==GLFW.GLFW_KEY_F&&state.shown){state.face=(state.face+1)%Math.max(1,TcgCardMeta.faceCount(state.card));return false;}return true;});
