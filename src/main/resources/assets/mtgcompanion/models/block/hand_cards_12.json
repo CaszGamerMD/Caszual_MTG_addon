@@ -1,19 +1,19 @@
 {
   "textures": {
-    "card": "minecraft:block/blue_concrete",
+    "card": "mtgcompanion:mtg_card_back",
     "edge": "minecraft:block/black_concrete"
   },
   "elements": [
     {
       "from": [
-        2,
-        15.35,
-        2
+        2.6,
+        16.02,
+        3.2
       ],
       "to": [
-        4.7,
-        15.53,
-        5.8
+        4.6,
+        16.2,
+        6.1
       ],
       "shade": false,
       "faces": {
@@ -39,14 +39,14 @@
     },
     {
       "from": [
-        5.2,
-        15.43,
-        1.6
+        4.8,
+        16.02,
+        3.2
       ],
       "to": [
-        7.9,
-        15.61,
-        5.4
+        6.8,
+        16.2,
+        6.1
       ],
       "shade": false,
       "faces": {
@@ -72,14 +72,14 @@
     },
     {
       "from": [
-        8.4,
-        15.51,
-        2.1
+        7,
+        16.02,
+        3.2
       ],
       "to": [
-        11.100000000000001,
-        15.69,
-        5.9
+        9,
+        16.2,
+        6.1
       ],
       "shade": false,
       "faces": {
@@ -105,14 +105,47 @@
     },
     {
       "from": [
+        9.2,
+        16.02,
+        3.2
+      ],
+      "to": [
         11.2,
-        15.59,
-        1.7
+        16.2,
+        6.1
+      ],
+      "shade": false,
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#card"
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        11.4,
+        16.02,
+        3.2
       ],
       "to": [
-        13.899999999999999,
-        15.77,
-        5.5
+        13.4,
+        16.2,
+        6.1
       ],
       "shade": false,
       "faces": {
@@ -139,13 +172,13 @@
     {
       "from": [
         2.6,
-        15.35,
-        5.5
+        16.02,
+        6.35
       ],
       "to": [
-        5.300000000000001,
-        15.53,
-        9.3
+        4.6,
+        16.2,
+        9.25
       ],
       "shade": false,
       "faces": {
@@ -171,14 +204,14 @@
     },
     {
       "from": [
-        6,
-        15.43,
-        5
+        4.8,
+        16.02,
+        6.35
       ],
       "to": [
-        8.7,
-        15.61,
-        8.8
+        6.8,
+        16.2,
+        9.25
       ],
       "shade": false,
       "faces": {
@@ -204,14 +237,14 @@
     },
     {
       "from": [
-        9.5,
-        15.51,
-        5.4
+        7,
+        16.02,
+        6.35
       ],
       "to": [
-        12.2,
-        15.69,
-        9.2
+        9,
+        16.2,
+        9.25
       ],
       "shade": false,
       "faces": {
@@ -237,14 +270,14 @@
     },
     {
       "from": [
-        11,
-        15.59,
-        6
+        9.2,
+        16.02,
+        6.35
       ],
       "to": [
-        13.7,
-        15.77,
-        9.8
+        11.2,
+        16.2,
+        9.25
       ],
       "shade": false,
       "faces": {
@@ -270,14 +303,14 @@
     },
     {
       "from": [
-        2,
-        15.35,
-        9
+        11.4,
+        16.02,
+        6.35
       ],
       "to": [
-        4.7,
-        15.53,
-        12.8
+        13.4,
+        16.2,
+        9.25
       ],
       "shade": false,
       "faces": {
@@ -303,80 +336,47 @@
     },
     {
       "from": [
-        5.1,
-        15.43,
-        9.6
-      ],
-      "to": [
-        7.8,
-        15.61,
-        13.399999999999999
-      ],
-      "shade": false,
-      "faces": {
-        "down": {
-          "texture": "#edge"
-        },
-        "up": {
-          "texture": "#card"
-        },
-        "north": {
-          "texture": "#edge"
-        },
-        "south": {
-          "texture": "#edge"
-        },
-        "west": {
-          "texture": "#edge"
-        },
-        "east": {
-          "texture": "#edge"
-        }
-      }
-    },
-    {
-      "from": [
-        8.3,
-        15.51,
-        9
-      ],
-      "to": [
-        11,
-        15.69,
-        12.8
-      ],
-      "shade": false,
-      "faces": {
-        "down": {
-          "texture": "#edge"
-        },
-        "up": {
-          "texture": "#card"
-        },
-        "north": {
-          "texture": "#edge"
-        },
-        "south": {
-          "texture": "#edge"
-        },
-        "west": {
-          "texture": "#edge"
-        },
-        "east": {
-          "texture": "#edge"
-        }
-      }
-    },
-    {
-      "from": [
-        11,
-        15.59,
+        2.6,
+        16.02,
         9.5
       ],
       "to": [
-        13.7,
-        15.77,
-        13.3
+        4.6,
+        16.2,
+        12.4
+      ],
+      "shade": false,
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#card"
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        4.8,
+        16.02,
+        9.5
+      ],
+      "to": [
+        6.8,
+        16.2,
+        12.4
       ],
       "shade": false,
       "faces": {

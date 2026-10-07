@@ -1,0 +1,9 @@
+{
+  "sources": [
+    {
+      "type": "single",
+      "resource": "mtgcard:item/card",
+      "sprite": "mtgcompanion:mtg_card_back"
+    }
+  ]
+}
