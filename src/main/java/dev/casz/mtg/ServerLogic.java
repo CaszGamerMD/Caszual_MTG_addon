@@ -4,6 +4,9 @@ import com.spider.mtgcard.util.*;
 import com.spider.mtgcard.cards.CardNbt;
 import com.spider.mtgcard.content.pack.cache.*;
 import com.spider.mtgcard.deckbox.DeckboxBlockEntity;
+import com.spider.mtgcard.cardstore.CardStoreBlockEntity;
+import com.spider.mtgcard.cardstore.CardStoreScreenHandler;
+import com.spider.mtgcard.cardstore.CardStorePrice;
 import com.spider.mtgcard.display.CardDisplayEntity;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.*;
@@ -16,7 +19,7 @@ import java.util.*;
 import java.util.concurrent.*;
 public final class ServerLogic {
  static final class Session {
-  final BlockPos pos;final int kind;final ResourceKey<Level> dimension;UUID entity,cardId;String deck="",report="";List<Wire.Row> statuses=List.of(),catalogueRows=List.of();String query="",oracle="",stats="",artKey="";boolean artwork=false;int mana=0;int page=0,revision=0;long last=0;boolean busy;
+  final BlockPos pos;final int kind;final ResourceKey<Level> dimension;UUID entity,cardId;String deck="",report="";List<Wire.Row> statuses=List.of(),catalogueRows=List.of();List<DeckList.Line> missingLines=List.of();String query="",oracle="",stats="",artKey="";boolean artwork=false;int mana=0;int page=0,revision=0;long last=0;boolean busy;
   Session(ServerPlayer p,BlockPos pos,int kind){this.pos=pos.immutable();this.kind=kind;dimension=p.level().dimension();}
  }
  static final Map<UUID,Session> sessions=new HashMap<>();
@@ -38,6 +41,7 @@ public final class ServerLogic {
     case "import_url" -> {if(s.kind==3)importArchidekt(p,s,req.text(),req.amount());}
     case "plan" -> {if(s.kind==3)plan(p,s,false,req.amount());}
     case "build" -> {if(s.kind==3)plan(p,s,true,req.amount());}
+    case "shop" -> {if(s.kind==3)shopMissing(p,s);}
     case "counter" -> {if(s.kind==4)editCounter(p,s,req.text(),req.amount());}
    }
   }catch(Exception e){s.busy=false;org.slf4j.LoggerFactory.getLogger("mtgcompanion").error("Request failed",e);reply(p,s,"Request failed: "+e.getMessage(),s.report);}
@@ -52,11 +56,18 @@ public final class ServerLogic {
  }
  static boolean matching(Session s,ItemStack card){return Banks.kind(card)==s.kind&&(s.kind==0?Catalogue.matchesMana(card,s.mana):Catalogue.matchesToken(card,s.oracle,s.stats));}
  static boolean sameArtFamily(ItemStack a,ItemStack b){String ai=StackData.readCustom(a).getString("mtgcompanion_oracle_id").orElse(""),bi=StackData.readCustom(b).getString("mtgcompanion_oracle_id").orElse("");if(!ai.isBlank()&&!bi.isBlank())return ai.equals(bi);var am=TcgCardMeta.read(a);var bm=TcgCardMeta.read(b);return am.name().equals(bm.name())&&am.typeLine().equals(bm.typeLine())&&am.oracleText().equals(bm.oracleText())&&am.power().equals(bm.power())&&am.toughness().equals(bm.toughness());}
- static void artworks(ServerPlayer p,Session s,String key,int requestedPage){s.busy=false;var entry=Banks.get(p.level().getServer()).entries.get(key);if(entry==null||!matching(s,entry.card())){reply(p,s,"Select a matching land or token first.","");return;}s.artwork=true;s.artKey=key;int page=Math.clamp(requestedPage,0,1000);catalogue(p,s,Catalogue.artworks(s.kind,entry.card(),page),page,entry.card().copy());}
+ static void artworks(ServerPlayer p,Session s,String key,int requestedPage){
+  s.busy=false;
+  ItemStack family=s.catalogueRows.stream().filter(row->row.key().equals(key)).map(Wire.Row::card).filter(card->!card.isEmpty()).findFirst().map(ItemStack::copy).orElse(ItemStack.EMPTY);
+  if(family.isEmpty()){var entry=Banks.get(p.level().getServer()).entries.get(key);if(entry!=null)family=entry.card().copy();}
+  if(family.isEmpty()||Banks.kind(family)!=s.kind){reply(p,s,"Select a matching land or token first.","");return;}
+  s.artwork=true;s.artKey=key;int page=Math.clamp(requestedPage,0,1000);
+  catalogue(p,s,Catalogue.artworks(s.kind,family,page),page,family);
+ }
  static void catalogue(ServerPlayer p,Session s,CompletableFuture<Catalogue.Page> future,int page,ItemStack family){s.busy=true;int revision=s.revision;future.whenComplete((result,error)->p.level().getServer().execute(()->{
    if(!valid(p,s)||s.revision!=revision)return;s.busy=false;
-   if(error!=null){List<Wire.Row> cached=family==null?rows(p,s,s.query,page):Banks.get(p.level().getServer()).search(s.kind,"").stream().filter(e->matching(s,e.getValue().card())&&sameArtFamily(family,e.getValue().card())).skip((long)page*40).limit(40).map(e->new Wire.Row(e.getKey(),e.getValue().card().copy(),-1)).toList();s.catalogueRows=cached;replyRows(p,s,"Online search unavailable; showing saved matching cards.",family==null?"":"art",cached);return;}
-   Banks bank=Banks.get(p.level().getServer());List<Wire.Row> found=new ArrayList<>();for(var hit:result.cards()){ItemStack card=CardStackBuilders.buildScryfallStackFromModel(hit.model(),false);Catalogue.metadata(card,hit.model(),hit.mana(),hit.fullArt());if(matching(s,card)&&(family==null||sameArtFamily(family,card))){bank.add(card,s.kind,1);found.add(new Wire.Row(Banks.key(s.kind,card),card,-1));}}
+   if(error!=null){List<Wire.Row> cached=family==null?rows(p,s,s.query,page):Banks.get(p.level().getServer()).search(s.kind,"").stream().filter(e->sameArtFamily(family,e.getValue().card())).skip((long)page*40).limit(40).map(e->new Wire.Row(e.getKey(),e.getValue().card().copy(),-1)).toList();s.catalogueRows=cached;replyRows(p,s,"Online search unavailable; showing saved matching cards.",family==null?"":"art",cached);return;}
+   Banks bank=Banks.get(p.level().getServer());List<Wire.Row> found=new ArrayList<>();for(var hit:result.cards()){ItemStack card=CardStackBuilders.buildScryfallStackFromModel(hit.model(),false);Catalogue.metadata(card,hit.model(),hit.mana(),hit.fullArt());if((family==null&&matching(s,card))||(family!=null&&Banks.kind(card)==s.kind&&sameArtFamily(family,card))){bank.add(card,s.kind,1);found.add(new Wire.Row(Banks.key(s.kind,card),card,-1));}}
    s.catalogueRows=List.copyOf(found);replyRows(p,s,(family==null?"Free catalogue":"Artwork choices")+" — page "+(page+1)+" · "+result.total()+" matches"+(result.hasMore()?" · more pages":""),family==null?"":"art",found);
   }));
  }
@@ -82,27 +93,31 @@ public final class ServerLogic {
  }
 
  static void resolveLands(ServerPlayer p,Session s,Runnable done){Set<Integer> linked=links(p,s);if(!linked.contains(0)&&!linked.contains(1)){done.run();return;}
-  Banks b=Banks.get(p.level().getServer());List<String> unknown=DeckList.parse(s.deck).lines().stream().map(DeckList.Line::name).filter(name->b.entries.values().stream().noneMatch(e->DeckList.normalize(TcgCardMeta.displayName(e.card())).equals(DeckList.normalize(name)))).limit(100).toList();
+  Banks b=Banks.get(p.level().getServer());List<String> unknown=DeckList.parse(s.deck).lines().stream().map(DeckList.Line::name).distinct().filter(name->b.entries.values().stream().noneMatch(e->DeckList.normalize(TcgCardMeta.displayName(e.card())).equals(DeckList.normalize(name)))).limit(100).toList();
   if(unknown.isEmpty()){done.run();return;}s.busy=true;reply(p,s,"Resolving land/token names…","");int revision=s.revision;
-  // Sequential requests respect MTGCard's own Scryfall service throttling.
-  CompletableFuture<List<ScryfallModels.Card>> chain=CompletableFuture.completedFuture(new ArrayList<>());
-  for(String name:unknown)chain=chain.thenCompose(list->ScryfallNamedFetch.fetchNamedFuzzyAsync(name).thenCompose(hit->{if(hit==null||!DeckList.normalize(hit.name()).equals(DeckList.normalize(name)))return CompletableFuture.completedFuture(null);return ScryfallExactFetch.fetchBySetCollectorAsync(p.level(),hit.set(),hit.collectorNumber());}).handle((card,error)->{if(card!=null)list.add(card);return list;}));
-  chain.whenComplete((models,error)->p.level().getServer().execute(()->{if(!valid(p,s)||s.revision!=revision)return;s.busy=false;if(models!=null)for(var model:models){ItemStack card=CardStackBuilders.buildScryfallStackFromModel(model,false);int kind=Banks.kind(card);if(kind<2&&linked.contains(kind))b.add(card,kind,1);}done.run();}));
+  List<CompletableFuture<ScryfallModels.Card>> requests=unknown.stream().map(name->ScryfallNamedFetch.fetchNamedFuzzyAsync(name)
+   .thenCompose(hit->{if(hit==null||!DeckList.normalize(hit.name()).equals(DeckList.normalize(name)))return CompletableFuture.<ScryfallModels.Card>completedFuture(null);return ScryfallExactFetch.fetchBySetCollectorAsync(p.level(),hit.set(),hit.collectorNumber());})
+   .exceptionally(error->null)).toList();
+  CompletableFuture.allOf(requests.toArray(CompletableFuture[]::new)).whenComplete((ignored,error)->p.level().getServer().execute(()->{
+   if(!valid(p,s)||s.revision!=revision)return;s.busy=false;
+   for(var request:requests){var model=request.getNow(null);if(model==null)continue;ItemStack card=CardStackBuilders.buildScryfallStackFromModel(model,false);int kind=Banks.kind(card);if(kind<2&&linked.contains(kind))b.add(card,kind,1);}
+   done.run();
+  }));
  }
  record Pick(String key,ItemStack card,boolean commander){}
  static boolean exactPrinting(DeckList.Line line,ItemStack card){if(!line.hasPrinting())return true;var meta=TcgCardMeta.read(card);return line.exactPrinting(meta.set(),meta.collectorNumber());}
  static void plan(ServerPlayer p,Session s,boolean build,int flags){if(s.deck.isBlank()){reply(p,s,"Import a decklist first.","");return;}Set<Integer> linked=links(p,s);
-  Banks b=Banks.get(p.level().getServer());var lines=DeckList.parse(s.deck).lines();Map<String,Long> available=new HashMap<>();for(var e:b.entries.entrySet())available.put(e.getKey(),e.getValue().count());List<Pick> picks=new ArrayList<>();List<String> missing=new ArrayList<>();List<Wire.Row> statuses=new ArrayList<>();StringBuilder summary=new StringBuilder();int requested=0,missingCount=0;
+  Banks b=Banks.get(p.level().getServer());var lines=DeckList.parse(s.deck).lines();Map<String,Long> available=new HashMap<>();for(var e:b.entries.entrySet())available.put(e.getKey(),e.getValue().count());List<Pick> picks=new ArrayList<>();List<String> missing=new ArrayList<>();List<DeckList.Line> missingLines=new ArrayList<>();List<Wire.Row> statuses=new ArrayList<>();StringBuilder summary=new StringBuilder();int requested=0,missingCount=0;
   boolean commanderFirst=(flags&2)!=0;
   int alternateArtCount=0;
   for(int i=0;i<lines.size();i++){
    var line=lines.get(i);int need=line.quantity();requested+=need;String name=DeckList.normalize(line.name());ItemStack preview=ItemStack.EMPTY;int alternateForLine=0;
    List<Map.Entry<String,Banks.Entry>> candidates=b.entries.entrySet().stream().filter(e->linked.contains(e.getValue().kind())&&DeckList.normalize(TcgCardMeta.displayName(e.getValue().card())).equals(name)).sorted((a,z)->Boolean.compare(line.exactPrinting(TcgCardMeta.read(z.getValue().card()).set(),TcgCardMeta.read(z.getValue().card()).collectorNumber()),line.exactPrinting(TcgCardMeta.read(a.getValue().card()).set(),TcgCardMeta.read(a.getValue().card()).collectorNumber()))).toList();
    for(var e:candidates){var entry=e.getValue();int amount=entry.kind()<2?need:(int)Math.min(need,available.getOrDefault(e.getKey(),0L));if(amount<=0)continue;if(preview.isEmpty())preview=entry.card().copy();boolean alternate=line.hasPrinting()&&!line.exactPrinting(TcgCardMeta.read(entry.card()).set(),TcgCardMeta.read(entry.card()).collectorNumber());if(alternate){alternateForLine+=amount;alternateArtCount+=amount;}for(int j=0;j<amount;j++)picks.add(new Pick(e.getKey(),entry.card(),commanderFirst&&i==0&&j==0));if(entry.kind()==2)available.put(e.getKey(),available.get(e.getKey())-amount);need-=amount;if(need==0)break;}
-   if(need>0){missing.add(line.shopLine(need));missingCount+=need;}
+   if(need>0){missing.add(line.shopLine(need));missingLines.add(new DeckList.Line(line.name(),need,line.set(),line.collector()));missingCount+=need;}
    String label=line.label()+(alternateForLine>0?" · alternate art":"");statuses.add(new Wire.Row(label,preview.copy(),line.quantity()-need,line.quantity()));summary.append(line.quantity()-need).append('/').append(line.quantity()).append(" ").append(label).append('\n');
   }
-  s.statuses=statuses;s.report=String.join("\n",missing)+(missing.isEmpty()?"":"\n");String msg="Requested "+requested+" | available "+picks.size()+" | missing "+missingCount+(alternateArtCount>0?" | alternate art "+alternateArtCount:"")+". Linked: "+linked.stream().sorted().map(k->k==0?"lands":k==1?"tokens":"community").toList();
+  s.statuses=statuses;s.missingLines=List.copyOf(missingLines);s.report=String.join("\n",missing)+(missing.isEmpty()?"":"\n");String msg="Requested "+requested+" | available "+picks.size()+" | missing "+missingCount+(alternateArtCount>0?" | alternate art "+alternateArtCount:"")+". Linked: "+linked.stream().sorted().map(k->k==0?"lands":k==1?"tokens":"community").toList();
   if(!build){replyRows(p,s,msg,s.report,statuses);return;}
   if(missingCount>0&&(flags&1)==0){replyRows(p,s,"Missing cards. Choose Build available to assemble a partial deck.",s.report,statuses);return;}
   if(picks.isEmpty()){reply(p,s,"No available cards to build.",s.report);return;}
@@ -114,6 +129,46 @@ public final class ServerLogic {
   // All availability checks and both inventory mutations run on the server thread.
   int slot=0;Map<String,Long> consumed=new HashMap<>();for(Pick pick:picks){ItemStack card=CardDatabaseCards.copyForExtraction(pick.card);card.setCount(1);CardDatabaseCards.ensureUniqueUid(card);box.setStack(pick.commander?DeckboxBlockEntity.FIRST_SIDE_SLOT:slot++,card);if(b.entries.get(pick.key).kind()==2)consumed.merge(pick.key,1L,Long::sum);}
   consumed.forEach(b::take);box.markDirty();box.persistExternalRecord();box.sync();replyRows(p,s,"Built "+picks.size()+" cards into the adjacent deckbox.",s.report,statuses);
+ }
+ static CardStoreBlockEntity nearbyStore(ServerPlayer p,Session s){
+  CardStoreBlockEntity best=null;double bestDistance=Double.MAX_VALUE;
+  for(BlockPos at:BlockPos.betweenClosed(s.pos.offset(-4,-4,-4),s.pos.offset(4,4,4))){
+   if(!p.level().hasChunkAt(at))continue;
+   if(p.level().getBlockEntity(at) instanceof CardStoreBlockEntity store){
+    double distance=at.distSqr(s.pos);
+    if(distance<bestDistance){best=store;bestDistance=distance;}
+   }
+  }
+  return best;
+ }
+ static CompletableFuture<CardStoreScreenHandler.CartEntryData> resolveStoreLine(ServerPlayer p,DeckList.Line line){
+  CompletableFuture<ScryfallModels.Card> future;
+  if(line.hasPrinting())future=ScryfallExactFetch.fetchBySetCollectorAsync(p.level(),line.set(),line.collector());
+  else future=ScryfallNamedFetch.fetchNamedFuzzyAsync(line.name()).thenCompose(hit->hit==null?CompletableFuture.<ScryfallModels.Card>completedFuture(null):ScryfallExactFetch.fetchBySetCollectorAsync(p.level(),hit.set(),hit.collectorNumber()));
+  return future.handle((model,error)->{
+   if(error!=null||model==null)return null;
+   ItemStack card=CardStackBuilders.buildScryfallStackFromModel(model,false);
+   if(card==null||card.isEmpty())return null;
+   long price=1L;
+   if(model.price!=null)price=CardStorePrice.toCurrencyItemsFromStrings(false,model.price.usd,model.price.usdFoil,model.price.usdEtched,model.price.eur,model.price.eurFoil,model.price.tix);
+   return new CardStoreScreenHandler.CartEntryData(TcgGameRegistry.MTG,model.set,model.collectorNumber,card,price,line.quantity());
+  });
+ }
+ static void shopMissing(ServerPlayer p,Session s){
+  if(s.missingLines.isEmpty()){reply(p,s,"No missing cards to send to the Card Store.",s.report);return;}
+  CardStoreBlockEntity store=nearbyStore(p,s);
+  if(store==null){reply(p,s,"No Card Store found within 4 blocks of the Deck Builder.",s.report);return;}
+  s.busy=true;int revision=s.revision;reply(p,s,"Preparing "+s.missingLines.size()+" missing card lines for the nearby Card Store…",s.report);
+  List<CompletableFuture<CardStoreScreenHandler.CartEntryData>> requests=s.missingLines.stream().map(line->resolveStoreLine(p,line)).toList();
+  CompletableFuture.allOf(requests.toArray(CompletableFuture[]::new)).whenComplete((ignored,error)->p.level().getServer().execute(()->{
+   if(!valid(p,s)||s.revision!=revision)return;s.busy=false;
+   List<CardStoreScreenHandler.CartEntryData> cart=requests.stream().map(r->r.getNow(null)).filter(Objects::nonNull).toList();
+   if(cart.isEmpty()){reply(p,s,"The Card Store could not resolve any missing cards.",s.report);return;}
+   store.setSelectedGame(p.getUUID(),TcgGameRegistry.MTG);
+   store.setSavedCart(p.getUUID(),cart);
+   reply(p,s,"Sent "+cart.size()+" missing card lines to the nearby Card Store.",s.report);
+   p.openMenu(store);
+  }));
  }
  static void editCounter(ServerPlayer p,Session s,String name,int value){if(name.isBlank()||name.length()>48||name.chars().anyMatch(c->Character.isISOControl(c))||value<0||value>1000000)return;CardDisplayEntity c=counter(p,s);if(c==null)return;var map=CardCounterNbt.readCounterMap(c.getDisplayCardStack(s.cardId));if(!map.containsKey(name)&&map.size()>=16){reply(p,s,"Maximum 16 counter types per card.","");return;}c.mutateDisplayCardStack(s.cardId,stack->{if(value==0)CardCounterNbt.removeCounter(stack,name);else CardCounterNbt.setCounter(stack,name,value);});reply(p,s,"Counters saved.","");}
 }
