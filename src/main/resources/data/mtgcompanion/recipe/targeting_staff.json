@@ -1,8 +1,9 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    " A",
-    "S "
+    "  A",
+    " S ",
+    "S  "
   ],
   "key": {
     "A": "minecraft:amethyst_shard",
