@@ -23,7 +23,7 @@ public final class DeckboxRefreshWire {
   Vec3 center=Vec3.atCenterOf(pos);
   for(ServerPlayer player:level.getServer().getPlayerList().getPlayers()){
    if(player.level()!=level)continue;
-   if(player.distanceToSqr(center)>16384.0)return;
+   if(player.distanceToSqr(center)>16384.0)continue;
    ServerPlayNetworking.send(player,new Refresh(pos.immutable()));
   }
  }
