@@ -1,18 +1,18 @@
 {
   "textures": {
-    "card": "minecraft:block/blue_concrete",
+    "card": "mtgcompanion:mtg_card_back",
     "edge": "minecraft:block/black_concrete"
   },
   "elements": [
     {
       "from": [
         4,
-        15.25,
+        16.02,
         3
       ],
       "to": [
         12,
-        18,
+        18.77,
         13
       ],
       "shade": false,
@@ -40,12 +40,12 @@
     {
       "from": [
         3.85,
-        18,
+        18.77,
         2.85
       ],
       "to": [
         12.15,
-        18.18,
+        18.95,
         13.15
       ],
       "shade": false,
