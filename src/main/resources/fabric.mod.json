@@ -8,6 +8,7 @@
     "Casz"
   ],
   "license": "MIT",
+  "icon": "assets/mtgcompanion/icon.png",
   "environment": "*",
   "entrypoints": {
     "main": [
