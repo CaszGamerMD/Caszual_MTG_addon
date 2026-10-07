@@ -1,6 +1,63 @@
 {
-  "parent": "minecraft:item/handheld",
   "textures": {
-    "layer0": "minecraft:item/blaze_rod"
+    "shaft": "minecraft:block/dark_oak_planks",
+    "gem": "minecraft:block/amethyst_block"
+  },
+  "elements": [
+    {
+      "from": [7, -14, 7],
+      "to": [9, 22, 9],
+      "faces": {
+        "north": {"texture": "#shaft"},
+        "south": {"texture": "#shaft"},
+        "west": {"texture": "#shaft"},
+        "east": {"texture": "#shaft"},
+        "up": {"texture": "#shaft"},
+        "down": {"texture": "#shaft"}
+      }
+    },
+    {
+      "from": [5.5, 20, 5.5],
+      "to": [10.5, 25, 10.5],
+      "faces": {
+        "north": {"texture": "#gem"},
+        "south": {"texture": "#gem"},
+        "west": {"texture": "#gem"},
+        "east": {"texture": "#gem"},
+        "up": {"texture": "#gem"},
+        "down": {"texture": "#gem"}
+      }
+    }
+  ],
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [0, 0, 0],
+      "translation": [0, 2, 1],
+      "scale": [0.75, 0.75, 0.75]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [0, 0, 0],
+      "translation": [0, 2, 1],
+      "scale": [0.75, 0.75, 0.75]
+    },
+    "firstperson_righthand": {
+      "rotation": [0, -12, 0],
+      "translation": [1, 4, 1],
+      "scale": [0.72, 0.72, 0.72]
+    },
+    "firstperson_lefthand": {
+      "rotation": [0, 12, 0],
+      "translation": [-1, 4, 1],
+      "scale": [0.72, 0.72, 0.72]
+    },
+    "gui": {
+      "rotation": [25, 35, 0],
+      "translation": [0, -2, 0],
+      "scale": [0.45, 0.45, 0.45]
+    },
+    "ground": {
+      "translation": [0, 4, 0],
+      "scale": [0.5, 0.5, 0.5]
+    }
   }
 }
