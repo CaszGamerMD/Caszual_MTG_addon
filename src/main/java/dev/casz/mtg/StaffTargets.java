@@ -49,7 +49,7 @@ public final class StaffTargets {
  public static void clearAllForDisconnect(ServerPlayer owner){clear(owner);}
 
  private static Entity find(ServerPlayer owner,UUID id){
-  for(ServerLevel level:owner.getServer().getAllLevels()){
+  for(ServerLevel level:owner.level().getServer().getAllLevels()){
    Entity entity=level.getEntity(id);
    if(entity!=null)return entity;
   }
