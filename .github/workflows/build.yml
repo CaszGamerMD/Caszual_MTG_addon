@@ -2,7 +2,7 @@ name: Build MTG Companion
 
 on:
   push:
-    branches: [ main, fix-hand-card-back-uv ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
