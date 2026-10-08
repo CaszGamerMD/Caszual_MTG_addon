@@ -2,7 +2,7 @@ name: Build MTG Companion
 
 on:
   push:
-    branches: [ main, fix-staff-hand-rendering ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
