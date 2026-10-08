@@ -21,7 +21,13 @@
           "texture": "#edge"
         },
         "up": {
-          "texture": "#card"
+          "texture": "#card",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#edge"
@@ -54,7 +60,13 @@
           "texture": "#edge"
         },
         "up": {
-          "texture": "#card"
+          "texture": "#card",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#edge"
@@ -87,7 +99,13 @@
           "texture": "#edge"
         },
         "up": {
-          "texture": "#card"
+          "texture": "#card",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#edge"
@@ -120,7 +138,13 @@
           "texture": "#edge"
         },
         "up": {
-          "texture": "#card"
+          "texture": "#card",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#edge"
@@ -153,7 +177,13 @@
           "texture": "#edge"
         },
         "up": {
-          "texture": "#card"
+          "texture": "#card",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#edge"
@@ -186,7 +216,13 @@
           "texture": "#edge"
         },
         "up": {
-          "texture": "#card"
+          "texture": "#card",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#edge"
@@ -219,7 +255,13 @@
           "texture": "#edge"
         },
         "up": {
-          "texture": "#card"
+          "texture": "#card",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#edge"
@@ -252,7 +294,13 @@
           "texture": "#edge"
         },
         "up": {
-          "texture": "#card"
+          "texture": "#card",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#edge"
@@ -285,7 +333,13 @@
           "texture": "#edge"
         },
         "up": {
-          "texture": "#card"
+          "texture": "#card",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "north": {
           "texture": "#edge"
