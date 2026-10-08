@@ -16,14 +16,14 @@ public abstract class StaffPoseMixin {
  @Inject(method="setupAnim",at=@At("TAIL"))
  private void companion$staffPose(HumanoidRenderState state,CallbackInfo ci){
   if(state.rightHandItemStack.is(Companion.TARGETING_STAFF)){
-   rightArm.xRot=-1.20F;
-   rightArm.yRot=-0.12F;
-   rightArm.zRot=0.05F;
+   rightArm.xRot=-1.55F;
+   rightArm.yRot=-0.03F;
+   rightArm.zRot=0.0F;
   }
   if(state.leftHandItemStack.is(Companion.TARGETING_STAFF)){
-   leftArm.xRot=-1.20F;
-   leftArm.yRot=0.12F;
-   leftArm.zRot=-0.05F;
+   leftArm.xRot=-1.55F;
+   leftArm.yRot=0.03F;
+   leftArm.zRot=0.0F;
   }
  }
 }
