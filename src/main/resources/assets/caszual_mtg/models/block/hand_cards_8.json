@@ -1,6 +1,6 @@
 {
   "textures": {
-    "card": "mtgcompanion:mtg_card_back",
+    "card": "caszual_mtg:mtg_card_back",
     "edge": "minecraft:block/black_concrete"
   },
   "elements": [

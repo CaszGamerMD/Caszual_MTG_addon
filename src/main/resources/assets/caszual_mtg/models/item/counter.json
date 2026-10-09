@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "mtgcompanion:item/counter"
+    "layer0": "caszual_mtg:item/counter"
   }
 }
