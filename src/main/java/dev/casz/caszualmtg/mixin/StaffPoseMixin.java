@@ -1,6 +1,6 @@
-package dev.casz.mtg.mixin;
+package dev.casz.caszualmtg.mixin;
 
-import dev.casz.mtg.Companion;
+import dev.casz.caszualmtg.CaszualMtg;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
@@ -15,12 +15,12 @@ public abstract class StaffPoseMixin {
 
  @Inject(method="setupAnim",at=@At("TAIL"))
  private void companion$staffPose(HumanoidRenderState state,CallbackInfo ci){
-  if(state.rightHandItemStack.is(Companion.TARGETING_STAFF)){
+  if(state.rightHandItemStack.is(CaszualMtg.TARGETING_STAFF)){
    rightArm.xRot=-1.55F;
    rightArm.yRot=-0.03F;
    rightArm.zRot=0.0F;
   }
-  if(state.leftHandItemStack.is(Companion.TARGETING_STAFF)){
+  if(state.leftHandItemStack.is(CaszualMtg.TARGETING_STAFF)){
    leftArm.xRot=-1.55F;
    leftArm.yRot=0.03F;
    leftArm.zRot=0.0F;
