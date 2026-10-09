@@ -2,7 +2,7 @@ name: Build Caszual MTG
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, rebrand-caszual-mtg ]
   workflow_dispatch:
 
 jobs:
