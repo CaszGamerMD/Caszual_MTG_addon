@@ -6,7 +6,7 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "mtgcompanion:custom_deckbox",
+          "name": "caszual_mtg:custom_deckbox",
           "functions": [
             {
               "function": "minecraft:copy_components",
@@ -15,7 +15,7 @@
                 "minecraft:custom_name",
                 "minecraft:lock",
                 "minecraft:container_loot",
-                "mtgcompanion:box_material"
+                "caszual_mtg:box_material"
               ]
             },
             {

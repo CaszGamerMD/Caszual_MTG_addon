@@ -6,7 +6,7 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "mtgcompanion:community_database"
+          "name": "caszual_mtg:deck_builder"
         }
       ],
       "conditions": [

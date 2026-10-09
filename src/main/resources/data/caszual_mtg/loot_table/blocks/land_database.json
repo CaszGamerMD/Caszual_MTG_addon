@@ -6,7 +6,7 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "mtgcompanion:land_database"
+          "name": "caszual_mtg:land_database"
         }
       ],
       "conditions": [
