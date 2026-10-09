@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 
 import com.google.gson.*;
 import java.net.*;
@@ -27,7 +27,7 @@ public final class ArchidektImport {
  public static CompletableFuture<Result> fetch(String url){
   long id=deckId(url);
   HttpRequest request=HttpRequest.newBuilder(URI.create("https://archidekt.com/api/decks/"+id+"/"))
-   .timeout(Duration.ofSeconds(20)).header("Accept","application/json").header("User-Agent","MTGCompanion/0.5.0 (Minecraft MTGCard addon)").GET().build();
+   .timeout(Duration.ofSeconds(20)).header("Accept","application/json").header("User-Agent","CaszualMTG/0.5.0 (Minecraft MTGCard addon)").GET().build();
   return HTTP.sendAsync(request,HttpResponse.BodyHandlers.ofByteArray()).thenApply(response->{
    if(response.statusCode()==401||response.statusCode()==403)throw new CompletionException(new IllegalArgumentException("That Archidekt deck is private or unavailable. Public and unlisted decks are supported."));
    if(response.statusCode()==404)throw new CompletionException(new IllegalArgumentException("Archidekt could not find that deck. Check the link, or make sure the deck is public/unlisted rather than private."));

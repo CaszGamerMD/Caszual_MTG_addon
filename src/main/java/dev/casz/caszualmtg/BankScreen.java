@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 import com.spider.mtgcard.client.compat.*;
 import com.spider.mtgcard.util.TcgCardMeta;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -44,7 +44,7 @@ public final class BankScreen extends LegacyScreen {
  @Override public void render(GuiGraphics g,int mx,int my,float delta){g.fill(0,0,width,height,0xC0080E18);g.fill(x,y,x+w,y+h,0xFF152032);g.drawString(font,title,x+12,y+12,0xFFFFFFFF);int messageY=kind==0?108:kind<2?88:kind==3?86:62;int helpY=kind==0?123:kind<2?103:kind==3?101:77;g.drawString(font,font.plainSubstrByWidth(data.message(),w-24),x+12,y+messageY,0xFFB3DFFF);
   String help=kind==3?"Databases/Card Store: within 4 blocks · Output: empty deckbox touching builder":kind==4?"Click a counter to edit. Setting zero removes it.":"Click a card to select it · Scroll the list · Land/token copies are unlimited";g.drawString(font,font.plainSubstrByWidth(help,w-24),x+12,y+helpY,0xFF9CADC6);
   int listW=w-206;if(kind<3)CardBrowser.render(g,font,data.rows(),x+12,y+listTop(),listW,h-listTop()-66,scroll,selected,grid,artMode);else for(int i=0;i<visible();i++){int at=scroll+i;if(at>=data.rows().size())break;var row=data.rows().get(at);int ry=y+listTop()+i*24;g.fill(x+12,ry,x+12+listW,ry+22,at==selected?0xFF365880:0xFF22324B);String label=kind==3?(row.count()<0?"… ":row.count()>=row.requested()?"✓ ":row.count()>0?"◐ ":"✗ ")+row.key()+" ["+(row.count()<0?"?":row.count())+"/"+row.requested()+"]":kind==4?row.key()+" : "+row.count():TcgCardMeta.displayName(row.card())+"  ["+(row.count()<0?"∞":row.count())+"]";g.drawString(font,font.plainSubstrByWidth(label,listW-12),x+18,ry+7,kind==3?(row.count()>=row.requested()?0xFF90E8A0:row.count()>0?0xFFFFD37E:0xFFFF9E9E):0xFFFFFFFF);}
-  ItemStack card=selected>=0&&selected<data.rows().size()?data.rows().get(selected).card():kind==4&&!data.rows().isEmpty()?data.rows().getFirst().card():ItemStack.EMPTY;if(!card.isEmpty())ClientCompanion.art(g,card,face%Math.max(1,TcgCardMeta.faceCount(card)),x+w-182,y+listTop(),170,h-listTop()-68);
+  ItemStack card=selected>=0&&selected<data.rows().size()?data.rows().get(selected).card():kind==4&&!data.rows().isEmpty()?data.rows().getFirst().card():ItemStack.EMPTY;if(!card.isEmpty())CaszualMtgClient.art(g,card,face%Math.max(1,TcgCardMeta.faceCount(card)),x+w-182,y+listTop(),170,h-listTop()-68);
   if(data.rows().isEmpty()&&kind==3){g.drawString(font,"Paste an Archidekt URL, import .txt, drag a file here, or paste a decklist.",x+16,y+134,0xFFFFFFFF);if(!data.report().isBlank()){g.drawString(font,"Missing cards (Shop missing opens TCGplayer):",x+16,y+134,0xFFFFCC88);int ry=y+154;for(String line:data.report().split("\\R")){if(ry>y+h-86)break;g.drawString(font,font.plainSubstrByWidth(line,w-32),x+16,ry,0xFFFFDDAB);ry+=14;}}}
   if(!localMessage.isEmpty())g.drawString(font,font.plainSubstrByWidth(localMessage,w-112),x+12,y+h-23,0xFFFFDA8A);
   super.render(g,mx,my,delta);

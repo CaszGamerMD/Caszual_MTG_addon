@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 import com.mojang.serialization.*;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.spider.mtgcard.api.*;
@@ -12,7 +12,7 @@ public final class Banks extends SavedData {
   static final Codec<Entry> CODEC=RecordCodecBuilder.create(i->i.group(Codec.INT.fieldOf("kind").forGetter(Entry::kind),ItemStack.CODEC.fieldOf("card").forGetter(Entry::card),Codec.LONG.fieldOf("count").forGetter(Entry::count)).apply(i,Entry::new));
  }
  public static final Codec<Banks> CODEC=Entry.CODEC.listOf().fieldOf("entries").codec().xmap(Banks::new,b->new ArrayList<>(b.entries.values()));
- public static final SavedDataType<Banks> TYPE=new SavedDataType<>(Companion.id("community_banks"),Banks::new,CODEC,null);
+ public static final SavedDataType<Banks> TYPE=new SavedDataType<>(CaszualMtg.id("community_banks"),Banks::new,CODEC,null);
  final Map<String,Entry> entries=new LinkedHashMap<>();
  public Banks(){}
  private Banks(List<Entry> saved){for(Entry e:saved)if(e.kind>=0&&e.kind<=2&&e.count>0&&(e.kind==2||kind(e.card)==e.kind))entries.put(key(e.kind,e.card),e);}

@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 public final class Catalogue {
  static final Gson GSON=new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
  static final Pattern TOKEN=Pattern.compile("\\bToken\\b",Pattern.CASE_INSENSITIVE), LAND=Pattern.compile("\\bLand\\b",Pattern.CASE_INSENSITIVE);
- static final String MANA="WUBRGC", MANA_TAG="mtgcompanion_produced_mana", FULL_ART_TAG="mtgcompanion_full_art";
+ static final String MANA="WUBRGC", MANA_TAG="caszual_mtg_produced_mana", FULL_ART_TAG="caszual_mtg_full_art";
  static final HttpClient HTTP=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
  public record Hit(ScryfallModels.Card model,int mana,boolean fullArt){}
  public record Page(List<Hit> cards,int total,boolean hasMore){}
@@ -35,8 +35,8 @@ public final class Catalogue {
  public static String[] stats(String text){if(text.isBlank())return null;var m=Pattern.compile("^\\s*(\\d{1,3})\\s*/\\s*(\\d{1,3})\\s*$").matcher(text);if(!m.matches())throw new IllegalArgumentException("Power/toughness must be numbers, for example 1/1.");return new String[]{Integer.toString(Integer.parseInt(m.group(1))),Integer.toString(Integer.parseInt(m.group(2)))};}
  public static boolean matchesToken(ItemStack card,String oracle,String stats){var meta=TcgCardMeta.read(card);String[] pt=stats(stats);return isToken(meta.typeLine())&&(oracle.isBlank()||meta.oracleText().toLowerCase(Locale.ROOT).contains(oracle.trim().toLowerCase(Locale.ROOT)))&&(pt==null||meta.power().equals(pt[0])&&meta.toughness().equals(pt[1]));}
  public static boolean acceptsLand(int produced,int identity,boolean legal,int selected){if(!legal)return false;if((selected&63)==0)return true;int colored=selected&31;return (identity&~colored)==0&&((produced&31)&~colored)==0&&(produced&selected)!=0;}
- public static void metadata(ItemStack card,ScryfallModels.Card model,int mana,boolean fullArt){var tag=StackData.readCustom(card);tag.putInt(MANA_TAG,mana&63);tag.putBoolean(FULL_ART_TAG,fullArt);tag.putString("mtgcompanion_oracle_id",model.oracleId==null?"":model.oracleId);StackData.writeCustom(card,tag);}
- public static String artworkQuery(int kind,ItemStack card){String oracle=StackData.readCustom(card).getString("mtgcompanion_oracle_id").orElse("");if(oracle.matches("[0-9a-fA-F-]{36}"))return (kind==0?"t:land legal:commander":"t:token")+" oracleid:"+oracle;var meta=TcgCardMeta.read(card);return (kind==0?"t:land legal:commander":"t:token")+" !"+quote(meta.name());}
+ public static void metadata(ItemStack card,ScryfallModels.Card model,int mana,boolean fullArt){var tag=StackData.readCustom(card);tag.putInt(MANA_TAG,mana&63);tag.putBoolean(FULL_ART_TAG,fullArt);tag.putString("caszual_mtg_oracle_id",model.oracleId==null?"":model.oracleId);StackData.writeCustom(card,tag);}
+ public static String artworkQuery(int kind,ItemStack card){String oracle=StackData.readCustom(card).getString("caszual_mtg_oracle_id").orElse("");if(oracle.matches("[0-9a-fA-F-]{36}"))return (kind==0?"t:land legal:commander":"t:token")+" oracleid:"+oracle;var meta=TcgCardMeta.read(card);return (kind==0?"t:land legal:commander":"t:token")+" !"+quote(meta.name());}
  public static int manaMask(JsonObject card){int mask=0;var arr=card.getAsJsonArray("produced_mana");if(arr!=null)for(var e:arr){int i=MANA.indexOf(e.getAsString());if(i>=0)mask|=1<<i;}return mask;}
  public static void setMana(ItemStack card,int mask){var tag=StackData.readCustom(card);tag.putInt(MANA_TAG,mask&63);StackData.writeCustom(card,tag);}
  public static boolean matchesMana(ItemStack card,int filter){var meta=TcgCardMeta.read(card);int mask=filter&63,landMode=(filter>>6)&3;boolean fullArt=(filter&256)!=0,basic=meta.typeLine().toLowerCase(Locale.ROOT).contains("basic land");if(landMode==1&&!basic||landMode==2&&basic)return false;int identity=0;for(String c:meta.colorIdentity()){int i=MANA.indexOf(c.toUpperCase(Locale.ROOT));if(i>=0&&i<5)identity|=1<<i;}var tag=StackData.readCustom(card);if(fullArt&&!tag.getBoolean(FULL_ART_TAG).orElse(false))return false;if(mask!=0&&!tag.contains(MANA_TAG))return false;return acceptsLand(tag.getInt(MANA_TAG).orElse(0),identity,"legal".equalsIgnoreCase(meta.commanderLegality()),mask);}
@@ -49,7 +49,7 @@ public final class Catalogue {
  static JsonObject fetch(String query,int page,String unique)throws Exception{
   String url="https://api.scryfall.com/cards/search?q="+URLEncoder.encode(query,StandardCharsets.UTF_8)+"&include_extras=true&unique="+unique+"&order=name&page="+page;
   synchronized(CACHE){var c=CACHE.get(url);if(c!=null&&System.currentTimeMillis()-c.time<300000)return c.json;}
-  var request=HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(20)).header("Accept","application/json").header("User-Agent","MTGCompanion/0.4.0 (Minecraft MTGCard addon)").GET().build();
+  var request=HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(20)).header("Accept","application/json").header("User-Agent","CaszualMTG/0.4.0 (Minecraft MTGCard addon)").GET().build();
   var response=HTTP.send(request,HttpResponse.BodyHandlers.ofInputStream());byte[] bytes;try(var body=response.body()){bytes=body.readNBytes(8*1024*1024+1);}if(bytes.length>8*1024*1024)throw new IllegalStateException("Catalogue response too large");
   JsonObject json=JsonParser.parseString(new String(bytes,StandardCharsets.UTF_8)).getAsJsonObject();if(response.statusCode()==404){JsonObject empty=new JsonObject();empty.add("data",new JsonArray());empty.addProperty("total_cards",0);empty.addProperty("has_more",false);return empty;}if(response.statusCode()!=200)throw new IllegalStateException("Catalogue HTTP "+response.statusCode());
   synchronized(CACHE){if(CACHE.size()>=32)CACHE.remove(CACHE.keySet().iterator().next());CACHE.put(url,new Cached(json,System.currentTimeMillis()));}return json;
