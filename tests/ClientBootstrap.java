@@ -7,6 +7,11 @@ public final class ClientBootstrap {
   Thread.currentThread().setContextClassLoader(cl);
   Class.forName("net.minecraft.SharedConstants",true,cl).getMethod("tryDetectVersion").invoke(null);
   Class.forName("net.minecraft.server.Bootstrap",true,cl).getMethod("bootStrap").invoke(null);
+  // Simulate Caszual MTG loading before the MTGCard main entrypoint:
+  // its safety guard must return 'not ready', not abort the client.
+  Object readiness=Class.forName("dev.casz.caszualmtg.MtgBlockEntitySafety",true,cl)
+      .getMethod("verifyIfReady").invoke(null);
+  if(!(readiness instanceof Boolean))throw new AssertionError("Expected boolean initialization status");
   Class.forName("dev.casz.caszualmtg.CaszualMtg",true,cl).getConstructor().newInstance();
   Class.forName("dev.casz.caszualmtg.CaszualMtgClient",true,cl).getConstructor().newInstance();
   Class.forName("dev.casz.caszualmtg.CommunityScreen",true,cl);
