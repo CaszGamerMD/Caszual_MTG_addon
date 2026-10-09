@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "mtgcompanion:item/token_database"
+    "model": "caszual_mtg:item/targeting_staff"
   }
 }

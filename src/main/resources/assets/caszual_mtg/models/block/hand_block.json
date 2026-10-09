@@ -1,8 +1,8 @@
 {
   "textures": {
-    "particle": "mtgcompanion:block/community_database_side",
-    "top": "mtgcompanion:block/community_database_top",
-    "side": "mtgcompanion:block/community_database_side"
+    "particle": "caszual_mtg:block/community_database_side",
+    "top": "caszual_mtg:block/community_database_top",
+    "side": "caszual_mtg:block/community_database_side"
   },
   "elements": [
     {
