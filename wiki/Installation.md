@@ -2,7 +2,7 @@
 
 ## Requirements
 
-MTG Companion 0.6.0 requires:
+Caszual MTG 0.6.0 requires:
 
 - Minecraft **26.2**
 - Fabric Loader **0.19.3+**
@@ -13,15 +13,15 @@ MTG Companion 0.6.0 requires:
 ## Install
 
 1. Install Fabric for Minecraft 26.2.
-2. Put MTGCard, Fabric API, and `mtgcompanion-0.6.0.jar` in the `mods` folder.
+2. Put MTGCard, Fabric API, and `caszual-mtg-0.6.0.jar` in the `mods` folder.
 3. Install the same mod versions on the server and on every player client.
 4. Restart Minecraft/server.
 
-Do not leave older MTG Companion jars in the mods folder at the same time.
+Do not leave older Caszual MTG jars in the mods folder at the same time.
 
 ## Creative tab
 
-MTG Companion places its functional blocks/items into Minecraft's **Functional Blocks** creative tab:
+Caszual MTG places its functional blocks/items into Minecraft's **Functional Blocks** creative tab:
 
 - Community Land Catalogue
 - Community Token Catalogue
