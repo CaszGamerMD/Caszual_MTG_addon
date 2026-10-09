@@ -45,7 +45,7 @@ with zipfile.ZipFile(sys.argv[1]) as jar:
         assert not any(name.startswith(prefix) for prefix in reserved) or name in mixins, ('Ordinary class is in reserved mixin package', name)
         for tag, value in pool.values():
             if tag == 1:
-                assert b'dev/casz/mtg/ContainerAccess' not in value, 'Stale accessor reference'
+                assert b'dev/casz/caszualmtg/ContainerAccess' not in value, 'Stale accessor reference'
     assert mixins <= classes, 'Mixin class missing from jar'
     for entries in mod['entrypoints'].values():
         for entry in entries:
