@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "mtgcompanion:item/counter"
+    "model": "caszual_mtg:item/hand_block"
   }
 }
