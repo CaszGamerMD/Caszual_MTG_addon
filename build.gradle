@@ -1,7 +1,7 @@
 plugins {
     id 'net.fabricmc.fabric-loom' version "${loom_version}"
 }
-base { archivesName = 'mtgcompanion' }
+base { archivesName = 'caszual-mtg' }
 
 repositories {
     maven {
@@ -26,7 +26,7 @@ java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_25; targetCom
 tasks.register('verifyDeckLists', JavaExec) {
     dependsOn testClasses
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'dev.casz.mtg.DeckListCheck'
+    mainClass = 'dev.casz.caszualmtg.DeckListCheck'
 }
 tasks.named('check') { dependsOn verifyDeckLists }
 tasks.register('writeRuntimeClasspath') { doLast { file('build/runtime-classpath.txt').text = sourceSets.main.runtimeClasspath.asPath } }
@@ -36,12 +36,12 @@ tasks.named("test") { enabled = false }
 tasks.register('verifyCatalogue', JavaExec) {
     dependsOn testClasses
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'dev.casz.mtg.CatalogueCheck'
+    mainClass = 'dev.casz.caszualmtg.CatalogueCheck'
 }
 tasks.named('check') { dependsOn verifyCatalogue }
 tasks.register('verifyArchidekt', JavaExec) {
     dependsOn testClasses
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'dev.casz.mtg.ArchidektImportCheck'
+    mainClass = 'dev.casz.caszualmtg.ArchidektImportCheck'
 }
 tasks.named('check') { dependsOn verifyArchidekt }

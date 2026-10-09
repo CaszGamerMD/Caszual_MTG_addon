@@ -1,4 +1,4 @@
-# MTG Companion 0.6.0 — expanded test build
+# Caszual MTG 0.6.0 — expanded test build
 
 ## Documentation
 
@@ -8,7 +8,7 @@ A separate addon for Minecraft **26.2 Fabric**, built against **MTGCard 1.7.0-26
 
 ## Install
 
-Put `mtgcompanion-0.6.0.jar` in the `mods` folder on both the server and every player's client. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+Put `caszual-mtg-0.6.0.jar` in the `mods` folder on both the server and every player's client. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
 
 ## Blocks and counter tool
 
@@ -31,7 +31,7 @@ The Deck Control gains **Discard Random from Hand**. It chooses a card server-si
 
 ## Grid view and artwork
 
-All three databases have a List/Grid toggle. The choice is shared by every MTG Companion card browser and remembered between sessions. Grid shows enlarged cards four across; scroll to see more, and select a tile for the larger side preview. The community grid shows the actual printings available in shared stock.
+All three databases have a List/Grid toggle. The choice is shared by every Caszual MTG card browser and remembered between sessions. Grid shows enlarged cards four across; scroll to see more, and select a tile for the larger side preview. The community grid shows the actual printings available in shared stock.
 
 In the land or token database, select a card and click **Choose artwork**. Alternate artwork choices open in a grid for that same card. Select a printing, set the quantity, then **Take selected** to receive that printing. Previous/Next browse artwork pages; **Back to search** returns to the original filters. New artwork choices require an online search; saved matching choices remain available if that search fails.
 
@@ -98,4 +98,4 @@ The source zip does not redistribute MTGCard. Put your `MtgCard-fabric-1.7.0-26.
 
 ## Retained startup fix
 
-Moved the client container accessor into `dev.casz.mtg.mixin`, separate from all regular addon classes. This fixes the client IllegalClassLoadError caused by Mixin reserving the main addon package. Remove older MTG Companion jars before installing 0.4.0. Update both clients and server together: this version changes the search network messages and retains the custom deckbox and material component.
+Moved the client container accessor into `dev.casz.caszualmtg.mixin`, separate from all regular addon classes. This fixes the client IllegalClassLoadError caused by Mixin reserving the main addon package. Remove older Caszual MTG jars before installing 0.4.0. Update both clients and server together: this version changes the search network messages and retains the custom deckbox and material component.
