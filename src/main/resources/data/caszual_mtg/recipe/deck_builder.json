@@ -10,10 +10,10 @@
     "G": "minecraft:glass",
     "I": "minecraft:iron_ingot",
     "R": "minecraft:redstone",
-    "D": "minecraft:purple_dye"
+    "D": "minecraft:crafting_table"
   },
   "result": {
-    "id": "mtgcompanion:community_database",
+    "id": "caszual_mtg:deck_builder",
     "count": 1
   }
 }

@@ -10,7 +10,7 @@
     "R": "minecraft:redstone"
   },
   "result": {
-    "id": "mtgcompanion:counter",
+    "id": "caszual_mtg:counter",
     "count": 1
   }
 }

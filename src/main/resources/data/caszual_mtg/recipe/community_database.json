@@ -2,18 +2,18 @@
   "type": "minecraft:crafting_shaped",
   "category": "redstone",
   "pattern": [
-    "PPP",
-    "GCG",
+    "IGI",
+    "RDR",
     "III"
   ],
   "key": {
-    "P": "minecraft:paper",
     "G": "minecraft:glass",
-    "C": "#c:chests",
-    "I": "minecraft:iron_ingot"
+    "I": "minecraft:iron_ingot",
+    "R": "minecraft:redstone",
+    "D": "minecraft:purple_dye"
   },
   "result": {
-    "id": "mtgcompanion:hand_block",
+    "id": "caszual_mtg:community_database",
     "count": 1
   }
 }
