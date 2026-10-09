@@ -1,4 +1,4 @@
-# Caszual MTG 0.6.0 — expanded test build
+# Caszual MTG 0.6.1 — expanded test build
 
 ## Documentation
 
@@ -8,7 +8,7 @@ A separate addon for Minecraft **26.2 Fabric**, built against **MTGCard 1.7.0-26
 
 ## Install
 
-Put `caszual-mtg-0.6.0.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+Put `caszual-mtg-0.6.1.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
 
 ## Blocks and counter tool
 
@@ -90,7 +90,7 @@ The community collections are stored in the overworld SavedData file for this ad
 
 ## Validation and limits
 
-The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.6.0 as a test build.
+The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.6.1 as a test build.
 
 ## MTGCard + Mouse Tweaks startup crash workaround
 
@@ -104,4 +104,4 @@ The source zip does not redistribute MTGCard. Put your `MtgCard-fabric-1.7.0-26.
 
 ## Retained startup fix
 
-Moved the client container accessor into `dev.casz.caszualmtg.mixin`, separate from all regular addon classes. This fixes the client IllegalClassLoadError caused by Mixin reserving the main addon package. Remove older Caszual MTG jars before installing 0.6.0. Update both clients and server together: this version changes the search network messages and retains the custom deckbox and material component.
+Moved the client container accessor into `dev.casz.caszualmtg.mixin`, separate from all regular addon classes. This fixes the client IllegalClassLoadError caused by Mixin reserving the main addon package. Remove older Caszual MTG jars before installing 0.6.1. Update both clients and server together: this version changes the search network messages and retains the custom deckbox and material component.
