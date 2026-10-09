@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 
 import com.spider.mtgcard.deckcontrol.DeckControlBlockEntity;
 import com.spider.mtgcard.graveyard.GraveyardBlockEntity;

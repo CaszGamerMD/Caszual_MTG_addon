@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 import com.spider.mtgcard.api.*;
 import com.spider.mtgcard.util.*;
 import com.spider.mtgcard.cards.CardNbt;
@@ -24,8 +24,8 @@ public final class ServerLogic {
  }
  static final Map<UUID,Session> sessions=new HashMap<>();
  public static void close(ServerPlayer p){sessions.remove(p.getUUID());}
- static boolean valid(ServerPlayer p,Session s){if(sessions.get(p.getUUID())!=s||p.isRemoved()||!p.level().dimension().equals(s.dimension)||p.distanceToSqr(Vec3.atCenterOf(s.pos))>64||!p.level().hasChunkAt(s.pos))return false;if(s.kind==2&&(!(p.containerMenu instanceof CommunityMenu m)||!m.pos.equals(s.pos)))return false;return s.kind==4?counter(p,s)!=null:Companion.kind(p.level().getBlockState(s.pos).getBlock())==s.kind;}
- static CardDisplayEntity counter(ServerPlayer p,Session s){var e=p.level().getEntity(s.entity);return e instanceof CardDisplayEntity c&&!c.isRemoved()&&p.distanceToSqr(c)<64&&(p.getMainHandItem().is(Companion.COUNTER)||p.getOffhandItem().is(Companion.COUNTER))&&!c.getDisplayCardStack(s.cardId).isEmpty()?c:null;}
+ static boolean valid(ServerPlayer p,Session s){if(sessions.get(p.getUUID())!=s||p.isRemoved()||!p.level().dimension().equals(s.dimension)||p.distanceToSqr(Vec3.atCenterOf(s.pos))>64||!p.level().hasChunkAt(s.pos))return false;if(s.kind==2&&(!(p.containerMenu instanceof CommunityMenu m)||!m.pos.equals(s.pos)))return false;return s.kind==4?counter(p,s)!=null:CaszualMtg.kind(p.level().getBlockState(s.pos).getBlock())==s.kind;}
+ static CardDisplayEntity counter(ServerPlayer p,Session s){var e=p.level().getEntity(s.entity);return e instanceof CardDisplayEntity c&&!c.isRemoved()&&p.distanceToSqr(c)<64&&(p.getMainHandItem().is(CaszualMtg.COUNTER)||p.getOffhandItem().is(CaszualMtg.COUNTER))&&!c.getDisplayCardStack(s.cardId).isEmpty()?c:null;}
  public static void open(ServerPlayer p,BlockPos pos,int kind){if(kind==2)p.openMenu(CommunityMenu.provider(pos));Session s=new Session(p,pos,kind);sessions.put(p.getUUID(),s);seed(p);reply(p,s,kind==3?"Import a decklist, then review availability.":"Shared across this server. Search by name or type.","");if(kind<2)search(p,s,"",0,0);}
  public static void openCounter(ServerPlayer p,CardDisplayEntity c){if(p.distanceToSqr(c)>64)return;Session s=new Session(p,c.blockPosition(),4);s.entity=c.getUUID();s.cardId=c.getDisplayCardId(c.findSelectedDisplayIndex(p));if(s.cardId==null)return;sessions.put(p.getUUID(),s);reply(p,s,"Edit counters on this card.","");}
  static void seed(ServerPlayer p){Banks b=Banks.get(p.level().getServer());for(var c:PersistentCardStore.load(p.level()).snapshot()){ItemStack card=CardStackBuilders.buildScryfallStackFromModel(c,false);int kind=Banks.kind(card);if(kind<2&&!b.entries.containsKey(Banks.key(kind,card)))b.add(card,kind,1);}}
@@ -44,7 +44,7 @@ public final class ServerLogic {
     case "shop" -> {if(s.kind==3)shopMissing(p,s);}
     case "counter" -> {if(s.kind==4)editCounter(p,s,req.text(),req.amount());}
    }
-  }catch(Exception e){s.busy=false;org.slf4j.LoggerFactory.getLogger("mtgcompanion").error("Request failed",e);reply(p,s,"Request failed: "+e.getMessage(),s.report);}
+  }catch(Exception e){s.busy=false;org.slf4j.LoggerFactory.getLogger("caszual_mtg").error("Request failed",e);reply(p,s,"Request failed: "+e.getMessage(),s.report);}
  }
  static void reply(ServerPlayer p,Session s,String msg,String report){replyRows(p,s,msg,s.kind<2&&s.artwork?"art":report,s.kind==3?s.statuses:s.kind<2?s.catalogueRows:rows(p,s,s.query,s.page));}
  static void replyRows(ServerPlayer p,Session s,String msg,String report,List<Wire.Row> rows){if(valid(p,s))ServerPlayNetworking.send(p,new Wire.Reply(s.pos,s.kind,msg.length()>1900?msg.substring(0,1900):msg,report.length()>32000?report.substring(0,32000):report,rows));}
@@ -55,7 +55,7 @@ public final class ServerLogic {
   catalogue(p,s,Catalogue.search(s.kind,q,s.mana,page,s.oracle,s.stats),page,null);
  }
  static boolean matching(Session s,ItemStack card){return Banks.kind(card)==s.kind&&(s.kind==0?Catalogue.matchesMana(card,s.mana):Catalogue.matchesToken(card,s.oracle,s.stats));}
- static boolean sameArtFamily(ItemStack a,ItemStack b){String ai=StackData.readCustom(a).getString("mtgcompanion_oracle_id").orElse(""),bi=StackData.readCustom(b).getString("mtgcompanion_oracle_id").orElse("");if(!ai.isBlank()&&!bi.isBlank())return ai.equals(bi);var am=TcgCardMeta.read(a);var bm=TcgCardMeta.read(b);return am.name().equals(bm.name())&&am.typeLine().equals(bm.typeLine())&&am.oracleText().equals(bm.oracleText())&&am.power().equals(bm.power())&&am.toughness().equals(bm.toughness());}
+ static boolean sameArtFamily(ItemStack a,ItemStack b){String ai=StackData.readCustom(a).getString("caszual_mtg_oracle_id").orElse(""),bi=StackData.readCustom(b).getString("caszual_mtg_oracle_id").orElse("");if(!ai.isBlank()&&!bi.isBlank())return ai.equals(bi);var am=TcgCardMeta.read(a);var bm=TcgCardMeta.read(b);return am.name().equals(bm.name())&&am.typeLine().equals(bm.typeLine())&&am.oracleText().equals(bm.oracleText())&&am.power().equals(bm.power())&&am.toughness().equals(bm.toughness());}
  static void artworks(ServerPlayer p,Session s,String key,int requestedPage){
   s.busy=false;
   ItemStack family=s.catalogueRows.stream().filter(row->row.key().equals(key)).map(Wire.Row::card).filter(card->!card.isEmpty()).findFirst().map(ItemStack::copy).orElse(ItemStack.EMPTY);
@@ -77,7 +77,7 @@ public final class ServerLogic {
   List<Integer> free=new ArrayList<>();for(int i=0;i<36;i++)if(p.getInventory().getItem(i).isEmpty())free.add(i);if(free.size()<count){reply(p,s,"Need "+count+" empty inventory slots; try a smaller quantity.","");return;}
   for(int i=0;i<count;i++){ItemStack card=CardDatabaseCards.copyForExtraction(entry.card());card.setCount(1);CardDatabaseCards.ensureUniqueUid(card);p.getInventory().setItem(free.get(i),card);}if(s.kind==2)b.take(key,count);p.inventoryMenu.broadcastChanges();reply(p,s,"Received "+count+" cards.","");
  }
- static Set<Integer> links(ServerPlayer p,Session s){Set<Integer> kinds=new HashSet<>();for(BlockPos at:BlockPos.betweenClosed(s.pos.offset(-4,-4,-4),s.pos.offset(4,4,4)))if(p.level().hasChunkAt(at)){int kind=Companion.kind(p.level().getBlockState(at).getBlock());if(kind>=0&&kind<3)kinds.add(kind);}return kinds;}
+ static Set<Integer> links(ServerPlayer p,Session s){Set<Integer> kinds=new HashSet<>();for(BlockPos at:BlockPos.betweenClosed(s.pos.offset(-4,-4,-4),s.pos.offset(4,4,4)))if(p.level().hasChunkAt(at)){int kind=CaszualMtg.kind(p.level().getBlockState(at).getBlock());if(kind>=0&&kind<3)kinds.add(kind);}return kinds;}
  static DeckboxBlockEntity output(ServerPlayer p,Session s){for(Direction d:Direction.values()){BlockPos at=s.pos.relative(d);if(p.level().hasChunkAt(at)&&p.level().getBlockEntity(at) instanceof DeckboxBlockEntity db)return db;}return null;}
  static void importArchidekt(ServerPlayer p,Session s,String url,int flags){
   if(s.busy){reply(p,s,"Working on the previous request…",s.report);return;}

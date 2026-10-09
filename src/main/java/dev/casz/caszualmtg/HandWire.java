@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -9,7 +9,7 @@ import java.util.*;
 
 public final class HandWire {
  public record Request(BlockPos pos,String action,String text) implements CustomPacketPayload {
-  public static final Type<Request> TYPE=new Type<>(Companion.id("hand_request"));
+  public static final Type<Request> TYPE=new Type<>(CaszualMtg.id("hand_request"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Request> CODEC=StreamCodec.of(
    (b,p)->{b.writeBlockPos(p.pos);b.writeUtf(p.action,32);b.writeUtf(p.text,128);},
    b->new Request(b.readBlockPos(),b.readUtf(32),b.readUtf(128))
@@ -17,7 +17,7 @@ public final class HandWire {
   public Type<Request> type(){return TYPE;}
  }
  public record Reply(BlockPos pos,String message,boolean visible,boolean authorized,boolean canManage,boolean revealAll,int count,String linked,List<String> viewers,List<ItemStack> cards,int strictMulligans,int pendingDiscards) implements CustomPacketPayload {
-  public static final Type<Reply> TYPE=new Type<>(Companion.id("hand_reply"));
+  public static final Type<Reply> TYPE=new Type<>(CaszualMtg.id("hand_reply"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Reply> CODEC=StreamCodec.of(
    (b,p)->{
     b.writeBlockPos(p.pos);b.writeUtf(p.message,512);b.writeBoolean(p.visible);b.writeBoolean(p.authorized);b.writeBoolean(p.canManage);b.writeBoolean(p.revealAll);

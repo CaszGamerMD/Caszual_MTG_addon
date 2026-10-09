@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 
 import com.spider.mtgcard.client.compat.*;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -78,9 +78,9 @@ public final class HandScreen extends LegacyScreen {
    int gx=x+12,gy=y+gridTop(),cw=78,ch=112,cols=gridCols(),rows=gridRows();
    for(int row=0;row<rows;row++)for(int col=0;col<cols;col++){
     int at=(scroll+row)*cols+col;if(at>=data.cards().size())continue;int cx=gx+col*cw,cy=gy+row*ch;
-    g.fill(cx,cy,cx+72,cy+106,at==selected?0xFF4B729F:0xFF22324B);ClientCompanion.art(g,data.cards().get(at),0,cx+3,cy+3,66,100);
+    g.fill(cx,cy,cx+72,cy+106,at==selected?0xFF4B729F:0xFF22324B);CaszualMtgClient.art(g,data.cards().get(at),0,cx+3,cy+3,66,100);
    }
-   if(selected>=0&&selected<data.cards().size()){ItemStack card=data.cards().get(selected);ClientCompanion.art(g,card,0,x+w-116,y+gridTop(),104,145);}
+   if(selected>=0&&selected<data.cards().size()){ItemStack card=data.cards().get(selected);CaszualMtgClient.art(g,card,0,x+w-116,y+gridTop(),104,145);}
   }
   if(!message.isBlank())g.drawString(font,font.plainSubstrByWidth(message,w-110),x+12,y+h-22,0xFFFFDA8A);
   super.render(g,mx,my,delta);
