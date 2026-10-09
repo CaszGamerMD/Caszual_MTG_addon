@@ -1,5 +1,9 @@
 # MTG Companion 0.6.0 — expanded test build
 
+## Documentation
+
+The current feature wiki/documentation is maintained in [`wiki/Home.md`](wiki/Home.md). It covers installation, recipes, every block/item, Deck Builder behavior, Card Hand mulligans/privacy, the Custom Deckbox, Card Counter, MTG Staff, UI controls, multiplayer/storage behavior, and troubleshooting.
+
 A separate addon for Minecraft **26.2 Fabric**, built against **MTGCard 1.7.0-26.2**.
 
 ## Install
