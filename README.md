@@ -8,7 +8,7 @@ A separate addon for Minecraft **26.2 Fabric**, built against **MTGCard 1.7.0-26
 
 ## Install
 
-Put `caszual-mtg-0.6.0.jar` in the `mods` folder on both the server and every player's client. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+Put `caszual-mtg-0.6.0.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
 
 ## Blocks and counter tool
 
@@ -25,7 +25,7 @@ All four database/builder blocks are in the Functional Blocks creative tab and h
 
 The **Card Hand** block links to the nearest MTGCard Deck Control within 8 blocks. The player who places it becomes the owner and can add or remove online players from its viewer list. Hand card data is sent only to authorized viewers unless **Reveal to all** is enabled.
 
-Once linked, normal Deck Control draws — including redstone draws — are routed into the Hand instead of being ejected into the world. If no linked Hand is available, MTGCard's normal draw behavior remains unchanged. The Hand holds up to 30 cards.
+Once linked, normal Deck Control draws — including redstone draws — are routed into the Hand instead of being ejected into the world. If no linked Hand is available, MTGCard's normal draw behavior remains unchanged. The Hand holds up to 100 cards.
 
 The Deck Control gains **Discard Random from Hand**. It chooses a card server-side and sends it into the MTGCard Graveyard touching the Deck Control. The Hand screen has the same random-discard action. If the Graveyard is missing or full, no card is removed.
 
@@ -78,7 +78,7 @@ Both `4 Card Name` and `4x Card Name` work, as do name-only lines. Duplicate nam
 
 After import, every card name appears immediately. Availability checks update an icon beside each entry: green check for all copies available, amber partial icon for some copies, red cross for none, and an ellipsis while checking. Rows show available/requested quantities, and missing cards remain visible. The screen also reports requested, available and missing totals. Select an available row to preview its card. **Build complete** requires all requested copies. **Build available** assembles a partial deck. Both require an empty adjacent deckbox. Community stock is withdrawn during assembly; lands/tokens do not consume stock. Rechecking before building uses current shared quantities, including other players' withdrawals. When a decklist specifies a set and collector number, the builder prefers that exact printing. If only another printing of the same card exists, it remains usable but the row is marked **alternate art**.
 
-**Shop missing** opens TCGplayer Mass Entry directly with the currently missing cards. When a decklist supplied a printing such as `(CMM) 396`, that printing is preserved for store import. No intermediate `.txt` file is created. If the browser cannot be opened, the missing list is copied to the clipboard as a fallback. This does not submit or purchase the order automatically.
+**Shop missing** sends the currently missing cards to a nearby MTGCard Card Store (within four blocks of the Deck Builder). Matching cards are resolved, added to that player's saved store cart, and the store menu opens. A missing or unreachable Card Store produces an in-game message. This prepares the cart; it does not submit or purchase an order automatically.
 
 ## Catalogue and matching details
 
@@ -90,7 +90,7 @@ The community collections are stored in the overworld SavedData file for this ad
 
 ## Validation and limits
 
-The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.4.0 as a test build.
+The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.6.0 as a test build.
 
 ## Source build
 
