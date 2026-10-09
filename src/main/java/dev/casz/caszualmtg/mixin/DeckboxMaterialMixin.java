@@ -1,5 +1,5 @@
-package dev.casz.mtg.mixin;
-import dev.casz.mtg.*;
+package dev.casz.caszualmtg.mixin;
+import dev.casz.caszualmtg.*;
 import com.spider.mtgcard.deckbox.DeckboxBlockEntity;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentMap;
@@ -32,9 +32,9 @@ public abstract class DeckboxMaterialMixin implements BoxMaterial {
  @Inject(method="loadAdditional",at=@At("TAIL"),remap=false)
  private void companion$load(ValueInput input,CallbackInfo ci){companion$skin=BoxMaterial.safe(input.getStringOr("CompanionMaterial",BoxMaterial.DEFAULT));}
  @Inject(method="saveAdditional",at=@At("TAIL"),remap=false)
- private void companion$save(ValueOutput output,CallbackInfo ci){var self=(DeckboxBlockEntity)(Object)this;if(self.getBlockState().is(Companion.CUSTOM_BOX))output.putString("CompanionMaterial",companion$skin);}
+ private void companion$save(ValueOutput output,CallbackInfo ci){var self=(DeckboxBlockEntity)(Object)this;if(self.getBlockState().is(CaszualMtg.CUSTOM_BOX))output.putString("CompanionMaterial",companion$skin);}
  @Inject(method="collectImplicitComponents",at=@At("TAIL"),remap=false)
- private void companion$components(DataComponentMap.Builder builder,CallbackInfo ci){var self=(DeckboxBlockEntity)(Object)this;if(self.getBlockState().is(Companion.CUSTOM_BOX))builder.set(Companion.BOX_MATERIAL,companion$skin);}
+ private void companion$components(DataComponentMap.Builder builder,CallbackInfo ci){var self=(DeckboxBlockEntity)(Object)this;if(self.getBlockState().is(CaszualMtg.CUSTOM_BOX))builder.set(CaszualMtg.BOX_MATERIAL,companion$skin);}
  @Inject(method="getUpdateTag",at=@At("RETURN"),remap=false)
- private void companion$update(HolderLookup.Provider lookup,CallbackInfoReturnable<CompoundTag> ci){var self=(DeckboxBlockEntity)(Object)this;if(self.getBlockState().is(Companion.CUSTOM_BOX))ci.getReturnValue().putString("CompanionMaterial",companion$skin);}
+ private void companion$update(HolderLookup.Provider lookup,CallbackInfoReturnable<CompoundTag> ci){var self=(DeckboxBlockEntity)(Object)this;if(self.getBlockState().is(CaszualMtg.CUSTOM_BOX))ci.getReturnValue().putString("CompanionMaterial",companion$skin);}
 }

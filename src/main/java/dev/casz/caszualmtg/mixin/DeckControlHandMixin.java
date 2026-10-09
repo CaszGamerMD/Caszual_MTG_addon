@@ -1,7 +1,7 @@
-package dev.casz.mtg.mixin;
+package dev.casz.caszualmtg.mixin;
 
 import com.spider.mtgcard.deckcontrol.DeckControlBlockEntity;
-import dev.casz.mtg.HandLogic;
+import dev.casz.caszualmtg.HandLogic;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;

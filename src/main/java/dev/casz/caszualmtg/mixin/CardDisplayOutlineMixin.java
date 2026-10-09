@@ -1,4 +1,4 @@
-package dev.casz.mtg.mixin;
+package dev.casz.caszualmtg.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
