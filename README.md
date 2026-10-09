@@ -92,6 +92,12 @@ The community collections are stored in the overworld SavedData file for this ad
 
 The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.6.1 as a test build.
 
+## 0.6.1: MTGCard block entity validation crash safeguard
+
+Caszual MTG no longer invokes MTGCard's block-entity initialization itself. On normal mod initialization, it verifies MTGCard's registered Deckbox types (including `warped_deckbox`) and Card Store block-entity types recognize their own registered blocks. Any missing valid-block associations are repaired in place without replacing native entities or altering inventories.
+
+This addresses the reported `Invalid block entity mtgcard:deckbox` errors seen by Jade and `Invalid block entity mtgcard:card_store` exceptions during interactions. The regression harness also checks actual server-side block-entity creation for a Warped Deckbox and Card Store. Back up your world and update **both client and server** to 0.6.1. A full client/modpack recreation of the user's issue has not yet been performed.
+
 ## MTGCard + Mouse Tweaks startup crash workaround
 
 If startup reports `mtgcard.client.mixins.json:MouseTweaksGuiContainerHandlerMixin` / `GuiContainerHandler was loaded too early`, the failure is in MTGCard's optional Mouse Tweaks mixin plugin, **not** a Caszual MTG mixin. Changing the Caszual MTG JAR alone does not repair it.
