@@ -74,4 +74,4 @@ This names a **MTGCard** optional Mouse Tweaks integration mixin, not a Caszual 
 
 ## Version mismatch
 
-Caszual MTG 0.6.0 targets Minecraft 26.2 and MTGCard 1.7.0-26.2. Use matching client/server jars and remove older Caszual MTG copies.
+Caszual MTG 0.6.1 targets Minecraft 26.2 and MTGCard 1.7.0-26.2. Use matching client/server jars and remove older Caszual MTG copies.
