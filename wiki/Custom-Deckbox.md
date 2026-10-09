@@ -2,7 +2,7 @@
 
 The **Custom Deckbox** is a normal MTGCard-compatible deckbox with a player-selected panel material.
 
-It retains MTGCard's normal deckbox storage and opening behavior. MTG Companion only changes the exterior panel appearance and preserves the selected material when the box is broken and placed again.
+It retains MTGCard's normal deckbox storage and opening behavior. Caszual MTG only changes the exterior panel appearance and preserves the selected material when the box is broken and placed again.
 
 ## Changing the material
 

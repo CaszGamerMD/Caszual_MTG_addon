@@ -1,0 +1,10 @@
+{
+  "block.caszual_mtg.land_database": "Community Land Catalogue",
+  "block.caszual_mtg.token_database": "Community Token Catalogue",
+  "block.caszual_mtg.community_database": "Community Card Collection",
+  "block.caszual_mtg.deck_builder": "Deck Builder",
+  "item.caszual_mtg.counter": "Card Counter",
+  "block.caszual_mtg.custom_deckbox": "Custom Deckbox",
+  "block.caszual_mtg.hand_block": "Card Hand",
+  "item.caszual_mtg.targeting_staff": "MTG Staff"
+}

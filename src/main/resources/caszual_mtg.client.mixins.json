@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "dev.casz.caszualmtg.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "ContainerAccess",
+    "CounterRendererMixin",
+    "ItemLayersAccess"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

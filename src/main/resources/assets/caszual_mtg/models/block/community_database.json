@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "caszual_mtg:block/community_database_side",
+    "down": "caszual_mtg:block/community_database_top",
+    "up": "caszual_mtg:block/community_database_top",
+    "north": "caszual_mtg:block/community_database_front",
+    "south": "caszual_mtg:block/community_database_side",
+    "east": "caszual_mtg:block/community_database_side",
+    "west": "caszual_mtg:block/community_database_side"
+  }
+}

@@ -29,7 +29,7 @@ Counters are stored using MTGCard's card counter metadata.
 
 ## HUD
 
-When looking at a placed card that has counters, MTG Companion displays a readable HUD with:
+When looking at a placed card that has counters, Caszual MTG displays a readable HUD with:
 
 - card name;
 - counter names;

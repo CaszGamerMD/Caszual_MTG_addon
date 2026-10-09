@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "caszual_mtg:block/deck_builder"
+    }
+  }
+}

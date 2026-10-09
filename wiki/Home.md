@@ -1,6 +1,6 @@
-# MTG Companion Wiki
+# Caszual MTG Wiki
 
-**MTG Companion 0.6.0** is a Fabric addon for **MTGCard 1.7.0-26.2** on **Minecraft 26.2**. It adds shared card databases, free land/token catalogues, deck building tools, a private Card Hand system, custom deckboxes, card counters, a multiplayer targeting staff, and larger card previews.
+**Caszual MTG 0.6.0** is a Fabric addon for **MTGCard 1.7.0-26.2** on **Minecraft 26.2**. It adds shared card databases, free land/token catalogues, deck building tools, a private Card Hand system, custom deckboxes, card counters, a multiplayer targeting staff, and larger card previews.
 
 ## Main features
 
@@ -13,7 +13,7 @@
 - **Card Counter** — named counters, world markers and a readable HUD for placed MTG cards.
 - **MTG Staff** — multiplayer-visible white/orange target declaration highlights.
 - **Large card previews** — hold **V** over cards in standard container screens; press **F** to flip card faces.
-- **Responsive GUIs** — MTG Companion screens use the same enlarged scaling target for easier reading.
+- **Responsive GUIs** — Caszual MTG screens use the same enlarged scaling target for easier reading.
 
 ## Compatibility
 
@@ -24,9 +24,9 @@
 | Fabric API | 0.161.0+26.2 or newer |
 | Java | 25 or newer |
 | MTGCard | 1.7.0-26.2 |
-| MTG Companion | 0.6.0 |
+| Caszual MTG | 0.6.0 |
 
-Install MTG Companion on the **server and every client** that connects to it.
+Install Caszual MTG on the **server and every client** that connects to it.
 
 ## Wiki pages
 

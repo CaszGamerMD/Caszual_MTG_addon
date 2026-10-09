@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.renderer.texture.*;
 import net.minecraft.client.resources.metadata.animation.FrameSize;

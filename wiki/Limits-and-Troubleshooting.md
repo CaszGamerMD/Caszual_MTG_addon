@@ -70,4 +70,4 @@ Sneak-right-click the placed Custom Deckbox with a BlockItem. The current implem
 
 ## Version mismatch
 
-MTG Companion 0.6.0 targets Minecraft 26.2 and MTGCard 1.7.0-26.2. Use matching client/server jars and remove older MTG Companion copies.
+Caszual MTG 0.6.0 targets Minecraft 26.2 and MTGCard 1.7.0-26.2. Use matching client/server jars and remove older Caszual MTG copies.

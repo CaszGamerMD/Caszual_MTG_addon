@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "caszual_mtg:block/deck_builder_side",
+    "down": "caszual_mtg:block/deck_builder_top",
+    "up": "caszual_mtg:block/deck_builder_top",
+    "north": "caszual_mtg:block/deck_builder_front",
+    "south": "caszual_mtg:block/deck_builder_side",
+    "east": "caszual_mtg:block/deck_builder_side",
+    "west": "caszual_mtg:block/deck_builder_side"
+  }
+}

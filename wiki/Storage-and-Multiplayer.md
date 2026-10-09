@@ -35,7 +35,7 @@ The Hand is different from community storage:
 
 ## Custom Deckbox
 
-Custom Deckbox card storage remains MTGCard deckbox storage. MTG Companion stores the selected exterior material alongside it.
+Custom Deckbox card storage remains MTGCard deckbox storage. Caszual MTG stores the selected exterior material alongside it.
 
 ## Backups
 

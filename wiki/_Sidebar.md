@@ -1,4 +1,4 @@
-# MTG Companion
+# Caszual MTG
 
 - [Home](Home.md)
 - [Installation](Installation.md)

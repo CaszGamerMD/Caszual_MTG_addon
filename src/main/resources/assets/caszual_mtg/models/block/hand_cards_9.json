@@ -1,0 +1,359 @@
+{
+  "textures": {
+    "card": "caszual_mtg:mtg_card_back",
+    "edge": "minecraft:block/black_concrete"
+  },
+  "elements": [
+    {
+      "from": [
+        2.6,
+        16.02,
+        3.2
+      ],
+      "to": [
+        4.6,
+        16.2,
+        6.1
+      ],
+      "shade": false,
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#card",
+          "uv": [
+            2.2615385,
+            0,
+            13.723077,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        4.8,
+        16.02,
+        3.2
+      ],
+      "to": [
+        6.8,
+        16.2,
+        6.1
+      ],
+      "shade": false,
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#card",
+          "uv": [
+            2.2615385,
+            0,
+            13.723077,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        16.02,
+        3.2
+      ],
+      "to": [
+        9,
+        16.2,
+        6.1
+      ],
+      "shade": false,
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#card",
+          "uv": [
+            2.2615385,
+            0,
+            13.723077,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        9.2,
+        16.02,
+        3.2
+      ],
+      "to": [
+        11.2,
+        16.2,
+        6.1
+      ],
+      "shade": false,
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#card",
+          "uv": [
+            2.2615385,
+            0,
+            13.723077,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        11.4,
+        16.02,
+        3.2
+      ],
+      "to": [
+        13.4,
+        16.2,
+        6.1
+      ],
+      "shade": false,
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#card",
+          "uv": [
+            2.2615385,
+            0,
+            13.723077,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        2.6,
+        16.02,
+        6.35
+      ],
+      "to": [
+        4.6,
+        16.2,
+        9.25
+      ],
+      "shade": false,
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#card",
+          "uv": [
+            2.2615385,
+            0,
+            13.723077,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        4.8,
+        16.02,
+        6.35
+      ],
+      "to": [
+        6.8,
+        16.2,
+        9.25
+      ],
+      "shade": false,
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#card",
+          "uv": [
+            2.2615385,
+            0,
+            13.723077,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        16.02,
+        6.35
+      ],
+      "to": [
+        9,
+        16.2,
+        9.25
+      ],
+      "shade": false,
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#card",
+          "uv": [
+            2.2615385,
+            0,
+            13.723077,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        9.2,
+        16.02,
+        6.35
+      ],
+      "to": [
+        11.2,
+        16.2,
+        9.25
+      ],
+      "shade": false,
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#card",
+          "uv": [
+            2.2615385,
+            0,
+            13.723077,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        }
+      }
+    }
+  ]
+}

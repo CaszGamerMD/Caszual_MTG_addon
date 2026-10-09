@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PGP",
+    "GCG",
+    "PGP"
+  ],
+  "key": {
+    "P": "minecraft:glass",
+    "G": "minecraft:gold_ingot",
+    "C": "#c:chests"
+  },
+  "result": {
+    "id": "caszual_mtg:custom_deckbox",
+    "count": 1
+  }
+}
