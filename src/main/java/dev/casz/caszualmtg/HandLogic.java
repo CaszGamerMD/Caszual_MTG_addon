@@ -45,12 +45,47 @@ public final class HandLogic {
     if(hand.pendingStrictDiscards()>0){reply(player,hand,"Finish the required mulligan discards by selecting cards first.");return;}
     reply(player,hand,discardRandom(player,hand));
    }
+   case "deposit_inventory" -> depositInventory(player,hand);
    case "take_selected" -> takeSelected(player,hand,req.text());
    case "discard_selected" -> discardSelected(player,hand,req.text());
    case "mulligan_friendly" -> mulligan(player,hand,false);
    case "mulligan_strict" -> mulligan(player,hand,true);
    case "mulligan_cancel" -> finishMulligan(player,hand);
   }
+ }
+
+ /** Transfer only actual TCG cards; creative inventory transfers still consume inputs. */
+ static void depositInventory(ServerPlayer player,HandBlockEntity hand){
+  if(!hand.isAuthorized(player)){reply(player,hand,"Only selected players can deposit into this hand.");return;}
+  int moved=0;
+  for(int slot=0;slot<36&&hand.cardCount()<HandBlockEntity.SIZE;slot++){
+   ItemStack stack=player.getInventory().getItem(slot);
+   if(stack.isEmpty()||!stack.is(com.spider.mtgcard.item.ModItemTags.TCG_CARD))continue;
+   while(!stack.isEmpty()&&hand.cardCount()<HandBlockEntity.SIZE){
+    if(!hand.addCard(stack))break;
+    stack.shrink(1);
+    moved++;
+   }
+  }
+  if(moved>0){player.getInventory().setChanged();player.inventoryMenu.broadcastChanges();}
+  reply(player,hand,moved>0?"Deposited "+moved+" inventory card"+(moved==1?"":"s")+" into the hand.":"No eligible cards or no space left in the hand.");
+ }
+
+ /**
+  * Input is a comma-separated set of current visible indices. Reject duplicates,
+  * invalid entries and insufficient space BEFORE removing anything; remove from
+  * highest index downwards so remaining visible indices cannot shift.
+  */
+ static java.util.List<Integer> selectedIndices(String raw,int count){
+  if(raw.isBlank()||raw.length()>512)return java.util.List.of();
+  java.util.TreeSet<Integer> indices=new java.util.TreeSet<>(java.util.Comparator.reverseOrder());
+  String[] parts=raw.split(",",-1);
+  if(parts.length>HandBlockEntity.SIZE)return java.util.List.of();
+  for(String part:parts){
+   int idx=parseIndex(part);
+   if(idx<0||idx>=count||!indices.add(idx))return java.util.List.of();
+  }
+  return java.util.List.copyOf(indices);
  }
 
  static void addViewer(ServerPlayer owner,HandBlockEntity hand,String raw){
@@ -64,11 +99,22 @@ public final class HandLogic {
  static void takeSelected(ServerPlayer player,HandBlockEntity hand,String raw){
   if(!hand.isAuthorized(player)){reply(player,hand,"Only selected players can take cards from this hand.");return;}
   if(hand.pendingStrictDiscards()>0){reply(player,hand,"Discard the required mulligan cards before taking cards out.");return;}
-  int index=parseIndex(raw);if(index<0){reply(player,hand,"Select a card first.");return;}
-  ItemStack card=hand.removeVisibleIndex(index);if(card.isEmpty()){reply(player,hand,"That card is no longer in the hand.");return;}
-  if(!player.getInventory().add(card)){player.drop(card,false);}
+  java.util.List<Integer> indices=selectedIndices(raw,hand.cardCount());
+  if(indices.isEmpty()){reply(player,hand,"Select one or more cards first.");return;}
+  java.util.List<Integer> emptySlots=new java.util.ArrayList<>();
+  for(int slot=0;slot<36;slot++)if(player.getInventory().getItem(slot).isEmpty())emptySlots.add(slot);
+  if(emptySlots.size()<indices.size()){
+   reply(player,hand,"Need "+indices.size()+" empty inventory slots (you have "+emptySlots.size()+"). Nothing was taken.");return;
+  }
+  int moved=0;
+  for(int index:indices){
+   ItemStack card=hand.removeVisibleIndex(index);
+   if(card.isEmpty())throw new IllegalStateException("Hand changed during a validated bulk transfer.");
+   player.getInventory().setItem(emptySlots.get(moved++),card);
+  }
   player.getInventory().setChanged();
-  reply(player,hand,"Took selected card from the hand.");
+  player.inventoryMenu.broadcastChanges();
+  reply(player,hand,"Took "+moved+" card"+(moved==1?"":"s")+" from the hand.");
  }
 
  static void discardSelected(ServerPlayer player,HandBlockEntity hand,String raw){
