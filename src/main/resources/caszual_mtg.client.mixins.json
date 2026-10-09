@@ -1,6 +1,6 @@
 {
   "required": true,
-  "package": "dev.casz.mtg.mixin",
+  "package": "dev.casz.caszualmtg.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
     "ContainerAccess",

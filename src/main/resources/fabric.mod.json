@@ -1,29 +1,29 @@
 {
   "schemaVersion": 1,
-  "id": "mtgcompanion",
+  "id": "caszual_mtg",
   "version": "${version}",
-  "name": "MTG Companion",
+  "name": "Caszual MTG",
   "description": "Shared card collections, unlimited lands and tokens, decklist assembly, large previews and readable counters for MTGCard.",
   "authors": [
     "Casz"
   ],
   "license": "MIT",
-  "icon": "assets/mtgcompanion/icon.png",
+  "icon": "assets/caszual_mtg/icon.png",
   "environment": "*",
   "entrypoints": {
     "main": [
-      "dev.casz.mtg.Companion"
+      "dev.casz.caszualmtg.CaszualMtg"
     ],
     "client": [
-      "dev.casz.mtg.ClientCompanion"
+      "dev.casz.caszualmtg.CaszualMtgClient"
     ]
   },
   "mixins": [
     {
-      "config": "mtgcompanion.client.mixins.json",
+      "config": "caszual_mtg.client.mixins.json",
       "environment": "client"
     },
-    "mtgcompanion.mixins.json"
+    "caszual_mtg.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.19.3",
