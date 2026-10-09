@@ -2,7 +2,7 @@ name: Build Caszual MTG
 
 on:
   push:
-    branches: [ main, rebrand-caszual-mtg, fix/mtgcard-mousetweaks-earlyload, fix/mtgcard-block-entity-validation, fix/deferred-mtgcard-be-verification ]
+    branches: [ main, rebrand-caszual-mtg, fix/mtgcard-mousetweaks-earlyload, fix/mtgcard-block-entity-validation, fix/deferred-mtgcard-be-verification, feat/hand-bulk-cards-community-loose-deposit ]
   workflow_dispatch:
 
 jobs:
@@ -26,6 +26,9 @@ jobs:
 
       - name: Build and verify
         run: ./gradlew clean build --stacktrace
+
+      - name: Validate opaque Hand Block texture and model assets
+        run: python3 -m unittest discover -s tests -p 'test_hand_assets.py' -v
 
       - name: Test MTGCard Mouse Tweaks safety patch
         run: |
@@ -54,15 +57,15 @@ jobs:
           mkdir -p release
           JAR="$(find build/libs -maxdepth 1 -type f -name 'caszual-mtg-*.jar' ! -name '*-sources.jar' | sort | head -n 1)"
           test -n "$JAR"
-          cp "$JAR" release/caszual-mtg-0.6.2.jar
-          sha256sum release/caszual-mtg-0.6.2.jar > release/caszual-mtg-0.6.2.jar.sha256
+          cp "$JAR" release/caszual-mtg-0.7.0.jar
+          sha256sum release/caszual-mtg-0.7.0.jar > release/caszual-mtg-0.7.0.jar.sha256
           cp build/mtgcard-mousetweaks-fixer.jar release/mtgcard-mousetweaks-fixer.jar
           sha256sum release/mtgcard-mousetweaks-fixer.jar > release/mtgcard-mousetweaks-fixer.jar.sha256
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add release/caszual-mtg-0.6.2.jar release/caszual-mtg-0.6.2.jar.sha256 release/mtgcard-mousetweaks-fixer.jar release/mtgcard-mousetweaks-fixer.jar.sha256
+          git add release/caszual-mtg-0.7.0.jar release/caszual-mtg-0.7.0.jar.sha256 release/mtgcard-mousetweaks-fixer.jar release/mtgcard-mousetweaks-fixer.jar.sha256
           if ! git diff --cached --quiet; then
-            git commit -m "Publish Caszual MTG 0.6.2 package [skip ci]"
+            git commit -m "Publish Caszual MTG 0.7.0 package [skip ci]"
             git push
           fi
 

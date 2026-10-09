@@ -45,6 +45,25 @@ public final class IntegrationChecks implements ModInitializer {
     "Card Store entity must instantiate when accessed");
   check(server.overworld().getBlockEntity(warpedPos) instanceof com.spider.mtgcard.deckbox.DeckboxBlockEntity,
     "Warped Deckbox entity must instantiate when accessed");
+  // Card Hand multi-select accepts distinct visible indices and removes in
+  // descending order, so the original selection is never shifted mid-transfer.
+  check(HandLogic.selectedIndices("0,2,4",5).equals(List.of(4,2,0)),"multi-select descending order");
+  check(HandLogic.selectedIndices("0,0",5).isEmpty(),"duplicate hand selections rejected");
+  check(HandLogic.selectedIndices("0,9",5).isEmpty(),"out-of-range hand selection rejected");
+  check(HandLogic.selectedIndices("",5).isEmpty(),"empty selection rejected");
+  check(ServerLogic.eligibleLoose(card),"ordinary cards may enter Community Collection");
+  check(!ServerLogic.eligibleLoose(land)&&!ServerLogic.eligibleLoose(token),
+    "community loose deposits exclude lands and tokens");
+  var testHandAt=at.above(8);
+  server.overworld().setBlock(testHandAt,CaszualMtg.HAND.defaultBlockState(),3);
+  var testHand=(HandBlockEntity)server.overworld().getBlockEntity(testHandAt);
+  testHand.ensureOwner(player);
+  check(testHand.addCard(card)&&testHand.addCard(card)&&testHand.addCard(card),
+    "Card Hand accepts three loose MTG cards");
+  check(testHand.cardCount()==3,"Card Hand deposit count");
+  for(int selectedIndex:HandLogic.selectedIndices("0,2",testHand.cardCount()))
+   check(!testHand.removeVisibleIndex(selectedIndex).isEmpty(),"valid multi-card extraction");
+  check(testHand.cardCount()==1,"multi-card extraction preserves unselected cards");
   var customAt=at.above(3);var customState=CaszualMtg.CUSTOM_BOX.defaultBlockState();server.overworld().setBlock(customAt,customState,3);var custom=(com.spider.mtgcard.deckbox.DeckboxBlockEntity)server.overworld().getBlockEntity(customAt);check(custom.getType().isValid(customState),"custom deckbox accepted by native entity type");var customItem=new net.minecraft.world.item.ItemStack(CaszualMtg.CUSTOM_BOX);customItem.set(CaszualMtg.BOX_MATERIAL,"minecraft:diamond_block");CaszualMtg.CUSTOM_BOX.setPlacedBy(server.overworld(),customAt,customState,player,customItem);check(((BoxMaterial)custom).companion$material().equals("minecraft:diamond_block"),"placed item material applied");custom.setStack(0,card.copy());custom.persistExternalRecord();var customId=custom.getStorageId();player.setShiftKeyDown(true);var gold=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLD_BLOCK,2);CaszualMtg.CUSTOM_BOX.useItemOn(gold,customState,server.overworld(),customAt,player,net.minecraft.world.InteractionHand.MAIN_HAND,new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(customAt),net.minecraft.core.Direction.NORTH,customAt,false));check(gold.getCount()==1&&((BoxMaterial)custom).companion$material().equals("minecraft:gold_block"),"texture application consumes one source block");check(!custom.getStack(0).isEmpty()&&customId.equals(custom.getStorageId()),"retexture preserves deck contents and storage identity");player.setShiftKeyDown(false);
   var customDrops=net.minecraft.world.level.block.Block.getDrops(customState,server.overworld(),customAt,custom,player,net.minecraft.world.item.ItemStack.EMPTY);check(customDrops.size()==1,"single custom deckbox loot");var customDrop=customDrops.getFirst();check(customDrop.is(CaszualMtg.CUSTOM_BOX.asItem())&&customDrop.get(CaszualMtg.BOX_MATERIAL).equals("minecraft:gold_block"),"loot preserves material component");check(StackData.readCustom(customDrop).getString("mtgcard_deckbox_id").orElse("").equals(customId.toString()),"loot preserves card storage identity");check(custom.getUpdateTag(server.registryAccess()).getString("CompanionMaterial").orElse("").equals("minecraft:gold_block"),"material synchronized to clients");check(custom.getRenderData().equals("minecraft:gold_block"),"thread-safe renderer material snapshot");
   server.overworld().setBlock(customAt,net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(),3);server.overworld().setBlock(customAt,customState,3);CaszualMtg.CUSTOM_BOX.setPlacedBy(server.overworld(),customAt,customState,player,customDrop);var replaced=(com.spider.mtgcard.deckbox.DeckboxBlockEntity)server.overworld().getBlockEntity(customAt);check(((BoxMaterial)replaced).companion$material().equals("minecraft:gold_block")&&!replaced.getStack(0).isEmpty(),"pickup and placement retain texture and contents");check(BoxMaterial.safe("minecraft:air").equals(BoxMaterial.DEFAULT),"invalid material fallback");

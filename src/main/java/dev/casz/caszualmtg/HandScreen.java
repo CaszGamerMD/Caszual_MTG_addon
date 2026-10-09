@@ -8,11 +8,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
 public final class HandScreen extends LegacyScreen {
- HandWire.Reply data;EditBox playerName;int x,y,w,h,scroll,selected=-1,ticks;String message="";boolean mulliganMenu;
+ HandWire.Reply data;EditBox playerName;int x,y,w,h,scroll,selected=-1,ticks;final java.util.LinkedHashSet<Integer> chosen=new java.util.LinkedHashSet<>();String message="";boolean mulliganMenu;
  HandScreen(HandWire.Reply data){super(Component.literal("Card Hand"));this.data=data;}
  void update(HandWire.Reply reply){
   boolean controlsChanged=data.authorized()!=reply.authorized()||data.canManage()!=reply.canManage()||data.revealAll()!=reply.revealAll()||data.pendingDiscards()!=reply.pendingDiscards();
-  data=reply;if(!reply.message().isBlank())message=reply.message();if(selected>=reply.cards().size())selected=-1;
+  data=reply;if(!reply.message().isBlank()){message=reply.message();chosen.clear();selected=-1;}chosen.removeIf(i->i>=reply.cards().size());if(selected>=reply.cards().size())selected=-1;
   if(reply.pendingDiscards()>0)mulliganMenu=false;
   if(controlsChanged)rebuildWidgets();
  }
@@ -28,6 +28,8 @@ public final class HandScreen extends LegacyScreen {
    button("Remove viewer",x+260,y+58,102,()->send("remove_viewer",playerName.getValue()));
   }
   if(data.authorized()){
+   button("Deposit inventory cards",x+370,y+58,176,()->send("deposit_inventory",""));
+   if(data.pendingDiscards()==0){button("Select all",x+370,y+84,88,()->{chosen.clear();for(int i=0;i<data.cards().size();i++)chosen.add(i);});button("Clear",x+464,y+84,72,chosen::clear);}
    if(data.pendingDiscards()>0){
     button("Discard selected ("+data.pendingDiscards()+")",x+12,y+84,168,()->sendSelected("discard_selected"));
    }else if(mulliganMenu){
@@ -35,7 +37,7 @@ public final class HandScreen extends LegacyScreen {
     button("Strict"+(data.strictMulligans()>0?" ("+data.strictMulligans()+")":""),x+110,y+84,104,()->send("mulligan_strict",""));
     button("Cancel",x+220,y+84,86,()->{mulliganMenu=false;send("mulligan_cancel","");rebuildWidgets();});
    }else{
-    button("Take selected",x+12,y+84,108,()->sendSelected("take_selected"));
+    button("Take selected",x+12,y+84,108,()->sendManySelected());
     button("Random → Graveyard",x+126,y+84,142,()->send("discard_random",""));
     button("Mulligan",x+274,y+84,90,()->{mulliganMenu=true;rebuildWidgets();});
    }
@@ -44,6 +46,7 @@ public final class HandScreen extends LegacyScreen {
  }
  void button(String label,int bx,int by,int bw,Runnable run){addRenderableWidget(Button.builder(Component.literal(label),b->run.run()).bounds(bx,by,bw,20).build());}
  void sendSelected(String action){if(selected<0||selected>=data.cards().size()){message="Select a card first.";return;}send(action,Integer.toString(selected));}
+ void sendManySelected(){if(chosen.isEmpty()){message="Select one or more cards first.";return;}send("take_selected",chosen.stream().sorted().map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));}
  void send(String action,String text){ClientPlayNetworking.send(new HandWire.Request(data.pos(),action,text));message="Working…";}
  @Override public void tick(){super.tick();if(++ticks%20==0)ClientPlayNetworking.send(new HandWire.Request(data.pos(),"refresh",""));}
  @Override public boolean isPauseScreen(){return false;}
@@ -58,7 +61,7 @@ public final class HandScreen extends LegacyScreen {
   if(data.visible()){
    int gx=x+12,gy=y+gridTop(),cw=78,ch=112,cols=gridCols(),rows=gridRows();int relX=(int)e.x()-gx,relY=(int)e.y()-gy;
    if(relX>=0&&relY>=0&&relX<cols*cw&&relY<rows*ch){
-    int col=relX/cw,row=relY/ch,at=(scroll+row)*cols+col;if(at>=0&&at<data.cards().size()){selected=at;return true;}
+    int col=relX/cw,row=relY/ch,at=(scroll+row)*cols+col;if(at>=0&&at<data.cards().size()){selected=at;if(!chosen.add(at))chosen.remove(at);return true;}
    }
   }
   return super.mouseClicked(e,twice);
@@ -66,11 +69,11 @@ public final class HandScreen extends LegacyScreen {
  @Override public void render(GuiGraphics g,int mx,int my,float delta){
   g.fill(0,0,width,height,0xC0080E18);g.fill(x,y,x+w,y+h,0xFF152032);g.drawString(font,title,x+12,y+12,0xFFFFFFFF);
   String privacy=data.revealAll()?"REVEALED TO ALL":data.visible()?"PRIVATE · YOU CAN VIEW":"PRIVATE · HIDDEN";
-  g.drawString(font,privacy+" · "+data.count()+"/"+HandBlockEntity.SIZE+" cards · Deck Control: "+data.linked(),x+12,y+112,data.revealAll()?0xFFFFD37E:0xFFB3DFFF);
+  g.drawString(font,privacy+" · "+data.count()+"/"+HandBlockEntity.SIZE+" cards · "+chosen.size()+" selected · Deck Control: "+data.linked(),x+12,y+112,data.revealAll()?0xFFFFD37E:0xFFB3DFFF);
   if(data.canManage())g.drawString(font,"Viewers: "+(data.viewers().isEmpty()?"none":String.join(", ",data.viewers())),x+12,y+124,0xFF9CADC6);
   if(data.pendingDiscards()>0)g.drawString(font,"Strict mulligan: discard "+data.pendingDiscards()+" selected card"+(data.pendingDiscards()==1?"":"s")+" to finish.",x+370,y+88,0xFFFFD37E);
   else if(mulliganMenu)g.drawString(font,"Friendly is free · Strict attempts: "+data.strictMulligans()+" · Cancel finishes mulligans.",x+320,y+88,0xFFB3DFFF);
-  else g.drawString(font,"Right-click the podium with an MTG card to add it.",x+370,y+88,0xFF9CADC6);
+  else g.drawString(font,"Click cards to toggle multi-select · Right-click podium to add.",x+370,y+88,0xFF9CADC6);
   if(!data.visible()){
    g.drawCenteredString(font,"This hand is private.",x+w/2,y+220,0xFFFFFFFF);
    g.drawCenteredString(font,"The owner can add you as a viewer or reveal the hand.",x+w/2,y+242,0xFF9CADC6);
@@ -78,7 +81,7 @@ public final class HandScreen extends LegacyScreen {
    int gx=x+12,gy=y+gridTop(),cw=78,ch=112,cols=gridCols(),rows=gridRows();
    for(int row=0;row<rows;row++)for(int col=0;col<cols;col++){
     int at=(scroll+row)*cols+col;if(at>=data.cards().size())continue;int cx=gx+col*cw,cy=gy+row*ch;
-    g.fill(cx,cy,cx+72,cy+106,at==selected?0xFF4B729F:0xFF22324B);CaszualMtgClient.art(g,data.cards().get(at),0,cx+3,cy+3,66,100);
+    g.fill(cx,cy,cx+72,cy+106,chosen.contains(at)?0xFF4B729F:0xFF22324B);CaszualMtgClient.art(g,data.cards().get(at),0,cx+3,cy+3,66,100);
    }
    if(selected>=0&&selected<data.cards().size()){ItemStack card=data.cards().get(selected);CaszualMtgClient.art(g,card,0,x+w-116,y+gridTop(),104,145);}
   }

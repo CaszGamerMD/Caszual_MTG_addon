@@ -60,6 +60,16 @@ Unlike Lands/Tokens, regular cards are **not generated**. They must be deposited
 - Select a card and use **Take selected** to withdraw available copies to your inventory.
 - Quantities cannot exceed stored stock.
 
+### Loose card and inventory deposits
+
+You can deposit regular MTG cards **without a deckbox**:
+
+- **Deposit inventory cards** transfers all storable non-land, non-token MTG cards from your main inventory and hotbar to the shared collection. Other items, land cards, and tokens are not consumed.
+- Put a card or stack into the **Loose** input slot near the Deckbox slot and press **Deposit loose card** to add it to shared storage. Shift-clicking an eligible card from your inventory can place it in the loose-card slot.
+- Closing the collection screen returns any undeposited loose cards and the deckbox to the player.
+
+These transfers are checked server-side and consume actual deposited card items.
+
 ### Deckbox bulk transfer
 
 The Community Collection has a dedicated deckbox slot.

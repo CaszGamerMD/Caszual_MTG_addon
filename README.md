@@ -1,4 +1,4 @@
-# Caszual MTG 0.6.2 — expanded test build
+# Caszual MTG 0.7.0 — expanded test build
 
 ## Documentation
 
@@ -8,7 +8,14 @@ A separate addon for Minecraft **26.2 Fabric**, built against **MTGCard 1.7.0-26
 
 ## Install
 
-Put `caszual-mtg-0.6.2.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+Put `caszual-mtg-0.7.0.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+
+## What's new in 0.7.0
+
+- Card Hand: fixed the missing block-atlas card-back texture with fully opaque pixel art; all 20 visual card-count stages use the correct texture.
+- Card Hand: **Deposit inventory cards** transfers regular MTG cards to the Hand, respecting the 100-card maximum.
+- Card Hand: multi-select any number of cards (including **Select all** / **Clear**) and take them together; prevents the transfer if insufficient inventory slots are free.
+- Community Card Collection: **Deposit inventory cards** and a **Loose** card input slot now accept individual regular MTG cards without a deckbox. Lands/tokens stay separate; undeposited slot contents are returned upon closing.
 
 ## Blocks and counter tool
 
@@ -90,7 +97,7 @@ The community collections are stored in the overworld SavedData file for this ad
 
 ## Validation and limits
 
-The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.6.2 as a test build.
+The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.7.0 as a test build.
 
 ## 0.6.1: MTGCard block entity validation crash safeguard
 

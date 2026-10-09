@@ -2,7 +2,7 @@
 
 ## Requirements
 
-Caszual MTG 0.6.2 requires:
+Caszual MTG 0.7.0 requires:
 
 - Minecraft **26.2**
 - Fabric Loader **0.19.3+**
@@ -13,11 +13,11 @@ Caszual MTG 0.6.2 requires:
 ## Install
 
 1. Install Fabric for Minecraft 26.2.
-2. Put MTGCard, Fabric API, and `caszual-mtg-0.6.2.jar` in the `mods` folder.
+2. Put MTGCard, Fabric API, and `caszual-mtg-0.7.0.jar` in the `mods` folder.
 3. Install the same mod versions on the server and on every player client.
 4. Restart Minecraft/server.
 
-Remove any old `mtgcompanion-*.jar` and older Caszual MTG jars from the mods folder; install only the new `caszual-mtg-0.6.2.jar`. The mod ID and block/item IDs have changed to `caszual_mtg`, and content placed under the old ID is not migrated. MTGCard itself is still required.
+Remove any old `mtgcompanion-*.jar` and older Caszual MTG jars from the mods folder; install only the new `caszual-mtg-0.7.0.jar`. The mod ID and block/item IDs have changed to `caszual_mtg`, and content placed under the old ID is not migrated. MTGCard itself is still required.
 
 ## Creative tab
 
