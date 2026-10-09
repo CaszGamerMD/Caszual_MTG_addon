@@ -27,6 +27,9 @@ jobs:
       - name: Build and verify
         run: ./gradlew clean build --stacktrace
 
+      - name: Validate opaque Hand Block texture and model assets
+        run: python3 -m unittest discover -s tests -p 'test_hand_assets.py' -v
+
       - name: Test MTGCard Mouse Tweaks safety patch
         run: |
           python3 -m unittest discover -s tests -p 'test_patch_mtgcard_mousetweaks.py' -v
