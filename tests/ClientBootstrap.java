@@ -16,6 +16,6 @@ public final class ClientBootstrap {
   Class<?> tag=Class.forName("net.minecraft.nbt.CompoundTag",true,cl);Object meta=tag.getConstructor().newInstance(), counters=tag.getConstructor().newInstance();tag.getMethod("putInt",String.class,int.class).invoke(counters,"charge",5);tag.getMethod("put",String.class,Class.forName("net.minecraft.nbt.Tag",true,cl)).invoke(meta,"counters",counters);
   Method build=renderer.getDeclaredMethod("buildCounterIcons",tag);build.setAccessible(true);var icons=(java.util.List<?>)build.invoke(null,meta);if(icons.size()!=5)throw new AssertionError("Counter mixin did not supply five markers");tag.getMethod("putInt",String.class,int.class).invoke(counters,"charge",50);if(((java.util.List<?>)build.invoke(null,meta)).size()!=12)throw new AssertionError("Visual marker cap");
   Class.forName("dev.casz.caszualmtg.CustomModelChecks",true,cl).getMethod("run").invoke(null);
-  System.out.println("MTGCOMPANION_CLIENT_BOOTSTRAP_PASS: entrypoints, menu screen, renderer mixins, counter growth and cap");
+  System.out.println("CASZUAL_MTG_CLIENT_BOOTSTRAP_PASS: entrypoints, menu screen, renderer mixins, counter growth and cap");
  }
 }
