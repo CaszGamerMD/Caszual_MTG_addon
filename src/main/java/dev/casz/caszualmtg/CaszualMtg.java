@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.menu.v1.ExtendedMenuType;
 import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
@@ -26,8 +26,8 @@ import com.spider.mtgcard.api.DeckControlActionRegistry;
 import com.spider.mtgcard.api.TcgGameRegistry;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import java.util.*;
-public final class Companion implements ModInitializer {
- public static Identifier id(String path){return Identifier.fromNamespaceAndPath("mtgcompanion",path);}
+public final class CaszualMtg implements ModInitializer {
+ public static Identifier id(String path){return Identifier.fromNamespaceAndPath("caszual_mtg",path);}
  public static final Block LANDS=block("land_database",0),TOKENS=block("token_database",1),CARDS=block("community_database",2),BUILDER=block("deck_builder",3);
  public static final net.minecraft.core.component.DataComponentType<String> BOX_MATERIAL=Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,id("box_material"),net.minecraft.core.component.DataComponentType.<String>builder().persistent(com.mojang.serialization.Codec.STRING).networkSynchronized(net.minecraft.network.codec.StreamCodec.of((b,v)->b.writeUtf(v,256),b->b.readUtf(256))).build());
  public static final CustomDeckbox CUSTOM_BOX=customBox();

@@ -1,13 +1,13 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 
 import net.fabricmc.loader.api.FabricLoader;
 import java.io.*;
 import java.nio.file.*;
 import java.util.Properties;
 
-/** Small persistent client preferences shared by every MTG Companion browser UI. */
+/** Small persistent client preferences shared by every Caszual MTG browser UI. */
 public final class ClientPrefs {
- private static final Path FILE=FabricLoader.getInstance().getConfigDir().resolve("mtgcompanion-client.properties");
+ private static final Path FILE=FabricLoader.getInstance().getConfigDir().resolve("caszual_mtg-client.properties");
  private static boolean grid=loadGrid();
  private ClientPrefs(){}
 
@@ -19,7 +19,7 @@ public final class ClientPrefs {
   p.setProperty("cardView",value?"grid":"list");
   try{
    Files.createDirectories(FILE.getParent());
-   try(Writer out=Files.newBufferedWriter(FILE)){p.store(out,"MTG Companion client preferences");}
+   try(Writer out=Files.newBufferedWriter(FILE)){p.store(out,"Caszual MTG client preferences");}
   }catch(IOException ignored){}
  }
 

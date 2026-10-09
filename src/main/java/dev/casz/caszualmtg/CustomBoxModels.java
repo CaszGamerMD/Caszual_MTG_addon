@@ -1,5 +1,5 @@
-package dev.casz.mtg;
-import dev.casz.mtg.mixin.ItemLayersAccess;
+package dev.casz.caszualmtg;
+import dev.casz.caszualmtg.mixin.ItemLayersAccess;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 import net.fabricmc.fabric.api.client.model.loading.v1.wrapper.*;
 import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
@@ -23,8 +23,8 @@ import java.util.function.Predicate;
 public final class CustomBoxModels {
  static final Identifier PANELS=Identifier.fromNamespaceAndPath("minecraft","block/spruce_planks");
  public static void register(){ModelLoadingPlugin.register(context->{
-  context.modifyBlockModelAfterBake().register((model,ctx)->ctx.state().is(Companion.CUSTOM_BOX)?new WorldModel(model):model);
-  context.modifyItemModelAfterBake().register((model,ctx)->ctx.itemId().equals(Companion.id("custom_deckbox"))?new ItemModel(model):model);
+  context.modifyBlockModelAfterBake().register((model,ctx)->ctx.state().is(CaszualMtg.CUSTOM_BOX)?new WorldModel(model):model);
+  context.modifyItemModelAfterBake().register((model,ctx)->ctx.itemId().equals(CaszualMtg.id("custom_deckbox"))?new ItemModel(model):model);
  });}
  static Material.Baked material(String id){return Minecraft.getInstance().getModelManager().getBlockStateModelSet().getParticleMaterial(BoxMaterial.block(id).defaultBlockState());}
  static String skin(BlockAndTintGetter level,BlockPos pos){Object data=level.getBlockEntityRenderData(pos);return data instanceof String id?BoxMaterial.safe(id):BoxMaterial.DEFAULT;}
@@ -52,6 +52,6 @@ public final class CustomBoxModels {
  }
  static final class ItemModel extends WrapperBakedItemModel {
   ItemModel(net.minecraft.client.renderer.item.ItemModel model){super(model);}
-  @Override public void update(ItemStackRenderState state,ItemStack stack,ItemModelResolver resolver,ItemDisplayContext display,net.minecraft.client.multiplayer.ClientLevel level,net.minecraft.world.entity.ItemOwner owner,int seed){int first=((ItemLayersAccess)state).companion$layerCount();wrapped.update(state,stack,resolver,display,level,owner,seed);String id=BoxMaterial.safe(stack.getOrDefault(Companion.BOX_MATERIAL,BoxMaterial.DEFAULT));var material=material(id);var access=(ItemLayersAccess)state;for(int i=first;i<access.companion$layerCount();i++){var layer=access.companion$layers()[i];var quads=layer.prepareQuadList();quads.replaceAll(q->remap(q,material));layer.setParticleMaterial(material);}state.appendModelIdentityElement(id);if(material.sprite().isAnimated())state.setAnimated();}
+  @Override public void update(ItemStackRenderState state,ItemStack stack,ItemModelResolver resolver,ItemDisplayContext display,net.minecraft.client.multiplayer.ClientLevel level,net.minecraft.world.entity.ItemOwner owner,int seed){int first=((ItemLayersAccess)state).companion$layerCount();wrapped.update(state,stack,resolver,display,level,owner,seed);String id=BoxMaterial.safe(stack.getOrDefault(CaszualMtg.BOX_MATERIAL,BoxMaterial.DEFAULT));var material=material(id);var access=(ItemLayersAccess)state;for(int i=first;i<access.companion$layerCount();i++){var layer=access.companion$layers()[i];var quads=layer.prepareQuadList();quads.replaceAll(q->remap(q,material));layer.setParticleMaterial(material);}state.appendModelIdentityElement(id);if(material.sprite().isAnimated())state.setAnimated();}
  }
 }

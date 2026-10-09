@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 import com.spider.mtgcard.client.compat.*;
 import com.spider.mtgcard.util.TcgCardMeta;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -25,7 +25,7 @@ public final class CommunityScreen extends LegacyContainerScreen<CommunityMenu> 
  void send(String action,String text,int count){if(!action.equals("search")&&!action.equals("box_deposit")&&count<1)return;if(action.equals("withdraw")&&count>64){message="Inventory withdrawal limit is 64; deckbox limit is 99.";return;}long now=System.currentTimeMillis();if(now-lastSend<180)return;lastSend=now;ClientPlayNetworking.send(new Wire.Request(menu.pos,action,text,count));message="Working…";}
  @Override protected void renderBg(GuiGraphics g,float delta,int mx,int my){int x=leftPos,y=topPos;g.fill(x,y,x+640,y+430,0xFF152032);g.drawString(font,title,x+12,y+12,0xFFFFFFFF);g.drawString(font,font.plainSubstrByWidth(data==null?"Loading shared collection…":data.message(),612),x+12,y+58,0xFFB3DFFF);
   if(data!=null)CardBrowser.render(g,font,data.rows(),x+12,y+76,412,212,scroll,selected,grid,false);
-  var chosen=chosen();if(chosen!=null)ClientCompanion.art(g,chosen.card(),face,x+452,y+76,158,198);
+  var chosen=chosen();if(chosen!=null)CaszualMtgClient.art(g,chosen.card(),face,x+452,y+76,158,198);
   g.drawString(font,"Your inventory",x+12,y+305,0xFFB3DFFF);g.drawString(font,"Deckbox",x+400,y+308,0xFFB3DFFF);
   for(var slot:menu.slots){g.fill(x+slot.x-1,y+slot.y-1,x+slot.x+17,y+slot.y+17,0xFF91A5C1);g.fill(x+slot.x,y+slot.y,x+slot.x+16,y+slot.y+16,0xFF27364D);}
   g.drawString(font,"Closing returns the deckbox to you.",x+212,y+384,0xFF9CADC6);if(!message.isEmpty())g.drawString(font,font.plainSubstrByWidth(message,524),x+12,y+409,0xFFFFDA8A);
