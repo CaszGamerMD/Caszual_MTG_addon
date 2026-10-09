@@ -96,7 +96,7 @@ The Java build and parser checks pass. Dedicated-server integration checks cover
 
 If startup reports `mtgcard.client.mixins.json:MouseTweaksGuiContainerHandlerMixin` / `GuiContainerHandler was loaded too early`, the failure is in MTGCard's optional Mouse Tweaks mixin plugin, **not** a Caszual MTG mixin. Changing the Caszual MTG JAR alone does not repair it.
 
-See [the Windows-friendly local MTGCard JAR hotfix and safety notes](docs/MTGCARD_MOUSE_TWEAKS_FIX.md). The workaround disables MTGCard's single early-loading optional Mouse Tweaks compatibility mixin registration; it does not uninstall Mouse Tweaks or change the official MTGCard JAR. Revert to an upstream-fixed MTGCard release when one is available.
+See [the Windows-friendly local MTGCard JAR hotfix and safety notes](docs/MTGCARD_MOUSE_TWEAKS_FIX.md). The preferred Java 25 fixer repairs MTGCard's class-presence probe so it no longer loads the Mouse Tweaks handler too early. It keeps MTGCard's Mouse Tweaks integration enabled and creates a separate, locally patched MTGCard JAR; it does not overwrite the official original. The fixer itself is a standalone utility, not a Fabric mod. Revert to an upstream-fixed MTGCard release when one is available.
 
 ## Source build
 
@@ -104,4 +104,4 @@ The source zip does not redistribute MTGCard. Put your `MtgCard-fabric-1.7.0-26.
 
 ## Retained startup fix
 
-Moved the client container accessor into `dev.casz.caszualmtg.mixin`, separate from all regular addon classes. This fixes the client IllegalClassLoadError caused by Mixin reserving the main addon package. Remove older Caszual MTG jars before installing 0.4.0. Update both clients and server together: this version changes the search network messages and retains the custom deckbox and material component.
+Moved the client container accessor into `dev.casz.caszualmtg.mixin`, separate from all regular addon classes. This fixes the client IllegalClassLoadError caused by Mixin reserving the main addon package. Remove older Caszual MTG jars before installing 0.6.0. Update both clients and server together: this version changes the search network messages and retains the custom deckbox and material component.
