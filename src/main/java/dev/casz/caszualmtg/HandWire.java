@@ -11,8 +11,8 @@ public final class HandWire {
  public record Request(BlockPos pos,String action,String text) implements CustomPacketPayload {
   public static final Type<Request> TYPE=new Type<>(CaszualMtg.id("hand_request"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Request> CODEC=StreamCodec.of(
-   (b,p)->{b.writeBlockPos(p.pos);b.writeUtf(p.action,32);b.writeUtf(p.text,128);},
-   b->new Request(b.readBlockPos(),b.readUtf(32),b.readUtf(128))
+   (b,p)->{b.writeBlockPos(p.pos);b.writeUtf(p.action,32);b.writeUtf(p.text,512);},
+   b->new Request(b.readBlockPos(),b.readUtf(32),b.readUtf(512))
   );
   public Type<Request> type(){return TYPE;}
  }
