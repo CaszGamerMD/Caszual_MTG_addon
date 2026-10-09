@@ -24,16 +24,19 @@ public final class MtgBlockEntitySafety {
 
     private MtgBlockEntitySafety() {}
 
-    public static void verifyAndRepair() {
-        if (checked) return;
+    /**
+     * Called only after Fabric has initialized the mods. Returns false (without
+     * failing startup) if MTGCard's initializer has not run yet.
+     */
+    public static synchronized boolean verifyIfReady() {
+        if (checked) return true;
 
-        // MTGCard owns ModBlocks.init() and ModBlockEntities.init().
-        // It must have completed its own entrypoint before this dependency loads.
+        // An addon entrypoint can run before MTGCard finishes its registration.
+        // Never call MTGCard's init() here and never abort client boot over timing.
         if (ModBlockEntities.DECKBOX == null || ModBlockEntities.CARD_STORE == null
                 || ModBlockEntities.DECK_CONTROL == null || ModBlockEntities.GRAVEYARD == null
                 || ModBlockEntities.DISPLAY_BLOCK == null || ModBlockEntities.CARD_DB == null) {
-            throw new IllegalStateException("MTGCard's block entities are not yet initialized; "
-                    + "check MTGCard 1.7.0-26.2 installation and mod initialization order");
+            return false;
         }
 
         int repaired = 0;
@@ -67,6 +70,15 @@ public final class MtgBlockEntitySafety {
                     + "Original block entities and their saved contents remain unchanged.", repaired);
         } else {
             LOGGER.info("Verified MTGCard block-entity associations (including Card Store and deckboxes).");
+        }
+        return true;
+    }
+
+    /** Deferred to the first client-start/server-start lifecycle checkpoint. */
+    public static void verifyAtLifecycle(String phase) {
+        if (!verifyIfReady()) {
+            LOGGER.warn("MTGCard block-entity registrations are still unavailable at {}. "
+                    + "Check the installed MTGCard version and logs; Caszual MTG won't abort startup.", phase);
         }
     }
 
