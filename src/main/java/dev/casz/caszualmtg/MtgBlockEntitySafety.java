@@ -76,9 +76,14 @@ public final class MtgBlockEntitySafety {
 
     /** Deferred to the first client-start/server-start lifecycle checkpoint. */
     public static void verifyAtLifecycle(String phase) {
-        if (!verifyIfReady()) {
-            LOGGER.warn("MTGCard block-entity registrations are still unavailable at {}. "
-                    + "Check the installed MTGCard version and logs; Caszual MTG won't abort startup.", phase);
+        try {
+            if (!verifyIfReady()) {
+                LOGGER.warn("MTGCard block-entity registrations are still unavailable at {}. "
+                        + "Check the installed MTGCard version and logs; Caszual MTG won't abort startup.", phase);
+            }
+        } catch (RuntimeException error) {
+            LOGGER.error("Could not validate MTGCard block-entity registrations at {}. "
+                    + "Deferring the error instead of crashing Minecraft during startup.", phase, error);
         }
     }
 
