@@ -74,7 +74,7 @@ This names a **MTGCard** optional Mouse Tweaks integration mixin, not a Caszual 
 
 ### Error: Invalid block entity mtgcard:deckbox or mtgcard:card_store
 
-**Caszual MTG 0.6.1** verifies that MTGCard's native Deckbox, Warped Deckbox, Card Store, and other native block-entity types recognize their registered block states. It repairs missing valid-block associations without replacing block entities, changing block IDs, or deleting card storage. It also stops Caszual MTG from calling MTGCard's block-entity init routine directly.
+**Caszual MTG 0.6.2** verifies that MTGCard's native Deckbox, Warped Deckbox, Card Store, and other native block-entity types recognize their registered block states. It repairs missing valid-block associations without replacing block entities, changing block IDs, or deleting card storage. It also stops Caszual MTG from calling MTGCard's block-entity init routine directly.
 
 If Jade reports `Invalid block entity mtgcard:deckbox` or Minecraft crashes with `Invalid block entity mtgcard:card_store`, back up the world, replace older Caszual MTG JARs with **0.6.1 on both client and server**, and restart both. You do not need to break or replace the Deckbox or Card Store.
 
@@ -82,4 +82,4 @@ Jade may be the first mod to read the bad block entity but is not necessarily th
 
 ## Version mismatch
 
-Caszual MTG 0.6.1 targets Minecraft 26.2 and MTGCard 1.7.0-26.2. Use matching client/server jars and remove older Caszual MTG copies.
+Caszual MTG 0.6.2 targets Minecraft 26.2 and MTGCard 1.7.0-26.2. Use matching client/server jars and remove older Caszual MTG copies.
