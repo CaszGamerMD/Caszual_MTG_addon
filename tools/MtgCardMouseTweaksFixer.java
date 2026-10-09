@@ -37,8 +37,8 @@ public final class MtgCardMouseTweaksFixer {
     private static final ClassDesc LOADER = ClassDesc.of("java.lang.ClassLoader");
     private static final ClassDesc OBJECTS = ClassDesc.of("java.util.Objects");
     private static final ClassDesc OBJECT = ClassDesc.of("java.lang.Object");
-    private static final ClassDesc CHAR = ClassDesc.ofDescriptor("C");
-    private static final ClassDesc BOOLEAN = ClassDesc.ofDescriptor("Z");
+    private static final ClassDesc CHAR = java.lang.constant.ConstantDescs.CD_char;
+    private static final ClassDesc BOOLEAN = java.lang.constant.ConstantDescs.CD_boolean;
     private static final ClassDesc URL = ClassDesc.of("java.net.URL");
     private static final ClassDesc SELF = ClassDesc.of(PLUGIN);
 
