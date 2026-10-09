@@ -2,7 +2,7 @@ name: Build Caszual MTG
 
 on:
   push:
-    branches: [ main, rebrand-caszual-mtg ]
+    branches: [ main, rebrand-caszual-mtg, fix/mtgcard-mousetweaks-earlyload ]
   workflow_dispatch:
 
 jobs:
@@ -26,6 +26,12 @@ jobs:
 
       - name: Build and verify
         run: ./gradlew clean build --stacktrace
+
+      - name: Test MTGCard Mouse Tweaks safety patch
+        run: |
+          python3 -m unittest discover -s tests -p 'test_patch_mtgcard_mousetweaks.py' -v
+          ./gradlew writeRuntimeClasspath --quiet
+          python3 tools/verify_mtgcard_patch.py build/runtime-classpath.txt
 
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
