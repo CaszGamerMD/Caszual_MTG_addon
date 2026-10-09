@@ -35,9 +35,13 @@ The selected Deck Control must be within the Hand's 8-block link range. A Deck C
 
 Right-click the Hand podium while holding an MTG card. One card is inserted into the Hand if you are authorized and space is available.
 
+The Hand screen also includes **Deposit inventory cards** for authorized players. It moves MTG cards from all 36 main-inventory/hotbar slots into the Hand, up to the Hand's **100-card** limit. Non-card items stay untouched. Cards are consumed from the player's inventory even in creative mode (this is a transfer, not duplication).
+
 ### Take
 
-Open the Hand, select a card, and press **Take selected**. The card is returned to your inventory (or dropped if inventory insertion fails).
+Open the Hand and **click cards to toggle their selection**. You can choose several cards before pressing **Take selected** to retrieve them together. **Select all** and **Clear** are available for fast selection.
+
+The Hand checks that your inventory has enough empty slots **before** removing any cards. If space is insufficient, no cards are taken (so a multi-card transfer never silently drops cards).
 
 If strict-mulligan discards are pending, taking cards out is blocked until those discards are completed.
 
@@ -51,7 +55,7 @@ If the Hand reaches 100 cards, further linked draws are consumed without removin
 
 ## World visualizer
 
-The podium displays only face-down MTG card backs:
+The podium displays fully opaque, face-down illustrated card backs, using a dedicated block-atlas texture:
 
 - **0–13 cards:** individual face-down cards are shown on the top surface.
 - **14+ cards:** the display becomes a growing face-down stack.
