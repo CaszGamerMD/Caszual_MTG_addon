@@ -17,7 +17,7 @@ Caszual MTG 0.6.0 requires:
 3. Install the same mod versions on the server and on every player client.
 4. Restart Minecraft/server.
 
-Do not leave older Caszual MTG jars in the mods folder at the same time.
+Remove any old `mtgcompanion-*.jar` and older Caszual MTG jars from the mods folder; install only the new `caszual-mtg-0.6.0.jar`. The mod ID and block/item IDs have changed to `caszual_mtg`, and content placed under the old ID is not migrated. MTGCard itself is still required.
 
 ## Creative tab
 
