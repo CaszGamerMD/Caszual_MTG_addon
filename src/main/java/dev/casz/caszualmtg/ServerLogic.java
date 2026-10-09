@@ -35,6 +35,8 @@ public final class ServerLogic {
     case "search" -> {if(s.kind<3)search(p,s,req.text(),req.amount(),req.filter(),req.oracle(),req.stats());}
     case "arts" -> {if(s.kind<2)artworks(p,s,req.text(),req.amount());}
     case "deposit" -> {if(s.kind<3)deposit(p,s);}
+    case "deposit_inventory" -> {if(s.kind==2)depositInventory(p,s);}
+    case "deposit_loose" -> {if(s.kind==2&&p.containerMenu instanceof CommunityMenu menu)depositLoose(p,s,menu);}
     case "withdraw" -> {if(s.kind<3)withdraw(p,s,req.text(),req.amount());}
     case "box_deposit", "box_withdraw", "box_fill" -> {if(s.kind==2&&p.containerMenu instanceof CommunityMenu menu){Banks bank=Banks.get(p.level().getServer());int count=req.action().equals("box_deposit")?DeckboxTransfer.deposit(p,menu.deckbox(),bank):DeckboxTransfer.withdraw(p,menu.deckbox(),bank,req.action().equals("box_fill")?null:req.text(),s.query,Math.clamp(req.amount(),1,99));menu.broadcastChanges();reply(p,s,"Transferred "+count+" cards. Lands and tokens stay in the box during deposits.","");}}
     case "import" -> {if(s.kind==3){var list=DeckList.parse(req.text());if(!list.errors().isEmpty()){reply(p,s,"Import rejected: "+list.errors().getFirst(),String.join("\n",list.errors()));return;}if(list.lines().isEmpty()){reply(p,s,"No cards in the list.","");return;}s.deck=req.text();s.statuses=list.lines().stream().map(line->new Wire.Row(line.label(),ItemStack.EMPTY,-1,line.quantity())).toList();reply(p,s,"Loaded "+list.lines().size()+" card entries. Checking availability…","");resolveLands(p,s,()->plan(p,s,false,req.amount()));}}
@@ -71,7 +73,38 @@ public final class ServerLogic {
    s.catalogueRows=List.copyOf(found);replyRows(p,s,(family==null?"Free catalogue":"Artwork choices")+" — page "+(page+1)+" · "+result.total()+" matches"+(result.hasMore()?" · more pages":""),family==null?"":"art",found);
   }));
  }
- static void deposit(ServerPlayer p,Session s){ItemStack held=p.getMainHandItem();if(!CardItemRegistry.isCard(held)||Banks.kind(held)!=s.kind){reply(p,s,"Hold a matching card in your main hand.","");return;}Banks.get(p.level().getServer()).add(held,s.kind,held.getCount());held.shrink(held.getCount());reply(p,s,s.kind==2?"Cards deposited.":"Card added to unlimited catalogue.","");}
+ static boolean eligibleLoose(ItemStack stack){
+  return !stack.isEmpty()&&CardItemRegistry.isCard(stack)&&CardDatabaseCards.canStore(stack)&&Banks.kind(stack)==2;
+ }
+ static void deposit(ServerPlayer p,Session s){
+  ItemStack held=p.getMainHandItem();
+  if(held.isEmpty()||!CardItemRegistry.isCard(held)||!CardDatabaseCards.canStore(held)||Banks.kind(held)!=s.kind){reply(p,s,"Hold a matching, storable MTG card.","");return;}
+  int count=held.getCount();
+  Banks.get(p.level().getServer()).add(held,s.kind,count);
+  held.shrink(count);p.getInventory().setChanged();p.inventoryMenu.broadcastChanges();
+  reply(p,s,s.kind==2?"Deposited "+count+" cards.":"Card added to unlimited catalogue.","");
+ }
+ static void depositInventory(ServerPlayer p,Session s){
+  Banks bank=Banks.get(p.level().getServer());int moved=0;
+  for(int slot=0;slot<36;slot++){
+   ItemStack card=p.getInventory().getItem(slot);
+   if(!eligibleLoose(card))continue;
+   int count=card.getCount();
+   bank.add(card,2,count);
+   card.shrink(count);
+   moved+=count;
+  }
+  if(moved>0){p.getInventory().setChanged();p.inventoryMenu.broadcastChanges();}
+  reply(p,s,moved>0?"Deposited "+moved+" regular cards from your inventory.":"No regular MTG cards found in your inventory.","");
+ }
+ static void depositLoose(ServerPlayer p,Session s,CommunityMenu menu){
+  ItemStack stack=menu.looseCard();
+  if(!eligibleLoose(stack)){reply(p,s,"Put regular MTG cards in the loose-card input slot.","");return;}
+  int count=stack.getCount();
+  Banks.get(p.level().getServer()).add(stack,2,count);
+  menu.consumeLoose();
+  reply(p,s,"Deposited "+count+" loose card"+(count==1?"":"s")+" into the shared collection.","");
+ }
  static void withdraw(ServerPlayer p,Session s,String key,int qty){if(qty<1||qty>64)return;Banks b=Banks.get(p.level().getServer());Banks.Entry entry=b.entries.get(key);if(entry==null||entry.kind()!=s.kind||Banks.kind(entry.card())!=s.kind){reply(p,s,"Card is no longer available.","");return;}if(s.kind<2&&(!matching(s,entry.card())||s.catalogueRows.stream().noneMatch(row->row.key().equals(key)))){reply(p,s,"Choose a card from the current results.","");return;}int count=s.kind==2?(int)Math.min(qty,entry.count()):qty;
   // Check empty inventory slots first; cards have individual UIDs and must not merge.
   List<Integer> free=new ArrayList<>();for(int i=0;i<36;i++)if(p.getInventory().getItem(i).isEmpty())free.add(i);if(free.size()<count){reply(p,s,"Need "+count+" empty inventory slots; try a smaller quantity.","");return;}
