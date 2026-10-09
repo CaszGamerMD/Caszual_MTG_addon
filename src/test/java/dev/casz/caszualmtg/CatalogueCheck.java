@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 public final class CatalogueCheck {
  static void check(boolean value,String name){if(!value)throw new AssertionError(name);}
  public static void main(String[] args){

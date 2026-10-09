@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 public final class DeckListCheck {
  static void check(boolean condition,String label){if(!condition)throw new AssertionError(label);}
  public static void main(String[] args){
