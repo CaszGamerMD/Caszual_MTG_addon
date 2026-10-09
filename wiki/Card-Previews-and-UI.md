@@ -25,11 +25,11 @@ Grid view:
 - supports scrolling;
 - lets you select a card for a larger preview.
 
-The preference is saved client-side and shared between MTG Companion card browsers.
+The preference is saved client-side and shared between Caszual MTG card browsers.
 
 ## GUI scaling
 
-MTG Companion custom GUIs use a common enlarged scaling target:
+Caszual MTG custom GUIs use a common enlarged scaling target:
 
 - preferred Minecraft GUI scale **3**;
 - common minimum layout target around **640×430**;

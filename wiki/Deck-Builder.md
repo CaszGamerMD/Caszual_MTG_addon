@@ -1,6 +1,6 @@
 # Deck Builder
 
-The Deck Builder assembles decklists from nearby MTG Companion databases and writes available cards into an adjacent MTGCard deckbox.
+The Deck Builder assembles decklists from nearby Caszual MTG databases and writes available cards into an adjacent MTGCard deckbox.
 
 ## Required layout
 
@@ -49,7 +49,7 @@ Paste a public or unlisted Archidekt deck URL into the URL field and press **Imp
 - Main deck only.
 - Sideboard and Maybeboard ignored.
 - Printing/set/collector information is preserved when Archidekt supplies it.
-- Private decks are not supported because MTG Companion does not request or store Archidekt login credentials.
+- Private decks are not supported because Caszual MTG does not request or store Archidekt login credentials.
 - A failed URL import does not replace the currently loaded list.
 
 ## Availability checking
@@ -91,7 +91,7 @@ The output deckbox must be empty.
 
 After **Check cards**, press **Shop missing**.
 
-MTG Companion finds the nearest real MTGCard **Card Store block within 4 blocks**, resolves the missing cards, saves them into that player's Card Store cart, and opens the store.
+Caszual MTG finds the nearest real MTGCard **Card Store block within 4 blocks**, resolves the missing cards, saves them into that player's Card Store cart, and opens the store.
 
 If the decklist specified a set/collector number, that printing is preferred for the store entry.
 
