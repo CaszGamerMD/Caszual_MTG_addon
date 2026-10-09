@@ -22,6 +22,9 @@ public final class CaszualMtgClient implements ClientModInitializer {
  static final Map<Screen,Preview> previews=new WeakHashMap<>();
  static final class Preview {ItemStack card=ItemStack.EMPTY;int face;boolean shown;}
  public void onInitializeClient(){
+  // Client initialization is finished before Jade or other overlays inspect blocks.
+  net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED
+      .register(client -> MtgBlockEntitySafety.verifyAtLifecycle("client startup"));
   CustomBoxModels.register();
   net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.COMMUNITY_MENU,CommunityScreen::new);
   ClientPlayNetworking.registerGlobalReceiver(Wire.Reply.TYPE,(reply,ctx)->{if(reply.kind()==2){if(ctx.client().gui.screen() instanceof CommunityScreen screen&&screen.getMenu().pos.equals(reply.pos()))screen.update(reply);return;}if(ctx.client().gui.screen() instanceof BankScreen screen&&screen.pos.equals(reply.pos())&&screen.kind==reply.kind())screen.update(reply);else if(!(ctx.client().gui.screen() instanceof BankScreen))ctx.client().gui.setScreen(new BankScreen(reply));});
