@@ -92,6 +92,12 @@ The community collections are stored in the overworld SavedData file for this ad
 
 The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.6.0 as a test build.
 
+## MTGCard + Mouse Tweaks startup crash workaround
+
+If startup reports `mtgcard.client.mixins.json:MouseTweaksGuiContainerHandlerMixin` / `GuiContainerHandler was loaded too early`, the failure is in MTGCard's optional Mouse Tweaks mixin plugin, **not** a Caszual MTG mixin. Changing the Caszual MTG JAR alone does not repair it.
+
+See [the Windows-friendly local MTGCard JAR hotfix and safety notes](docs/MTGCARD_MOUSE_TWEAKS_FIX.md). The workaround disables MTGCard's single early-loading optional Mouse Tweaks compatibility mixin registration; it does not uninstall Mouse Tweaks or change the official MTGCard JAR. Revert to an upstream-fixed MTGCard release when one is available.
+
 ## Source build
 
 The source zip does not redistribute MTGCard. Put your `MtgCard-fabric-1.7.0-26.2.jar` into the source project's `libs` directory. With Java 25 installed, run `gradlew.bat build` on Windows or `./gradlew build` on Linux/macOS. Output is in `build/libs`. Gradle downloads Fabric/Minecraft dependencies on the first build.
