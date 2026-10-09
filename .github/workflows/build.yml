@@ -2,7 +2,7 @@ name: Build Caszual MTG
 
 on:
   push:
-    branches: [ main, rebrand-caszual-mtg, fix/mtgcard-mousetweaks-earlyload, fix/mtgcard-block-entity-validation, fix/deferred-mtgcard-be-verification, feat/hand-bulk-cards-community-loose-deposit ]
+    branches: [ main, 'fix/**', 'feat/**', 'chore/**' ]
   workflow_dispatch:
 
 jobs:
@@ -30,27 +30,6 @@ jobs:
       - name: Validate opaque Hand Block texture and model assets
         run: python3 -m unittest discover -s tests -p 'test_hand_assets.py' -v
 
-      - name: Test MTGCard Mouse Tweaks safety patch
-        run: |
-          python3 -m unittest discover -s tests -p 'test_patch_mtgcard_mousetweaks.py' -v
-          ./gradlew writeRuntimeClasspath --quiet
-          python3 tools/verify_mtgcard_patch.py build/runtime-classpath.txt
-
-      - name: Build and verify preserving MTGCard compatibility fixer
-        run: |
-          mkdir -p build/fixer-classes
-          javac --release 25 -d build/fixer-classes tools/MtgCardMouseTweaksFixer.java
-          jar --create --file build/mtgcard-mousetweaks-fixer.jar --main-class=MtgCardMouseTweaksFixer -C build/fixer-classes .
-          python3 tools/verify_java_fixer.py
-
-      - name: Upload standalone MTGCard fixer
-        uses: actions/upload-artifact@v4
-        with:
-          name: mtgcard-mousetweaks-fixer-${{ github.sha }}
-          path: build/mtgcard-mousetweaks-fixer.jar
-          if-no-files-found: error
-          retention-days: 30
-
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
@@ -59,11 +38,9 @@ jobs:
           test -n "$JAR"
           cp "$JAR" release/caszual-mtg-0.7.0.jar
           sha256sum release/caszual-mtg-0.7.0.jar > release/caszual-mtg-0.7.0.jar.sha256
-          cp build/mtgcard-mousetweaks-fixer.jar release/mtgcard-mousetweaks-fixer.jar
-          sha256sum release/mtgcard-mousetweaks-fixer.jar > release/mtgcard-mousetweaks-fixer.jar.sha256
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add release/caszual-mtg-0.7.0.jar release/caszual-mtg-0.7.0.jar.sha256 release/mtgcard-mousetweaks-fixer.jar release/mtgcard-mousetweaks-fixer.jar.sha256
+          git add release/caszual-mtg-0.7.0.jar release/caszual-mtg-0.7.0.jar.sha256
           if ! git diff --cached --quiet; then
             git commit -m "Publish Caszual MTG 0.7.0 package [skip ci]"
             git push

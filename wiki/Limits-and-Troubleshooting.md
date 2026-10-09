@@ -68,10 +68,6 @@ A Graveyard must directly touch the linked Deck Control and must have room.
 
 Sneak-right-click the placed Custom Deckbox with a BlockItem. The current implementation schedules a deckbox tick and client render refresh after a confirmed material change.
 
-### Crash on startup: MouseTweaksGuiContainerHandlerMixin was loaded too early
-
-This names a **MTGCard** optional Mouse Tweaks integration mixin, not a Caszual MTG mixin. MTGCard's compatibility plugin may load the Mouse Tweaks handler before the mixin is applied. See [the safe local JAR workaround](../docs/MTGCARD_MOUSE_TWEAKS_FIX.md); it creates a patched copy of your official MTGCard 1.7.0-26.2 JAR while preserving the original. The native fix must be made upstream in MTGCard.
-
 ### 0.6.1 startup exception: MTGCard block entities are not yet initialized
 
 If Minecraft crashes during `caszual_mtg`'s `main` entrypoint with

@@ -29,7 +29,6 @@ tasks.register('verifyDeckLists', JavaExec) {
     mainClass = 'dev.casz.caszualmtg.DeckListCheck'
 }
 tasks.named('check') { dependsOn verifyDeckLists }
-tasks.register('writeRuntimeClasspath') { doLast { file('build/runtime-classpath.txt').text = sourceSets.main.runtimeClasspath.asPath } }
 
 // Parser checks use an explicit Java harness rather than JUnit.
 tasks.named("test") { enabled = false }

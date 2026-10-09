@@ -105,12 +105,6 @@ Caszual MTG no longer invokes MTGCard's block-entity initialization itself. On n
 
 This addresses the reported `Invalid block entity mtgcard:deckbox` errors seen by Jade and `Invalid block entity mtgcard:card_store` exceptions during interactions. The regression harness also checks actual server-side block-entity creation for a Warped Deckbox and Card Store. Back up your world and update **both client and server** to 0.6.1. A full client/modpack recreation of the user's issue has not yet been performed.
 
-## MTGCard + Mouse Tweaks startup crash workaround
-
-If startup reports `mtgcard.client.mixins.json:MouseTweaksGuiContainerHandlerMixin` / `GuiContainerHandler was loaded too early`, the failure is in MTGCard's optional Mouse Tweaks mixin plugin, **not** a Caszual MTG mixin. Changing the Caszual MTG JAR alone does not repair it.
-
-See [the Windows-friendly local MTGCard JAR hotfix and safety notes](docs/MTGCARD_MOUSE_TWEAKS_FIX.md). The preferred Java 25 fixer repairs MTGCard's class-presence probe so it no longer loads the Mouse Tweaks handler too early. It keeps MTGCard's Mouse Tweaks integration enabled and creates a separate, locally patched MTGCard JAR; it does not overwrite the official original. The fixer itself is a standalone utility, not a Fabric mod. Revert to an upstream-fixed MTGCard release when one is available.
-
 ## Source build
 
 The source zip does not redistribute MTGCard. Put your `MtgCard-fabric-1.7.0-26.2.jar` into the source project's `libs` directory. With Java 25 installed, run `gradlew.bat build` on Windows or `./gradlew build` on Linux/macOS. Output is in `build/libs`. Gradle downloads Fabric/Minecraft dependencies on the first build.
