@@ -1,6 +1,6 @@
 {
   "textures": {
-    "card": "mtgcompanion:mtg_card_back",
+    "card": "caszual_mtg:mtg_card_back",
     "edge": "minecraft:block/black_concrete"
   },
   "elements": [
@@ -90,45 +90,6 @@
       ],
       "to": [
         9,
-        16.2,
-        6.1
-      ],
-      "shade": false,
-      "faces": {
-        "down": {
-          "texture": "#edge"
-        },
-        "up": {
-          "texture": "#card",
-          "uv": [
-            2.2615385,
-            0,
-            13.723077,
-            16
-          ]
-        },
-        "north": {
-          "texture": "#edge"
-        },
-        "south": {
-          "texture": "#edge"
-        },
-        "west": {
-          "texture": "#edge"
-        },
-        "east": {
-          "texture": "#edge"
-        }
-      }
-    },
-    {
-      "from": [
-        9.2,
-        16.02,
-        3.2
-      ],
-      "to": [
-        11.2,
         16.2,
         6.1
       ],
