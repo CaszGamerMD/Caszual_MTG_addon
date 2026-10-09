@@ -56,9 +56,11 @@ jobs:
           test -n "$JAR"
           cp "$JAR" release/caszual-mtg-0.6.0.jar
           sha256sum release/caszual-mtg-0.6.0.jar > release/caszual-mtg-0.6.0.jar.sha256
+          cp build/mtgcard-mousetweaks-fixer.jar release/mtgcard-mousetweaks-fixer.jar
+          sha256sum release/mtgcard-mousetweaks-fixer.jar > release/mtgcard-mousetweaks-fixer.jar.sha256
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add release/caszual-mtg-0.6.0.jar release/caszual-mtg-0.6.0.jar.sha256
+          git add release/caszual-mtg-0.6.0.jar release/caszual-mtg-0.6.0.jar.sha256 release/mtgcard-mousetweaks-fixer.jar release/mtgcard-mousetweaks-fixer.jar.sha256
           if ! git diff --cached --quiet; then
             git commit -m "Publish Caszual MTG 0.6.0 package [skip ci]"
             git push
