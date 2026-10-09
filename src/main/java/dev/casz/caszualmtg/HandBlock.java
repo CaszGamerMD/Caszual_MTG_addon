@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 
 import com.mojang.serialization.MapCodec;
 import com.spider.mtgcard.item.ModItemTags;

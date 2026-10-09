@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
@@ -11,7 +11,7 @@ import net.minecraft.world.phys.Vec3;
 
 public final class DeckboxRefreshWire {
  public record Refresh(BlockPos pos) implements CustomPacketPayload {
-  public static final Type<Refresh> TYPE=new Type<>(Companion.id("deckbox_refresh"));
+  public static final Type<Refresh> TYPE=new Type<>(CaszualMtg.id("deckbox_refresh"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Refresh> CODEC=StreamCodec.of(
    (b,p)->b.writeBlockPos(p.pos),
    b->new Refresh(b.readBlockPos())

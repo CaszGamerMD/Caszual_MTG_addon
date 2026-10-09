@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 import java.util.*;
 import java.util.regex.*;
 

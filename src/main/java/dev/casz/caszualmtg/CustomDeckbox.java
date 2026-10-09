@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 import com.mojang.serialization.MapCodec;
 import com.spider.mtgcard.deckbox.*;
 import net.minecraft.core.BlockPos;
@@ -45,10 +45,10 @@ public final class CustomDeckbox extends DeckboxBlock {
    DeckboxRefreshWire.broadcast(level,pos);
   }
  }
- @Override public void setPlacedBy(Level level,BlockPos pos,BlockState state,LivingEntity owner,ItemStack stack){super.setPlacedBy(level,pos,state,owner,stack);if(level.getBlockEntity(pos) instanceof BoxMaterial box)box.companion$material(stack.getOrDefault(Companion.BOX_MATERIAL,BoxMaterial.DEFAULT));}
- @Override protected ItemStack getCloneItemStack(LevelReader level,BlockPos pos,BlockState state,boolean includeData){ItemStack result=super.getCloneItemStack(level,pos,state,includeData);if(level.getBlockEntity(pos) instanceof BoxMaterial box)result.set(Companion.BOX_MATERIAL,box.companion$material());return result;}
+ @Override public void setPlacedBy(Level level,BlockPos pos,BlockState state,LivingEntity owner,ItemStack stack){super.setPlacedBy(level,pos,state,owner,stack);if(level.getBlockEntity(pos) instanceof BoxMaterial box)box.companion$material(stack.getOrDefault(CaszualMtg.BOX_MATERIAL,BoxMaterial.DEFAULT));}
+ @Override protected ItemStack getCloneItemStack(LevelReader level,BlockPos pos,BlockState state,boolean includeData){ItemStack result=super.getCloneItemStack(level,pos,state,includeData);if(level.getBlockEntity(pos) instanceof BoxMaterial box)result.set(CaszualMtg.BOX_MATERIAL,box.companion$material());return result;}
  public static final class Item extends DeckboxBlockItem {
   public Item(CustomDeckbox block,net.minecraft.world.item.Item.Properties p){super(block,p);}
-  @Override public void appendHoverText(ItemStack stack,net.minecraft.world.item.Item.TooltipContext context,TooltipDisplay display,Consumer<Component> lines,TooltipFlag flag){super.appendHoverText(stack,context,display,lines,flag);lines.accept(Component.literal("Texture: ").append(BoxMaterial.block(stack.getOrDefault(Companion.BOX_MATERIAL,BoxMaterial.DEFAULT)).getName()));lines.accept(Component.literal("Sneak-use a block on the placed box to change its panels."));}
+  @Override public void appendHoverText(ItemStack stack,net.minecraft.world.item.Item.TooltipContext context,TooltipDisplay display,Consumer<Component> lines,TooltipFlag flag){super.appendHoverText(stack,context,display,lines,flag);lines.accept(Component.literal("Texture: ").append(BoxMaterial.block(stack.getOrDefault(CaszualMtg.BOX_MATERIAL,BoxMaterial.DEFAULT)).getName()));lines.accept(Component.literal("Sneak-use a block on the placed box to change its panels."));}
  }
 }

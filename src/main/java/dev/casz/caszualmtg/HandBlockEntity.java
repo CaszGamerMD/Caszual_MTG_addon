@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -24,7 +24,7 @@ public final class HandBlockEntity extends BlockEntity implements Container {
  private int strictMulligans;
  private int pendingStrictDiscards;
 
- public HandBlockEntity(BlockPos pos,BlockState state){super(Companion.HAND_BE,pos,state);}
+ public HandBlockEntity(BlockPos pos,BlockState state){super(CaszualMtg.HAND_BE,pos,state);}
 
  public UUID owner(){return owner;}
  public void ensureOwner(Player player){if(owner==null){owner=player.getUUID();viewers.add(owner);viewerNames.put(owner,player.getGameProfile().name());changed();}}

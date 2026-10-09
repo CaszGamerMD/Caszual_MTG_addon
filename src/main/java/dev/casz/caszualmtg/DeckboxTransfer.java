@@ -1,4 +1,4 @@
-package dev.casz.mtg;
+package dev.casz.caszualmtg;
 
 import com.spider.mtgcard.api.*;
 import com.spider.mtgcard.deckbox.*;
