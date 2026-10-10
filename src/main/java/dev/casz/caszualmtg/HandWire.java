@@ -16,7 +16,7 @@ public final class HandWire {
   );
   public Type<Request> type(){return TYPE;}
  }
- public record Reply(BlockPos pos,String message,boolean visible,boolean authorized,boolean canManage,boolean revealAll,int count,String linked,List<String> viewers,List<ItemStack> cards,int strictMulligans,int pendingDiscards) implements CustomPacketPayload {
+ public record Reply(BlockPos pos,String message,boolean visible,boolean authorized,boolean canManage,boolean revealAll,int count,String linked,List<String> viewers,List<ItemStack> cards,int strictMulligans,int pendingDiscards,boolean hasStaff,String staffLeft,String staffRight) implements CustomPacketPayload {
   public static final Type<Reply> TYPE=new Type<>(CaszualMtg.id("hand_reply"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Reply> CODEC=StreamCodec.of(
    (b,p)->{
@@ -25,6 +25,7 @@ public final class HandWire {
     b.writeVarInt(p.viewers.size());for(String s:p.viewers)b.writeUtf(s,64);
     b.writeVarInt(p.cards.size());for(ItemStack s:p.cards)ItemStack.OPTIONAL_STREAM_CODEC.encode(b,s);
     b.writeVarInt(p.strictMulligans);b.writeVarInt(p.pendingDiscards);
+    b.writeBoolean(p.hasStaff);b.writeUtf(p.staffLeft,7);b.writeUtf(p.staffRight,7);
    },
    b->{
     BlockPos pos=b.readBlockPos();String msg=b.readUtf(512);
@@ -36,7 +37,9 @@ public final class HandWire {
     List<ItemStack> cards=new ArrayList<>();for(int i=0;i<cn;i++)cards.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(b));
     int strict=b.readVarInt(),pending=b.readVarInt();
     if(strict<0||strict>100||pending<0||pending>HandBlockEntity.SIZE)throw new IllegalArgumentException("Invalid hand mulligan state");
-    return new Reply(pos,msg,visible,authorized,manage,reveal,count,linked,List.copyOf(viewers),List.copyOf(cards),strict,pending);
+    boolean staff=b.readBoolean();String left=b.readUtf(7),right=b.readUtf(7);
+    if(!StaffColors.valid(left)||!StaffColors.valid(right))throw new IllegalArgumentException("Invalid staff color packet");
+    return new Reply(pos,msg,visible,authorized,manage,reveal,count,linked,List.copyOf(viewers),List.copyOf(cards),strict,pending,staff,left,right);
    }
   );
   public Type<Reply> type(){return TYPE;}
