@@ -39,9 +39,11 @@ public final class Catalogue {
  /** Match exact names because Scryfall search does not guarantee an oracleid: search operator.
   * Scryfall's exact-name !"..."" syntax returns alternate printings of basic lands. */
  public static String artworkQuery(int kind,ItemStack card,boolean fullArt){
-  var meta=TcgCardMeta.read(card);
+  return artworkQuery(kind,TcgCardMeta.read(card).name(),fullArt);
+ }
+ static String artworkQuery(int kind,String name,boolean fullArt){
   return (kind==0?"t:land legal:commander":"t:token")
-    +(kind==0&&fullArt?" is:fullart":"")+" !"+quote(meta.name());
+    +(kind==0&&fullArt?" is:fullart":"")+" !"+quote(name);
  }
  /** Basics have many distinct illustrations even without a text search.
   * Full-art land search must retain those illustrations rather than one per Oracle card. */
