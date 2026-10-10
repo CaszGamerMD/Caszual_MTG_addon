@@ -18,6 +18,12 @@ Authorized viewers can see the actual cards in the Hand. Unauthorized players on
 
 Card identities are not sent to unauthorized viewers.
 
+## Targeting Staff glow colors
+
+When you carry at least one targeting staff, the Card Hand UI displays two color fields with previews: **Left click** and **Right click**. Enter a six-digit RGB hex code such as `#FFFFFF` or `#8F59FF`, then press **Apply to all staffs**.
+
+The Hand Block remembers both chosen colors in its saved data. Applying them updates every targeting staff in **your** inventory, including offhand, and recolors your active marks. Only authorized Hand players may edit them. Staffs keep their colors after you leave the screen.
+
 ## Linking to Deck Control
 
 Linking is explicit so multiple nearby Deck Controls do not get mixed up.
