@@ -23,6 +23,8 @@ public final class HandBlockEntity extends BlockEntity implements Container {
  private boolean revealAll;
  private int strictMulligans;
  private int pendingStrictDiscards;
+ private String staffLeft=StaffColors.LEFT_DEFAULT;
+ private String staffRight=StaffColors.RIGHT_DEFAULT;
 
  public HandBlockEntity(BlockPos pos,BlockState state){super(CaszualMtg.HAND_BE,pos,state);}
 
@@ -38,6 +40,13 @@ public final class HandBlockEntity extends BlockEntity implements Container {
  public List<String> viewerNames(){return List.copyOf(viewerNames.values());}
  public void addViewer(UUID id,String name){viewers.add(id);viewerNames.put(id,name);changed();}
  public boolean removeViewer(String name){UUID found=null;for(var e:viewerNames.entrySet())if(e.getValue().equalsIgnoreCase(name)&&!e.getKey().equals(owner)){found=e.getKey();break;}if(found==null)return false;viewers.remove(found);viewerNames.remove(found);changed();return true;}
+ public String staffLeft(){return staffLeft;}
+ public String staffRight(){return staffRight;}
+ public void staffColors(String left,String right){
+  String l=StaffColors.normalize(left),r=StaffColors.normalize(right);
+  if(staffLeft.equals(l)&&staffRight.equals(r))return;
+  staffLeft=l;staffRight=r;changed();
+ }
  public int strictMulligans(){return strictMulligans;}
  public int pendingStrictDiscards(){return pendingStrictDiscards;}
  public void resetMulligans(){strictMulligans=0;pendingStrictDiscards=0;changed();}
@@ -86,6 +95,10 @@ public final class HandBlockEntity extends BlockEntity implements Container {
   String link=in.getStringOr("LinkedControl","");linkedControl=parsePos(link);revealAll=in.getBooleanOr("RevealAll",false);
   strictMulligans=Math.max(0,in.getIntOr("StrictMulligans",0));
   pendingStrictDiscards=Math.max(0,in.getIntOr("PendingStrictDiscards",0));
+  String left=in.getStringOr("StaffLeftRGB",StaffColors.LEFT_DEFAULT);
+  String right=in.getStringOr("StaffRightRGB",StaffColors.RIGHT_DEFAULT);
+  staffLeft=StaffColors.valid(left)?StaffColors.normalize(left):StaffColors.LEFT_DEFAULT;
+  staffRight=StaffColors.valid(right)?StaffColors.normalize(right):StaffColors.RIGHT_DEFAULT;
  }
  @Override protected void saveAdditional(ValueOutput out){
   super.saveAdditional(out);
@@ -97,6 +110,8 @@ public final class HandBlockEntity extends BlockEntity implements Container {
   out.putBoolean("RevealAll",revealAll);
   out.putInt("StrictMulligans",strictMulligans);
   out.putInt("PendingStrictDiscards",pendingStrictDiscards);
+  out.putString("StaffLeftRGB",staffLeft);
+  out.putString("StaffRightRGB",staffRight);
  }
 
  static String pos(BlockPos p){return p.getX()+","+p.getY()+","+p.getZ();}
