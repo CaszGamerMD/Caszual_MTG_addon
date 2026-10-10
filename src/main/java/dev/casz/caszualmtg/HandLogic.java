@@ -46,6 +46,7 @@ public final class HandLogic {
     reply(player,hand,discardRandom(player,hand));
    }
    case "deposit_inventory" -> depositInventory(player,hand);
+   case "staff_colors" -> updateStaffColors(player,hand,req.text());
    case "take_selected" -> takeSelected(player,hand,req.text());
    case "discard_selected" -> discardSelected(player,hand,req.text());
    case "mulligan_friendly" -> mulligan(player,hand,false);
@@ -88,6 +89,33 @@ public final class HandLogic {
   return java.util.List.copyOf(indices);
  }
 
+ static int staffCount(ServerPlayer player){
+  int count=0;
+  for(int i=0;i<player.getInventory().getContainerSize();i++)
+   if(player.getInventory().getItem(i).is(CaszualMtg.TARGETING_STAFF))count++;
+  return count;
+ }
+ static void updateStaffColors(ServerPlayer player,HandBlockEntity hand,String raw){
+  if(!hand.isAuthorized(player)){reply(player,hand,"Only authorized Hand players can change staff colors.");return;}
+  if(staffCount(player)==0){reply(player,hand,"Keep a targeting staff in your inventory to edit its colors.");return;}
+  String[] input=raw.split(",",-1);
+  if(input.length!=2||!StaffColors.valid(input[0])||!StaffColors.valid(input[1])){
+   reply(player,hand,"Enter two hex colors in #RRGGBB format.");return;
+  }
+  String left=StaffColors.normalize(input[0]),right=StaffColors.normalize(input[1]);
+  hand.staffColors(left,right);
+  int updated=0;
+  for(int i=0;i<player.getInventory().getContainerSize();i++){
+   ItemStack stack=player.getInventory().getItem(i);
+   if(!stack.is(CaszualMtg.TARGETING_STAFF))continue;
+   StaffColors.write(stack,left,right);
+   updated++;
+  }
+  player.getInventory().setChanged();
+  player.inventoryMenu.broadcastChanges();
+  StaffTargets.refreshOwner(player);
+  reply(player,hand,"Applied "+left+" / "+right+" to "+updated+" targeting staff"+(updated==1?"":"s")+".");
+ }
  static void addViewer(ServerPlayer owner,HandBlockEntity hand,String raw){
   if(!hand.canManage(owner)){reply(owner,hand,"Only the hand owner can add viewers.");return;}
   String name=raw.trim();if(name.isBlank()){reply(owner,hand,"Enter an online player name.");return;}
@@ -227,7 +255,7 @@ public final class HandLogic {
   ServerPlayNetworking.send(player,new HandWire.Reply(
    hand.getBlockPos(),message,visible,authorized,hand.canManage(player),hand.revealAll(),hand.cardCount(),linked,
    hand.canManage(player)?hand.viewerNames():java.util.List.of(),visible?hand.visibleCards():java.util.List.of(),
-   hand.strictMulligans(),hand.pendingStrictDiscards()
+   hand.strictMulligans(),hand.pendingStrictDiscards(),staffCount(player)>0,hand.staffLeft(),hand.staffRight()
   ));
  }
  static String shortPos(BlockPos p){return p.getX()+", "+p.getY()+", "+p.getZ();}

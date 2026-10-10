@@ -5,7 +5,8 @@
   "mixins": [
     "DeckboxMaterialMixin",
     "DeckControlHandMixin",
-    "CardDisplayStaffMixin"
+    "CardDisplayStaffMixin",
+    "StaffRgbOutlineMixin"
   ],
   "injectors": {
     "defaultRequire": 1

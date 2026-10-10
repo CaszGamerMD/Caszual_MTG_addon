@@ -8,12 +8,15 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
 public final class HandScreen extends LegacyScreen {
- HandWire.Reply data;EditBox playerName;int x,y,w,h,scroll,selected=-1,ticks;final java.util.LinkedHashSet<Integer> chosen=new java.util.LinkedHashSet<>();String message="";boolean mulliganMenu;
+ HandWire.Reply data;EditBox playerName,staffLeft,staffRight;int x,y,w,h,scroll,selected=-1,ticks;final java.util.LinkedHashSet<Integer> chosen=new java.util.LinkedHashSet<>();String message="";boolean mulliganMenu;
  HandScreen(HandWire.Reply data){super(Component.literal("Card Hand"));this.data=data;}
  void update(HandWire.Reply reply){
-  boolean controlsChanged=data.authorized()!=reply.authorized()||data.canManage()!=reply.canManage()||data.revealAll()!=reply.revealAll()||data.pendingDiscards()!=reply.pendingDiscards();
+  boolean controlsChanged=data.authorized()!=reply.authorized()||data.canManage()!=reply.canManage()||data.revealAll()!=reply.revealAll()||data.pendingDiscards()!=reply.pendingDiscards()||data.hasStaff()!=reply.hasStaff();
   data=reply;if(!reply.message().isBlank()){message=reply.message();chosen.clear();selected=-1;}chosen.removeIf(i->i>=reply.cards().size());if(selected>=reply.cards().size())selected=-1;
   if(reply.pendingDiscards()>0)mulliganMenu=false;
+  if(reply.message().startsWith("Applied ")&&staffLeft!=null&&staffRight!=null){
+   staffLeft.setValue(reply.staffLeft());staffRight.setValue(reply.staffRight());
+  }
   if(controlsChanged)rebuildWidgets();
  }
  @Override protected void init(){
@@ -42,6 +45,20 @@ public final class HandScreen extends LegacyScreen {
     button("Mulligan",x+274,y+84,90,()->{mulliganMenu=true;rebuildWidgets();});
    }
   }
+  if(data.hasStaff()&&data.authorized()){
+   int sidebar=x+w-144;
+   staffLeft=addRenderableWidget(new EditBox(font,sidebar,y+164,106,20,Component.literal("Left click color")));
+   staffLeft.setMaxLength(7);staffLeft.setValue(data.staffLeft());
+   staffRight=addRenderableWidget(new EditBox(font,sidebar,y+212,106,20,Component.literal("Right click color")));
+   staffRight.setMaxLength(7);staffRight.setValue(data.staffRight());
+   button("Apply to all staffs",sidebar,y+240,135,()->{
+    String left=staffLeft.getValue(),right=staffRight.getValue();
+    if(!StaffColors.valid(left)||!StaffColors.valid(right)){
+     message="Use #RRGGBB in both color fields.";return;
+    }
+    send("staff_colors",left+","+right);
+   });
+  }else{staffLeft=null;staffRight=null;}
   button("Done",x+w-84,y+h-30,72,this::onClose);
  }
  void button(String label,int bx,int by,int bw,Runnable run){addRenderableWidget(Button.builder(Component.literal(label),b->run.run()).bounds(bx,by,bw,20).build());}
@@ -49,6 +66,10 @@ public final class HandScreen extends LegacyScreen {
  void sendManySelected(){if(chosen.isEmpty()){message="Select one or more cards first.";return;}send("take_selected",chosen.stream().sorted().map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));}
  void send(String action,String text){ClientPlayNetworking.send(new HandWire.Request(data.pos(),action,text));message="Working…";}
  @Override public void tick(){super.tick();if(++ticks%20==0)ClientPlayNetworking.send(new HandWire.Request(data.pos(),"refresh",""));}
+ static void colorSwatch(GuiGraphics g,String value,int bx,int by){
+  g.fill(bx-1,by-1,bx+21,by+19,0xFFACBAD0);
+  g.fill(bx,by,bx+20,by+18,StaffColors.valid(value)?0xFF000000|StaffColors.rgb(value):0xFF52202B);
+ }
  @Override public boolean isPauseScreen(){return false;}
  int gridTop(){return 142;}
  int gridCols(){return Math.max(3,Math.min(8,(w-150)/78));}
@@ -83,7 +104,22 @@ public final class HandScreen extends LegacyScreen {
     int at=(scroll+row)*cols+col;if(at>=data.cards().size())continue;int cx=gx+col*cw,cy=gy+row*ch;
     g.fill(cx,cy,cx+72,cy+106,chosen.contains(at)?0xFF4B729F:0xFF22324B);CaszualMtgClient.art(g,data.cards().get(at),0,cx+3,cy+3,66,100);
    }
-   if(selected>=0&&selected<data.cards().size()){ItemStack card=data.cards().get(selected);CaszualMtgClient.art(g,card,0,x+w-116,y+gridTop(),104,145);}
+   if(data.hasStaff()&&data.authorized()){
+    if(selected>=0&&selected<data.cards().size()){
+     ItemStack card=data.cards().get(selected);
+     CaszualMtgClient.art(g,card,0,x+w-116,y+264,104,96);
+    }
+   }else if(selected>=0&&selected<data.cards().size()){
+    ItemStack card=data.cards().get(selected);
+    CaszualMtgClient.art(g,card,0,x+w-116,y+gridTop(),104,145);
+   }
+  }
+  if(data.hasStaff()&&data.authorized()&&staffLeft!=null&&staffRight!=null){
+   int bx=x+w-144;
+   g.drawString(font,"LEFT CLICK",bx,y+146,0xFFB3DFFF);
+   g.drawString(font,"RIGHT CLICK",bx,y+194,0xFFB3DFFF);
+   colorSwatch(g,staffLeft.getValue(),bx+110,y+165);
+   colorSwatch(g,staffRight.getValue(),bx+110,y+213);
   }
   if(!message.isBlank())g.drawString(font,font.plainSubstrByWidth(message,w-110),x+12,y+h-22,0xFFFFDA8A);
   super.render(g,mx,my,delta);

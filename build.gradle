@@ -44,3 +44,10 @@ tasks.register('verifyArchidekt', JavaExec) {
     mainClass = 'dev.casz.caszualmtg.ArchidektImportCheck'
 }
 tasks.named('check') { dependsOn verifyArchidekt }
+
+tasks.register('verifyStaffColors', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.casz.caszualmtg.StaffColorChecks'
+}
+tasks.named('check') { dependsOn verifyStaffColors }
