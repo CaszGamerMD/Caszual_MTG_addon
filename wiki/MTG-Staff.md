@@ -1,3 +1,17 @@
+## Hex RGB glow colors (0.8.0)
+
+The staff now supports any six-digit RGB hex value, e.g. `#22D3EE` and `#FF55A8`, for the two staff actions. No wool-block color sampling is needed.
+
+1. Have a targeting staff anywhere in your inventory or offhand.
+2. Open a Card Hand you are authorized to use.
+3. On the right side of the screen, enter the **Left click** and **Right click** hex colors. The color swatches update as you type.
+4. Press **Apply to all staffs**. The color presets are saved in the Hand Block, and all staffs in your inventory (including offhand) are updated at once.
+5. New glow targets use the color stored on the held staff. Existing marks you own are refreshed when you apply colors.
+
+The defaults are **#FFFFFF** (left click) and **#FFAA00** (right click). Invalid values cannot be applied. Presets persist in the Hand Block's saved data and on the staff item. When different players use the same Hand Block, applying its colors updates only the staffs belonging to the player who pressed the button.
+
+All clients need this version of the addon for full-precision colors. The effect is visible as an outline and does not emit light.
+
 # MTG Staff
 
 The **MTG Staff** is a multiplayer target-declaration tool.
