@@ -12,7 +12,7 @@ The Land Catalogue searches Scryfall and caches discovered land templates into t
 
 - Search by card name or Scryfall-style query.
 - **All lands / Basics / Nonbasics** tabs.
-- **Full art** filter.
+- **Full art** filter. When enabled, distinct illustrations are shown instead of only one printing per land name; the **Basics** tab also browses different illustrations even without Full art.
 - Mana-production filters for:
   - White
   - Blue
@@ -31,7 +31,7 @@ Select a result, choose a quantity from 1–64, and press **Take selected**. Lan
 
 ### Artwork picker
 
-Select a land and press **Choose artwork**. Caszual MTG searches alternate printings for the same card family. Artwork mode does not keep the normal Full Art filter, so alternate-art choices can include non-full-art printings. Select a printing and take it normally.
+Select a land and press **Choose artwork**. Caszual MTG searches distinct illustrations of the exact land name. **Full art stays enabled in artwork mode** when selected, so choosing artwork for a Full Art basic land lists only Full Art alternatives. Use **Previous/Next** to browse further pages; each page can show up to 40 choices. Disable Full art first if you want to see standard-frame artwork too. Select a printing and take it normally.
 
 ## Community Token Catalogue
 
