@@ -36,13 +36,13 @@ jobs:
           mkdir -p release
           JAR="$(find build/libs -maxdepth 1 -type f -name 'caszual-mtg-*.jar' ! -name '*-sources.jar' | sort | head -n 1)"
           test -n "$JAR"
-          cp "$JAR" release/caszual-mtg-0.8.0.jar
-          sha256sum release/caszual-mtg-0.8.0.jar > release/caszual-mtg-0.8.0.jar.sha256
+          cp "$JAR" release/caszual-mtg-0.8.1.jar
+          sha256sum release/caszual-mtg-0.8.1.jar > release/caszual-mtg-0.8.1.jar.sha256
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add release/caszual-mtg-0.8.0.jar release/caszual-mtg-0.8.0.jar.sha256
+          git add release/caszual-mtg-0.8.1.jar release/caszual-mtg-0.8.1.jar.sha256
           if ! git diff --cached --quiet; then
-            git commit -m "Publish Caszual MTG 0.8.0 package [skip ci]"
+            git commit -m "Publish Caszual MTG 0.8.1 package [skip ci]"
             git push
           fi
 
