@@ -1,3 +1,5 @@
+# MTG Staff
+
 ## Hex RGB glow colors (0.8.0)
 
 The staff now supports any six-digit RGB hex value, e.g. `#22D3EE` and `#FF55A8`, for the two staff actions. No wool-block color sampling is needed.
@@ -12,16 +14,14 @@ The defaults are **#FFFFFF** (left click) and **#FFAA00** (right click). Invalid
 
 All clients need this version of the addon for full-precision colors. The effect is visible as an outline and does not emit light.
 
-# MTG Staff
-
 The **MTG Staff** is a multiplayer target-declaration tool.
 
 ## Controls
 
 While holding the staff:
 
-- **Left-click an entity/card display** → mark it with a **white** highlight.
-- **Right-click an entity/card display** → mark it with an **orange/gold** highlight.
+- **Left-click an entity/card display** → mark it with a highlight using the staff's **left-click RGB color** (default white).
+- **Right-click an entity/card display** → mark it with an highlight using the staff's **right-click RGB color** (default orange/gold).
 - **Right-click empty air** → clear the highlights created by your staff.
 
 The targeting hooks include MTGCard's custom placed-card entities so target declaration does not simply rotate/break the card.
