@@ -32,6 +32,11 @@
 
 ## Common problems
 
+### Basic Full Art lands still show one printing each
+
+Use **Caszual MTG 0.8.1** on the client and server. In the Land Catalogue, select **Basics** and **Full art**; the results now show different illustrations for the same land names. Choose a specific card and click **Choose artwork** to browse distinct Full Art alternatives. Use **Next** to explore beyond the first page. An active server connection to Scryfall is needed to retrieve new artwork.
+
+
 ### Land/token search shows no new cards
 
 Check that the server can reach Scryfall. Previously saved catalogue entries may still appear even if online discovery is unavailable.

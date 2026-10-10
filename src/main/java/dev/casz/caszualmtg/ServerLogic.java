@@ -64,12 +64,13 @@ public final class ServerLogic {
   if(family.isEmpty()){var entry=Banks.get(p.level().getServer()).entries.get(key);if(entry!=null)family=entry.card().copy();}
   if(family.isEmpty()||Banks.kind(family)!=s.kind){reply(p,s,"Select a matching land or token first.","");return;}
   s.artwork=true;s.artKey=key;int page=Math.clamp(requestedPage,0,1000);
-  catalogue(p,s,Catalogue.artworks(s.kind,family,page),page,family);
+  // Keep Full Art active when browsing alternate printings of the chosen land.
+  catalogue(p,s,Catalogue.artworks(s.kind,family,page,s.kind==0&&(s.mana&256)!=0),page,family);
  }
  static void catalogue(ServerPlayer p,Session s,CompletableFuture<Catalogue.Page> future,int page,ItemStack family){s.busy=true;int revision=s.revision;future.whenComplete((result,error)->p.level().getServer().execute(()->{
    if(!valid(p,s)||s.revision!=revision)return;s.busy=false;
-   if(error!=null){List<Wire.Row> cached=family==null?rows(p,s,s.query,page):Banks.get(p.level().getServer()).search(s.kind,"").stream().filter(e->sameArtFamily(family,e.getValue().card())).skip((long)page*40).limit(40).map(e->new Wire.Row(e.getKey(),e.getValue().card().copy(),-1)).toList();s.catalogueRows=cached;replyRows(p,s,"Online search unavailable; showing saved matching cards.",family==null?"":"art",cached);return;}
-   Banks bank=Banks.get(p.level().getServer());List<Wire.Row> found=new ArrayList<>();for(var hit:result.cards()){ItemStack card=CardStackBuilders.buildScryfallStackFromModel(hit.model(),false);Catalogue.metadata(card,hit.model(),hit.mana(),hit.fullArt());if((family==null&&matching(s,card))||(family!=null&&Banks.kind(card)==s.kind&&sameArtFamily(family,card))){bank.add(card,s.kind,1);found.add(new Wire.Row(Banks.key(s.kind,card),card,-1));}}
+   if(error!=null){List<Wire.Row> cached=family==null?rows(p,s,s.query,page):Banks.get(p.level().getServer()).search(s.kind,"").stream().filter(e->sameArtFamily(family,e.getValue().card())&&(s.kind!=0||Catalogue.matchesMana(e.getValue().card(),s.mana))).skip((long)page*40).limit(40).map(e->new Wire.Row(e.getKey(),e.getValue().card().copy(),-1)).toList();s.catalogueRows=cached;replyRows(p,s,"Online search unavailable; showing saved matching cards.",family==null?"":"art",cached);return;}
+   Banks bank=Banks.get(p.level().getServer());List<Wire.Row> found=new ArrayList<>();for(var hit:result.cards()){ItemStack card=CardStackBuilders.buildScryfallStackFromModel(hit.model(),false);Catalogue.metadata(card,hit.model(),hit.mana(),hit.fullArt());if((family==null&&matching(s,card))||(family!=null&&Banks.kind(card)==s.kind&&sameArtFamily(family,card)&&(s.kind!=0||Catalogue.matchesMana(card,s.mana)))){bank.add(card,s.kind,1);found.add(new Wire.Row(Banks.key(s.kind,card),card,-1));}}
    s.catalogueRows=List.copyOf(found);replyRows(p,s,(family==null?"Free catalogue":"Artwork choices")+" — page "+(page+1)+" · "+result.total()+" matches"+(result.hasMore()?" · more pages":""),family==null?"":"art",found);
   }));
  }
