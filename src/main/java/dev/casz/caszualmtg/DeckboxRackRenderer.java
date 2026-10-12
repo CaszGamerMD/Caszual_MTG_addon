@@ -37,7 +37,7 @@ public final class DeckboxRackRenderer implements BlockEntityRenderer<DeckboxRac
    ItemStack stack=be.getItem(i);
    if(stack.isEmpty())continue;
    ItemStackRenderState item=new ItemStackRenderState();
-   resolver.updateForTopItem(item,stack,ItemDisplayContext.FIXED,be.getLevel(),be,i+be.getBlockPos().hashCode());
+   resolver.updateForTopItem(item,stack,ItemDisplayContext.FIXED,be.getLevel(),null,i+be.getBlockPos().hashCode());
    state.boxes[i]=item;
   }
  }
