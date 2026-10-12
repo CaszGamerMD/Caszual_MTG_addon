@@ -26,6 +26,11 @@ public final class CaszualMtgClient implements ClientModInitializer {
   net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED
       .register(client -> MtgBlockEntitySafety.verifyAtLifecycle("client startup"));
   CustomBoxModels.register();
+  // The native MTGCard block-entity type includes both vanilla and Caszual deckboxes.
+  // Register only a world block renderer; inventory items stay visually unchanged.
+  if(com.spider.mtgcard.registry.ModBlockEntities.DECKBOX!=null)
+   net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(
+     com.spider.mtgcard.registry.ModBlockEntities.DECKBOX,CommanderTopRenderer::new);
   net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(CaszualMtg.RACK_BE,DeckboxRackRenderer::new);
   net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(CaszualMtg.STAFF_RACK_BE,StaffRackRenderer::new);
   net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.COMMUNITY_MENU,CommunityScreen::new);

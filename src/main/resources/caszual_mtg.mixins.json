@@ -9,7 +9,8 @@
     "StaffRgbOutlineMixin",
     "MenuSlotInvoker",
     "CardStoreBoxMixin",
-    "CardStoreBoxSlotMixin"
+    "CardStoreBoxSlotMixin",
+    "CommanderTopDeckboxMixin"
   ],
   "injectors": {
     "defaultRequire": 1

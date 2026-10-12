@@ -25,3 +25,5 @@ Spruce Slab  Iron Bars  Spruce Slab
 ## Card Store and Deck Builder
 
 The Deck Builder and Card Store each have their **own deckbox slot** for directly receiving cards. Move a filled deckbox from either block to a rack to store it.
+
+The new commander artwork preview appears **only on deckboxes placed in the world**. Miniature deckbox items displayed by this rack retain their normal item model.
