@@ -75,3 +75,12 @@ Spruce Slab  Iron Bars  Spruce Slab
 ```
 
 Holds five MTGCard deckboxes; floor or wall mounted.
+
+## Staff Rack
+
+```text
+Iron Nugget   Iron Bars  Iron Nugget
+Dark Oak      (empty)    Dark Oak
+```
+
+A wall-mounted rack storing four MTG targeting staffs. The rack drops as one item retaining all four staffs when broken.

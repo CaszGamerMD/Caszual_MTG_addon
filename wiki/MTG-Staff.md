@@ -40,3 +40,7 @@ Holding the MTG Staff changes the holder's arm pose to an extended, nearly horiz
 - an amethyst-block-textured head.
 
 The item has a dedicated first-person, third-person, GUI and ground transform.
+
+## Staff Rack
+
+Store up to four targeting staffs in the new **Staff Rack** wall mount. Their 3D models hang vertically from its hooks; placing the rack around two blocks above the floor lets the staff ends touch the ground. It retains individual left-/right-click RGB color settings when stored or removed. [Full Staff Rack guide](Staff-Rack.md).

@@ -1,0 +1,20 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "caszual_mtg:block/staff_rack",
+      "y": 0
+    },
+    "facing=east": {
+      "model": "caszual_mtg:block/staff_rack",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "caszual_mtg:block/staff_rack",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "caszual_mtg:block/staff_rack",
+      "y": 270
+    }
+  }
+}
