@@ -34,10 +34,11 @@ public final class StaffRackBlock extends BaseEntityBlock {
  @Override protected void createBlockStateDefinition(StateDefinition.Builder<Block,BlockState> builder){builder.add(FACING);}
  @Override public RenderShape getRenderShape(BlockState state){return RenderShape.MODEL;}
  @Override public @Nullable BlockEntity newBlockEntity(BlockPos pos,BlockState state){return new StaffRackEntity(pos,state);}
- @Override public BlockState getStateForPlacement(BlockPlaceContext ctx){
-  // Local NORTH is the front; a right-click on a wall points the rack away from that wall.
+ @Override public @Nullable BlockState getStateForPlacement(BlockPlaceContext ctx){
+  // This is a wall-mounted rack, not a floor item. Face outward from the clicked wall.
   Direction side=ctx.getClickedFace();
-  return defaultBlockState().setValue(FACING,side.getAxis().isHorizontal()?side:ctx.getHorizontalDirection().getOpposite());
+  if(!side.getAxis().isHorizontal())return null;
+  return defaultBlockState().setValue(FACING,side);
  }
  @Override protected VoxelShape getShape(BlockState state,BlockGetter world,BlockPos pos,CollisionContext ctx){
   return switch(state.getValue(FACING)){
