@@ -13,6 +13,9 @@ import net.minecraft.core.registries.*;
 import net.minecraft.resources.*;
 import net.minecraft.world.*;
 import net.minecraft.world.item.*;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.*;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.*;
@@ -112,7 +115,21 @@ public final class CaszualMtg implements ModInitializer {
   DeckControlActionRegistry.register(DeckControlActionRegistry.simple(TcgGameRegistry.MTG,id("hand_discard_random"),Component.literal("Discard Random from Hand"),65,ctx->ctx.player().sendSystemMessage(Component.literal(HandLogic.discardRandom(ctx.deckControl())))));
  }
  static final class BankBlock extends Block {
-  final int kind; BankBlock(BlockBehaviour.Properties p,int kind){super(p);this.kind=kind;}
+  static final EnumProperty<Direction> FACING=BlockStateProperties.HORIZONTAL_FACING;
+  final int kind;
+  BankBlock(BlockBehaviour.Properties properties,int kind){
+   super(properties);
+   this.kind=kind;
+   // Existing database blocks from older worlds continue facing north.
+   registerDefaultState(stateDefinition.any().setValue(FACING,Direction.NORTH));
+  }
+  @Override protected void createBlockStateDefinition(StateDefinition.Builder<Block,BlockState> builder){
+   builder.add(FACING);
+  }
+  @Override public BlockState getStateForPlacement(BlockPlaceContext context){
+   // The textured control panel is the model's north face.
+   return defaultBlockState().setValue(FACING,context.getHorizontalDirection().getOpposite());
+  }
   @Override protected InteractionResult useItemOn(ItemStack held,BlockState s,Level l,BlockPos pos,Player p,InteractionHand hand,BlockHitResult hit){return useWithoutItem(s,l,pos,p,hit);}
   @Override protected InteractionResult useWithoutItem(BlockState s,Level l,BlockPos pos,Player p,BlockHitResult hit){if(p instanceof ServerPlayer sp)ServerLogic.open(sp,pos,kind);return InteractionResult.SUCCESS;}
  }

@@ -1,9 +1,10 @@
 # Caszual MTG Wiki
 
-**Caszual MTG 0.10.0** is a Fabric addon for **MTGCard 1.7.0-26.2** on **Minecraft 26.2**. It adds shared card databases, free land/token catalogues, deck building tools, a private Card Hand system, custom deckboxes, card counters, a multiplayer targeting staff, and larger card previews.
+**Caszual MTG 0.10.1** is a Fabric addon for **MTGCard 1.7.0-26.2** on **Minecraft 26.2**. It adds shared card databases, free land/token catalogues, deck building tools, a private Card Hand system, custom deckboxes, card counters, a multiplayer targeting staff, and larger card previews.
 
 ## Main features
 
+- **Player-facing utility boxes** — the three database fronts and Deck Builder screen face the player when placed.
 - **Community Land Catalogue** — searchable, Commander-aware unlimited land catalogue with mana filters and artwork selection.
 - **Community Token Catalogue** — searchable unlimited token catalogue with optional Oracle-text and P/T filtering.
 - **Community Card Collection** — server-wide shared storage for real deposited non-land/non-token cards.
@@ -27,7 +28,7 @@
 | Fabric API | 0.161.0+26.2 or newer |
 | Java | 25 or newer |
 | MTGCard | 1.7.0-26.2 |
-| Caszual MTG | 0.10.0 |
+| Caszual MTG | 0.10.1 |
 
 Install Caszual MTG on the **server and every client** that connects to it.
 

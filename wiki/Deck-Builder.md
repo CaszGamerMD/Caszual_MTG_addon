@@ -1,6 +1,6 @@
 # Deck Builder
 
-The Deck Builder assembles decklists from nearby Caszual MTG databases and writes available cards directly into an **MTGCard deckbox inserted in its output slot**.
+The Deck Builder's front panel rotates to face the placing player; already-placed blocks retain their original orientation. The Deck Builder assembles decklists from nearby Caszual MTG databases and writes available cards directly into an **MTGCard deckbox inserted in its output slot**.
 
 ## Required layout
 
