@@ -30,8 +30,8 @@ public final class DeckboxRackBlock extends BaseEntityBlock {
  public static final BooleanProperty[] OCCUPIED={
   BooleanProperty.create("box0"),BooleanProperty.create("box1"),BooleanProperty.create("box2"),BooleanProperty.create("box3"),BooleanProperty.create("box4")
  };
- static final VoxelShape FLOOR=Block.box(0,0,0,16,8,8);
- static final VoxelShape WALL_SHAPE=Block.box(0,7,0,16,15,8);
+ static final VoxelShape FLOOR=Block.box(0,0,0,16,4,8);
+ static final VoxelShape WALL_SHAPE=Block.box(0,7,0,16,11,8);
  public DeckboxRackBlock(Properties p){
   super(p);
   BlockState state=stateDefinition.any().setValue(FACING,Direction.NORTH).setValue(WALL,false);
@@ -51,7 +51,7 @@ public final class DeckboxRackBlock extends BaseEntityBlock {
   VoxelShape shape=state.getValue(WALL)?WALL_SHAPE:FLOOR;
   return switch(state.getValue(FACING)){
    case NORTH -> shape;
-   case SOUTH -> Shapes.or(Block.box(0,state.getValue(WALL)?7:0,8,16,state.getValue(WALL)?15:8,16));
+   case SOUTH -> Shapes.or(Block.box(0,state.getValue(WALL)?7:0,8,16,state.getValue(WALL)?11:4,16));
    case EAST -> Block.box(8,state.getValue(WALL)?7:0,0,16,state.getValue(WALL)?15:8,16);
    case WEST -> Block.box(0,state.getValue(WALL)?7:0,0,8,state.getValue(WALL)?15:8,16);
    default -> shape;
