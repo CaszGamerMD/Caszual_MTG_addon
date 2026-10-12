@@ -23,15 +23,17 @@ public final class BuilderScreen extends LegacyContainerScreen<BuilderMenu> {
  public void update(Wire.Reply reply){
   data=reply;
   if(!reply.message().isBlank())status=reply.message();
-  if(url!=null&&!url.isFocused()&&!reply.url().equals(url.getValue()))url.setValue(reply.url());
+  if(url!=null&&reply.message().contains("cleared"))url.setValue("");
+  else if(url!=null&&!url.isFocused()&&!reply.url().equals(url.getValue())&&!reply.resolving())url.setValue(reply.url());
   commander=(reply.flags()&2)!=0;
  }
  @Override protected void init(){
   if(MtgGuiScaleHelper.applyAutoFitGuiScale(this,3,640,430))return;
   super.init();
+  String currentUrl=url==null?(data==null?"":data.url()):url.getValue();
   url=addRenderableWidget(new EditBox(font,leftPos+12,topPos+32,402,20,Component.literal("Archidekt URL")));
   url.setMaxLength(512);url.setHint(Component.literal("Paste an Archidekt deck URL"));
-  if(data!=null)url.setValue(data.url());
+  url.setValue(currentUrl);
   button("Import URL",422,32,108,()->send("import_url",url.getValue(),commander?2:0));
   button("Reset",536,32,90,()->send("reset","",0));
   button("Import .txt",12,60,104,this::chooseFile);
