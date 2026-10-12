@@ -2,6 +2,11 @@ package dev.casz.caszualmtg;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.*;
@@ -18,7 +23,19 @@ import org.jetbrains.annotations.Nullable;
 
 public final class BuilderBlock extends BaseEntityBlock {
  public static final MapCodec<BuilderBlock> CODEC=simpleCodec(BuilderBlock::new);
- public BuilderBlock(BlockBehaviour.Properties p){super(p);}
+ public static final EnumProperty<Direction> FACING=BlockStateProperties.HORIZONTAL_FACING;
+ public BuilderBlock(BlockBehaviour.Properties p){
+  super(p);
+  // North is the old blockstate, so existing placed builders keep their appearance.
+  registerDefaultState(stateDefinition.any().setValue(FACING,Direction.NORTH));
+ }
+ @Override protected void createBlockStateDefinition(StateDefinition.Builder<Block,BlockState> builder){
+  builder.add(FACING);
+ }
+ @Override public BlockState getStateForPlacement(BlockPlaceContext context){
+  // The computer screen on the north side of the model points toward its owner.
+  return defaultBlockState().setValue(FACING,context.getHorizontalDirection().getOpposite());
+ }
  @Override protected MapCodec<? extends BaseEntityBlock> codec(){return CODEC;}
  @Override public RenderShape getRenderShape(BlockState s){return RenderShape.MODEL;}
  @Override public @Nullable BlockEntity newBlockEntity(BlockPos pos,BlockState s){return new BuilderBlockEntity(pos,s);}
