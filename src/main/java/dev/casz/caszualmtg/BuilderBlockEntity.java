@@ -33,7 +33,7 @@ public final class BuilderBlockEntity extends BlockEntity implements Container {
  public long revision(){return revision;}
  public List<Wire.Row> statuses(){return statuses;}
  public boolean cached(String address){return !deck.isBlank()&&url.equals(address)&&cachedAt>0&&System.currentTimeMillis()-cachedAt<6*60*60*1000L;}
- public long start(String address,int flags){revision++;url=address;deck="";report="";message="Loading decklist…";statuses=List.of();resolving=true;this.flags=flags;setChanged();return revision;}
+ public long start(String address,int flags){revision++;message="Loading decklist…";resolving=true;this.flags=flags;setChanged();return revision;}
  public long reset(){revision++;deck="";url="";report="";message="Deck Builder cleared.";statuses=List.of();cachedAt=0;resolving=false;flags=2;setChanged();return revision;}
  public void loaded(long token,String deck,String url,int flags){
   if(token!=revision)return;this.deck=deck;this.url=url;this.flags=flags;cachedAt=System.currentTimeMillis();resolving=true;
