@@ -39,6 +39,9 @@ jobs:
       - name: Validate player-facing utility blockstates
         run: python3 -m unittest discover -s tests -p 'test_utility_box_rotation.py' -v
 
+      - name: Verify placed-only commander artwork and deckbox data safety
+        run: python3 -m unittest discover -s tests -p 'test_commander_top.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
