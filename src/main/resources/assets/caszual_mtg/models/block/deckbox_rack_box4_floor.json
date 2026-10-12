@@ -1,0 +1,74 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "shelf": "minecraft:block/spruce_planks",
+    "edge": "minecraft:block/dark_oak_planks",
+    "mini": "minecraft:block/dark_oak_planks"
+  },
+  "elements": [
+    {
+      "from": [
+        13,
+        4,
+        1.5
+      ],
+      "to": [
+        15.4,
+        8,
+        6.7
+      ],
+      "faces": {
+        "north": {
+          "texture": "#mini"
+        },
+        "south": {
+          "texture": "#mini"
+        },
+        "east": {
+          "texture": "#mini"
+        },
+        "west": {
+          "texture": "#mini"
+        },
+        "up": {
+          "texture": "#mini"
+        },
+        "down": {
+          "texture": "#mini"
+        }
+      }
+    },
+    {
+      "from": [
+        13,
+        4,
+        1.5
+      ],
+      "to": [
+        13.4,
+        8,
+        6.7
+      ],
+      "faces": {
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#edge"
+        },
+        "down": {
+          "texture": "#edge"
+        }
+      }
+    }
+  ]
+}
