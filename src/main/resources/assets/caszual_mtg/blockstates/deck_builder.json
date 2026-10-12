@@ -1,7 +1,20 @@
 {
   "variants": {
-    "": {
-      "model": "caszual_mtg:block/deck_builder"
+    "facing=north": {
+      "model": "caszual_mtg:block/deck_builder",
+      "y": 0
+    },
+    "facing=east": {
+      "model": "caszual_mtg:block/deck_builder",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "caszual_mtg:block/deck_builder",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "caszual_mtg:block/deck_builder",
+      "y": 270
     }
   }
 }
