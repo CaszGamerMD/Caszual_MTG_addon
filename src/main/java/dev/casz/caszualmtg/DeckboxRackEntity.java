@@ -12,6 +12,13 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.resources.RegistryOps;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import java.util.*;
 
 /** Rack inventory is owned by the block; all five deckboxes survive world saving. */
@@ -34,6 +41,18 @@ public final class DeckboxRackEntity extends BlockEntity implements Container {
   var saved=new ArrayList<SlotSave>();
   for(int i=0;i<SIZE;i++)if(!boxes.get(i).isEmpty())saved.add(new SlotSave(i,boxes.get(i)));
   output.store("Deckboxes",SlotSave.CODEC.listOf(),saved);
+ }
+ /** Sync actual ItemStacks, so the client renderer displays each real deckbox model. */
+ @Override public CompoundTag getUpdateTag(HolderLookup.Provider lookup){
+  CompoundTag tag=new CompoundTag();
+  var saved=new ArrayList<SlotSave>();
+  for(int i=0;i<SIZE;i++)if(!boxes.get(i).isEmpty())saved.add(new SlotSave(i,boxes.get(i)));
+  SlotSave.CODEC.listOf().encodeStart(RegistryOps.create(NbtOps.INSTANCE,lookup),saved)
+    .result().ifPresent(v->tag.put("Deckboxes",v));
+  return tag;
+ }
+ @Override public Packet<ClientGamePacketListener> getUpdatePacket(){
+  return ClientboundBlockEntityDataPacket.create(this);
  }
  private record SlotSave(int index,ItemStack item){
   static final Codec<SlotSave> CODEC=RecordCodecBuilder.create(i->i.group(
