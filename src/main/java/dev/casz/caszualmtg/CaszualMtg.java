@@ -41,6 +41,20 @@ public final class CaszualMtg implements ModInitializer {
  public static final DeckboxRackBlock RACK=rackBlock();
  public static final BlockEntityType<DeckboxRackEntity> RACK_BE=Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,id("deckbox_rack"),FabricBlockEntityTypeBuilder.create(DeckboxRackEntity::new,RACK).build());
  static DeckboxRackBlock rackBlock(){var key=ResourceKey.create(Registries.BLOCK,id("deckbox_rack"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new DeckboxRackBlock(BlockBehaviour.Properties.of().setId(key).strength(2.0f).noOcclusion().sound(net.minecraft.world.level.block.SoundType.WOOD)));var ik=ResourceKey.create(Registries.ITEM,id("deckbox_rack"));Registry.register(BuiltInRegistries.ITEM,ik,new BlockItem(block,new Item.Properties().setId(ik).useBlockDescriptionPrefix().stacksTo(1)));return block;}
+ public static final StaffRackBlock STAFF_RACK=staffRackBlock();
+ public static final BlockEntityType<StaffRackEntity> STAFF_RACK_BE=Registry.register(
+   BuiltInRegistries.BLOCK_ENTITY_TYPE,id("staff_rack"),
+   FabricBlockEntityTypeBuilder.create(StaffRackEntity::new,STAFF_RACK).build());
+ static StaffRackBlock staffRackBlock(){
+  var key=ResourceKey.create(Registries.BLOCK,id("staff_rack"));
+  var block=Registry.register(BuiltInRegistries.BLOCK,key,
+    new StaffRackBlock(BlockBehaviour.Properties.of().setId(key).strength(2.0f).noOcclusion()
+      .sound(net.minecraft.world.level.block.SoundType.WOOD)));
+  var itemKey=ResourceKey.create(Registries.ITEM,id("staff_rack"));
+  Registry.register(BuiltInRegistries.ITEM,itemKey,new BlockItem(block,
+    new Item.Properties().setId(itemKey).useBlockDescriptionPrefix().stacksTo(1)));
+  return block;
+ }
  public static final Item COUNTER=Registry.register(BuiltInRegistries.ITEM,id("counter"),new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM,id("counter"))).stacksTo(1)));
  public static final Item TARGETING_STAFF=Registry.register(BuiltInRegistries.ITEM,id("targeting_staff"),new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM,id("targeting_staff"))).stacksTo(1)));
  static Block block(String name,int kind){var key=ResourceKey.create(Registries.BLOCK,id(name));Block b=Registry.register(BuiltInRegistries.BLOCK,key,new BankBlock(BlockBehaviour.Properties.of().setId(key).strength(2.5f),kind));var ik=ResourceKey.create(Registries.ITEM,id(name));Registry.register(BuiltInRegistries.ITEM,ik,new BlockItem(b,new Item.Properties().setId(ik).useBlockDescriptionPrefix()));return b;}
@@ -48,6 +62,9 @@ public final class CaszualMtg implements ModInitializer {
  public static final ExtendedMenuType<CommunityMenu,CommunityMenu.OpenData> COMMUNITY_MENU=Registry.register(BuiltInRegistries.MENU,id("community"),new ExtendedMenuType<>(CommunityMenu::new,CommunityMenu.OpenData.CODEC));
  public static final ExtendedMenuType<BuilderMenu,BuilderMenu.OpenData> BUILDER_MENU=Registry.register(BuiltInRegistries.MENU,id("builder"),new ExtendedMenuType<>(BuilderMenu::new,BuilderMenu.OpenData.CODEC));
  public static final ExtendedMenuType<DeckboxRackMenu,DeckboxRackMenu.OpenData> RACK_MENU=Registry.register(BuiltInRegistries.MENU,id("deckbox_rack"),new ExtendedMenuType<>(DeckboxRackMenu::new,DeckboxRackMenu.OpenData.CODEC));
+ public static final ExtendedMenuType<StaffRackMenu,StaffRackMenu.OpenData> STAFF_RACK_MENU=
+   Registry.register(BuiltInRegistries.MENU,id("staff_rack"),
+     new ExtendedMenuType<>(StaffRackMenu::new,StaffRackMenu.OpenData.CODEC));
  public void onInitialize(){
   // Do not inspect MTGCard's block-entity fields in our main entrypoint:
   // MTGCard's initializer can run later in the same Fabric initialization pass.
@@ -56,7 +73,7 @@ public final class CaszualMtg implements ModInitializer {
   PayloadTypeRegistry.serverboundPlay().register(Wire.Request.TYPE,Wire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(Wire.Reply.TYPE,Wire.Reply.CODEC);PayloadTypeRegistry.serverboundPlay().register(HandWire.Request.TYPE,HandWire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(HandWire.Reply.TYPE,HandWire.Reply.CODEC);PayloadTypeRegistry.clientboundPlay().register(DeckboxRefreshWire.Refresh.TYPE,DeckboxRefreshWire.Refresh.CODEC);
   ServerPlayNetworking.registerGlobalReceiver(Wire.Request.TYPE,(req,ctx)->ServerLogic.handle(ctx.player(),req));ServerPlayNetworking.registerGlobalReceiver(HandWire.Request.TYPE,(req,ctx)->HandLogic.handle(ctx.player(),req));
   ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);StaffTargets.clearAllForDisconnect(h.player);});
-  CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(HAND);e.accept(RACK);});
+  CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(HAND);e.accept(RACK);e.accept(STAFF_RACK);});
   UseEntityCallback.EVENT.register((p,l,hand,e,hit)->{
    if(p.getItemInHand(hand).is(TARGETING_STAFF)){
     if(!l.isClientSide()&&p instanceof ServerPlayer sp)StaffTargets.mark(sp,e,StaffTargets.Color.ORANGE);
