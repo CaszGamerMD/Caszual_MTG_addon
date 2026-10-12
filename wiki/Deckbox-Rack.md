@@ -6,6 +6,7 @@ A quarter-block-high, half-block-deep shelf which holds **five MTGCard deckboxes
 
 - Place on a floor to make a short shelf, or click the side of a block to mount it on a wall.
 - Its shape and facing adapt to the clicked face.
+- As of **0.11.1**, the supporting shelf sits on the wall side underneath the miniature deckboxes in all four rotations. The shelf's collision matches the visible wood and its edge trim no longer z-fights the top surface.
 - Right-click with an MTGCard deckbox to insert it into the first open position.
 - Right-click empty-handed to open its five-slot inventory and take or rearrange deckboxes.
 
