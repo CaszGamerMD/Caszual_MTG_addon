@@ -49,3 +49,9 @@ The Custom Deckbox works anywhere an MTGCard deckbox is expected, including:
 - normal MTGCard card storage.
 
 The item tooltip shows the currently selected texture material.
+
+## Placed commander card artwork (0.11.0)
+
+Place a custom deckbox with a commander card inside its designated commander slot. When the box is **closed and placed**, the top surface displays the actual artwork of that commander in a small frame. Opening the box hides the display until it closes. It never changes the deckbox's inventory icon or its custom block-texture panels. Standard MTGCard deckboxes receive the same feature.
+
+The artwork uses MTGCard's existing artwork downloads/cache. The deckbox must have a commander card; older Caszual Builder decks that used the first side slot are also supported.
