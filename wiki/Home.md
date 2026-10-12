@@ -1,6 +1,6 @@
 # Caszual MTG Wiki
 
-**Caszual MTG 0.9.0** is a Fabric addon for **MTGCard 1.7.0-26.2** on **Minecraft 26.2**. It adds shared card databases, free land/token catalogues, deck building tools, a private Card Hand system, custom deckboxes, card counters, a multiplayer targeting staff, and larger card previews.
+**Caszual MTG 0.10.0** is a Fabric addon for **MTGCard 1.7.0-26.2** on **Minecraft 26.2**. It adds shared card databases, free land/token catalogues, deck building tools, a private Card Hand system, custom deckboxes, card counters, a multiplayer targeting staff, and larger card previews.
 
 ## Main features
 
@@ -9,6 +9,7 @@
 - **Community Card Collection** — server-wide shared storage for real deposited non-land/non-token cards.
 - **Deck Builder** — insert an output deckbox, save and reset drafts, cache Archidekt URLs, continue background lookups, and build or shop missing cards.
 - **Deckbox Rack** — store five deckboxes on a thin floor/wall shelf, with real miniature models and contents retained on break.
+- **Staff Rack** — store four RGB-configured targeting staffs on a wall rail; their 3D shafts hang two blocks below it.
 - **Card Store output** — a built-in deckbox slot routes purchases directly into the chosen deckbox.
 - **Card Hand** — private 100-card hand linked to a specific Deck Control, with viewers, reveal mode, mulligans, draw routing and graveyard discards.
 - **Custom Deckbox** — an MTGCard deckbox whose main panels can inherit the representative texture of a vanilla or modded block.
@@ -26,7 +27,7 @@
 | Fabric API | 0.161.0+26.2 or newer |
 | Java | 25 or newer |
 | MTGCard | 1.7.0-26.2 |
-| Caszual MTG | 0.9.0 |
+| Caszual MTG | 0.10.0 |
 
 Install Caszual MTG on the **server and every client** that connects to it.
 
@@ -37,6 +38,7 @@ Install Caszual MTG on the **server and every client** that connects to it.
 - [Databases](Databases.md)
 - [Deck Builder](Deck-Builder.md)
 - [Deckbox Rack](Deckbox-Rack.md)
+- [Staff Rack](Staff-Rack.md)
 - [Card Store output](Card-Store-Output.md)
 - [Card Hand](Card-Hand.md)
 - [Custom Deckbox](Custom-Deckbox.md)
