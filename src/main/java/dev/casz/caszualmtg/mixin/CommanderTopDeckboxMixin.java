@@ -37,7 +37,7 @@ public abstract class CommanderTopDeckboxMixin implements CommanderTopAccess {
   if(box.getLevel()!=null&&box.getLevel().isClientSide())return caszual$visibleCommander;
   return caszual$select(box);
  }
- @Inject(method="getUpdateTag",at=@At("RETURN"))
+ @Inject(method="getUpdateTag",remap=false,at=@At("RETURN"))
  private void caszual$includeCommander(HolderLookup.Provider lookup,CallbackInfoReturnable<CompoundTag> cir){
   var box=(DeckboxBlockEntity)(Object)this;
   ItemStack card=caszual$select(box);
@@ -46,20 +46,20 @@ public abstract class CommanderTopDeckboxMixin implements CommanderTopAccess {
   ItemStack.CODEC.encodeStart(RegistryOps.create(NbtOps.INSTANCE,lookup),card.copyWithCount(1))
    .result().ifPresent(encoded->cir.getReturnValue().put(CASZUAL_COMMANDER,encoded));
  }
- @Inject(method="loadAdditional",at=@At("TAIL"))
+ @Inject(method="loadAdditional",remap=false,at=@At("TAIL"))
  private void caszual$readCommander(ValueInput input,CallbackInfo ci){
   // Initial chunk/BE update packets call loadAdditional on the client.
   var box=(DeckboxBlockEntity)(Object)this;
   if(box.getLevel()!=null&&box.getLevel().isClientSide())
    caszual$visibleCommander=input.read(CASZUAL_COMMANDER,ItemStack.CODEC).orElse(ItemStack.EMPTY);
  }
- @Inject(method="setItem",at=@At("TAIL"))
+ @Inject(method="setItem",remap=false,at=@At("TAIL"))
  private void caszual$commanderChanged(int slot,ItemStack stack,CallbackInfo ci){
   if(slot!=DeckboxBlockEntity.SECOND_SIDE_SLOT&&slot!=DeckboxBlockEntity.FIRST_SIDE_SLOT)return;
   var box=(DeckboxBlockEntity)(Object)this;
   if(box.getLevel()!=null&&!box.getLevel().isClientSide())box.sync();
  }
- @Inject(method="loadStorageId",at=@At("TAIL"))
+ @Inject(method="loadStorageId",remap=false,at=@At("TAIL"))
  private void caszual$placedStorageLoaded(UUID id,CallbackInfo ci){
   // Placement of a UUID-backed deckbox can replace its cards from external storage.
   var box=(DeckboxBlockEntity)(Object)this;
