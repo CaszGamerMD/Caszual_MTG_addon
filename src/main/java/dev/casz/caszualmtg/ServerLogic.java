@@ -134,14 +134,34 @@ public final class ServerLogic {
  static Set<Integer> links(ServerPlayer p,Session s){Set<Integer> kinds=new HashSet<>();for(BlockPos at:BlockPos.betweenClosed(s.pos.offset(-4,-4,-4),s.pos.offset(4,4,4)))if(p.level().hasChunkAt(at)){int kind=CaszualMtg.kind(p.level().getBlockState(at).getBlock());if(kind>=0&&kind<3)kinds.add(kind);}return kinds;}
  static DeckboxBlockEntity output(ServerPlayer p,Session s){for(Direction d:Direction.values()){BlockPos at=s.pos.relative(d);if(p.level().hasChunkAt(at)&&p.level().getBlockEntity(at) instanceof DeckboxBlockEntity db)return db;}return null;}
  static void importArchidekt(ServerPlayer p,Session s,String url,int flags){
-  if(s.busy){reply(p,s,"Working on the previous request…",s.report);return;}
-  long revision=s.revision;s.busy=true;reply(p,s,"Loading Archidekt main deck…","");
-  ArchidektImport.fetch(url).whenComplete((result,error)->p.level().getServer().execute(()->{
-   if(!valid(p,s)||s.revision!=revision)return;s.busy=false;
-   if(error!=null){Throwable cause=error instanceof CompletionException&&error.getCause()!=null?error.getCause():error;reply(p,s,"Archidekt import failed: "+cause.getMessage(),"");return;}
-   var parsed=DeckList.parse(result.text());if(!parsed.errors().isEmpty()){reply(p,s,"Archidekt import rejected: "+parsed.errors().getFirst(),"");return;}
-   s.deck=result.text();s.statuses=parsed.lines().stream().map(line->new Wire.Row(line.label(),ItemStack.EMPTY,-1,line.quantity())).toList();
-   reply(p,s,"Loaded "+result.cards()+" main-deck cards from "+(result.deckName().isBlank()?"Archidekt":result.deckName())+". Sideboard and Maybeboard ignored.","");
+  BuilderBlockEntity be=builder(p,s);if(be==null)return;
+  String address=url.trim();
+  if(address.isBlank()||address.length()>512){reply(p,s,"Enter an Archidekt URL.","");return;}
+  if(be.cached(address)){
+   s.workToken=be.revision();s.deck=be.deck();s.statuses=be.statuses();s.report=be.report();
+   if(!s.statuses.isEmpty()){reply(p,s,"Restored cached URL and resolved decklist.",s.report);return;}
+   resolveLands(p,s,()->plan(p,s,false,flags));return;
+  }
+  s.workToken=be.start(address,flags);s.busy=true;
+  reply(p,s,"Loading Archidekt main deck in background…",be.report());
+  long token=s.workToken;
+  ArchidektImport.fetch(address).whenComplete((result,error)->p.level().getServer().execute(()->{
+   if(!workValid(p,s))return;
+   s.busy=false;
+   if(error!=null){
+    Throwable cause=error instanceof CompletionException&&error.getCause()!=null?error.getCause():error;
+    be.failed(token,"Archidekt import failed: "+cause.getMessage());
+    reply(p,s,be.message(),be.report());return;
+   }
+   var parsed=DeckList.parse(result.text());
+   if(!parsed.errors().isEmpty()||parsed.lines().isEmpty()){
+    be.failed(token,"Archidekt returned an empty or invalid decklist.");
+    reply(p,s,be.message(),be.report());return;
+   }
+   be.loaded(token,result.text(),address,flags);
+   s.deck=result.text();
+   s.statuses=parsed.lines().stream().map(line->new Wire.Row(line.label(),ItemStack.EMPTY,-1,line.quantity())).toList();
+   reply(p,s,"Loaded "+result.cards()+" cards. Resolving in background…",be.report());
    resolveLands(p,s,()->plan(p,s,false,flags));
   }));
  }
