@@ -40,3 +40,15 @@ Custom Deckbox card storage remains MTGCard deckbox storage. Caszual MTG stores 
 ## Backups
 
 The world contains the community collection/catalogue saved data, while MTGCard manages its own related card/deckbox data. Normal server/world backups are recommended.
+
+## Deck Builder saved drafts and output
+
+Each Deck Builder block retains its last imported decklist, URL, resolved card rows, missing-card list and commander setting. Background lookups can finish after the screen closes. Successfully resolved Archidekt imports are cached for six hours. Built cards go into an MTGCard deckbox **item in the Builder's own GUI slot**; the inserted deckbox drops if the Builder is mined.
+
+## Deckbox Rack
+
+The wall/floor mounted Deckbox Rack stores five MTGCard deckbox item stacks as part of the rack. Its actual deckbox item models are displayed as miniatures. Breaking the rack returns a rack item retaining all five deckboxes and their MTGCard storage references.
+
+## Card Store output
+
+The Card Store has an additional deckbox slot saved on its block entity. Purchased cards route into the inserted deckbox first. If full, the store tries free buyer inventory slots; otherwise MTGCard's normal neighboring deckbox/front ejection logic remains. Breaking the Card Store drops its inserted deckbox.
