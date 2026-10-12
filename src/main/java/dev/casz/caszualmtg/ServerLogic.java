@@ -19,19 +19,35 @@ import java.util.*;
 import java.util.concurrent.*;
 public final class ServerLogic {
  static final class Session {
-  final BlockPos pos;final int kind;final ResourceKey<Level> dimension;UUID entity,cardId;String deck="",report="";List<Wire.Row> statuses=List.of(),catalogueRows=List.of();List<DeckList.Line> missingLines=List.of();String query="",oracle="",stats="",artKey="";boolean artwork=false;int mana=0;int page=0,revision=0;long last=0;boolean busy;
+  final BlockPos pos;final int kind;final ResourceKey<Level> dimension;UUID entity,cardId;String deck="",report="";long workToken;List<Wire.Row> statuses=List.of(),catalogueRows=List.of();List<DeckList.Line> missingLines=List.of();String query="",oracle="",stats="",artKey="";boolean artwork=false;int mana=0;int page=0,revision=0;long last=0;boolean busy;
   Session(ServerPlayer p,BlockPos pos,int kind){this.pos=pos.immutable();this.kind=kind;dimension=p.level().dimension();}
  }
  static final Map<UUID,Session> sessions=new HashMap<>();
  public static void close(ServerPlayer p){sessions.remove(p.getUUID());}
+ static BuilderBlockEntity builder(ServerPlayer p,Session s){
+  return s.kind==3&&p.level().dimension().equals(s.dimension)&&p.level().hasChunkAt(s.pos)&&p.level().getBlockEntity(s.pos) instanceof BuilderBlockEntity be?be:null;
+ }
+ static boolean workValid(ServerPlayer p,Session s){BuilderBlockEntity be=builder(p,s);return be!=null&&be.revision()==s.workToken;}
  static boolean valid(ServerPlayer p,Session s){if(sessions.get(p.getUUID())!=s||p.isRemoved()||!p.level().dimension().equals(s.dimension)||p.distanceToSqr(Vec3.atCenterOf(s.pos))>64||!p.level().hasChunkAt(s.pos))return false;if(s.kind==2&&(!(p.containerMenu instanceof CommunityMenu m)||!m.pos.equals(s.pos)))return false;return s.kind==4?counter(p,s)!=null:CaszualMtg.kind(p.level().getBlockState(s.pos).getBlock())==s.kind;}
  static CardDisplayEntity counter(ServerPlayer p,Session s){var e=p.level().getEntity(s.entity);return e instanceof CardDisplayEntity c&&!c.isRemoved()&&p.distanceToSqr(c)<64&&(p.getMainHandItem().is(CaszualMtg.COUNTER)||p.getOffhandItem().is(CaszualMtg.COUNTER))&&!c.getDisplayCardStack(s.cardId).isEmpty()?c:null;}
- public static void open(ServerPlayer p,BlockPos pos,int kind){if(kind==2)p.openMenu(CommunityMenu.provider(pos));Session s=new Session(p,pos,kind);sessions.put(p.getUUID(),s);seed(p);reply(p,s,kind==3?"Import a decklist, then review availability.":"Shared across this server. Search by name or type.","");if(kind<2)search(p,s,"",0,0);}
+ public static void open(ServerPlayer p,BlockPos pos,int kind){
+  if(kind==2)p.openMenu(CommunityMenu.provider(pos));
+  if(kind==3)p.openMenu(BuilderMenu.provider(pos));
+  Session s=new Session(p,pos,kind);
+  if(kind==3&&p.level().getBlockEntity(pos) instanceof BuilderBlockEntity be){
+   s.deck=be.deck();s.report=be.report();s.statuses=be.statuses();s.workToken=be.revision();
+  }
+  sessions.put(p.getUUID(),s);seed(p);
+  reply(p,s,kind==3?"Saved Deck Builder draft restored.":"Shared across this server. Search by name or type.","");
+  if(kind<2)search(p,s,"",0,0);
+}
  public static void openCounter(ServerPlayer p,CardDisplayEntity c){if(p.distanceToSqr(c)>64)return;Session s=new Session(p,c.blockPosition(),4);s.entity=c.getUUID();s.cardId=c.getDisplayCardId(c.findSelectedDisplayIndex(p));if(s.cardId==null)return;sessions.put(p.getUUID(),s);reply(p,s,"Edit counters on this card.","");}
  static void seed(ServerPlayer p){Banks b=Banks.get(p.level().getServer());for(var c:PersistentCardStore.load(p.level()).snapshot()){ItemStack card=CardStackBuilders.buildScryfallStackFromModel(c,false);int kind=Banks.kind(card);if(kind<2&&!b.entries.containsKey(Banks.key(kind,card)))b.add(card,kind,1);}}
- public static void handle(ServerPlayer p,Wire.Request req){Session s=sessions.get(p.getUUID());if(s==null||!s.pos.equals(req.pos())||!valid(p,s))return;if(req.action().equals("close")){close(p);return;}long now=System.currentTimeMillis();if(now-s.last<150)return;s.last=now;if(s.busy&&!req.action().equals("search")&&!req.action().equals("arts")){reply(p,s,"Working on the previous request…",s.report);return;}s.revision++;
+ public static void handle(ServerPlayer p,Wire.Request req){Session s=sessions.get(p.getUUID());if(s==null||!s.pos.equals(req.pos())||!valid(p,s))return;if(req.action().equals("close")){close(p);return;}long now=System.currentTimeMillis();if(now-s.last<150)return;s.last=now;if(s.busy&&!req.action().equals("search")&&!req.action().equals("arts")&&!req.action().equals("reset")&&!req.action().equals("refresh")){reply(p,s,"Working on the previous request…",s.report);return;}s.revision++;
   try{
    switch(req.action()){
+    case "refresh" -> {if(s.kind==3&&builder(p,s) instanceof BuilderBlockEntity be){s.deck=be.deck();s.report=be.report();s.statuses=be.statuses();s.workToken=be.revision();reply(p,s,be.message(),be.report());}}
+    case "reset" -> {if(s.kind==3&&builder(p,s) instanceof BuilderBlockEntity be){be.reset();s.deck="";s.report="";s.statuses=List.of();s.missingLines=List.of();s.busy=false;s.workToken=be.revision();reply(p,s,"Draft cleared. Output deckbox was left in its slot.","");}}
     case "search" -> {if(s.kind<3)search(p,s,req.text(),req.amount(),req.filter(),req.oracle(),req.stats());}
     case "arts" -> {if(s.kind<2)artworks(p,s,req.text(),req.amount());}
     case "deposit" -> {if(s.kind<3)deposit(p,s);}
@@ -39,17 +55,21 @@ public final class ServerLogic {
     case "deposit_loose" -> {if(s.kind==2&&p.containerMenu instanceof CommunityMenu menu)depositLoose(p,s,menu);}
     case "withdraw" -> {if(s.kind<3)withdraw(p,s,req.text(),req.amount());}
     case "box_deposit", "box_withdraw", "box_fill" -> {if(s.kind==2&&p.containerMenu instanceof CommunityMenu menu){Banks bank=Banks.get(p.level().getServer());int count=req.action().equals("box_deposit")?DeckboxTransfer.deposit(p,menu.deckbox(),bank):DeckboxTransfer.withdraw(p,menu.deckbox(),bank,req.action().equals("box_fill")?null:req.text(),s.query,Math.clamp(req.amount(),1,99));menu.broadcastChanges();reply(p,s,"Transferred "+count+" cards. Lands and tokens stay in the box during deposits.","");}}
-    case "import" -> {if(s.kind==3){var list=DeckList.parse(req.text());if(!list.errors().isEmpty()){reply(p,s,"Import rejected: "+list.errors().getFirst(),String.join("\n",list.errors()));return;}if(list.lines().isEmpty()){reply(p,s,"No cards in the list.","");return;}s.deck=req.text();s.statuses=list.lines().stream().map(line->new Wire.Row(line.label(),ItemStack.EMPTY,-1,line.quantity())).toList();reply(p,s,"Loaded "+list.lines().size()+" card entries. Checking availability…","");resolveLands(p,s,()->plan(p,s,false,req.amount()));}}
+    case "import" -> {if(s.kind==3){var list=DeckList.parse(req.text());if(!list.errors().isEmpty()){reply(p,s,"Import rejected: "+list.errors().getFirst(),String.join("\n",list.errors()));return;}if(list.lines().isEmpty()){reply(p,s,"No cards in the list.","");return;}BuilderBlockEntity be=builder(p,s);if(be==null)return;s.workToken=be.start("",req.amount());be.loaded(s.workToken,req.text(),"",req.amount());s.deck=req.text();s.statuses=list.lines().stream().map(line->new Wire.Row(line.label(),ItemStack.EMPTY,-1,line.quantity())).toList();reply(p,s,"Loaded "+list.lines().size()+" card entries. Checking availability…","");resolveLands(p,s,()->plan(p,s,false,req.amount()));}}
     case "import_url" -> {if(s.kind==3)importArchidekt(p,s,req.text(),req.amount());}
-    case "plan" -> {if(s.kind==3)plan(p,s,false,req.amount());}
-    case "build" -> {if(s.kind==3)plan(p,s,true,req.amount());}
+    case "plan" -> {if(s.kind==3){BuilderBlockEntity be=builder(p,s);if(be!=null&&be.resolving())reply(p,s,"Decklist still resolving; results will be saved when complete.",be.report());else plan(p,s,false,req.amount());}}
+    case "build" -> {if(s.kind==3){BuilderBlockEntity be=builder(p,s);if(be!=null&&be.resolving())reply(p,s,"Wait for background resolution to finish.",be.report());else plan(p,s,true,req.amount());}}
     case "shop" -> {if(s.kind==3)shopMissing(p,s);}
     case "counter" -> {if(s.kind==4)editCounter(p,s,req.text(),req.amount());}
    }
   }catch(Exception e){s.busy=false;org.slf4j.LoggerFactory.getLogger("caszual_mtg").error("Request failed",e);reply(p,s,"Request failed: "+e.getMessage(),s.report);}
  }
  static void reply(ServerPlayer p,Session s,String msg,String report){replyRows(p,s,msg,s.kind<2&&s.artwork?"art":report,s.kind==3?s.statuses:s.kind<2?s.catalogueRows:rows(p,s,s.query,s.page));}
- static void replyRows(ServerPlayer p,Session s,String msg,String report,List<Wire.Row> rows){if(valid(p,s))ServerPlayNetworking.send(p,new Wire.Reply(s.pos,s.kind,msg.length()>1900?msg.substring(0,1900):msg,report.length()>32000?report.substring(0,32000):report,rows));}
+ static void replyRows(ServerPlayer p,Session s,String msg,String report,List<Wire.Row> rows){if(valid(p,s)){
+  BuilderBlockEntity be=builder(p,s);
+  ServerPlayNetworking.send(p,new Wire.Reply(s.pos,s.kind,msg.length()>1900?msg.substring(0,1900):msg,report.length()>32000?report.substring(0,32000):report,rows,
+    be==null?"":be.deck(),be==null?"":be.url(),be==null?2:be.flags(),be!=null&&be.resolving()));
+ }}
  static List<Wire.Row> rows(ServerPlayer p,Session s,String q,int page){if(s.kind==4){var c=counter(p,s);if(c==null)return List.of();ItemStack stack=c.getDisplayCardStack(s.cardId);return CardCounterNbt.readCounterMap(stack).entrySet().stream().limit(40).map(e->new Wire.Row(e.getKey(),stack.copy(),e.getValue())).toList();}if(s.kind==3)return List.of();return Banks.get(p.level().getServer()).search(s.kind,q).stream().filter(e->s.kind!=0||Catalogue.matchesMana(e.getValue().card(),s.mana)).filter(e->s.kind!=1||Catalogue.matchesToken(e.getValue().card(),s.oracle,s.stats)).skip((long)page*40).limit(40).map(e->new Wire.Row(e.getKey(),e.getValue().card().copy(),s.kind==2?e.getValue().count():-1)).toList();}
  static void search(ServerPlayer p,Session s,String q,int page,int mask){search(p,s,q,page,mask,"","");}
  static void search(ServerPlayer p,Session s,String q,int requestedPage,int mask,String oracle,String stats){s.busy=false;if(q.length()>200||oracle.length()>200||stats.length()>40)throw new IllegalArgumentException("Search fields are too long.");if(s.kind==1)Catalogue.stats(stats);int page=Math.clamp(requestedPage,0,1000);s.page=page;s.query=q;s.mana=mask&511;s.oracle=oracle;s.stats=stats;s.artwork=false;s.catalogueRows=List.of();
