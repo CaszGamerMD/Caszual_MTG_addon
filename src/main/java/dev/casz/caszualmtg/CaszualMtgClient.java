@@ -27,9 +27,11 @@ public final class CaszualMtgClient implements ClientModInitializer {
       .register(client -> MtgBlockEntitySafety.verifyAtLifecycle("client startup"));
   CustomBoxModels.register();
   net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(CaszualMtg.RACK_BE,DeckboxRackRenderer::new);
+  net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(CaszualMtg.STAFF_RACK_BE,StaffRackRenderer::new);
   net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.COMMUNITY_MENU,CommunityScreen::new);
   net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.BUILDER_MENU,BuilderScreen::new);
   net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.RACK_MENU,DeckboxRackScreen::new);
+  net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.STAFF_RACK_MENU,StaffRackScreen::new);
   ScreenEvents.AFTER_INIT.register((mc,screen,w,h)->{
    if(!(screen instanceof com.spider.mtgcard.client.gui.CardStoreScreen))return;
    ScreenEvents.afterExtract(screen).register((s,g,mx,my,t)->{
