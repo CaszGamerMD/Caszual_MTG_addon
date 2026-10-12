@@ -75,6 +75,18 @@ public final class CaszualMtg implements ModInitializer {
    if(!l.isClientSide()&&p instanceof ServerPlayer sp)StaffTargets.clear(sp);
    return InteractionResult.SUCCESS;
   });
+  // Drop the inserted Card Store deckbox on normal block destruction, including its
+  // MTGCard UUID storage pointer, before vanilla destroys the Card Store block entity.
+  net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents.AFTER.register((world,player,pos,state,be)->{
+   if(be instanceof com.spider.mtgcard.cardstore.CardStoreBlockEntity store
+       &&store instanceof CardStoreBoxAccess access){
+    ItemStack box=access.caszual$getDeckbox();
+    if(!box.isEmpty()){
+     Block.popResource(world,pos,box.copy());
+     access.caszual$setDeckbox(ItemStack.EMPTY);
+    }
+   }
+  });
   UseBlockCallback.EVENT.register((p,l,hand,hit)->{
    if(p instanceof ServerPlayer sp&&l.getBlockEntity(hit.getBlockPos()) instanceof DeckControlBlockEntity&&HandLogic.completePendingLink(sp,hit.getBlockPos()))return InteractionResult.SUCCESS;
    if(l.getBlockState(hit.getBlockPos()).is(CUSTOM_BOX)&&p.isShiftKeyDown()&&p.getItemInHand(hand).getItem() instanceof BlockItem)return CUSTOM_BOX.applyMaterial(p.getItemInHand(hand),l,hit.getBlockPos(),p);
