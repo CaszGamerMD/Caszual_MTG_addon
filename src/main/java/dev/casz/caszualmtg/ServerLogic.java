@@ -199,14 +199,23 @@ public final class ServerLogic {
   }
   if(missingCount>0&&(flags&1)==0){replyRows(p,s,"Missing cards. Choose Build available to assemble a partial deck.",s.report,statuses);return;}
   if(picks.isEmpty()){reply(p,s,"No available cards to build.",s.report);return;}
-  DeckboxBlockEntity box=output(p,s);if(box==null){reply(p,s,"Place an MTGCard deckbox touching the builder.",s.report);return;}
+  BuilderBlockEntity be=builder(p,s);
+  if(be==null||be.getItem(0).isEmpty()){reply(p,s,"Insert an MTGCard deckbox in the Deck Builder output slot.",s.report);return;}
+  DeckboxTransfer.Loaded loaded=DeckboxTransfer.load(p,be.getItem(0));
   int commanders=(int)picks.stream().filter(Pick::commander).count(),main=picks.size()-commanders;
   if(main>DeckboxBlockEntity.MAIN_SLOTS){reply(p,s,"Deckbox has 99 main slots. Use First = commander for a 100-card deck.",s.report);return;}
   if(commanders>0&&!CardNbt.isCommanderLegal(picks.stream().filter(Pick::commander).findFirst().get().card)){reply(p,s,"The first card is not commander-legal.",s.report);return;}
-  for(int i=0;i<box.getContainerSize();i++)if(!box.getStack(i).isEmpty()){reply(p,s,"Output deckbox must be empty.",s.report);return;}
-  // All availability checks and both inventory mutations run on the server thread.
-  int slot=0;Map<String,Long> consumed=new HashMap<>();for(Pick pick:picks){ItemStack card=CardDatabaseCards.copyForExtraction(pick.card);card.setCount(1);CardDatabaseCards.ensureUniqueUid(card);box.setStack(pick.commander?DeckboxBlockEntity.FIRST_SIDE_SLOT:slot++,card);if(b.entries.get(pick.key).kind()==2)consumed.merge(pick.key,1L,Long::sum);}
-  consumed.forEach(b::take);box.markDirty();box.persistExternalRecord();box.sync();replyRows(p,s,"Built "+picks.size()+" cards into the adjacent deckbox.",s.report,statuses);
+  for(ItemStack existing:loaded.items())if(!existing.isEmpty()){reply(p,s,"Output deckbox must be empty.",s.report);return;}
+  int slot=0;Map<String,Long> consumed=new HashMap<>();
+  for(Pick pick:picks){
+   ItemStack card=CardDatabaseCards.copyForExtraction(pick.card);card.setCount(1);CardDatabaseCards.ensureUniqueUid(card);
+   loaded.items().set(pick.commander?DeckboxBlockEntity.FIRST_SIDE_SLOT:slot++,card);
+   if(b.entries.get(pick.key).kind()==2)consumed.merge(pick.key,1L,Long::sum);
+  }
+  DeckboxTransfer.save(p,be.getItem(0),loaded);
+  be.setChanged();
+  consumed.forEach(b::take);
+  replyRows(p,s,"Built "+picks.size()+" cards directly into the inserted deckbox.",s.report,statuses);
  }
  static CardStoreBlockEntity nearbyStore(ServerPlayer p,Session s){
   CardStoreBlockEntity best=null;double bestDistance=Double.MAX_VALUE;
