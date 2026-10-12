@@ -43,7 +43,7 @@ public final class ServerLogic {
 }
  public static void openCounter(ServerPlayer p,CardDisplayEntity c){if(p.distanceToSqr(c)>64)return;Session s=new Session(p,c.blockPosition(),4);s.entity=c.getUUID();s.cardId=c.getDisplayCardId(c.findSelectedDisplayIndex(p));if(s.cardId==null)return;sessions.put(p.getUUID(),s);reply(p,s,"Edit counters on this card.","");}
  static void seed(ServerPlayer p){Banks b=Banks.get(p.level().getServer());for(var c:PersistentCardStore.load(p.level()).snapshot()){ItemStack card=CardStackBuilders.buildScryfallStackFromModel(c,false);int kind=Banks.kind(card);if(kind<2&&!b.entries.containsKey(Banks.key(kind,card)))b.add(card,kind,1);}}
- public static void handle(ServerPlayer p,Wire.Request req){Session s=sessions.get(p.getUUID());if(s==null||!s.pos.equals(req.pos())||!valid(p,s))return;if(req.action().equals("close")){close(p);return;}long now=System.currentTimeMillis();if(now-s.last<150)return;s.last=now;if(s.busy&&!req.action().equals("search")&&!req.action().equals("arts")&&!req.action().equals("reset")&&!req.action().equals("refresh")){reply(p,s,"Working on the previous request…",s.report);return;}s.revision++;
+ public static void handle(ServerPlayer p,Wire.Request req){Session s=sessions.get(p.getUUID());if(s==null||!s.pos.equals(req.pos())||!valid(p,s))return;if(req.action().equals("close")){close(p);return;}long now=System.currentTimeMillis();if(!req.action().equals("reset")&&!req.action().equals("refresh")&&now-s.last<150)return;s.last=now;if(s.busy&&!req.action().equals("search")&&!req.action().equals("arts")&&!req.action().equals("reset")&&!req.action().equals("refresh")){reply(p,s,"Working on the previous request…",s.report);return;}s.revision++;
   try{
    switch(req.action()){
     case "refresh" -> {if(s.kind==3&&builder(p,s) instanceof BuilderBlockEntity be){s.deck=be.deck();s.report=be.report();s.statuses=be.statuses();s.workToken=be.revision();reply(p,s,be.message(),be.report());}}
@@ -138,6 +138,7 @@ public final class ServerLogic {
   String address=url.trim();
   if(address.isBlank()||address.length()>512){reply(p,s,"Enter an Archidekt URL.","");return;}
   if(be.cached(address)){
+   if(be.resolving()){reply(p,s,"This decklist is already resolving in the background.",be.report());return;}
    s.workToken=be.revision();s.deck=be.deck();s.statuses=be.statuses();s.report=be.report();
    if(!s.statuses.isEmpty()){reply(p,s,"Restored cached URL and resolved decklist.",s.report);return;}
    resolveLands(p,s,()->plan(p,s,false,flags));return;
