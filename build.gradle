@@ -51,3 +51,10 @@ tasks.register('verifyStaffColors', JavaExec) {
     mainClass = 'dev.casz.caszualmtg.StaffColorChecks'
 }
 tasks.named('check') { dependsOn verifyStaffColors }
+
+tasks.register('verifyHandPrivacy', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.casz.caszualmtg.HandPrivacyCheck'
+}
+tasks.named('check') { dependsOn verifyHandPrivacy }
