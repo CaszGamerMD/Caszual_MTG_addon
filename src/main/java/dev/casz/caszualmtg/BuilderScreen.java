@@ -23,7 +23,7 @@ public final class BuilderScreen extends LegacyContainerScreen<BuilderMenu> {
  public void update(Wire.Reply reply){
   data=reply;
   if(!reply.message().isBlank())status=reply.message();
-  if(url!=null&&reply.message().contains("cleared"))url.setValue("");
+  if(reply.message().startsWith("Draft cleared.")){selected=-1;scroll=0;face=0;if(url!=null)url.setValue("");}
   else if(url!=null&&!url.isFocused()&&!reply.url().equals(url.getValue())&&!reply.resolving())url.setValue(reply.url());
   commander=(reply.flags()&2)!=0;
  }
