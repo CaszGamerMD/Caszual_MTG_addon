@@ -49,7 +49,9 @@ public final class DeckboxRackRenderer implements BlockEntityRenderer<DeckboxRac
   for(int i=0;i<state.boxes.length;i++){
    ItemStackRenderState item=state.boxes[i];if(item==null)continue;
    poses.pushPose();
-   poses.translate((1.55+i*3.05)/16.0,(state.wall?7.0:0.0)/16.0+4.5/16.0,4.0/16.0);
+   // Give the miniature models ~0.2 px of separation above the wooden face:
+   // their bottom planes previously intersected the shelf and z-fought.
+   poses.translate((1.55+i*3.05)/16.0,(state.wall?7.0:0.0)/16.0+4.75/16.0,4.0/16.0);
    poses.scale(.195f,.195f,.195f);
    item.submit(poses,out,state.lightCoords,OverlayTexture.NO_OVERLAY,0);
    poses.popPose();
