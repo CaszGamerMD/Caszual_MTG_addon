@@ -32,15 +32,6 @@ public final class BuilderBlock extends BaseEntityBlock {
   }
   return super.playerWillDestroy(level,pos,state,player);
  }
- // The menu slot belongs to the block entity, so return the output box when mined
- // before Minecraft removes the block entity from the world.
- @Override public BlockState playerWillDestroy(Level level,BlockPos pos,BlockState state,Player player){
-  if(!level.isClientSide()&&level.getBlockEntity(pos) instanceof BuilderBlockEntity builder){
-   ItemStack box=builder.removeItemNoUpdate(0);
-   if(!box.isEmpty())popResource(level,pos,box);
-  }
-  return super.playerWillDestroy(level,pos,state,player);
- }
  @Override protected void affectNeighborsAfterRemoval(BlockState state,ServerLevel world,BlockPos pos,boolean moved){
   if(world.getBlockState(pos).getBlock()!=this&&world.getBlockEntity(pos) instanceof BuilderBlockEntity builder)Containers.dropContents(world,pos,builder);
   super.affectNeighborsAfterRemoval(state,world,pos,moved);
