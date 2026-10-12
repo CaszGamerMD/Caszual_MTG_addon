@@ -4,7 +4,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.spider.mtgcard.item.ModItemTags;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -13,7 +12,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import java.util.*;
 
-public final class HandBlockEntity extends BlockEntity implements Container {
+public final class HandBlockEntity extends BlockEntity {
  public static final int SIZE=100;
  private final List<ItemStack> cards=new ArrayList<>(Collections.nCopies(SIZE,ItemStack.EMPTY));
  private UUID owner;
@@ -119,13 +118,8 @@ public final class HandBlockEntity extends BlockEntity implements Container {
  private record SlotStack(int slot,ItemStack stack){static final Codec<SlotStack> CODEC=RecordCodecBuilder.create(i->i.group(Codec.INT.fieldOf("Slot").forGetter(SlotStack::slot),ItemStack.CODEC.fieldOf("Stack").forGetter(SlotStack::stack)).apply(i,SlotStack::new));}
  private record Viewer(String uuid,String name){static final Codec<Viewer> CODEC=RecordCodecBuilder.create(i->i.group(Codec.STRING.fieldOf("Uuid").forGetter(Viewer::uuid),Codec.STRING.fieldOf("Name").forGetter(Viewer::name)).apply(i,Viewer::new));}
 
- @Override public int getContainerSize(){return SIZE;}
- @Override public boolean isEmpty(){return cardCount()==0;}
- @Override public ItemStack getItem(int slot){return slot>=0&&slot<SIZE?cards.get(slot):ItemStack.EMPTY;}
- @Override public ItemStack removeItem(int slot,int amount){if(slot<0||slot>=SIZE)return ItemStack.EMPTY;ItemStack cur=cards.get(slot);if(cur.isEmpty())return ItemStack.EMPTY;ItemStack out=cur.split(amount);if(cur.isEmpty())cards.set(slot,ItemStack.EMPTY);changed();return out;}
- @Override public ItemStack removeItemNoUpdate(int slot){if(slot<0||slot>=SIZE)return ItemStack.EMPTY;ItemStack out=cards.get(slot);cards.set(slot,ItemStack.EMPTY);return out;}
- @Override public void setItem(int slot,ItemStack stack){if(slot>=0&&slot<SIZE){cards.set(slot,stack);changed();}}
- @Override public void setChanged(){super.setChanged();}
- @Override public boolean stillValid(Player player){return level!=null&&player.distanceToSqr(worldPosition.getX()+.5,worldPosition.getY()+.5,worldPosition.getZ()+.5)<=64;}
- @Override public void clearContent(){for(int i=0;i<SIZE;i++)cards.set(i,ItemStack.EMPTY);changed();}
+ // Intentionally DO NOT implement Minecraft Container (or expose its accessors).
+ // The generic Container capability is visible to tooltip/inventory-inspection
+ // mods that have no knowledge of the Card Hand's owner/viewer permissions.
+ // All card transfers run through HandLogic's server-side authorized methods.
 }

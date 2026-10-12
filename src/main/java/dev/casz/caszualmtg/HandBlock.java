@@ -57,8 +57,19 @@ public final class HandBlock extends BaseEntityBlock {
   super.setPlacedBy(level,pos,state,placer,stack);
   if(placer instanceof Player p&&level.getBlockEntity(pos) instanceof HandBlockEntity hand)hand.ensureOwner(p);
  }
+ // Drop real cards using the Hand's private server-side API, not generic Container.
+ // Doing so while the block entity is still present also covers normal player mining.
+ private static void dropHandContents(Level level,BlockPos pos){
+  if(level.isClientSide())return;
+  if(level.getBlockEntity(pos) instanceof HandBlockEntity hand)
+   for(ItemStack card:hand.takeAllCards())popResource(level,pos,card);
+ }
+ @Override public BlockState playerWillDestroy(Level level,BlockPos pos,BlockState state,Player player){
+  dropHandContents(level,pos);
+  return super.playerWillDestroy(level,pos,state,player);
+ }
  @Override protected void affectNeighborsAfterRemoval(BlockState state,ServerLevel level,BlockPos pos,boolean moved){
-  if(level.getBlockState(pos).getBlock()!=this&&level.getBlockEntity(pos) instanceof HandBlockEntity hand)Containers.dropContents(level,pos,hand);
+  if(level.getBlockState(pos).getBlock()!=this)dropHandContents(level,pos);
   super.affectNeighborsAfterRemoval(state,level,pos,moved);
  }
 }
