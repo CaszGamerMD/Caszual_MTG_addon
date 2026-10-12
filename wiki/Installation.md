@@ -2,7 +2,7 @@
 
 ## Requirements
 
-Caszual MTG 0.11.1 requires:
+Caszual MTG 0.11.2 requires:
 
 - Minecraft **26.2**
 - Fabric Loader **0.19.3+**
@@ -13,11 +13,11 @@ Caszual MTG 0.11.1 requires:
 ## Install
 
 1. Install Fabric for Minecraft 26.2.
-2. Put MTGCard, Fabric API, and `caszual-mtg-0.11.1.jar` in the `mods` folder.
+2. Put MTGCard, Fabric API, and `caszual-mtg-0.11.2.jar` in the `mods` folder.
 3. Install the same mod versions on the server and on every player client.
 4. Restart Minecraft/server.
 
-Remove any old `mtgcompanion-*.jar` and older Caszual MTG jars from the mods folder; install only the new `caszual-mtg-0.11.1.jar`. The mod ID and block/item IDs have changed to `caszual_mtg`, and content placed under the old ID is not migrated. MTGCard itself is still required.
+Remove any old `mtgcompanion-*.jar` and older Caszual MTG jars from the mods folder; install only the new `caszual-mtg-0.11.2.jar`. The mod ID and block/item IDs have changed to `caszual_mtg`, and content placed under the old ID is not migrated. MTGCard itself is still required.
 
 ## Creative tab
 
@@ -35,3 +35,7 @@ Caszual MTG places its functional blocks/items into Minecraft's **Functional Blo
 - Staff Rack
 
 See [Recipes](Recipes.md) for survival crafting.
+
+## Optional Caszual Additions integration
+
+Install **Caszual Additions 0.1.1 or newer** alongside Caszual MTG to use the shared Caszual Creative tab and **Barrel of Caszual Fun**. All ten addon items are provided through the cross-mod `caszual_additions:caszual_content` item tag. The barrel is creative-mode only; reopen an existing one to discover newly installed items. Caszual MTG does not require Caszual Additions to run.
