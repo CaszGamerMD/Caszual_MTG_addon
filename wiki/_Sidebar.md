@@ -8,6 +8,7 @@
 - [Databases](Databases.md)
 - [Deck Builder](Deck-Builder.md)
 - [Deckbox Rack](Deckbox-Rack.md)
+- [Card Store output](Card-Store-Output.md)
 - [Card Hand](Card-Hand.md)
 - [Custom Deckbox](Custom-Deckbox.md)
 - [Card Counter](Card-Counter.md)

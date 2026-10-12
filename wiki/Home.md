@@ -7,7 +7,9 @@
 - **Community Land Catalogue** — searchable, Commander-aware unlimited land catalogue with mana filters and artwork selection.
 - **Community Token Catalogue** — searchable unlimited token catalogue with optional Oracle-text and P/T filtering.
 - **Community Card Collection** — server-wide shared storage for real deposited non-land/non-token cards.
-- **Deck Builder** — import text or Archidekt lists, check availability, build into a deckbox, and send missing cards to a nearby MTGCard Card Store.
+- **Deck Builder** — insert an output deckbox, save and reset drafts, cache Archidekt URLs, continue background lookups, and build or shop missing cards.
+- **Deckbox Rack** — store five deckboxes on a thin floor/wall shelf, with real miniature models and contents retained on break.
+- **Card Store output** — a built-in deckbox slot routes purchases directly into the chosen deckbox.
 - **Card Hand** — private 100-card hand linked to a specific Deck Control, with viewers, reveal mode, mulligans, draw routing and graveyard discards.
 - **Custom Deckbox** — an MTGCard deckbox whose main panels can inherit the representative texture of a vanilla or modded block.
 - **Card Counter** — named counters, world markers and a readable HUD for placed MTG cards.
@@ -34,6 +36,8 @@ Install Caszual MTG on the **server and every client** that connects to it.
 - [Recipes](Recipes.md)
 - [Databases](Databases.md)
 - [Deck Builder](Deck-Builder.md)
+- [Deckbox Rack](Deckbox-Rack.md)
+- [Card Store output](Card-Store-Output.md)
 - [Card Hand](Card-Hand.md)
 - [Custom Deckbox](Custom-Deckbox.md)
 - [Card Counter](Card-Counter.md)

@@ -31,5 +31,6 @@ Caszual MTG places its functional blocks/items into Minecraft's **Functional Blo
 - MTG Staff
 - Custom Deckbox
 - Card Hand
+- Deckbox Rack
 
 See [Recipes](Recipes.md) for survival crafting.
