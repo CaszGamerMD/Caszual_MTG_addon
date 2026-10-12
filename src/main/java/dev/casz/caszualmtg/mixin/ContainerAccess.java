@@ -6,4 +6,6 @@ import net.minecraft.world.inventory.Slot;
 @Mixin(AbstractContainerScreen.class)
 public interface ContainerAccess {
  @Accessor("hoveredSlot") Slot companion$getHoveredSlot();
+ @Accessor("leftPos") int companion$getLeftPos();
+ @Accessor("topPos") int companion$getTopPos();
 }
