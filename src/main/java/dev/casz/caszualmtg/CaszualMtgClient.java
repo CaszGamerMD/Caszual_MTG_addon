@@ -28,6 +28,7 @@ public final class CaszualMtgClient implements ClientModInitializer {
   CustomBoxModels.register();
   net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.COMMUNITY_MENU,CommunityScreen::new);
   net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.BUILDER_MENU,BuilderScreen::new);
+  net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.RACK_MENU,DeckboxRackScreen::new);
   ClientPlayNetworking.registerGlobalReceiver(Wire.Reply.TYPE,(reply,ctx)->{if(reply.kind()==2){if(ctx.client().gui.screen() instanceof CommunityScreen screen&&screen.getMenu().pos.equals(reply.pos()))screen.update(reply);return;}if(reply.kind()==3){if(ctx.client().gui.screen() instanceof BuilderScreen screen&&screen.getMenu().pos.equals(reply.pos()))screen.update(reply);return;}if(ctx.client().gui.screen() instanceof BankScreen screen&&screen.pos.equals(reply.pos())&&screen.kind==reply.kind())screen.update(reply);else if(!(ctx.client().gui.screen() instanceof BankScreen))ctx.client().gui.setScreen(new BankScreen(reply));});
   ClientPlayNetworking.registerGlobalReceiver(HandWire.Reply.TYPE,(reply,ctx)->{if(ctx.client().gui.screen() instanceof HandScreen screen&&screen.data.pos().equals(reply.pos()))screen.update(reply);else if(reply.message().equals("Hand ready."))ctx.client().gui.setScreen(new HandScreen(reply));});
   ClientPlayNetworking.registerGlobalReceiver(DeckboxRefreshWire.Refresh.TYPE,(refresh,ctx)->{
