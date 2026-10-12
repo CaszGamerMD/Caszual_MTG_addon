@@ -49,20 +49,20 @@ class StaffRackTests(unittest.TestCase):
         loot = json.loads((DATA / "loot_table/blocks/staff_rack.json").read_text())
         self.assertEqual(loot["pools"], [], "Rack drops a single contents-preserving item in code")
 
-    def test_hanging_staffs_extend_two_blocks_below(self):
+    def test_hanging_staffs_are_raised_one_block(self):
         rack = (BASE / "StaffRackRenderer.java").read_text()
         self.assertIn("ItemStackRenderState[] staffs", rack)
         self.assertIn("ItemDisplayContext.FIXED", rack)
         self.assertIn("STAFF_HORIZONTAL_SCALE=.69f,STAFF_VERTICAL_SCALE=.92f", rack)
-        self.assertIn("STAFF_VERTICAL_OFFSET=-.62", rack)
+        self.assertIn("STAFF_VERTICAL_OFFSET=.38", rack)
         self.assertIn("2.0+4.0*i", rack)
         staff = json.loads((ASSETS / "models/item/targeting_staff.json").read_text())
         min_y = min(element["from"][1] for element in staff["elements"])
         max_y = max(element["to"][1] for element in staff["elements"])
-        bottom = -.62 + ((min_y - 8) / 16) * .92
-        top = -.62 + ((max_y - 8) / 16) * .92
-        self.assertAlmostEqual(bottom, -2.0, delta=.04)
-        self.assertGreater(top, .70, "Staff tip should meet the rack's upper hooks")
+        bottom = .38 + ((min_y - 8) / 16) * .92
+        top = .38 + ((max_y - 8) / 16) * .92
+        self.assertAlmostEqual(bottom, -1.0, delta=.04)
+        self.assertGreater(top, 1.70, "Gem is raised beyond the old overlapping hooks")
         max_half_width = max((element["to"][0] - element["from"][0]) / 2
                              for element in staff["elements"]) * .69
         self.assertLess(max_half_width * 2, 4.0, "All 4 gems must fit across 16px rack")
