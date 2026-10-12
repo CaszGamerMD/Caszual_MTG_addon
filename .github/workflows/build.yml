@@ -30,6 +30,9 @@ jobs:
       - name: Validate opaque Hand Block texture and model assets
         run: python3 -m unittest discover -s tests -p 'test_hand_assets.py' -v
 
+      - name: Verify Deck Builder / Rack / Card Store integration
+        run: python3 -m unittest discover -s tests -p 'test_deck_builder_rack.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
