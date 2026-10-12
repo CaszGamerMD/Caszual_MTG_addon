@@ -25,7 +25,7 @@ import java.util.List;
 /** Quarter-block-high shelf, one-half block deep, with five item-preserving positions. */
 public final class DeckboxRackBlock extends BaseEntityBlock {
  public static final MapCodec<DeckboxRackBlock> CODEC=simpleCodec(DeckboxRackBlock::new);
- public static final DirectionProperty FACING=BlockStateProperties.HORIZONTAL_FACING;
+ public static final EnumProperty<Direction> FACING=BlockStateProperties.HORIZONTAL_FACING;
  public static final BooleanProperty WALL=BooleanProperty.create("wall");
  public static final BooleanProperty[] OCCUPIED={
   BooleanProperty.create("box0"),BooleanProperty.create("box1"),BooleanProperty.create("box2"),BooleanProperty.create("box3"),BooleanProperty.create("box4")
@@ -62,7 +62,7 @@ public final class DeckboxRackBlock extends BaseEntityBlock {
    if(!level.isClientSide()&&level.getBlockEntity(pos) instanceof DeckboxRackEntity rack){
     int slot=-1;for(int i=0;i<DeckboxRackEntity.SIZE;i++)if(rack.getItem(i).isEmpty()){slot=i;break;}
     if(slot>=0){rack.setItem(slot,stack.copyWithCount(1));if(!player.getAbilities().instabuild)stack.shrink(1);}
-    else player.displayClientMessage(net.minecraft.network.chat.Component.literal("Deckbox rack is full."),true);
+    else player.sendSystemMessage(net.minecraft.network.chat.Component.literal("Deckbox rack is full."));
    }
    return InteractionResult.SUCCESS;
   }
