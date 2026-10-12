@@ -48,20 +48,21 @@ public final class DeckboxRackBlock extends BaseEntityBlock {
   return state.setValue(WALL,side.getAxis().isHorizontal()).setValue(FACING,side.getAxis().isHorizontal()?side:ctx.getHorizontalDirection().getOpposite());
  }
  @Override protected VoxelShape getShape(BlockState state,BlockGetter world,BlockPos pos,CollisionContext ctx){
-  VoxelShape shape=state.getValue(WALL)?WALL_SHAPE:FLOOR;
+  int bottom=state.getValue(WALL)?7:0,top=bottom+4;
+  // Rotate the same half-depth, quarter-block shelf in every horizontal direction.
   return switch(state.getValue(FACING)){
-   case NORTH -> shape;
-   case SOUTH -> Shapes.or(Block.box(0,state.getValue(WALL)?7:0,8,16,state.getValue(WALL)?11:4,16));
-   case EAST -> Block.box(8,state.getValue(WALL)?7:0,0,16,state.getValue(WALL)?15:8,16);
-   case WEST -> Block.box(0,state.getValue(WALL)?7:0,0,8,state.getValue(WALL)?15:8,16);
-   default -> shape;
+   case NORTH -> Block.box(0,bottom,0,16,top,8);
+   case SOUTH -> Block.box(0,bottom,8,16,top,16);
+   case EAST -> Block.box(8,bottom,0,16,top,16);
+   case WEST -> Block.box(0,bottom,0,8,top,16);
+   default -> Block.box(0,bottom,0,16,top,8);
   };
  }
  @Override protected InteractionResult useItemOn(ItemStack stack,BlockState s,Level level,BlockPos pos,Player player,InteractionHand hand,BlockHitResult hit){
   if(stack.getItem() instanceof com.spider.mtgcard.deckbox.DeckboxBlockItem){
    if(!level.isClientSide()&&level.getBlockEntity(pos) instanceof DeckboxRackEntity rack){
     int slot=-1;for(int i=0;i<DeckboxRackEntity.SIZE;i++)if(rack.getItem(i).isEmpty()){slot=i;break;}
-    if(slot>=0){rack.setItem(slot,stack.copyWithCount(1));if(!player.getAbilities().instabuild)stack.shrink(1);}
+    if(slot>=0){rack.setItem(slot,stack.copyWithCount(1));stack.shrink(1);}
     else player.sendSystemMessage(net.minecraft.network.chat.Component.literal("Deckbox rack is full."));
    }
    return InteractionResult.SUCCESS;
