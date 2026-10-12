@@ -1,4 +1,4 @@
-# Caszual MTG 0.8.1 — expanded test build
+# Caszual MTG 0.9.0 — expanded test build
 
 ## Documentation
 
@@ -8,7 +8,19 @@ A separate addon for Minecraft **26.2 Fabric**, built against **MTGCard 1.7.0-26
 
 ## Install
 
-Put `caszual-mtg-0.8.1.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+Put `caszual-mtg-0.9.0.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+
+## What's new in 0.9.0
+
+- **Deck Builder output slot:** insert one MTGCard deckbox into the Builder GUI to build directly into it; no adjacent output block required.
+- **Reset:** clears the Builder's imported list, URL, results, shopping list, and any pending async job without ejecting the deckbox.
+- **Remember and cache decks:** the Builder block retains imported URL/list, availability rows, and missing report when the screen closes; its URL lookup and land/name resolution can continue in the background. Repeat imports of the same successfully resolved Archidekt URL use a six-hour cache, saved with the block across restarts. Failed imports do not wipe the previous draft.
+- **Deckbox Rack:** quarter-height, half-depth floor or wall shelf with five deckbox slots, real miniature deckbox models, and a retained-content rack item on break.
+- **Card Store deckbox slot:** MTGCard's Card Store receives a dedicated persistent deckbox slot. Purchases fill its main card slots before using a buyer's empty inventory slots or MTGCard's existing adjacent-box/ejection fallback.
+
+## What's fixed in 0.8.2
+
+- **Private Card Hands:** block-hover information mods (including Jade's generic inventory display) no longer gain direct access to unrevealed Hand cards. Card Hand no longer implements vanilla `Container` and never exposes its slots through generic inventory introspection. The authorized Card Hand GUI and linked Deck Control still operate normally. Cards are explicitly dropped when the block is broken, so contents are not lost.
 
 ## What's fixed in 0.8.1
 
@@ -21,7 +33,7 @@ Put `caszual-mtg-0.8.1.jar` in the `mods` folder on both the server and every pl
 - **RGB hex staff glows:** left-click and right-click glow marks now accept arbitrary `#RRGGBB` colors instead of being limited to vanilla team colors. The staff uses two independent presets, with defaults white and golden orange.
 - **Card Hand settings:** if an authorized player carries an MTG Staff, two hex fields and live color previews appear in the Hand Block. Press **Apply to all staffs** to save the presets in that Hand Block and update every staff in the player's inventory, including offhand. Already-marked targets are refreshed.
 - The RGB glow uses Caszual MTG's client mixin and the normal scoreboard synchronization. No wool-block color sampling is necessary.
-- All players on the server should install Caszual MTG 0.8.1 to see the exact colors.
+- All players on the server should install Caszual MTG 0.9.0 to see the exact colors.
 
 ## What's new in 0.7.0
 
