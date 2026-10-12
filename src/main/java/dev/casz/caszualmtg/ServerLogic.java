@@ -168,12 +168,12 @@ public final class ServerLogic {
 
  static void resolveLands(ServerPlayer p,Session s,Runnable done){Set<Integer> linked=links(p,s);if(!linked.contains(0)&&!linked.contains(1)){done.run();return;}
   Banks b=Banks.get(p.level().getServer());List<String> unknown=DeckList.parse(s.deck).lines().stream().map(DeckList.Line::name).distinct().filter(name->b.entries.values().stream().noneMatch(e->DeckList.normalize(TcgCardMeta.displayName(e.card())).equals(DeckList.normalize(name)))).limit(100).toList();
-  if(unknown.isEmpty()){done.run();return;}s.busy=true;reply(p,s,"Resolving land/token names…","");int revision=s.revision;
+  if(unknown.isEmpty()){done.run();return;}s.busy=true;reply(p,s,"Resolving land/token names…","");long token=s.workToken;
   List<CompletableFuture<ScryfallModels.Card>> requests=unknown.stream().map(name->ScryfallNamedFetch.fetchNamedFuzzyAsync(name)
    .thenCompose(hit->{if(hit==null||!DeckList.normalize(hit.name()).equals(DeckList.normalize(name)))return CompletableFuture.<ScryfallModels.Card>completedFuture(null);return ScryfallExactFetch.fetchBySetCollectorAsync(p.level(),hit.set(),hit.collectorNumber());})
    .exceptionally(error->null)).toList();
   CompletableFuture.allOf(requests.toArray(CompletableFuture[]::new)).whenComplete((ignored,error)->p.level().getServer().execute(()->{
-   if(!valid(p,s)||s.revision!=revision)return;s.busy=false;
+   if(!workValid(p,s))return;s.busy=false;
    for(var request:requests){var model=request.getNow(null);if(model==null)continue;ItemStack card=CardStackBuilders.buildScryfallStackFromModel(model,false);int kind=Banks.kind(card);if(kind<2&&linked.contains(kind))b.add(card,kind,1);}
    done.run();
   }));
@@ -192,7 +192,11 @@ public final class ServerLogic {
    String label=line.label()+(alternateForLine>0?" · alternate art":"");statuses.add(new Wire.Row(label,preview.copy(),line.quantity()-need,line.quantity()));summary.append(line.quantity()-need).append('/').append(line.quantity()).append(" ").append(label).append('\n');
   }
   s.statuses=statuses;s.missingLines=List.copyOf(missingLines);s.report=String.join("\n",missing)+(missing.isEmpty()?"":"\n");String msg="Requested "+requested+" | available "+picks.size()+" | missing "+missingCount+(alternateArtCount>0?" | alternate art "+alternateArtCount:"")+". Linked: "+linked.stream().sorted().map(k->k==0?"lands":k==1?"tokens":"community").toList();
-  if(!build){replyRows(p,s,msg,s.report,statuses);return;}
+  if(!build){
+    BuilderBlockEntity be=builder(p,s);
+    if(be!=null&&be.revision()==s.workToken)be.complete(s.workToken,s.report,msg,statuses);
+    replyRows(p,s,msg,s.report,statuses);return;
+  }
   if(missingCount>0&&(flags&1)==0){replyRows(p,s,"Missing cards. Choose Build available to assemble a partial deck.",s.report,statuses);return;}
   if(picks.isEmpty()){reply(p,s,"No available cards to build.",s.report);return;}
   DeckboxBlockEntity box=output(p,s);if(box==null){reply(p,s,"Place an MTGCard deckbox touching the builder.",s.report);return;}
