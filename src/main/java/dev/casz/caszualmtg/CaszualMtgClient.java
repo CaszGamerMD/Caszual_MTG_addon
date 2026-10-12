@@ -26,6 +26,7 @@ public final class CaszualMtgClient implements ClientModInitializer {
   net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED
       .register(client -> MtgBlockEntitySafety.verifyAtLifecycle("client startup"));
   CustomBoxModels.register();
+  net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(CaszualMtg.RACK_BE,DeckboxRackRenderer::new);
   net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.COMMUNITY_MENU,CommunityScreen::new);
   net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.BUILDER_MENU,BuilderScreen::new);
   net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.RACK_MENU,DeckboxRackScreen::new);
