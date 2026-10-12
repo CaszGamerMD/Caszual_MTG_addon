@@ -16,7 +16,7 @@ import java.util.*;
 /** Block-owned output slot and persistent draft; survives closing the GUI and server restarts. */
 public final class BuilderBlockEntity extends BlockEntity implements Container {
  private ItemStack box=ItemStack.EMPTY;
- private String deck="",url="",report="",message="";
+ private String deck="",url="",requestedUrl="",report="",message="";
  private boolean resolving;
  private int flags=2;
  private long cachedAt;
@@ -25,40 +25,40 @@ public final class BuilderBlockEntity extends BlockEntity implements Container {
 
  public BuilderBlockEntity(BlockPos at,BlockState state){super(CaszualMtg.BUILDER_BE,at,state);}
  public String deck(){return deck;}
- public String url(){return url;}
+ public String url(){return requestedUrl.isBlank()?url:requestedUrl;}
  public String report(){return report;}
  public String message(){return message;}
  public int flags(){return flags;}
  public boolean resolving(){return resolving;}
  public long revision(){return revision;}
  public List<Wire.Row> statuses(){return statuses;}
- public boolean cached(String address){return !deck.isBlank()&&url.equals(address)&&cachedAt>0&&System.currentTimeMillis()-cachedAt<6*60*60*1000L;}
- public long start(String address,int flags){revision++;message="Loading decklist…";resolving=true;this.flags=flags;setChanged();return revision;}
- public long reset(){revision++;deck="";url="";report="";message="Deck Builder cleared.";statuses=List.of();cachedAt=0;resolving=false;flags=2;setChanged();return revision;}
+ public boolean cached(String address){return !resolving&&!deck.isBlank()&&url.equals(address)&&cachedAt>0&&System.currentTimeMillis()-cachedAt<6*60*60*1000L;}
+ public long start(String address,int flags){revision++;requestedUrl=address;message="Loading decklist…";resolving=true;this.flags=flags;setChanged();return revision;}
+ public long reset(){revision++;deck="";url="";requestedUrl="";report="";message="Deck Builder cleared.";statuses=List.of();cachedAt=0;resolving=false;flags=2;setChanged();return revision;}
  public void loaded(long token,String deck,String url,int flags){
-  if(token!=revision)return;this.deck=deck;this.url=url;this.flags=flags;cachedAt=System.currentTimeMillis();resolving=true;
+  if(token!=revision)return;this.deck=deck;this.url=url;this.requestedUrl=url;this.flags=flags;cachedAt=System.currentTimeMillis();resolving=true;
   message="Resolving availability…";setChanged();
  }
  public void complete(long token,String report,String message,List<Wire.Row> statuses){
   if(token!=revision)return;this.report=report;this.message=message;this.statuses=List.copyOf(statuses);this.resolving=false;setChanged();
  }
- public void failed(long token,String message){if(token!=revision)return;this.message=message;resolving=false;setChanged();}
+ public void failed(long token,String message){if(token!=revision)return;this.message=message;requestedUrl=url;resolving=false;setChanged();}
  @Override protected void loadAdditional(ValueInput in){
   super.loadAdditional(in);
   box=in.read("Deckbox",ItemStack.CODEC).orElse(ItemStack.EMPTY);
   if(!box.isEmpty()&&!(box.getItem() instanceof DeckboxBlockItem))box=ItemStack.EMPTY;
-  deck=in.getStringOr("Decklist","");url=in.getStringOr("Url","");
+  deck=in.getStringOr("Decklist","");url=in.getStringOr("Url","");requestedUrl=in.getStringOr("RequestedUrl",url);
   report=in.getStringOr("Report","");message=in.getStringOr("Message","");
   flags=in.getIntOr("Flags",2);cachedAt=in.getLongOr("CachedAt",0);
   revision=in.getLongOr("Revision",0);resolving=in.getBooleanOr("Resolving",false);
   statuses=in.read("Rows",RowSave.CODEC.listOf()).orElse(List.of()).stream().map(r->new Wire.Row(r.name,r.card,r.count,r.total)).toList();
   // Pending futures don't survive a full server restart. The input remains saved.
-  if(resolving){resolving=false;message="Draft restored. Press Check cards to update availability.";}
+  if(resolving){resolving=false;requestedUrl=url;message="Draft restored. Press Check cards to update availability.";}
  }
  @Override protected void saveAdditional(ValueOutput out){
   super.saveAdditional(out);
   if(!box.isEmpty())out.store("Deckbox",ItemStack.CODEC,box);
-  out.putString("Decklist",deck);out.putString("Url",url);
+  out.putString("Decklist",deck);out.putString("Url",url);out.putString("RequestedUrl",requestedUrl);
   out.putString("Report",report);out.putString("Message",message);
   out.putInt("Flags",flags);out.putLong("CachedAt",cachedAt);
   out.putLong("Revision",revision);out.putBoolean("Resolving",resolving);
