@@ -1,11 +1,11 @@
 # Deck Builder
 
-The Deck Builder assembles decklists from nearby Caszual MTG databases and writes available cards into an adjacent MTGCard deckbox.
+The Deck Builder assembles decklists from nearby Caszual MTG databases and writes available cards directly into an **MTGCard deckbox inserted in its output slot**.
 
 ## Required layout
 
 - Put Land, Token and/or Community Card database blocks within **4 blocks in each direction** of the Deck Builder.
-- Put an **empty MTGCard deckbox** directly touching one of the six faces of the Deck Builder.
+- Place an **empty MTGCard deckbox in the Deck Builder's output slot**. Nearby placed deckboxes are not used as output.
 - A nearby MTGCard **Card Store** within 4 blocks can receive missing-card lists.
 
 The builder reports which database kinds it can currently see.
@@ -52,6 +52,14 @@ Paste a public or unlisted Archidekt deck URL into the URL field and press **Imp
 - Private decks are not supported because Caszual MTG does not request or store Archidekt login credentials.
 - A failed URL import does not replace the currently loaded list.
 
+## Saved drafts, URL cache and Reset
+
+The Deck Builder now remembers the last successfully imported text or Archidekt URL, the resolved decklist, each card's availability, and the missing-card report **on that block**. Closing the UI does not interrupt a current Archidekt import or background land/name resolution, provided the builder still exists and the server remains running. Reopen it later to see the saved results.
+
+For repeat imports, a successfully resolved Archidekt URL is cached for **six hours**. Opening the builder or selecting the same URL does not need to refetch everything. A failed new URL will leave your previous valid list intact.
+
+Press **Reset** to erase the saved URL/list/results and cancel older background lookup results. Reset does **not** eject or empty the deckbox in the output slot. Removing the block does remove its draft but drops its inserted deckbox.
+
 ## Availability checking
 
 After import, every deck entry is shown while availability is checked.
@@ -85,7 +93,7 @@ Turn the option off for ordinary decks.
 
 Community Collection stock is consumed during build. Lands and tokens are catalogue-generated and do not reduce stock.
 
-The output deckbox must be empty.
+The output deckbox must be empty. Its item remains in the Deck Builder slot after the build and retains all cards through MTGCard's external deckbox storage.
 
 ## Shop missing
 
