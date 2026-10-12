@@ -7,7 +7,7 @@
       },
       "apply": {
         "model": "caszual_mtg:block/deckbox_rack_base_floor",
-        "y": 0
+        "y": 180
       }
     },
     {
@@ -27,7 +27,7 @@
       },
       "apply": {
         "model": "caszual_mtg:block/deckbox_rack_base_floor",
-        "y": 180
+        "y": 0
       }
     },
     {
@@ -47,7 +47,7 @@
       },
       "apply": {
         "model": "caszual_mtg:block/deckbox_rack_base_wall",
-        "y": 0
+        "y": 180
       }
     },
     {
@@ -67,7 +67,7 @@
       },
       "apply": {
         "model": "caszual_mtg:block/deckbox_rack_base_wall",
-        "y": 180
+        "y": 0
       }
     },
     {

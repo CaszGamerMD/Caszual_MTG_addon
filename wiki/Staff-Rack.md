@@ -5,7 +5,7 @@ The Staff Rack is a slim **wall-mounted** rail with **four** hooks. It stores Ca
 ## Placement and appearance
 
 - Right-click the **side face of a wall** to mount the rack; it faces outward automatically.
-- Position the rack around **two blocks above the floor**. Staffs hang almost two blocks below the mount, with the tips near the hooks and the lower ends touching the ground.
+- **0.11.1:** Staff models were raised **one block** relative to the earlier hanging layout. If you want their lower ends to touch the floor, mount the rack about **one block above the floor**. At a two-block-high mounting point, the staff bottoms now remain about one block off the floor.
 - The wooden rail has four metal hooks across one block. The shafts are narrow enough to hang side by side without the amethyst heads clipping.
 - The hanging staffs are visuals. Their storage and interaction are handled by the wall rack, not the empty space below it.
 

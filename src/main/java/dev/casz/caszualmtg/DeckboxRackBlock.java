@@ -51,11 +51,13 @@ public final class DeckboxRackBlock extends BaseEntityBlock {
   int bottom=state.getValue(WALL)?7:0,top=bottom+4;
   // Rotate the same half-depth, quarter-block shelf in every horizontal direction.
   return switch(state.getValue(FACING)){
-   case NORTH -> Block.box(0,bottom,0,16,top,8);
-   case SOUTH -> Block.box(0,bottom,8,16,top,16);
-   case EAST -> Block.box(8,bottom,0,16,top,16);
-   case WEST -> Block.box(0,bottom,0,8,top,16);
-   default -> Block.box(0,bottom,0,16,top,8);
+   // Match the world item renderer's orientation and the shelf blockstate model.
+   // Shelf sits on the wall-facing half, UNDER the existing deckbox minis.
+   case NORTH -> Block.box(0,bottom,8,16,top,16);
+   case SOUTH -> Block.box(0,bottom,0,16,top,8);
+   case EAST -> Block.box(0,bottom,0,8,top,16);
+   case WEST -> Block.box(8,bottom,0,16,top,16);
+   default -> Block.box(0,bottom,8,16,top,16);
   };
  }
  @Override protected InteractionResult useItemOn(ItemStack stack,BlockState s,Level level,BlockPos pos,Player player,InteractionHand hand,BlockHitResult hit){

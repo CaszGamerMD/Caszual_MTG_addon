@@ -20,11 +20,12 @@ import org.jetbrains.annotations.Nullable;
 /** Four full-height hanging 3D staff item models, with their exact saved item data. */
 public final class StaffRackRenderer implements BlockEntityRenderer<StaffRackEntity,StaffRackRenderer.State> {
  private final ItemModelResolver resolver;
- // The targeting staff item model is 47.7 pixels tall, from y=-16 to 31.7.
- // In FIXED context, scaling vertically by .92 and anchoring at -.62 makes
- // its tip reach the rack's hooks and its butt hang ~2 blocks below the rack.
+ // Raise the hanging items exactly one full block relative to the old
+ // rack layout. This keeps the displayed models spaced the same distance apart
+ // and prevents their amethyst tops from intersecting the metal hooks.
+ // The original offset was -0.62; the new one is (-0.62 + 1.00).
  public static final float STAFF_HORIZONTAL_SCALE=.69f,STAFF_VERTICAL_SCALE=.92f;
- public static final double STAFF_VERTICAL_OFFSET=-.62;
+ public static final double STAFF_VERTICAL_OFFSET=.38;
  public static final double STAFF_DEPTH=9.0/16.0;
  public StaffRackRenderer(BlockEntityRendererProvider.Context context){resolver=context.itemModelResolver();}
  public static final class State extends BlockEntityRenderState {
