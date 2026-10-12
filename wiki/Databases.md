@@ -1,6 +1,6 @@
 # Databases
 
-Caszual MTG has three database/catalogue blocks. The Land and Token catalogues provide **unlimited free copies** of discovered cards; the Community Card Collection stores **real deposited stock**.
+Caszual MTG has three database/catalogue blocks. When placed, each block's control-panel/front texture rotates to face the player. Existing north-facing blocks remain unchanged until picked up and replaced. The Land and Token catalogues provide **unlimited free copies** of discovered cards; the Community Card Collection stores **real deposited stock**.
 
 All custom database card browsers support **List/Grid** view and a larger selected-card preview. The List/Grid preference is shared across Caszual MTG browsers and remembered client-side.
 

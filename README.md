@@ -1,4 +1,4 @@
-# Caszual MTG 0.10.0 — expanded test build
+# Caszual MTG 0.10.1 — expanded test build
 
 ## Documentation
 
@@ -8,7 +8,13 @@ A separate addon for Minecraft **26.2 Fabric**, built against **MTGCard 1.7.0-26
 
 ## Install
 
-Put `caszual-mtg-0.10.0.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+Put `caszual-mtg-0.10.1.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+
+## What's fixed in 0.10.1
+
+- **Player-facing utility boxes:** the front of the Deck Builder and all three Community Database blocks (Land Catalogue, Token Catalogue, and Community Card Collection) now rotates toward the player when placed.
+- Four cardinal blockstates turn the existing front/side textures without changing recipes, item models, saved builder drafts, community inventories or block IDs.
+- Already-placed blocks retain their historical north-facing orientation; break and replace a utility box to choose its new direction. Remove any inserted deckbox before breaking a Builder.
 
 ## What's new in 0.10.0
 
@@ -40,7 +46,7 @@ Put `caszual-mtg-0.10.0.jar` in the `mods` folder on both the server and every p
 - **RGB hex staff glows:** left-click and right-click glow marks now accept arbitrary `#RRGGBB` colors instead of being limited to vanilla team colors. The staff uses two independent presets, with defaults white and golden orange.
 - **Card Hand settings:** if an authorized player carries an MTG Staff, two hex fields and live color previews appear in the Hand Block. Press **Apply to all staffs** to save the presets in that Hand Block and update every staff in the player's inventory, including offhand. Already-marked targets are refreshed.
 - The RGB glow uses Caszual MTG's client mixin and the normal scoreboard synchronization. No wool-block color sampling is necessary.
-- All players on the server should install Caszual MTG 0.10.0 to see the exact colors.
+- All players on the server should install Caszual MTG 0.10.1 to see the exact colors.
 
 ## What's new in 0.7.0
 
@@ -129,7 +135,7 @@ The community collections are stored in the overworld SavedData file for this ad
 
 ## Validation and limits
 
-The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.10.0 as a test build.
+The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.10.1 as a test build.
 
 ## 0.6.1: MTGCard block entity validation crash safeguard
 
