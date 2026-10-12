@@ -28,7 +28,10 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import java.util.*;
 public final class CaszualMtg implements ModInitializer {
  public static Identifier id(String path){return Identifier.fromNamespaceAndPath("caszual_mtg",path);}
- public static final Block LANDS=block("land_database",0),TOKENS=block("token_database",1),CARDS=block("community_database",2),BUILDER=block("deck_builder",3);
+ public static final Block LANDS=block("land_database",0),TOKENS=block("token_database",1),CARDS=block("community_database",2);
+ public static final BuilderBlock BUILDER=builderBlock();
+ public static final BlockEntityType<BuilderBlockEntity> BUILDER_BE=Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,id("deck_builder"),FabricBlockEntityTypeBuilder.create(BuilderBlockEntity::new,BUILDER).build());
+ static BuilderBlock builderBlock(){var key=ResourceKey.create(Registries.BLOCK,id("deck_builder"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new BuilderBlock(BlockBehaviour.Properties.of().setId(key).strength(2.5f)));var itemKey=ResourceKey.create(Registries.ITEM,id("deck_builder"));Registry.register(BuiltInRegistries.ITEM,itemKey,new BlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));return block;}
  public static final net.minecraft.core.component.DataComponentType<String> BOX_MATERIAL=Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,id("box_material"),net.minecraft.core.component.DataComponentType.<String>builder().persistent(com.mojang.serialization.Codec.STRING).networkSynchronized(net.minecraft.network.codec.StreamCodec.of((b,v)->b.writeUtf(v,256),b->b.readUtf(256))).build());
  public static final CustomDeckbox CUSTOM_BOX=customBox();
  public static final HandBlock HAND=handBlock();
@@ -40,6 +43,7 @@ public final class CaszualMtg implements ModInitializer {
  static Block block(String name,int kind){var key=ResourceKey.create(Registries.BLOCK,id(name));Block b=Registry.register(BuiltInRegistries.BLOCK,key,new BankBlock(BlockBehaviour.Properties.of().setId(key).strength(2.5f),kind));var ik=ResourceKey.create(Registries.ITEM,id(name));Registry.register(BuiltInRegistries.ITEM,ik,new BlockItem(b,new Item.Properties().setId(ik).useBlockDescriptionPrefix()));return b;}
  public static int kind(Block b){return b==LANDS?0:b==TOKENS?1:b==CARDS?2:b==BUILDER?3:-1;}
  public static final ExtendedMenuType<CommunityMenu,CommunityMenu.OpenData> COMMUNITY_MENU=Registry.register(BuiltInRegistries.MENU,id("community"),new ExtendedMenuType<>(CommunityMenu::new,CommunityMenu.OpenData.CODEC));
+ public static final ExtendedMenuType<BuilderMenu,BuilderMenu.OpenData> BUILDER_MENU=Registry.register(BuiltInRegistries.MENU,id("builder"),new ExtendedMenuType<>(BuilderMenu::new,BuilderMenu.OpenData.CODEC));
  public void onInitialize(){
   // Do not inspect MTGCard's block-entity fields in our main entrypoint:
   // MTGCard's initializer can run later in the same Fabric initialization pass.
