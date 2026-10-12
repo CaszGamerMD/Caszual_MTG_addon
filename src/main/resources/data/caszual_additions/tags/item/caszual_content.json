@@ -1,0 +1,15 @@
+{
+  "replace": false,
+  "values": [
+    "caszual_mtg:land_database",
+    "caszual_mtg:token_database",
+    "caszual_mtg:community_database",
+    "caszual_mtg:deck_builder",
+    "caszual_mtg:custom_deckbox",
+    "caszual_mtg:hand_block",
+    "caszual_mtg:deckbox_rack",
+    "caszual_mtg:staff_rack",
+    "caszual_mtg:counter",
+    "caszual_mtg:targeting_staff"
+  ]
+}
