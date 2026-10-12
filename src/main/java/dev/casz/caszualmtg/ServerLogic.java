@@ -36,6 +36,17 @@ public final class ServerLogic {
   Session s=new Session(p,pos,kind);
   if(kind==3&&p.level().getBlockEntity(pos) instanceof BuilderBlockEntity be){
    s.deck=be.deck();s.report=be.report();s.statuses=be.statuses();s.workToken=be.revision();
+   // Reconstruct the missing shopping list from the saved availability result.
+   var parsed=DeckList.parse(s.deck).lines();
+   if(parsed.size()==s.statuses.size()){
+    List<DeckList.Line> absent=new ArrayList<>();
+    for(int i=0;i<parsed.size();i++){
+     var line=parsed.get(i);
+     int missing=(int)Math.max(0,line.quantity()-Math.max(0,s.statuses.get(i).count()));
+     if(missing>0)absent.add(new DeckList.Line(line.name(),missing,line.set(),line.collector()));
+    }
+    s.missingLines=List.copyOf(absent);
+   }
   }
   sessions.put(p.getUUID(),s);seed(p);
   reply(p,s,kind==3?"Saved Deck Builder draft restored.":"Shared across this server. Search by name or type.","");
