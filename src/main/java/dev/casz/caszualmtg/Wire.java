@@ -14,9 +14,10 @@ public final class Wire {
   public Type<Request> type(){return TYPE;}
  }
  public record Row(String key,ItemStack card,long count,int requested) {public Row(String key,ItemStack card,long count){this(key,card,count,0);}}
- public record Reply(BlockPos pos,int kind,String message,String report,List<Row> rows) implements CustomPacketPayload {
+ public record Reply(BlockPos pos,int kind,String message,String report,List<Row> rows,String deck,String url,int flags,boolean resolving) implements CustomPacketPayload {
+  public Reply(BlockPos pos,int kind,String message,String report,List<Row> rows){this(pos,kind,message,report,rows,"","",2,false);}
   public static final Type<Reply> TYPE=new Type<>(CaszualMtg.id("reply"));
-  public static final StreamCodec<RegistryFriendlyByteBuf,Reply> CODEC=StreamCodec.of((b,p)->{b.writeBlockPos(p.pos);b.writeInt(p.kind);b.writeUtf(p.message,2000);b.writeUtf(p.report,32767);b.writeVarInt(p.rows.size());for(Row r:p.rows){b.writeUtf(r.key,512);ItemStack.OPTIONAL_STREAM_CODEC.encode(b,r.card);b.writeLong(r.count);b.writeInt(r.requested);}},b->{var pos=b.readBlockPos();int kind=b.readInt();String msg=b.readUtf(2000),report=b.readUtf(32767);int n=b.readVarInt();if(n<0||n>500)throw new IllegalArgumentException("Too many rows");List<Row> rows=new ArrayList<>();for(int i=0;i<n;i++)rows.add(new Row(b.readUtf(512),ItemStack.OPTIONAL_STREAM_CODEC.decode(b),b.readLong(),b.readInt()));return new Reply(pos,kind,msg,report,rows);});
+  public static final StreamCodec<RegistryFriendlyByteBuf,Reply> CODEC=StreamCodec.of((b,p)->{b.writeBlockPos(p.pos);b.writeInt(p.kind);b.writeUtf(p.message,2000);b.writeUtf(p.report,32767);b.writeVarInt(p.rows.size());for(Row r:p.rows){b.writeUtf(r.key,512);ItemStack.OPTIONAL_STREAM_CODEC.encode(b,r.card);b.writeLong(r.count);b.writeInt(r.requested);}b.writeUtf(p.deck,24000);b.writeUtf(p.url,512);b.writeInt(p.flags);b.writeBoolean(p.resolving);},b->{var pos=b.readBlockPos();int kind=b.readInt();String msg=b.readUtf(2000),report=b.readUtf(32767);int n=b.readVarInt();if(n<0||n>500)throw new IllegalArgumentException("Too many rows");List<Row> rows=new ArrayList<>();for(int i=0;i<n;i++)rows.add(new Row(b.readUtf(512),ItemStack.OPTIONAL_STREAM_CODEC.decode(b),b.readLong(),b.readInt()));return new Reply(pos,kind,msg,report,rows,b.readUtf(24000),b.readUtf(512),b.readInt(),b.readBoolean());});
   public Type<Reply> type(){return TYPE;}
  }
 }

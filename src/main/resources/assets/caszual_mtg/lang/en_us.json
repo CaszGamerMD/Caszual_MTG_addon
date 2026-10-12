@@ -6,5 +6,7 @@
   "item.caszual_mtg.counter": "Card Counter",
   "block.caszual_mtg.custom_deckbox": "Custom Deckbox",
   "block.caszual_mtg.hand_block": "Card Hand",
-  "item.caszual_mtg.targeting_staff": "MTG Staff"
+  "item.caszual_mtg.targeting_staff": "MTG Staff",
+  "block.caszual_mtg.deckbox_rack": "Deckbox Rack",
+  "item.caszual_mtg.deckbox_rack": "Deckbox Rack"
 }

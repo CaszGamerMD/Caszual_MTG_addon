@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SIS",
+    " P "
+  ],
+  "key": {
+    "S": "minecraft:spruce_slab",
+    "I": "minecraft:iron_bars",
+    "P": "minecraft:spruce_planks"
+  },
+  "result": {
+    "id": "caszual_mtg:deckbox_rack",
+    "count": 1
+  }
+}

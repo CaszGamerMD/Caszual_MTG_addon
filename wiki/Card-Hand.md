@@ -118,6 +118,6 @@ Examples:
 
 Required discards are sent to the Graveyard touching the linked Deck Control. You choose the cards by selecting them in the Hand UI.
 
-## Privacy and hover tooltips (0.8.2)
+## Privacy and hover tooltips (0.9.0)
 
 A private Card Hand is intentionally **not a generic Minecraft inventory**. This prevents Jade and other generic inventory-inspection overlays from enumerating the cards without the owner's permission. Owner/viewer access still works through the Card Hand GUI, and the deck-control link still routes drawn cards privately. Breaking the Hand continues to drop its actual contents.

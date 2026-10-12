@@ -1,0 +1,84 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "wall": "false",
+        "facing": "north"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/deckbox_rack_base_floor",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "wall": "false",
+        "facing": "east"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/deckbox_rack_base_floor",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "wall": "false",
+        "facing": "south"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/deckbox_rack_base_floor",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "wall": "false",
+        "facing": "west"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/deckbox_rack_base_floor",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "wall": "true",
+        "facing": "north"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/deckbox_rack_base_wall",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "wall": "true",
+        "facing": "east"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/deckbox_rack_base_wall",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "wall": "true",
+        "facing": "south"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/deckbox_rack_base_wall",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "wall": "true",
+        "facing": "west"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/deckbox_rack_base_wall",
+        "y": 270
+      }
+    }
+  ]
+}

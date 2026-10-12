@@ -28,18 +28,26 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import java.util.*;
 public final class CaszualMtg implements ModInitializer {
  public static Identifier id(String path){return Identifier.fromNamespaceAndPath("caszual_mtg",path);}
- public static final Block LANDS=block("land_database",0),TOKENS=block("token_database",1),CARDS=block("community_database",2),BUILDER=block("deck_builder",3);
+ public static final Block LANDS=block("land_database",0),TOKENS=block("token_database",1),CARDS=block("community_database",2);
+ public static final BuilderBlock BUILDER=builderBlock();
+ public static final BlockEntityType<BuilderBlockEntity> BUILDER_BE=Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,id("deck_builder"),FabricBlockEntityTypeBuilder.create(BuilderBlockEntity::new,BUILDER).build());
+ static BuilderBlock builderBlock(){var key=ResourceKey.create(Registries.BLOCK,id("deck_builder"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new BuilderBlock(BlockBehaviour.Properties.of().setId(key).strength(2.5f)));var itemKey=ResourceKey.create(Registries.ITEM,id("deck_builder"));Registry.register(BuiltInRegistries.ITEM,itemKey,new BlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));return block;}
  public static final net.minecraft.core.component.DataComponentType<String> BOX_MATERIAL=Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,id("box_material"),net.minecraft.core.component.DataComponentType.<String>builder().persistent(com.mojang.serialization.Codec.STRING).networkSynchronized(net.minecraft.network.codec.StreamCodec.of((b,v)->b.writeUtf(v,256),b->b.readUtf(256))).build());
  public static final CustomDeckbox CUSTOM_BOX=customBox();
  public static final HandBlock HAND=handBlock();
  public static final BlockEntityType<HandBlockEntity> HAND_BE=Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,id("hand_block"),FabricBlockEntityTypeBuilder.create(HandBlockEntity::new,HAND).build());
  static HandBlock handBlock(){var key=ResourceKey.create(Registries.BLOCK,id("hand_block"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new HandBlock(BlockBehaviour.Properties.of().setId(key).strength(2.0f).sound(net.minecraft.world.level.block.SoundType.WOOD)));var itemKey=ResourceKey.create(Registries.ITEM,id("hand_block"));Registry.register(BuiltInRegistries.ITEM,itemKey,new BlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));return block;}
   static CustomDeckbox customBox(){var key=ResourceKey.create(Registries.BLOCK,id("custom_deckbox"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new CustomDeckbox(BlockBehaviour.Properties.of().setId(key).strength(2.5f).noOcclusion().sound(net.minecraft.world.level.block.SoundType.WOOD)));var itemKey=ResourceKey.create(Registries.ITEM,id("custom_deckbox"));Registry.register(BuiltInRegistries.ITEM,itemKey,new CustomDeckbox.Item(block,new Item.Properties().setId(itemKey).stacksTo(1).useBlockDescriptionPrefix()));return block;}
+ public static final DeckboxRackBlock RACK=rackBlock();
+ public static final BlockEntityType<DeckboxRackEntity> RACK_BE=Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,id("deckbox_rack"),FabricBlockEntityTypeBuilder.create(DeckboxRackEntity::new,RACK).build());
+ static DeckboxRackBlock rackBlock(){var key=ResourceKey.create(Registries.BLOCK,id("deckbox_rack"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new DeckboxRackBlock(BlockBehaviour.Properties.of().setId(key).strength(2.0f).noOcclusion().sound(net.minecraft.world.level.block.SoundType.WOOD)));var ik=ResourceKey.create(Registries.ITEM,id("deckbox_rack"));Registry.register(BuiltInRegistries.ITEM,ik,new BlockItem(block,new Item.Properties().setId(ik).useBlockDescriptionPrefix().stacksTo(1)));return block;}
  public static final Item COUNTER=Registry.register(BuiltInRegistries.ITEM,id("counter"),new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM,id("counter"))).stacksTo(1)));
  public static final Item TARGETING_STAFF=Registry.register(BuiltInRegistries.ITEM,id("targeting_staff"),new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM,id("targeting_staff"))).stacksTo(1)));
  static Block block(String name,int kind){var key=ResourceKey.create(Registries.BLOCK,id(name));Block b=Registry.register(BuiltInRegistries.BLOCK,key,new BankBlock(BlockBehaviour.Properties.of().setId(key).strength(2.5f),kind));var ik=ResourceKey.create(Registries.ITEM,id(name));Registry.register(BuiltInRegistries.ITEM,ik,new BlockItem(b,new Item.Properties().setId(ik).useBlockDescriptionPrefix()));return b;}
  public static int kind(Block b){return b==LANDS?0:b==TOKENS?1:b==CARDS?2:b==BUILDER?3:-1;}
  public static final ExtendedMenuType<CommunityMenu,CommunityMenu.OpenData> COMMUNITY_MENU=Registry.register(BuiltInRegistries.MENU,id("community"),new ExtendedMenuType<>(CommunityMenu::new,CommunityMenu.OpenData.CODEC));
+ public static final ExtendedMenuType<BuilderMenu,BuilderMenu.OpenData> BUILDER_MENU=Registry.register(BuiltInRegistries.MENU,id("builder"),new ExtendedMenuType<>(BuilderMenu::new,BuilderMenu.OpenData.CODEC));
+ public static final ExtendedMenuType<DeckboxRackMenu,DeckboxRackMenu.OpenData> RACK_MENU=Registry.register(BuiltInRegistries.MENU,id("deckbox_rack"),new ExtendedMenuType<>(DeckboxRackMenu::new,DeckboxRackMenu.OpenData.CODEC));
  public void onInitialize(){
   // Do not inspect MTGCard's block-entity fields in our main entrypoint:
   // MTGCard's initializer can run later in the same Fabric initialization pass.
@@ -48,7 +56,7 @@ public final class CaszualMtg implements ModInitializer {
   PayloadTypeRegistry.serverboundPlay().register(Wire.Request.TYPE,Wire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(Wire.Reply.TYPE,Wire.Reply.CODEC);PayloadTypeRegistry.serverboundPlay().register(HandWire.Request.TYPE,HandWire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(HandWire.Reply.TYPE,HandWire.Reply.CODEC);PayloadTypeRegistry.clientboundPlay().register(DeckboxRefreshWire.Refresh.TYPE,DeckboxRefreshWire.Refresh.CODEC);
   ServerPlayNetworking.registerGlobalReceiver(Wire.Request.TYPE,(req,ctx)->ServerLogic.handle(ctx.player(),req));ServerPlayNetworking.registerGlobalReceiver(HandWire.Request.TYPE,(req,ctx)->HandLogic.handle(ctx.player(),req));
   ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);StaffTargets.clearAllForDisconnect(h.player);});
-  CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(HAND);});
+  CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(HAND);e.accept(RACK);});
   UseEntityCallback.EVENT.register((p,l,hand,e,hit)->{
    if(p.getItemInHand(hand).is(TARGETING_STAFF)){
     if(!l.isClientSide()&&p instanceof ServerPlayer sp)StaffTargets.mark(sp,e,StaffTargets.Color.ORANGE);
@@ -66,6 +74,18 @@ public final class CaszualMtg implements ModInitializer {
    if(!p.getItemInHand(hand).is(TARGETING_STAFF))return InteractionResult.PASS;
    if(!l.isClientSide()&&p instanceof ServerPlayer sp)StaffTargets.clear(sp);
    return InteractionResult.SUCCESS;
+  });
+  // Drop the inserted Card Store deckbox on normal block destruction, including its
+  // MTGCard UUID storage pointer, before vanilla destroys the Card Store block entity.
+  net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents.AFTER.register((world,player,pos,state,be)->{
+   if(be instanceof com.spider.mtgcard.cardstore.CardStoreBlockEntity store
+       &&store instanceof CardStoreBoxAccess access){
+    ItemStack box=access.caszual$getDeckbox();
+    if(!box.isEmpty()){
+     Block.popResource(world,pos,box.copy());
+     access.caszual$setDeckbox(ItemStack.EMPTY);
+    }
+   }
   });
   UseBlockCallback.EVENT.register((p,l,hand,hit)->{
    if(p instanceof ServerPlayer sp&&l.getBlockEntity(hit.getBlockPos()) instanceof DeckControlBlockEntity&&HandLogic.completePendingLink(sp,hit.getBlockPos()))return InteractionResult.SUCCESS;

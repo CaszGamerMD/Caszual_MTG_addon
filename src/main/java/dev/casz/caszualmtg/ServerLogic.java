@@ -19,19 +19,46 @@ import java.util.*;
 import java.util.concurrent.*;
 public final class ServerLogic {
  static final class Session {
-  final BlockPos pos;final int kind;final ResourceKey<Level> dimension;UUID entity,cardId;String deck="",report="";List<Wire.Row> statuses=List.of(),catalogueRows=List.of();List<DeckList.Line> missingLines=List.of();String query="",oracle="",stats="",artKey="";boolean artwork=false;int mana=0;int page=0,revision=0;long last=0;boolean busy;
+  final BlockPos pos;final int kind;final ResourceKey<Level> dimension;UUID entity,cardId;String deck="",report="";long workToken;List<Wire.Row> statuses=List.of(),catalogueRows=List.of();List<DeckList.Line> missingLines=List.of();String query="",oracle="",stats="",artKey="";boolean artwork=false;int mana=0;int page=0,revision=0;long last=0;boolean busy;
   Session(ServerPlayer p,BlockPos pos,int kind){this.pos=pos.immutable();this.kind=kind;dimension=p.level().dimension();}
  }
  static final Map<UUID,Session> sessions=new HashMap<>();
  public static void close(ServerPlayer p){sessions.remove(p.getUUID());}
+ static BuilderBlockEntity builder(ServerPlayer p,Session s){
+  return s.kind==3&&p.level().dimension().equals(s.dimension)&&p.level().hasChunkAt(s.pos)&&p.level().getBlockEntity(s.pos) instanceof BuilderBlockEntity be?be:null;
+ }
+ static boolean workValid(ServerPlayer p,Session s){BuilderBlockEntity be=builder(p,s);return be!=null&&be.revision()==s.workToken;}
  static boolean valid(ServerPlayer p,Session s){if(sessions.get(p.getUUID())!=s||p.isRemoved()||!p.level().dimension().equals(s.dimension)||p.distanceToSqr(Vec3.atCenterOf(s.pos))>64||!p.level().hasChunkAt(s.pos))return false;if(s.kind==2&&(!(p.containerMenu instanceof CommunityMenu m)||!m.pos.equals(s.pos)))return false;return s.kind==4?counter(p,s)!=null:CaszualMtg.kind(p.level().getBlockState(s.pos).getBlock())==s.kind;}
  static CardDisplayEntity counter(ServerPlayer p,Session s){var e=p.level().getEntity(s.entity);return e instanceof CardDisplayEntity c&&!c.isRemoved()&&p.distanceToSqr(c)<64&&(p.getMainHandItem().is(CaszualMtg.COUNTER)||p.getOffhandItem().is(CaszualMtg.COUNTER))&&!c.getDisplayCardStack(s.cardId).isEmpty()?c:null;}
- public static void open(ServerPlayer p,BlockPos pos,int kind){if(kind==2)p.openMenu(CommunityMenu.provider(pos));Session s=new Session(p,pos,kind);sessions.put(p.getUUID(),s);seed(p);reply(p,s,kind==3?"Import a decklist, then review availability.":"Shared across this server. Search by name or type.","");if(kind<2)search(p,s,"",0,0);}
+ public static void open(ServerPlayer p,BlockPos pos,int kind){
+  if(kind==2)p.openMenu(CommunityMenu.provider(pos));
+  if(kind==3)p.openMenu(BuilderMenu.provider(pos));
+  Session s=new Session(p,pos,kind);
+  if(kind==3&&p.level().getBlockEntity(pos) instanceof BuilderBlockEntity be){
+   s.deck=be.deck();s.report=be.report();s.statuses=be.statuses();s.workToken=be.revision();
+   // Reconstruct the missing shopping list from the saved availability result.
+   var parsed=DeckList.parse(s.deck).lines();
+   if(parsed.size()==s.statuses.size()){
+    List<DeckList.Line> absent=new ArrayList<>();
+    for(int i=0;i<parsed.size();i++){
+     var line=parsed.get(i);
+     int missing=(int)Math.max(0,line.quantity()-Math.max(0,s.statuses.get(i).count()));
+     if(missing>0)absent.add(new DeckList.Line(line.name(),missing,line.set(),line.collector()));
+    }
+    s.missingLines=List.copyOf(absent);
+   }
+  }
+  sessions.put(p.getUUID(),s);seed(p);
+  reply(p,s,kind==3?"Saved Deck Builder draft restored.":"Shared across this server. Search by name or type.","");
+  if(kind<2)search(p,s,"",0,0);
+}
  public static void openCounter(ServerPlayer p,CardDisplayEntity c){if(p.distanceToSqr(c)>64)return;Session s=new Session(p,c.blockPosition(),4);s.entity=c.getUUID();s.cardId=c.getDisplayCardId(c.findSelectedDisplayIndex(p));if(s.cardId==null)return;sessions.put(p.getUUID(),s);reply(p,s,"Edit counters on this card.","");}
  static void seed(ServerPlayer p){Banks b=Banks.get(p.level().getServer());for(var c:PersistentCardStore.load(p.level()).snapshot()){ItemStack card=CardStackBuilders.buildScryfallStackFromModel(c,false);int kind=Banks.kind(card);if(kind<2&&!b.entries.containsKey(Banks.key(kind,card)))b.add(card,kind,1);}}
- public static void handle(ServerPlayer p,Wire.Request req){Session s=sessions.get(p.getUUID());if(s==null||!s.pos.equals(req.pos())||!valid(p,s))return;if(req.action().equals("close")){close(p);return;}long now=System.currentTimeMillis();if(now-s.last<150)return;s.last=now;if(s.busy&&!req.action().equals("search")&&!req.action().equals("arts")){reply(p,s,"Working on the previous request…",s.report);return;}s.revision++;
+ public static void handle(ServerPlayer p,Wire.Request req){Session s=sessions.get(p.getUUID());if(s==null||!s.pos.equals(req.pos())||!valid(p,s))return;if(req.action().equals("close")){close(p);return;}long now=System.currentTimeMillis();if(!req.action().equals("reset")&&!req.action().equals("refresh")&&now-s.last<150)return;s.last=now;if(s.busy&&!req.action().equals("search")&&!req.action().equals("arts")&&!req.action().equals("reset")&&!req.action().equals("refresh")){reply(p,s,"Working on the previous request…",s.report);return;}s.revision++;
   try{
    switch(req.action()){
+    case "refresh" -> {if(s.kind==3&&builder(p,s) instanceof BuilderBlockEntity be){s.deck=be.deck();s.report=be.report();s.statuses=be.statuses();s.workToken=be.revision();reply(p,s,be.message(),be.report());}}
+    case "reset" -> {if(s.kind==3&&builder(p,s) instanceof BuilderBlockEntity be){be.reset();s.deck="";s.report="";s.statuses=List.of();s.missingLines=List.of();s.busy=false;s.workToken=be.revision();reply(p,s,"Draft cleared. Output deckbox was left in its slot.","");}}
     case "search" -> {if(s.kind<3)search(p,s,req.text(),req.amount(),req.filter(),req.oracle(),req.stats());}
     case "arts" -> {if(s.kind<2)artworks(p,s,req.text(),req.amount());}
     case "deposit" -> {if(s.kind<3)deposit(p,s);}
@@ -39,17 +66,21 @@ public final class ServerLogic {
     case "deposit_loose" -> {if(s.kind==2&&p.containerMenu instanceof CommunityMenu menu)depositLoose(p,s,menu);}
     case "withdraw" -> {if(s.kind<3)withdraw(p,s,req.text(),req.amount());}
     case "box_deposit", "box_withdraw", "box_fill" -> {if(s.kind==2&&p.containerMenu instanceof CommunityMenu menu){Banks bank=Banks.get(p.level().getServer());int count=req.action().equals("box_deposit")?DeckboxTransfer.deposit(p,menu.deckbox(),bank):DeckboxTransfer.withdraw(p,menu.deckbox(),bank,req.action().equals("box_fill")?null:req.text(),s.query,Math.clamp(req.amount(),1,99));menu.broadcastChanges();reply(p,s,"Transferred "+count+" cards. Lands and tokens stay in the box during deposits.","");}}
-    case "import" -> {if(s.kind==3){var list=DeckList.parse(req.text());if(!list.errors().isEmpty()){reply(p,s,"Import rejected: "+list.errors().getFirst(),String.join("\n",list.errors()));return;}if(list.lines().isEmpty()){reply(p,s,"No cards in the list.","");return;}s.deck=req.text();s.statuses=list.lines().stream().map(line->new Wire.Row(line.label(),ItemStack.EMPTY,-1,line.quantity())).toList();reply(p,s,"Loaded "+list.lines().size()+" card entries. Checking availability…","");resolveLands(p,s,()->plan(p,s,false,req.amount()));}}
+    case "import" -> {if(s.kind==3){var list=DeckList.parse(req.text());if(!list.errors().isEmpty()){reply(p,s,"Import rejected: "+list.errors().getFirst(),String.join("\n",list.errors()));return;}if(list.lines().isEmpty()){reply(p,s,"No cards in the list.","");return;}BuilderBlockEntity be=builder(p,s);if(be==null)return;s.workToken=be.start("",req.amount());be.loaded(s.workToken,req.text(),"",req.amount());s.deck=req.text();s.statuses=list.lines().stream().map(line->new Wire.Row(line.label(),ItemStack.EMPTY,-1,line.quantity())).toList();reply(p,s,"Loaded "+list.lines().size()+" card entries. Checking availability…","");resolveLands(p,s,()->plan(p,s,false,req.amount()));}}
     case "import_url" -> {if(s.kind==3)importArchidekt(p,s,req.text(),req.amount());}
-    case "plan" -> {if(s.kind==3)plan(p,s,false,req.amount());}
-    case "build" -> {if(s.kind==3)plan(p,s,true,req.amount());}
+    case "plan" -> {if(s.kind==3){BuilderBlockEntity be=builder(p,s);if(be!=null&&be.resolving())reply(p,s,"Decklist still resolving; results will be saved when complete.",be.report());else plan(p,s,false,req.amount());}}
+    case "build" -> {if(s.kind==3){BuilderBlockEntity be=builder(p,s);if(be!=null&&be.resolving())reply(p,s,"Wait for background resolution to finish.",be.report());else plan(p,s,true,req.amount());}}
     case "shop" -> {if(s.kind==3)shopMissing(p,s);}
     case "counter" -> {if(s.kind==4)editCounter(p,s,req.text(),req.amount());}
    }
   }catch(Exception e){s.busy=false;org.slf4j.LoggerFactory.getLogger("caszual_mtg").error("Request failed",e);reply(p,s,"Request failed: "+e.getMessage(),s.report);}
  }
  static void reply(ServerPlayer p,Session s,String msg,String report){replyRows(p,s,msg,s.kind<2&&s.artwork?"art":report,s.kind==3?s.statuses:s.kind<2?s.catalogueRows:rows(p,s,s.query,s.page));}
- static void replyRows(ServerPlayer p,Session s,String msg,String report,List<Wire.Row> rows){if(valid(p,s))ServerPlayNetworking.send(p,new Wire.Reply(s.pos,s.kind,msg.length()>1900?msg.substring(0,1900):msg,report.length()>32000?report.substring(0,32000):report,rows));}
+ static void replyRows(ServerPlayer p,Session s,String msg,String report,List<Wire.Row> rows){if(valid(p,s)){
+  BuilderBlockEntity be=builder(p,s);
+  ServerPlayNetworking.send(p,new Wire.Reply(s.pos,s.kind,msg.length()>1900?msg.substring(0,1900):msg,report.length()>32000?report.substring(0,32000):report,rows,
+    be==null?"":be.deck(),be==null?"":be.url(),be==null?2:be.flags(),be!=null&&be.resolving()));
+ }}
  static List<Wire.Row> rows(ServerPlayer p,Session s,String q,int page){if(s.kind==4){var c=counter(p,s);if(c==null)return List.of();ItemStack stack=c.getDisplayCardStack(s.cardId);return CardCounterNbt.readCounterMap(stack).entrySet().stream().limit(40).map(e->new Wire.Row(e.getKey(),stack.copy(),e.getValue())).toList();}if(s.kind==3)return List.of();return Banks.get(p.level().getServer()).search(s.kind,q).stream().filter(e->s.kind!=0||Catalogue.matchesMana(e.getValue().card(),s.mana)).filter(e->s.kind!=1||Catalogue.matchesToken(e.getValue().card(),s.oracle,s.stats)).skip((long)page*40).limit(40).map(e->new Wire.Row(e.getKey(),e.getValue().card().copy(),s.kind==2?e.getValue().count():-1)).toList();}
  static void search(ServerPlayer p,Session s,String q,int page,int mask){search(p,s,q,page,mask,"","");}
  static void search(ServerPlayer p,Session s,String q,int requestedPage,int mask,String oracle,String stats){s.busy=false;if(q.length()>200||oracle.length()>200||stats.length()>40)throw new IllegalArgumentException("Search fields are too long.");if(s.kind==1)Catalogue.stats(stats);int page=Math.clamp(requestedPage,0,1000);s.page=page;s.query=q;s.mana=mask&511;s.oracle=oracle;s.stats=stats;s.artwork=false;s.catalogueRows=List.of();
@@ -114,26 +145,47 @@ public final class ServerLogic {
  static Set<Integer> links(ServerPlayer p,Session s){Set<Integer> kinds=new HashSet<>();for(BlockPos at:BlockPos.betweenClosed(s.pos.offset(-4,-4,-4),s.pos.offset(4,4,4)))if(p.level().hasChunkAt(at)){int kind=CaszualMtg.kind(p.level().getBlockState(at).getBlock());if(kind>=0&&kind<3)kinds.add(kind);}return kinds;}
  static DeckboxBlockEntity output(ServerPlayer p,Session s){for(Direction d:Direction.values()){BlockPos at=s.pos.relative(d);if(p.level().hasChunkAt(at)&&p.level().getBlockEntity(at) instanceof DeckboxBlockEntity db)return db;}return null;}
  static void importArchidekt(ServerPlayer p,Session s,String url,int flags){
-  if(s.busy){reply(p,s,"Working on the previous request…",s.report);return;}
-  long revision=s.revision;s.busy=true;reply(p,s,"Loading Archidekt main deck…","");
-  ArchidektImport.fetch(url).whenComplete((result,error)->p.level().getServer().execute(()->{
-   if(!valid(p,s)||s.revision!=revision)return;s.busy=false;
-   if(error!=null){Throwable cause=error instanceof CompletionException&&error.getCause()!=null?error.getCause():error;reply(p,s,"Archidekt import failed: "+cause.getMessage(),"");return;}
-   var parsed=DeckList.parse(result.text());if(!parsed.errors().isEmpty()){reply(p,s,"Archidekt import rejected: "+parsed.errors().getFirst(),"");return;}
-   s.deck=result.text();s.statuses=parsed.lines().stream().map(line->new Wire.Row(line.label(),ItemStack.EMPTY,-1,line.quantity())).toList();
-   reply(p,s,"Loaded "+result.cards()+" main-deck cards from "+(result.deckName().isBlank()?"Archidekt":result.deckName())+". Sideboard and Maybeboard ignored.","");
+  BuilderBlockEntity be=builder(p,s);if(be==null)return;
+  String address=url.trim();
+  if(address.isBlank()||address.length()>512){reply(p,s,"Enter an Archidekt URL.","");return;}
+  if(be.cached(address)){
+   if(be.resolving()){reply(p,s,"This decklist is already resolving in the background.",be.report());return;}
+   s.workToken=be.revision();s.deck=be.deck();s.statuses=be.statuses();s.report=be.report();
+   if(!s.statuses.isEmpty()){reply(p,s,"Restored cached URL and resolved decklist.",s.report);return;}
+   resolveLands(p,s,()->plan(p,s,false,flags));return;
+  }
+  s.workToken=be.start(address,flags);s.busy=true;
+  reply(p,s,"Loading Archidekt main deck in background…",be.report());
+  long token=s.workToken;
+  ArchidektImport.fetch(address).whenComplete((result,error)->p.level().getServer().execute(()->{
+   if(!workValid(p,s))return;
+   s.busy=false;
+   if(error!=null){
+    Throwable cause=error instanceof CompletionException&&error.getCause()!=null?error.getCause():error;
+    be.failed(token,"Archidekt import failed: "+cause.getMessage());
+    reply(p,s,be.message(),be.report());return;
+   }
+   var parsed=DeckList.parse(result.text());
+   if(!parsed.errors().isEmpty()||parsed.lines().isEmpty()){
+    be.failed(token,"Archidekt returned an empty or invalid decklist.");
+    reply(p,s,be.message(),be.report());return;
+   }
+   be.loaded(token,result.text(),address,flags);
+   s.deck=result.text();
+   s.statuses=parsed.lines().stream().map(line->new Wire.Row(line.label(),ItemStack.EMPTY,-1,line.quantity())).toList();
+   reply(p,s,"Loaded "+result.cards()+" cards. Resolving in background…",be.report());
    resolveLands(p,s,()->plan(p,s,false,flags));
   }));
  }
 
  static void resolveLands(ServerPlayer p,Session s,Runnable done){Set<Integer> linked=links(p,s);if(!linked.contains(0)&&!linked.contains(1)){done.run();return;}
   Banks b=Banks.get(p.level().getServer());List<String> unknown=DeckList.parse(s.deck).lines().stream().map(DeckList.Line::name).distinct().filter(name->b.entries.values().stream().noneMatch(e->DeckList.normalize(TcgCardMeta.displayName(e.card())).equals(DeckList.normalize(name)))).limit(100).toList();
-  if(unknown.isEmpty()){done.run();return;}s.busy=true;reply(p,s,"Resolving land/token names…","");int revision=s.revision;
+  if(unknown.isEmpty()){done.run();return;}s.busy=true;reply(p,s,"Resolving land/token names…","");long token=s.workToken;
   List<CompletableFuture<ScryfallModels.Card>> requests=unknown.stream().map(name->ScryfallNamedFetch.fetchNamedFuzzyAsync(name)
    .thenCompose(hit->{if(hit==null||!DeckList.normalize(hit.name()).equals(DeckList.normalize(name)))return CompletableFuture.<ScryfallModels.Card>completedFuture(null);return ScryfallExactFetch.fetchBySetCollectorAsync(p.level(),hit.set(),hit.collectorNumber());})
    .exceptionally(error->null)).toList();
   CompletableFuture.allOf(requests.toArray(CompletableFuture[]::new)).whenComplete((ignored,error)->p.level().getServer().execute(()->{
-   if(!valid(p,s)||s.revision!=revision)return;s.busy=false;
+   if(!workValid(p,s))return;s.busy=false;
    for(var request:requests){var model=request.getNow(null);if(model==null)continue;ItemStack card=CardStackBuilders.buildScryfallStackFromModel(model,false);int kind=Banks.kind(card);if(kind<2&&linked.contains(kind))b.add(card,kind,1);}
    done.run();
   }));
@@ -152,17 +204,30 @@ public final class ServerLogic {
    String label=line.label()+(alternateForLine>0?" · alternate art":"");statuses.add(new Wire.Row(label,preview.copy(),line.quantity()-need,line.quantity()));summary.append(line.quantity()-need).append('/').append(line.quantity()).append(" ").append(label).append('\n');
   }
   s.statuses=statuses;s.missingLines=List.copyOf(missingLines);s.report=String.join("\n",missing)+(missing.isEmpty()?"":"\n");String msg="Requested "+requested+" | available "+picks.size()+" | missing "+missingCount+(alternateArtCount>0?" | alternate art "+alternateArtCount:"")+". Linked: "+linked.stream().sorted().map(k->k==0?"lands":k==1?"tokens":"community").toList();
-  if(!build){replyRows(p,s,msg,s.report,statuses);return;}
+  if(!build){
+    BuilderBlockEntity be=builder(p,s);
+    if(be!=null&&be.revision()==s.workToken)be.complete(s.workToken,s.report,msg,statuses);
+    replyRows(p,s,msg,s.report,statuses);return;
+  }
   if(missingCount>0&&(flags&1)==0){replyRows(p,s,"Missing cards. Choose Build available to assemble a partial deck.",s.report,statuses);return;}
   if(picks.isEmpty()){reply(p,s,"No available cards to build.",s.report);return;}
-  DeckboxBlockEntity box=output(p,s);if(box==null){reply(p,s,"Place an MTGCard deckbox touching the builder.",s.report);return;}
+  BuilderBlockEntity be=builder(p,s);
+  if(be==null||be.getItem(0).isEmpty()){reply(p,s,"Insert an MTGCard deckbox in the Deck Builder output slot.",s.report);return;}
+  DeckboxTransfer.Loaded loaded=DeckboxTransfer.load(p,be.getItem(0));
   int commanders=(int)picks.stream().filter(Pick::commander).count(),main=picks.size()-commanders;
   if(main>DeckboxBlockEntity.MAIN_SLOTS){reply(p,s,"Deckbox has 99 main slots. Use First = commander for a 100-card deck.",s.report);return;}
   if(commanders>0&&!CardNbt.isCommanderLegal(picks.stream().filter(Pick::commander).findFirst().get().card)){reply(p,s,"The first card is not commander-legal.",s.report);return;}
-  for(int i=0;i<box.getContainerSize();i++)if(!box.getStack(i).isEmpty()){reply(p,s,"Output deckbox must be empty.",s.report);return;}
-  // All availability checks and both inventory mutations run on the server thread.
-  int slot=0;Map<String,Long> consumed=new HashMap<>();for(Pick pick:picks){ItemStack card=CardDatabaseCards.copyForExtraction(pick.card);card.setCount(1);CardDatabaseCards.ensureUniqueUid(card);box.setStack(pick.commander?DeckboxBlockEntity.FIRST_SIDE_SLOT:slot++,card);if(b.entries.get(pick.key).kind()==2)consumed.merge(pick.key,1L,Long::sum);}
-  consumed.forEach(b::take);box.markDirty();box.persistExternalRecord();box.sync();replyRows(p,s,"Built "+picks.size()+" cards into the adjacent deckbox.",s.report,statuses);
+  for(ItemStack existing:loaded.items())if(!existing.isEmpty()){reply(p,s,"Output deckbox must be empty.",s.report);return;}
+  int slot=0;Map<String,Long> consumed=new HashMap<>();
+  for(Pick pick:picks){
+   ItemStack card=CardDatabaseCards.copyForExtraction(pick.card);card.setCount(1);CardDatabaseCards.ensureUniqueUid(card);
+   loaded.items().set(pick.commander?DeckboxBlockEntity.FIRST_SIDE_SLOT:slot++,card);
+   if(b.entries.get(pick.key).kind()==2)consumed.merge(pick.key,1L,Long::sum);
+  }
+  DeckboxTransfer.save(p,be.getItem(0),loaded);
+  be.setChanged();
+  consumed.forEach(b::take);
+  replyRows(p,s,"Built "+picks.size()+" cards directly into the inserted deckbox.",s.report,statuses);
  }
  static CardStoreBlockEntity nearbyStore(ServerPlayer p,Session s){
   CardStoreBlockEntity best=null;double bestDistance=Double.MAX_VALUE;

@@ -6,7 +6,10 @@
     "DeckboxMaterialMixin",
     "DeckControlHandMixin",
     "CardDisplayStaffMixin",
-    "StaffRgbOutlineMixin"
+    "StaffRgbOutlineMixin",
+    "MenuSlotInvoker",
+    "CardStoreBoxMixin",
+    "CardStoreBoxSlotMixin"
   ],
   "injectors": {
     "defaultRequire": 1
