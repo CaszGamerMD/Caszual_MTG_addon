@@ -2,8 +2,7 @@
   "parent": "minecraft:block/block",
   "textures": {
     "shelf": "minecraft:block/spruce_planks",
-    "edge": "minecraft:block/dark_oak_planks",
-    "mini": "minecraft:block/warped_planks"
+    "edge": "minecraft:block/dark_oak_planks"
   },
   "elements": [
     {
@@ -14,58 +13,23 @@
       ],
       "to": [
         16,
-        3,
-        8
+        2,
+        0.75
       ],
       "faces": {
-        "north": {
-          "texture": "#shelf"
-        },
-        "south": {
-          "texture": "#shelf"
-        },
-        "east": {
-          "texture": "#shelf"
-        },
-        "west": {
-          "texture": "#shelf"
-        },
         "up": {
-          "texture": "#shelf"
+          "texture": "#edge"
         },
         "down": {
-          "texture": "#shelf"
-        }
-      }
-    },
-    {
-      "from": [
-        0,
-        3,
-        0
-      ],
-      "to": [
-        16,
-        4,
-        1
-      ],
-      "faces": {
-        "north": {
-          "texture": "#edge"
-        },
-        "south": {
-          "texture": "#edge"
-        },
-        "east": {
           "texture": "#edge"
         },
         "west": {
           "texture": "#edge"
         },
-        "up": {
+        "east": {
           "texture": "#edge"
         },
-        "down": {
+        "north": {
           "texture": "#edge"
         }
       }
@@ -73,31 +37,54 @@
     {
       "from": [
         0,
-        3,
-        7
+        0,
+        0.75
       ],
       "to": [
         16,
-        4,
-        8
+        2,
+        5.25
       ],
       "faces": {
-        "north": {
-          "texture": "#edge"
+        "up": {
+          "texture": "#shelf"
         },
-        "south": {
-          "texture": "#edge"
+        "down": {
+          "texture": "#shelf"
+        },
+        "west": {
+          "texture": "#shelf"
         },
         "east": {
+          "texture": "#shelf"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        0,
+        5.25
+      ],
+      "to": [
+        16,
+        2,
+        6
+      ],
+      "faces": {
+        "up": {
+          "texture": "#edge"
+        },
+        "down": {
           "texture": "#edge"
         },
         "west": {
           "texture": "#edge"
         },
-        "up": {
+        "east": {
           "texture": "#edge"
         },
-        "down": {
+        "south": {
           "texture": "#edge"
         }
       }
