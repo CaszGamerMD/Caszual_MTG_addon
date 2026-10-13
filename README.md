@@ -1,4 +1,4 @@
-# Caszual MTG 0.11.2 — expanded test build
+# Caszual MTG 0.11.3 — expanded test build
 
 ## Documentation
 
@@ -8,7 +8,14 @@ A separate addon for Minecraft **26.2 Fabric**, built against **MTGCard 1.7.0-26
 
 ## Install
 
-Put `caszual-mtg-0.11.2.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+Put `caszual-mtg-0.11.3.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+
+## What's fixed in 0.11.3
+
+- **Thin Deckbox Rack shelf:** wall and floor shelves are now two model pixels thick and six deep instead of four thick and eight deep. The wood spans the full 16-pixel width but no longer looks like a bulky slab.
+- **Deckboxes actually rest on the shelf:** all five existing mini deckbox item models have been lowered to sit about 0.09 model pixels above the top surface and centered within the shelf's six-pixel depth. Their slot order, individual box contents and appearance remain unchanged.
+- **No shelf z-clipping:** decorative dark-oak edge strips meet the spruce plank surface edge-to-edge, without overlapping/coplanar internal faces. Collision matches the narrower shelf in all four rotations.
+- Existing racks automatically use the updated look; no rebuilding or re-placing required. Item models and persisted inventories retain their existing IDs.
 
 ## What's new in 0.11.2
 
@@ -65,7 +72,7 @@ Put `caszual-mtg-0.11.2.jar` in the `mods` folder on both the server and every p
 - **RGB hex staff glows:** left-click and right-click glow marks now accept arbitrary `#RRGGBB` colors instead of being limited to vanilla team colors. The staff uses two independent presets, with defaults white and golden orange.
 - **Card Hand settings:** if an authorized player carries an MTG Staff, two hex fields and live color previews appear in the Hand Block. Press **Apply to all staffs** to save the presets in that Hand Block and update every staff in the player's inventory, including offhand. Already-marked targets are refreshed.
 - The RGB glow uses Caszual MTG's client mixin and the normal scoreboard synchronization. No wool-block color sampling is necessary.
-- All players on the server should install Caszual MTG 0.11.2 to see the exact colors.
+- All players on the server should install Caszual MTG 0.11.3 to see the exact colors.
 
 ## What's new in 0.7.0
 
@@ -154,7 +161,7 @@ The community collections are stored in the overworld SavedData file for this ad
 
 ## Validation and limits
 
-The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.11.2 as a test build.
+The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.11.3 as a test build.
 
 ## 0.6.1: MTGCard block entity validation crash safeguard
 
