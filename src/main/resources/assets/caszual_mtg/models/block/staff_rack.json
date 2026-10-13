@@ -1,9 +1,9 @@
 {
   "parent": "minecraft:block/block",
   "textures": {
-    "rail": "minecraft:block/dark_oak_planks",
-    "steel": "minecraft:block/polished_deepslate",
-    "hook": "minecraft:block/iron_block"
+    "rail": "caszual_mtg:block/suite/spruce",
+    "steel": "caszual_mtg:block/suite/slate",
+    "hook": "caszual_mtg:block/suite/steel"
   },
   "elements": [
     {
