@@ -85,3 +85,7 @@ The Community Collection has a dedicated deckbox slot.
 Land/token discovery requires the server to reach Scryfall. Previously discovered catalogue entries are saved and can still appear if the online search is unavailable.
 
 Card images themselves use MTGCard's image/cache system.
+
+## Fullscreen Community Card Collection (0.11.4)
+
+The Community Card Collection expands to the available screen area. Browse stored cards in the left panel (grid or list), preview the selected card to the right, and use the separately positioned **Loose card** and **Deckbox** slots alongside their deposit/withdraw buttons. The player inventory stays along the bottom and never overlaps the browse controls. Card thumbnails are constrained by both screen dimensions.
