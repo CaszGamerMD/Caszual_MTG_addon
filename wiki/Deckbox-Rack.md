@@ -1,12 +1,12 @@
 # Deckbox Rack
 
-A quarter-block-high, half-block-deep shelf which holds **five MTGCard deckboxes** and displays each as a small 3D model of its actual deckbox item.
+A two-model-pixel-thick, six-model-pixel-deep shelf which holds **five MTGCard deckboxes** and displays each as a small 3D model of its actual deckbox item.
 
 ## Placement
 
 - Place on a floor to make a short shelf, or click the side of a block to mount it on a wall.
 - Its shape and facing adapt to the clicked face.
-- As of **0.11.1**, the supporting shelf sits on the wall side underneath the miniature deckboxes in all four rotations. The shelf's collision matches the visible wood and its edge trim no longer z-fights the top surface.
+- As of **0.11.3**, the supporting shelf is a slim **2-pixel-high, 6-pixel-deep wooden ledge**. The miniature deckboxes sit with their bases immediately above the top surface, fully supported by the shelf in every rotation. The visible collision matches the narrower ledge, and the dark-oak trim meets the spruce plank without overlapping surfaces.
 - Right-click with an MTGCard deckbox to insert it into the first open position.
 - Right-click empty-handed to open its five-slot inventory and take or rearrange deckboxes.
 
