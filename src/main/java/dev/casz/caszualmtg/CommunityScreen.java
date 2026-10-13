@@ -124,8 +124,8 @@ public final class CommunityScreen extends LegacyContainerScreen<CommunityMenu> 
   else g.drawCenteredString(font,"Select a card",sx+FullScreenMenuLayout.sidebarWidth(width)/2,
     previewY+previewH/2,0xFFB3DFFF);
 
-  g.drawString(font,"Loose card",sx+38,looseY()-9,0xFFB3DFFF);
-  g.drawString(font,"Deckbox",sx+38,boxY()-9,0xFFB3DFFF);
+  // The transfer buttons label their corresponding slots; separate floating
+  // labels previously collided with the preview and adjacent action rows.
   g.drawString(font,"Your inventory",12,FullScreenMenuLayout.inventoryLabelY(height),0xFFB3DFFF);
   for(var slot:menu.slots){
    g.fill(slot.x-1,slot.y-1,slot.x+17,slot.y+17,0xFF91A5C1);
