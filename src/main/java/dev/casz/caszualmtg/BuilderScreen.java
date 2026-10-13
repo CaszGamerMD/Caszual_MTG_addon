@@ -53,8 +53,8 @@ public final class BuilderScreen extends LegacyContainerScreen<BuilderMenu> {
   if(MtgGuiScaleHelper.applyAutoFitGuiScale(this,3,640,430))return;
   String previousUrl=url==null?(data==null?"":data.url()):url.getValue();
   // Use all available GUI pixels, not a fixed 640x430 floating panel.
-  ((ContainerAccess)this).companion$setImageWidth(width);
-  ((ContainerAccess)this).companion$setImageHeight(height);
+  ((ContainerAccess)(Object)this).companion$setImageWidth(width);
+  ((ContainerAccess)(Object)this).companion$setImageHeight(height);
   super.init();
   FullScreenMenuLayout.positionInventory(menu,1,height);
   FullScreenMenuLayout.position(menu.slots.getFirst(),side()+17,128);
