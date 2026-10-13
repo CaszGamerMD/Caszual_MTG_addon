@@ -261,7 +261,7 @@ public final class AutoDeckBuilder {
    }
    consumed.forEach(bank::take);
   }
-  be.autoFilled(token,statuses,missing,added,target.name());
+  be.autoFilled(token,statuses,missing,added,target.name(),target.slotted());
  }
  private static CompletableFuture<CardStoreScreenHandler.CartEntryData> storeLine(ServerLevel level,DeckList.Line line){
   CompletableFuture<ScryfallModels.Card> future;
@@ -281,13 +281,22 @@ public final class AutoDeckBuilder {
  }
  private static void shop(ServerLevel level,BuilderBlockEntity be,long token){
   List<DeckList.Line> missing=be.autoMissing();
-  if(missing.isEmpty()){be.autoDone(token,"Deck assembled. No cards to shop.");return;}
+  if(missing.isEmpty()&&be.getItem(0).isEmpty()){be.autoDone(token,"Deck assembled. No cards to shop or transfer.");return;}
   CardStoreBlockEntity store=nearbyStore(level,be.getBlockPos());
   if(store==null){be.autoStage(token,"wait_store","Loaded available cards. Waiting for a Card Store within four blocks to send "+missing.size()+" missing lines.");return;}
   if(be.autoOwner()==null){be.autoError(token,"No player owner saved; cannot assign a private Card Store cart.");return;}
   ItemStack inserted=be.getItem(0);
   if(!inserted.isEmpty()&&!((CardStoreBoxAccess)store).caszual$getDeckbox().isEmpty()){
    be.autoStage(token,"wait_shop_box","Card Store already has a deckbox. Empty its output slot to transfer this Builder's deckbox safely.");return;
+  }
+  if(missing.isEmpty()){
+   // Still hand a finished slotted deckbox to the shop; an adjacent box stays put.
+   // There is no purchase cart to create or overwrite in this case.
+   ItemStack outgoing=be.getItem(0).copy();
+   ((CardStoreBoxAccess)store).caszual$setDeckbox(outgoing);
+   be.setItem(0,ItemStack.EMPTY);
+   be.autoDone(token,"Deck complete. Moved the finished deckbox into the Card Store output slot.");
+   return;
   }
   be.autoInFlight(true);
   List<CompletableFuture<CardStoreScreenHandler.CartEntryData>> futures=missing.stream().map(line->storeLine(level,line)).toList();
