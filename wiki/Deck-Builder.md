@@ -104,3 +104,7 @@ Caszual MTG finds the nearest real MTGCard **Card Store block within 4 blocks**,
 If the decklist specified a set/collector number, that printing is preferred for the store entry.
 
 This prepares the in-game Card Store cart; it does not automatically purchase anything.
+
+## Fullscreen interface (0.11.4)
+
+The Deck Builder uses the full available window with a responsive card list on the left, an independent selected-card preview and **output deckbox slot** on the right, and inventory/hotbar at the bottom. Import, Reset, Check cards and Commander buttons remain across the top. The Build Complete / Build Available buttons sit below the list, never on top of inventory cells. The server-side cached decklist and background resolution features remain unchanged.

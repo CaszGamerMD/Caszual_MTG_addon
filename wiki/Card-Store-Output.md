@@ -15,3 +15,7 @@ If the deckbox fills up, the store tries the buyer's free inventory slots and th
 The output slot and its deckbox are saved with the Card Store block entity, so closing the store GUI does not remove the box. If you mine the Card Store, the inserted deckbox drops so you can recover it. This feature depends on Caszual MTG being installed on both server and client.
 
 **Note:** The dedicated slot affects card delivery, not the Card Store's prices, cart, or purchasing behavior.
+
+## Refined output slot position (0.11.4)
+
+The additional Card Store deckbox slot now appears in the **right-hand panel near the player inventory, immediately above the native purchase buttons**, with a matching **Deckbox output** label. Unlike the earlier fixed-offset position, it follows the Card Store's own fullscreen GUI layout when Minecraft GUI scale or window dimensions change. Item delivery behavior is unchanged.

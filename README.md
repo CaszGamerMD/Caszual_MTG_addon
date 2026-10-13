@@ -1,4 +1,4 @@
-# Caszual MTG 0.11.3 — expanded test build
+# Caszual MTG 0.11.4 — expanded test build
 
 ## Documentation
 
@@ -8,7 +8,15 @@ A separate addon for Minecraft **26.2 Fabric**, built against **MTGCard 1.7.0-26
 
 ## Install
 
-Put `caszual-mtg-0.11.3.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+Put `caszual-mtg-0.11.4.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+
+## What's fixed in 0.11.4
+
+- **Deck Builder and Community Card Collection use fullscreen, responsive layouts** rather than fixed 640×430 UI geometry. Browsing, previews, toolbars, player inventories and status lines each receive their own space.
+- **No overlapping buttons or inventories:** the Deck Builder output deckbox slot and Community loose-card/deckbox input slots are correctly anchored inside the new right-hand panels. Player inventory and hotbar follow the bottom-left viewport rather than retaining their old hardcoded positions.
+- **Community card grid** now respects both width and available height, preventing oversized art thumbnails from rendering into the action row on short/wide displays.
+- **MTGCard Card Store output deckbox slot** is relocated above the native purchase controls inside the right panel, immediately near the player inventory, with a synchronized border and label. Placement follows the Card Store's own dynamic GUI scale.
+- Existing block inventories, saved decklists and community cards remain unchanged. Only client UI positioning and item-slot presentation are altered.
 
 ## What's fixed in 0.11.3
 
@@ -72,7 +80,7 @@ Put `caszual-mtg-0.11.3.jar` in the `mods` folder on both the server and every p
 - **RGB hex staff glows:** left-click and right-click glow marks now accept arbitrary `#RRGGBB` colors instead of being limited to vanilla team colors. The staff uses two independent presets, with defaults white and golden orange.
 - **Card Hand settings:** if an authorized player carries an MTG Staff, two hex fields and live color previews appear in the Hand Block. Press **Apply to all staffs** to save the presets in that Hand Block and update every staff in the player's inventory, including offhand. Already-marked targets are refreshed.
 - The RGB glow uses Caszual MTG's client mixin and the normal scoreboard synchronization. No wool-block color sampling is necessary.
-- All players on the server should install Caszual MTG 0.11.3 to see the exact colors.
+- All players on the server should install Caszual MTG 0.11.4 to see the exact colors.
 
 ## What's new in 0.7.0
 
@@ -161,7 +169,7 @@ The community collections are stored in the overworld SavedData file for this ad
 
 ## Validation and limits
 
-The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.11.3 as a test build.
+The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.11.4 as a test build.
 
 ## 0.6.1: MTGCard block entity validation crash safeguard
 
