@@ -1,4 +1,4 @@
-# Caszual MTG 0.11.4 — expanded test build
+# Caszual MTG 0.12.0 — expanded test build
 
 ## Documentation
 
@@ -8,7 +8,15 @@ A separate addon for Minecraft **26.2 Fabric**, built against **MTGCard 1.7.0-26
 
 ## Install
 
-Put `caszual-mtg-0.11.4.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+Put `caszual-mtg-0.12.0.jar` in the `mods` folder on both the server and every player's client, replacing any old `mtgcompanion-*.jar`. Keep MTGCard installed. Requires Java 25, Fabric Loader 0.19.3 or newer, and Fabric API 0.161.0+26.2 or newer. Restart Minecraft/server.
+
+## What's new in 0.12.0
+
+- **Automated Archidekt URL builds:** **Import URL** now starts a server-side workflow: fetch and cache the list → scan connected Land/Token/Community databases and display the counts → place all available cards into the preferred deckbox → send remaining card lines to the nearest MTGCard Card Store's saved shopping cart.
+- **Output priority:** an MTGCard deckbox in the Builder's dedicated slot always takes priority. If that slot is empty, a directly adjacent **placed** deckbox is used. The process can add missing cards to an already-partially-filled deckbox without duplicating its existing contents. It uses MTGCard's special commander slot for commander-legal first entries.
+- **Automatic deckbox handoff:** when there are missing cards and the Builder contains a slotted deckbox, it is moved to the nearby Card Store's deckbox output slot along with the generated cart. An adjacent placed deckbox is never moved. If the Card Store is missing or its output is occupied, work waits safely for it instead of discarding or overwriting items.
+- **No GUI required after import:** progress belongs to the Builder block entity rather than the player's menu session. Closing the UI or logging out will not cancel it. Jobs are checkpointed and resume across server restarts once the Builder's chunk is loaded/ticking; Reset cancels old callbacks. Repeated URL imports reuse the existing six-hour Archidekt list cache.
+- **Shopping only:** the Card Store cart is prepared for the importing player, including while offline; this does **not** automatically charge currency or purchase the missing cards.
 
 ## What's fixed in 0.11.4
 
@@ -80,7 +88,7 @@ Put `caszual-mtg-0.11.4.jar` in the `mods` folder on both the server and every p
 - **RGB hex staff glows:** left-click and right-click glow marks now accept arbitrary `#RRGGBB` colors instead of being limited to vanilla team colors. The staff uses two independent presets, with defaults white and golden orange.
 - **Card Hand settings:** if an authorized player carries an MTG Staff, two hex fields and live color previews appear in the Hand Block. Press **Apply to all staffs** to save the presets in that Hand Block and update every staff in the player's inventory, including offhand. Already-marked targets are refreshed.
 - The RGB glow uses Caszual MTG's client mixin and the normal scoreboard synchronization. No wool-block color sampling is necessary.
-- All players on the server should install Caszual MTG 0.11.4 to see the exact colors.
+- All players on the server should install Caszual MTG 0.12.0 to see the exact colors.
 
 ## What's new in 0.7.0
 
@@ -96,7 +104,7 @@ All four database/builder blocks are in the Functional Blocks creative tab and h
 - **Community Land Catalogue:** green. Search names or Scryfall queries, select a card, choose quantity, then Take selected. **All lands / Basics / Nonbasics** tabs keep basic lands easy to reach, and **Full art** restricts results to full-art printings. White, Blue, Black, Red, Green and Colorless toggles filter the mana a land can produce. Only Commander-legal lands are shown. Selecting colors restricts both color identity and produced mana: Green alone excludes White/Green dual lands; Green + White permits them. A land must produce at least one selected mana type and cannot produce an unselected colored mana type. Colorless production is allowed alongside selected colors. This also excludes flexible any-color producers unless all their produced colors are selected. All clears the color restriction. Infinite free copies, without depositing or owning a card first.
 - **Community Token Catalogue:** gold. Same search/withdraw controls, restricted to cards with Token in their type line. Emblems and other token-like objects are excluded. Optional Oracle text and Power/toughness fields combine with the name search; leave either blank to skip it. Power/toughness uses numeric values such as `1/1` or `2/2`. Infinite free copies, without depositing first.
 - **Community Card Collection:** purple. Insert an MTGCard deckbox into the dedicated slot, or shift-click it from your inventory. Deposit contents moves regular cards into the shared collection while leaving lands, tokens, and other items in the box. Select a card and choose a quantity, then Selected into box withdraws available copies into empty main slots. Fill box from search takes matching stored cards until the box is full. Take to inventory withdraws the selected card directly. Withdrawals consume actual shared stock; they never create free regular cards. Closing returns the deckbox to your inventory (or drops it by you if the inventory is full).
-- **Deck Builder:** blue. Place any database blocks within four blocks in each direction. Insert an empty MTGCard deckbox in the Builder's dedicated output slot. Nearby deckboxes are not used as output. The builder shows the linked database kinds when checking the list. You can also paste an **Archidekt deck URL** and import it directly; only cards in the main deck are imported. Sideboard and Maybeboard entries are ignored. Archidekt printing/set information is preserved when available. **Public and unlisted decks are supported** when Archidekt allows anonymous access to the deck URL; private decks are not supported because the addon does not store or request Archidekt login credentials. A failed URL import leaves the currently loaded deck untouched.
+- **Deck Builder:** blue. Place any database blocks within four blocks in each direction. Insert an empty MTGCard deckbox in the Builder's dedicated output slot. For manual Build Complete/Available, the Builder still uses its slot; automatic URL import can also fill an adjacent placed deckbox when the slot is empty. The builder shows the linked database kinds when checking the list. You can also paste an **Archidekt deck URL** and import it directly; only cards in the main deck are imported. Sideboard and Maybeboard entries are ignored. Archidekt printing/set information is preserved when available. **Public and unlisted decks are supported** when Archidekt allows anonymous access to the deck URL; private decks are not supported because the addon does not store or request Archidekt login credentials. A failed URL import leaves the currently loaded deck untouched.
 - **Card Counter:** right-click a placed MTGCard card with this tool. Set a named total, select a counter to use +1/−1, or set zero/remove to delete it. Supports up to 16 named counter types per card and totals up to 1,000,000. When looking at a placed card, a readable HUD shows its counter labels and totals. Uses MTGCard's existing counter metadata. Visible markers sit directly on the placed card and grow into piles as counter totals increase. Each counter type contributes up to 12 visible markers, with up to six types represented; exact totals remain in the HUD. Default markers are provided when no MTGCard counter icon was selected. Hidden cards retain MTGCard's normal visibility rules.
 
 
@@ -169,7 +177,7 @@ The community collections are stored in the overworld SavedData file for this ad
 
 ## Validation and limits
 
-The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.11.4 as a test build.
+The Java build and parser checks pass. Dedicated-server integration checks cover storage, bulk deckbox transfers, strict token classification, mana metadata, deck availability and missing-card networking. A headless client bootstrap loads both entrypoints, the community screen, and the transformed placed-card renderer; marker growth and its visual cap pass. See VALIDATION.md. Actual screen appearance, mouse interactions and live online search still need in-game testing. Treat 0.12.0 as a test build.
 
 ## 0.6.1: MTGCard block entity validation crash safeguard
 

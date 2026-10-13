@@ -1,12 +1,12 @@
 # Deck Builder
 
-The Deck Builder's front panel rotates to face the placing player; already-placed blocks retain their original orientation. The Deck Builder assembles decklists from nearby Caszual MTG databases and writes available cards directly into an **MTGCard deckbox inserted in its output slot**.
+The Deck Builder's front panel rotates to face the placing player; already-placed blocks retain their original orientation. The Deck Builder assembles decklists from nearby Caszual MTG databases and can scan, assemble, and shop cards automatically from an Archidekt URL.
 
 ## Required layout
 
 - Put Land, Token and/or Community Card database blocks within **4 blocks in each direction** of the Deck Builder.
-- Place an **empty MTGCard deckbox in the Deck Builder's output slot**. Nearby placed deckboxes are not used as output.
-- A nearby MTGCard **Card Store** within 4 blocks can receive missing-card lists.
+- Insert an MTGCard deckbox in the Builder's output slot, **or** place a deckbox directly adjacent to the Builder. Automatic URL jobs use the inserted box first, otherwise the adjacent box. Existing cards in the box are counted so they are not duplicated.
+- A nearby MTGCard **Card Store** within 4 blocks automatically receives remaining card lines from a URL job. If the Builder has an inserted deckbox, the box transfers into the Store's output slot once it is empty.
 
 The builder reports which database kinds it can currently see.
 
@@ -52,6 +52,19 @@ Paste a public or unlisted Archidekt deck URL into the URL field and press **Imp
 - Private decks are not supported because Caszual MTG does not request or store Archidekt login credentials.
 - A failed URL import does not replace the currently loaded list.
 
+## Automatic Import URL workflow (0.12.0)
+
+After pressing **Import URL** once, the Deck Builder completes these stages automatically:
+
+1. Fetch and save the public/unlisted Archidekt main-deck list (or use a successful six-hour cached list).
+2. Scan the connected Land, Token and Community Card databases, resolving missing catalogue names online and storing available/requested status for every card in the Builder.
+3. Load available cards into the **inserted deckbox**, or into a directly **adjacent placed deckbox** if the output slot is empty. Existing cards count toward the request; regular Community stock is consumed only after deckbox insertion succeeds. Remaining cards, including any that cannot fit, become the shop list.
+4. Prepare the missing cards as a saved MTGCard Card Store cart for the player who started the import. If the output box was in the Builder's slot, transfer it into the Store's dedicated deckbox output slot for purchased cards. An adjacent placed deckbox stays where it is.
+
+The player can **close the GUI or log off** after starting the job. The Builder itself runs the steps and records its stage and shopping list in its block data. Work resumes when its chunk is loaded/ticking, including after a server restart. If the Builder has no deckbox, or the Card Store cannot be found within four blocks, it waits and resumes automatically when the required block appears. If the Store's output already contains a deckbox, remove that box before the automatic handoff can finish.
+
+**No purchases happen automatically.** The missing-card cart waits at the Card Store until you open it and confirm the purchase with normal MTGCard currency. Press **Reset** to cancel a pending job; Reset never ejects or empties a deckbox. For manual `.txt` builds, the original **Check cards**, **Build complete**, **Build available**, and **Shop missing** controls remain available.
+
 ## Saved drafts, URL cache and Reset
 
 The Deck Builder now remembers the last successfully imported text or Archidekt URL, the resolved decklist, each card's availability, and the missing-card report **on that block**. Closing the UI does not interrupt a current Archidekt import or background land/name resolution, provided the builder still exists and the server remains running. Reopen it later to see the saved results.
@@ -80,7 +93,7 @@ When a decklist specifies an exact set + collector number, the builder prefers t
 
 When enabled:
 
-- The first available copy of the first decklist entry is placed in MTGCard's first commander/side slot.
+- Automatic URL builds place a commander-legal first card in MTGCard's official commander slot (slot 100). Manual Build Complete/Available retains its existing behavior.
 - That card must be commander-legal.
 - The deckbox then has 99 normal main slots, allowing a typical 100-card Commander deck.
 
@@ -93,11 +106,11 @@ Turn the option off for ordinary decks.
 
 Community Collection stock is consumed during build. Lands and tokens are catalogue-generated and do not reduce stock.
 
-The output deckbox must be empty. Its item remains in the Deck Builder slot after the build and retains all cards through MTGCard's external deckbox storage.
+For manual button-based builds, the output deckbox must be empty and stays in the Builder slot. Automatic URL builds may fill a partly filled box and transfer a slotted box to the Card Store if cards are missing.
 
 ## Shop missing
 
-After **Check cards**, press **Shop missing**.
+For manually imported text lists, press **Shop missing** after checking. Archidekt URL imports prepare the shopping cart automatically when necessary.
 
 Caszual MTG finds the nearest real MTGCard **Card Store block within 4 blocks**, resolves the missing cards, saves them into that player's Card Store cart, and opens the store.
 
