@@ -64,14 +64,16 @@ public final class BuilderBlockEntity extends BlockEntity implements Container {
   autoStage="fill";message="Network scan complete. Loading available cards into deckbox…";
   resolving=true;autoInFlight=false;setChanged();
  }
- public void autoFilled(long token,List<Wire.Row> rows,List<DeckList.Line> missing,int added,String destination){
+ public void autoFilled(long token,List<Wire.Row> rows,List<DeckList.Line> missing,int added,String destination,boolean transferSlotted){
   if(!autoValid(token))return;
   statuses=List.copyOf(rows);
   autoMissing=missing.stream().map(l->l.quantity()+" "+l.label()).collect(java.util.stream.Collectors.joining("\n"));
   report=missing.stream().map(l->l.shopLine(l.quantity())).collect(java.util.stream.Collectors.joining("\n"));
-  autoStage=missing.isEmpty()?"done":"shop";
-  resolving=!missing.isEmpty();
-  message="Loaded "+added+" available cards into "+destination+". "+(missing.isEmpty()?"Deck complete.":"Preparing "+missing.stream().mapToInt(DeckList.Line::quantity).sum()+" remaining cards for Card Store.");
+  autoStage=missing.isEmpty()&&!transferSlotted?"done":"shop";
+  resolving=!autoStage.equals("done");
+  message="Loaded "+added+" available cards into "+destination+". "
+    +(missing.isEmpty()?(transferSlotted?"All cards available. Sending the slotted deckbox to Card Store.":"Deck complete.")
+      :"Preparing "+missing.stream().mapToInt(DeckList.Line::quantity).sum()+" remaining cards for Card Store.");
   autoInFlight=false;setChanged();
  }
  public void autoDone(long token,String progress){
