@@ -1,6 +1,7 @@
 package dev.casz.caszualmtg;
 
 import com.spider.mtgcard.client.compat.*;
+import dev.casz.caszualmtg.mixin.ContainerAccess;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.components.*;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -44,8 +45,8 @@ public final class CommunityScreen extends LegacyContainerScreen<CommunityMenu> 
   if(MtgGuiScaleHelper.applyAutoFitGuiScale(this,3,640,430))return;
   String lastSearch=search==null?query:search.getValue();
   String lastQuantity=quantity==null?"1":quantity.getValue();
-  imageWidth=width;
-  imageHeight=height;
+  ((ContainerAccess)this).companion$setImageWidth(width);
+  ((ContainerAccess)this).companion$setImageHeight(height);
   super.init();
   FullScreenMenuLayout.positionInventory(menu,2,height);
   FullScreenMenuLayout.position(menu.slots.get(0),side()+8,boxY());
