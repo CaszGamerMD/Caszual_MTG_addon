@@ -17,6 +17,7 @@
   },
   "client": [
     "StaffPoseMixin",
-    "CardDisplayOutlineMixin"
+    "CardDisplayOutlineMixin",
+    "MenuSlotPositionAccessor"
   ]
 }
