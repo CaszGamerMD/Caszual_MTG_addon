@@ -26,6 +26,14 @@ public final class CommunityScreen extends LegacyContainerScreen<CommunityMenu> 
  int browseTop(){return 86;}
  int browseWidth(){return FullScreenMenuLayout.browseWidth(width);}
  int browseHeight(){return FullScreenMenuLayout.browseHeight(height,browseTop());}
+ // CardBrowser derives its card height from its width. Bound that width to
+ // the browse area HEIGHT too: wide windows with short viewports must not
+ // render giant cards over the action buttons and player inventory.
+ int browserWidth(){
+  if(!grid)return browseWidth();
+  int maxCell=Math.max(32,Math.round((browseHeight()-22)*.716f)+8);
+  return Math.min(browseWidth(),maxCell*4+18);
+ }
  int actionY(){return FullScreenMenuLayout.actionY(height);}
  int previewHeight(){return Math.max(115,Math.min(270,FullScreenMenuLayout.inventoryTop(height)-213));}
  int looseY(){return browseTop()+previewHeight()+14;}
@@ -113,7 +121,7 @@ public final class CommunityScreen extends LegacyContainerScreen<CommunityMenu> 
   int listW=browseWidth(),listH=browseHeight();
   g.fill(11,browseTop()-1,13+listW,browseTop()+listH+1,0xFF41536C);
   g.fill(12,browseTop(),12+listW,browseTop()+listH,0xFF101B2A);
-  if(data!=null)CardBrowser.render(g,font,data.rows(),12,browseTop(),listW,listH,scroll,selected,grid,false);
+  if(data!=null)CardBrowser.render(g,font,data.rows(),12,browseTop(),browserWidth(),listH,scroll,selected,grid,false);
 
   int previewY=browseTop(),previewH=previewHeight(),sx=side();
   g.fill(sx+3,previewY-2,width-12,previewY+previewH+3,0xFF41536C);
@@ -139,7 +147,7 @@ public final class CommunityScreen extends LegacyContainerScreen<CommunityMenu> 
  @Override protected void renderLabels(GuiGraphics g,int mx,int my){}
 
  @Override public boolean mouseClicked(MouseButtonEvent event,boolean twice){
-  int at=CardBrowser.hit((int)event.x(),(int)event.y(),12,browseTop(),browseWidth(),browseHeight(),
+  int at=CardBrowser.hit((int)event.x(),(int)event.y(),12,browseTop(),browserWidth(),browseHeight(),
     scroll,data==null?0:data.rows().size(),grid);
   if(at>=0){selected=at;face=0;return true;}
   return super.mouseClicked(event,twice);
@@ -147,7 +155,7 @@ public final class CommunityScreen extends LegacyContainerScreen<CommunityMenu> 
  @Override public boolean mouseScrolled(double mx,double my,double dx,double dy){
   if(mx>=12&&mx<12+browseWidth()&&my>=browseTop()&&my<browseTop()+browseHeight()){
    scroll=CardBrowser.clampScroll(scroll-(int)Math.signum(dy)*(grid?4:3),
-     data==null?0:data.rows().size(),browseWidth(),browseHeight(),grid);
+     data==null?0:data.rows().size(),browserWidth(),browseHeight(),grid);
    return true;
   }
   return super.mouseScrolled(mx,my,dx,dy);
