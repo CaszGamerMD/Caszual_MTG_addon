@@ -1,6 +1,7 @@
 package dev.casz.caszualmtg;
 
 import com.spider.mtgcard.client.compat.*;
+import dev.casz.caszualmtg.mixin.ContainerAccess;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.components.*;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -52,8 +53,8 @@ public final class BuilderScreen extends LegacyContainerScreen<BuilderMenu> {
   if(MtgGuiScaleHelper.applyAutoFitGuiScale(this,3,640,430))return;
   String previousUrl=url==null?(data==null?"":data.url()):url.getValue();
   // Use all available GUI pixels, not a fixed 640x430 floating panel.
-  imageWidth=width;
-  imageHeight=height;
+  ((ContainerAccess)this).companion$setImageWidth(width);
+  ((ContainerAccess)this).companion$setImageHeight(height);
   super.init();
   FullScreenMenuLayout.positionInventory(menu,1,height);
   FullScreenMenuLayout.position(menu.slots.getFirst(),side()+17,128);
