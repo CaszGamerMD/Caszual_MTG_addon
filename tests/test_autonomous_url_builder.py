@@ -73,7 +73,7 @@ class AutonomousBuilderTests(unittest.TestCase):
   self.assertIn("be.autoMissing()",auto)
   self.assertIn("futures.stream().map(f->f.getNow(null)).filter(Objects::nonNull)",auto)
   self.assertIn("autoMissing=missing.stream()",be)
-  self.assertIn('autoStage=missing.isEmpty()?"done":"shop"',be)
+  self.assertIn('autoStage=missing.isEmpty()&&!transferSlotted?"done":"shop"',be)
 
 
 if __name__=="__main__":unittest.main()
