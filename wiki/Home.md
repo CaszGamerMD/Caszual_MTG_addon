@@ -1,6 +1,6 @@
 # Caszual MTG Wiki
 
-**Caszual MTG 0.11.4** is a Fabric addon for **MTGCard 1.7.0-26.2** on **Minecraft 26.2**. It adds shared card databases, free land/token catalogues, deck building tools, a private Card Hand system, custom deckboxes, card counters, a multiplayer targeting staff, and larger card previews.
+**Caszual MTG 0.12.0** is a Fabric addon for **MTGCard 1.7.0-26.2** on **Minecraft 26.2**. It adds shared card databases, free land/token catalogues, deck building tools, a private Card Hand system, custom deckboxes, card counters, a multiplayer targeting staff, and larger card previews.
 
 ## Main features
 
@@ -9,7 +9,7 @@
 - **Community Land Catalogue** — searchable, Commander-aware unlimited land catalogue with mana filters and artwork selection.
 - **Community Token Catalogue** — searchable unlimited token catalogue with optional Oracle-text and P/T filtering.
 - **Community Card Collection** — server-wide shared storage for real deposited non-land/non-token cards.
-- **Deck Builder** — insert an output deckbox, save and reset drafts, cache Archidekt URLs, continue background lookups, and build or shop missing cards.
+- **Deck Builder** — Archidekt URL imports automatically scan the connected database network, fill the inserted or adjacent deckbox, and send remaining cards plus any slotted box to the Card Store. Runs even after the GUI closes, with saved progress and restart recovery.
 - **Placed commander artwork** — standard and custom deckboxes display their commander illustration on the top surface when closed.
 - **Deckbox Rack** — store five deckboxes on a thin floor/wall shelf, with real miniature models and contents retained on break.
 - **Staff Rack** — store four RGB-configured targeting staffs on a wall rail; their 3D shafts hang two blocks below it.

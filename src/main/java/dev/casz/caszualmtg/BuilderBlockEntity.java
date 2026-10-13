@@ -22,6 +22,12 @@ public final class BuilderBlockEntity extends BlockEntity implements Container {
  private long cachedAt;
  private long revision;
  private List<Wire.Row> statuses=List.of();
+ // The automation is owned by this block entity, never by the player's menu session.
+ // Stage and missing cards survive closing the GUI, logouts and server restarts.
+ private String autoStage="idle",autoMissing="";
+ private UUID autoOwner;
+ private transient boolean autoInFlight;
+ private transient long autoRetryAt;
 
  public BuilderBlockEntity(BlockPos at,BlockState state){super(CaszualMtg.BUILDER_BE,at,state);}
  public String deck(){return deck;}
@@ -32,9 +38,55 @@ public final class BuilderBlockEntity extends BlockEntity implements Container {
  public boolean resolving(){return resolving;}
  public long revision(){return revision;}
  public List<Wire.Row> statuses(){return statuses;}
+ public String autoStage(){return autoStage;}
+ public UUID autoOwner(){return autoOwner;}
+ public boolean autoInFlight(){return autoInFlight;}
+ public void autoInFlight(boolean running){autoInFlight=running;}
+ public long autoRetryAt(){return autoRetryAt;}
+ public void autoRetryAt(long when){autoRetryAt=when;}
+ public List<DeckList.Line> autoMissing(){return DeckList.parse(autoMissing).lines();}
+ public boolean autoActive(){return !autoStage.equals("idle")&&!autoStage.equals("done")&&!autoStage.equals("failed");}
+ public boolean autoValid(long token){return revision==token&&autoActive();}
+ public long beginAuto(UUID owner,String address,int options){
+  long token=start(address,options);
+  autoOwner=owner;autoStage="fetch";autoMissing="";autoInFlight=false;
+  report="";statuses=List.of();autoRetryAt=0;
+  setChanged();return token;
+ }
+ public void autoStage(long token,String stage,String progress){
+  if(!autoValid(token))return;
+  autoStage=stage;message=progress;resolving=!stage.equals("done")&&!stage.equals("failed");
+  autoInFlight=false;setChanged();
+ }
+ public void autoScan(long token,List<Wire.Row> rows,String text){
+  if(!autoValid(token))return;
+  statuses=List.copyOf(rows);report=text;
+  autoStage="fill";message="Network scan complete. Loading available cards into deckbox…";
+  resolving=true;autoInFlight=false;setChanged();
+ }
+ public void autoFilled(long token,List<Wire.Row> rows,List<DeckList.Line> missing,int added,String destination,boolean transferSlotted){
+  if(!autoValid(token))return;
+  statuses=List.copyOf(rows);
+  autoMissing=missing.stream().map(l->l.quantity()+" "+l.label()).collect(java.util.stream.Collectors.joining("\n"));
+  report=missing.stream().map(l->l.shopLine(l.quantity())).collect(java.util.stream.Collectors.joining("\n"));
+  autoStage=missing.isEmpty()&&!transferSlotted?"done":"shop";
+  resolving=!autoStage.equals("done");
+  message="Loaded "+added+" available cards into "+destination+". "
+    +(missing.isEmpty()?(transferSlotted?"All cards available. Sending the slotted deckbox to Card Store.":"Deck complete.")
+      :"Preparing "+missing.stream().mapToInt(DeckList.Line::quantity).sum()+" remaining cards for Card Store.");
+  autoInFlight=false;setChanged();
+ }
+ public void autoDone(long token,String progress){
+  if(!autoValid(token))return;
+  autoStage="done";resolving=false;message=progress;autoInFlight=false;setChanged();
+ }
+ public void autoError(long token,String progress){
+  if(!autoValid(token))return;
+  autoStage="failed";resolving=false;message=progress;autoInFlight=false;setChanged();
+ }
  public boolean cached(String address){return !resolving&&!deck.isBlank()&&url.equals(address)&&cachedAt>0&&System.currentTimeMillis()-cachedAt<6*60*60*1000L;}
  public long start(String address,int flags){revision++;requestedUrl=address;message="Loading decklist…";resolving=true;this.flags=flags;setChanged();return revision;}
- public long reset(){revision++;deck="";url="";requestedUrl="";report="";message="Deck Builder cleared.";statuses=List.of();cachedAt=0;resolving=false;flags=2;setChanged();return revision;}
+ public long reset(){revision++;deck="";url="";requestedUrl="";report="";message="Deck Builder cleared.";statuses=List.of();cachedAt=0;resolving=false;flags=2;autoStage="idle";autoMissing="";autoOwner=null;autoInFlight=false;setChanged();return revision;}
  public void loaded(long token,String deck,String url,int flags){
   if(token!=revision)return;this.deck=deck;this.url=url;this.requestedUrl=url;this.flags=flags;cachedAt=System.currentTimeMillis();resolving=true;
   message="Resolving availability…";setChanged();
@@ -50,10 +102,17 @@ public final class BuilderBlockEntity extends BlockEntity implements Container {
   deck=in.getStringOr("Decklist","");url=in.getStringOr("Url","");requestedUrl=in.getStringOr("RequestedUrl",url);
   report=in.getStringOr("Report","");message=in.getStringOr("Message","");
   flags=in.getIntOr("Flags",2);cachedAt=in.getLongOr("CachedAt",0);
+  autoStage=in.getStringOr("AutoStage","idle");
+  autoMissing=in.getStringOr("AutoMissing","");
+  String owner=in.getStringOr("AutoOwner","");
+  try{autoOwner=owner.isEmpty()?null:UUID.fromString(owner);}catch(IllegalArgumentException ignored){autoOwner=null;}
+  autoInFlight=false;autoRetryAt=0;
   revision=in.getLongOr("Revision",0);resolving=in.getBooleanOr("Resolving",false);
   statuses=in.read("Rows",RowSave.CODEC.listOf()).orElse(List.of()).stream().map(r->new Wire.Row(r.name,r.card,r.count,r.total)).toList();
   // Pending futures don't survive a full server restart. The input remains saved.
-  if(resolving){resolving=false;requestedUrl=url;message="Draft restored. Press Check cards to update availability.";}
+  if(resolving&&!autoActive()){resolving=false;requestedUrl=url;message="Draft restored. Press Check cards to update availability.";}
+  // Active autoStage takes precedence and resumes from its saved checkpoint on server tick.
+  if(autoActive())resolving=true;
  }
  @Override protected void saveAdditional(ValueOutput out){
   super.saveAdditional(out);
@@ -61,6 +120,8 @@ public final class BuilderBlockEntity extends BlockEntity implements Container {
   out.putString("Decklist",deck);out.putString("Url",url);out.putString("RequestedUrl",requestedUrl);
   out.putString("Report",report);out.putString("Message",message);
   out.putInt("Flags",flags);out.putLong("CachedAt",cachedAt);
+  out.putString("AutoStage",autoStage);out.putString("AutoMissing",autoMissing);
+  if(autoOwner!=null)out.putString("AutoOwner",autoOwner.toString());
   out.putLong("Revision",revision);out.putBoolean("Resolving",resolving);
   out.store("Rows",RowSave.CODEC.listOf(),statuses.stream().map(r->new RowSave(r.key(),r.card(),r.count(),r.requested())).toList());
  }

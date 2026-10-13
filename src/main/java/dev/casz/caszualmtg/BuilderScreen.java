@@ -82,7 +82,7 @@ public final class BuilderScreen extends LegacyContainerScreen<BuilderMenu> {
  void send(String action,String text,int flags){
   if(!ClientPlayNetworking.canSend(Wire.Request.TYPE))return;
   ClientPlayNetworking.send(new Wire.Request(menu.pos,action,text,flags));
-  status="Working…";
+  if(!action.equals("refresh"))status="Working…";
  }
  void chooseFile(){
   try{
@@ -114,7 +114,7 @@ public final class BuilderScreen extends LegacyContainerScreen<BuilderMenu> {
   g.fill(0,0,width,27,0xFF202F45);
   g.drawString(font,title,12,11,0xFFFFFFFF);
   String label=data==null?"Loading builder…":
-    data.resolving()?"Resolving cards in background…":
+    data.resolving()?(data.message().isBlank()?"Working automatically in background…":data.message()):
     data.deck().isBlank()?"Import a decklist to begin.":data.message();
   g.drawString(font,font.plainSubstrByWidth(label,width-24),12,99,
     data!=null&&data.resolving()?0xFFFFD37E:0xFFB3DFFF);

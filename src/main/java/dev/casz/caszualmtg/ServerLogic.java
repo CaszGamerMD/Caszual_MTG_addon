@@ -49,7 +49,7 @@ public final class ServerLogic {
    }
   }
   sessions.put(p.getUUID(),s);seed(p);
-  reply(p,s,kind==3?"Saved Deck Builder draft restored.":"Shared across this server. Search by name or type.","");
+  reply(p,s,kind==3&&p.level().getBlockEntity(pos) instanceof BuilderBlockEntity builder?builder.message():"Shared across this server. Search by name or type.","");
   if(kind<2)search(p,s,"",0,0);
 }
  public static void openCounter(ServerPlayer p,CardDisplayEntity c){if(p.distanceToSqr(c)>64)return;Session s=new Session(p,c.blockPosition(),4);s.entity=c.getUUID();s.cardId=c.getDisplayCardId(c.findSelectedDisplayIndex(p));if(s.cardId==null)return;sessions.put(p.getUUID(),s);reply(p,s,"Edit counters on this card.","");}
@@ -147,35 +147,20 @@ public final class ServerLogic {
  static void importArchidekt(ServerPlayer p,Session s,String url,int flags){
   BuilderBlockEntity be=builder(p,s);if(be==null)return;
   String address=url.trim();
-  if(address.isBlank()||address.length()>512){reply(p,s,"Enter an Archidekt URL.","");return;}
-  if(be.cached(address)){
-   if(be.resolving()){reply(p,s,"This decklist is already resolving in the background.",be.report());return;}
-   s.workToken=be.revision();s.deck=be.deck();s.statuses=be.statuses();s.report=be.report();
-   if(!s.statuses.isEmpty()){reply(p,s,"Restored cached URL and resolved decklist.",s.report);return;}
-   resolveLands(p,s,()->plan(p,s,false,flags));return;
+  if(address.isBlank()||address.length()>512){reply(p,s,"Enter an Archidekt deck URL.","");return;}
+  try{
+   // The Builder block owns the entire import job, not this transient GUI session.
+   // Running it again while the same URL is in flight should not reset work.
+   if(be.autoActive()&&be.url().equals(address)){
+    reply(p,s,"Already running: "+be.message(),be.report());return;
+   }
+   AutoDeckBuilder.start(be,p.getUUID(),address,flags);
+   s.workToken=be.revision();
+   s.deck=be.deck();s.report=be.report();s.statuses=be.statuses();s.busy=false;
+   reply(p,s,"Automatic URL import started. You can close the GUI; the block continues scanning, building and shopping.",be.report());
+  }catch(IllegalArgumentException e){
+   reply(p,s,e.getMessage(),be.report());
   }
-  s.workToken=be.start(address,flags);s.busy=true;
-  reply(p,s,"Loading Archidekt main deck in background…",be.report());
-  long token=s.workToken;
-  ArchidektImport.fetch(address).whenComplete((result,error)->p.level().getServer().execute(()->{
-   if(!workValid(p,s))return;
-   s.busy=false;
-   if(error!=null){
-    Throwable cause=error instanceof CompletionException&&error.getCause()!=null?error.getCause():error;
-    be.failed(token,"Archidekt import failed: "+cause.getMessage());
-    reply(p,s,be.message(),be.report());return;
-   }
-   var parsed=DeckList.parse(result.text());
-   if(!parsed.errors().isEmpty()||parsed.lines().isEmpty()){
-    be.failed(token,"Archidekt returned an empty or invalid decklist.");
-    reply(p,s,be.message(),be.report());return;
-   }
-   be.loaded(token,result.text(),address,flags);
-   s.deck=result.text();
-   s.statuses=parsed.lines().stream().map(line->new Wire.Row(line.label(),ItemStack.EMPTY,-1,line.quantity())).toList();
-   reply(p,s,"Loaded "+result.cards()+" cards. Resolving in background…",be.report());
-   resolveLands(p,s,()->plan(p,s,false,flags));
-  }));
  }
 
  static void resolveLands(ServerPlayer p,Session s,Runnable done){Set<Integer> linked=links(p,s);if(!linked.contains(0)&&!linked.contains(1)){done.run();return;}
