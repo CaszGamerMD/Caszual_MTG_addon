@@ -137,7 +137,7 @@ public final class BuilderScreen extends LegacyContainerScreen<BuilderMenu> {
   }
 
   int sidebar=side(),sidebarWidth=FullScreenMenuLayout.sidebarWidth(width);
-  g.drawString(font,"Output deckbox",sidebar+43,132,0xFFB3DFFF);
+  g.drawString(font,"Output deckbox",sidebar+42,132,0xFFB3DFFF);
   int py=previewTop(),ph=previewHeight();
   g.fill(sidebar+3,py-3,width-12,py+ph+3,0xFF34435C);
   g.fill(sidebar+4,py-2,width-13,py+ph+2,0xFF101B2A);
