@@ -22,7 +22,7 @@ import net.minecraft.world.phys.shapes.*;
 import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
-/** Quarter-block-high shelf, one-half block deep, with five item-preserving positions. */
+/** Slim two-pixel shelf, six pixels deep, with five item-preserving positions. */
 public final class DeckboxRackBlock extends BaseEntityBlock {
  public static final MapCodec<DeckboxRackBlock> CODEC=simpleCodec(DeckboxRackBlock::new);
  public static final EnumProperty<Direction> FACING=BlockStateProperties.HORIZONTAL_FACING;
@@ -30,8 +30,8 @@ public final class DeckboxRackBlock extends BaseEntityBlock {
  public static final BooleanProperty[] OCCUPIED={
   BooleanProperty.create("box0"),BooleanProperty.create("box1"),BooleanProperty.create("box2"),BooleanProperty.create("box3"),BooleanProperty.create("box4")
  };
- static final VoxelShape FLOOR=Block.box(0,0,0,16,4,8);
- static final VoxelShape WALL_SHAPE=Block.box(0,7,0,16,11,8);
+ static final VoxelShape FLOOR=Block.box(0,0,0,16,2,6);
+ static final VoxelShape WALL_SHAPE=Block.box(0,7,0,16,9,6);
  public DeckboxRackBlock(Properties p){
   super(p);
   BlockState state=stateDefinition.any().setValue(FACING,Direction.NORTH).setValue(WALL,false);
@@ -48,16 +48,16 @@ public final class DeckboxRackBlock extends BaseEntityBlock {
   return state.setValue(WALL,side.getAxis().isHorizontal()).setValue(FACING,side.getAxis().isHorizontal()?side:ctx.getHorizontalDirection().getOpposite());
  }
  @Override protected VoxelShape getShape(BlockState state,BlockGetter world,BlockPos pos,CollisionContext ctx){
-  int bottom=state.getValue(WALL)?7:0,top=bottom+4;
-  // Rotate the same half-depth, quarter-block shelf in every horizontal direction.
+  int bottom=state.getValue(WALL)?7:0,top=bottom+2;
+  // Same model coordinates as deckbox_rack_base_wall/floor: a 6px-deep ledge
+  // at local Z=0..6. Rotate it exactly like the multipart blockstates AND
+  // the five actual deckbox item models (which are centered on local Z=4).
   return switch(state.getValue(FACING)){
-   // Match the world item renderer's orientation and the shelf blockstate model.
-   // Shelf sits on the wall-facing half, UNDER the existing deckbox minis.
-   case NORTH -> Block.box(0,bottom,8,16,top,16);
-   case SOUTH -> Block.box(0,bottom,0,16,top,8);
-   case EAST -> Block.box(0,bottom,0,8,top,16);
-   case WEST -> Block.box(8,bottom,0,16,top,16);
-   default -> Block.box(0,bottom,8,16,top,16);
+   case NORTH -> Block.box(0,bottom,10,16,top,16);
+   case SOUTH -> Block.box(0,bottom,0,16,top,6);
+   case EAST -> Block.box(10,bottom,0,16,top,16);
+   case WEST -> Block.box(0,bottom,0,6,top,16);
+   default -> Block.box(0,bottom,10,16,top,16);
   };
  }
  @Override protected InteractionResult useItemOn(ItemStack stack,BlockState s,Level level,BlockPos pos,Player player,InteractionHand hand,BlockHitResult hit){
