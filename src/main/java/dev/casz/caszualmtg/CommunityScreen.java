@@ -45,8 +45,8 @@ public final class CommunityScreen extends LegacyContainerScreen<CommunityMenu> 
   if(MtgGuiScaleHelper.applyAutoFitGuiScale(this,3,640,430))return;
   String lastSearch=search==null?query:search.getValue();
   String lastQuantity=quantity==null?"1":quantity.getValue();
-  ((ContainerAccess)this).companion$setImageWidth(width);
-  ((ContainerAccess)this).companion$setImageHeight(height);
+  ((ContainerAccess)(Object)this).companion$setImageWidth(width);
+  ((ContainerAccess)(Object)this).companion$setImageHeight(height);
   super.init();
   FullScreenMenuLayout.positionInventory(menu,2,height);
   FullScreenMenuLayout.position(menu.slots.get(0),side()+8,boxY());
