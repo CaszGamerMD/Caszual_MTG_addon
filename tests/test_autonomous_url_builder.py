@@ -41,7 +41,7 @@ class AutonomousBuilderTests(unittest.TestCase):
  def test_scan_before_fill_and_exact_card_counts(self):
   auto=self.read("AutoDeckBuilder.java")
   self.assertIn('be.autoScan(token,status,String.join("\\n",summary));',auto)
-  self.assertIn("be.autoFilled(token,statuses,missing,added,target.name());",auto)
+  self.assertIn("be.autoFilled(token,statuses,missing,added,target.name(),target.slotted());",auto)
   self.assertIn("boolean[] accounted=new boolean[items.size()]",auto)
   self.assertIn("!insertions.containsKey(i)",auto)
   self.assertIn("if(found.kind()==2)",auto)
@@ -61,6 +61,8 @@ class AutonomousBuilderTests(unittest.TestCase):
   self.assertIn("be.setItem(0,ItemStack.EMPTY)",auto)
   self.assertIn("boolean moved=false;",auto)
   self.assertIn("CardStoreBoxAccess",auto)
+  self.assertIn('if(missing.isEmpty()&&be.getItem(0).isEmpty())',auto)
+  self.assertIn('if(missing.isEmpty()){\n   // Still hand a finished slotted deckbox to the shop',auto)
   self.assertNotIn("openMenu(",auto)
   self.assertNotIn("sendConfirm",auto)
 
