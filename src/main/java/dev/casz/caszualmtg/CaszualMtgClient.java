@@ -38,16 +38,19 @@ public final class CaszualMtgClient implements ClientModInitializer {
   net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.RACK_MENU,DeckboxRackScreen::new);
   net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.STAFF_RACK_MENU,StaffRackScreen::new);
   ScreenEvents.AFTER_INIT.register((mc,screen,w,h)->{
-   if(!(screen instanceof com.spider.mtgcard.client.gui.CardStoreScreen))return;
-   ScreenEvents.afterExtract(screen).register((s,g,mx,my,t)->{
-    var a=(ContainerAccess)s;
-    int px=a.companion$getLeftPos()+190,py=a.companion$getTopPos()+154;
-    GuiGraphics gg=new GuiGraphics(g);
+   if(!(screen instanceof com.spider.mtgcard.client.gui.CardStoreScreen store))return;
+   // MTGCard adjusts the virtual menu origin after calculating its panels.
+   // Re-anchor the extra deckbox slot to the live purchase button coordinates.
+   CardStoreDeckboxLayout.arrange(store);
+   ScreenEvents.afterExtract(screen).register((shown,graphics,mx,my,t)->{
+    int px=CardStoreDeckboxLayout.screenSlotX(store);
+    int py=CardStoreDeckboxLayout.screenSlotY(store);
+    GuiGraphics gg=new GuiGraphics(graphics);
     gg.fill(px-2,py-2,px+18,py,0xFFC2A66F);
     gg.fill(px-2,py+16,px+18,py+18,0xFFC2A66F);
     gg.fill(px-2,py,px,py+16,0xFFC2A66F);
     gg.fill(px+16,py,px+18,py+16,0xFFC2A66F);
-    gg.drawString(mc.font,"Deckbox output",px-15,py-13,0xFFFFDDA2);
+    gg.drawString(mc.font,"Deckbox output",px+24,py+4,0xFFFFDDA2);
    });
   });
   ClientPlayNetworking.registerGlobalReceiver(Wire.Reply.TYPE,(reply,ctx)->{if(reply.kind()==2){if(ctx.client().gui.screen() instanceof CommunityScreen screen&&screen.getMenu().pos.equals(reply.pos()))screen.update(reply);return;}if(reply.kind()==3){if(ctx.client().gui.screen() instanceof BuilderScreen screen&&screen.getMenu().pos.equals(reply.pos()))screen.update(reply);return;}if(ctx.client().gui.screen() instanceof BankScreen screen&&screen.pos.equals(reply.pos())&&screen.kind==reply.kind())screen.update(reply);else if(!(ctx.client().gui.screen() instanceof BankScreen))ctx.client().gui.setScreen(new BankScreen(reply));});
