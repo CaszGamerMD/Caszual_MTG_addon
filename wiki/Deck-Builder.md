@@ -6,7 +6,7 @@ The Deck Builder's front panel rotates to face the placing player; already-place
 
 - Put Land, Token and/or Community Card database blocks within **4 blocks in each direction** of the Deck Builder.
 - Insert an MTGCard deckbox in the Builder's output slot, **or** place a deckbox directly adjacent to the Builder. Automatic URL jobs use the inserted box first, otherwise the adjacent box. Existing cards in the box are counted so they are not duplicated.
-- A nearby MTGCard **Card Store** within 4 blocks automatically receives remaining card lines from a URL job. If the Builder has an inserted deckbox, the box transfers into the Store's output slot once it is empty.
+- A nearby MTGCard **Card Store** within 4 blocks automatically receives remaining card lines from a URL job. If the Builder has an inserted deckbox, it transfers to the Store's output slot once that slot is empty—even if no cards were missing.
 
 The builder reports which database kinds it can currently see.
 
@@ -59,7 +59,7 @@ After pressing **Import URL** once, the Deck Builder completes these stages auto
 1. Fetch and save the public/unlisted Archidekt main-deck list (or use a successful six-hour cached list).
 2. Scan the connected Land, Token and Community Card databases, resolving missing catalogue names online and storing available/requested status for every card in the Builder.
 3. Load available cards into the **inserted deckbox**, or into a directly **adjacent placed deckbox** if the output slot is empty. Existing cards count toward the request; regular Community stock is consumed only after deckbox insertion succeeds. Remaining cards, including any that cannot fit, become the shop list.
-4. Prepare the missing cards as a saved MTGCard Card Store cart for the player who started the import. If the output box was in the Builder's slot, transfer it into the Store's dedicated deckbox output slot for purchased cards. An adjacent placed deckbox stays where it is.
+4. Prepare any missing cards as a saved MTGCard Card Store cart for the importing player. Transfer a slotted deckbox into the Store's dedicated output slot **whether or not anything was missing**. An adjacent placed deckbox stays where it is.
 
 The player can **close the GUI or log off** after starting the job. The Builder itself runs the steps and records its stage and shopping list in its block data. Work resumes when its chunk is loaded/ticking, including after a server restart. If the Builder has no deckbox, or the Card Store cannot be found within four blocks, it waits and resumes automatically when the required block appears. If the Store's output already contains a deckbox, remove that box before the automatic handoff can finish.
 
