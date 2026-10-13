@@ -22,8 +22,8 @@ class FullscreenLayoutTests(unittest.TestCase):
     def test_dedicated_fullscreen_screen_geometry(self):
         for screen in ("BuilderScreen.java","CommunityScreen.java"):
             code=(SRC/screen).read_text()
-            self.assertIn("imageWidth=width;",code)
-            self.assertIn("imageHeight=height;",code)
+            self.assertIn("companion$setImageWidth(width)",code)
+            self.assertIn("companion$setImageHeight(height)",code)
             self.assertIn("FullScreenMenuLayout.positionInventory",code)
             self.assertNotIn("topPos+318",code)
             self.assertIn("renderBg",code)
