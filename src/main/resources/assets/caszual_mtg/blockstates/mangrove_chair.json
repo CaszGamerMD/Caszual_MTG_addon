@@ -13,7 +13,7 @@
       "when": {
         "facing": "north",
         "color": "white",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_white",
@@ -23,8 +23,19 @@
     {
       "when": {
         "facing": "north",
+        "color": "white",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_white",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "orange",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_orange",
@@ -34,8 +45,19 @@
     {
       "when": {
         "facing": "north",
+        "color": "orange",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_orange",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "magenta",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_magenta",
@@ -45,8 +67,19 @@
     {
       "when": {
         "facing": "north",
+        "color": "magenta",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_magenta",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "light_blue",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_light_blue",
@@ -56,8 +89,19 @@
     {
       "when": {
         "facing": "north",
+        "color": "light_blue",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_light_blue",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "yellow",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_yellow",
@@ -67,8 +111,19 @@
     {
       "when": {
         "facing": "north",
+        "color": "yellow",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_yellow",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "lime",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_lime",
@@ -78,8 +133,19 @@
     {
       "when": {
         "facing": "north",
+        "color": "lime",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_lime",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "pink",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_pink",
@@ -89,8 +155,19 @@
     {
       "when": {
         "facing": "north",
+        "color": "pink",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_pink",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "gray",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_gray",
@@ -100,8 +177,19 @@
     {
       "when": {
         "facing": "north",
+        "color": "gray",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_gray",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "light_gray",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_light_gray",
@@ -111,8 +199,19 @@
     {
       "when": {
         "facing": "north",
+        "color": "light_gray",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_light_gray",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "cyan",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_cyan",
@@ -122,8 +221,19 @@
     {
       "when": {
         "facing": "north",
+        "color": "cyan",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_cyan",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "purple",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_purple",
@@ -133,8 +243,19 @@
     {
       "when": {
         "facing": "north",
+        "color": "purple",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_purple",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "blue",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_blue",
@@ -144,8 +265,19 @@
     {
       "when": {
         "facing": "north",
+        "color": "blue",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_blue",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "brown",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_brown",
@@ -155,8 +287,19 @@
     {
       "when": {
         "facing": "north",
+        "color": "brown",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_brown",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "green",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_green",
@@ -166,8 +309,19 @@
     {
       "when": {
         "facing": "north",
+        "color": "green",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_green",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "red",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_red",
@@ -177,11 +331,33 @@
     {
       "when": {
         "facing": "north",
+        "color": "red",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_red",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
         "color": "black",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_black",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "color": "black",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_black",
         "y": 0
       }
     },
@@ -198,7 +374,7 @@
       "when": {
         "facing": "east",
         "color": "white",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_white",
@@ -208,8 +384,19 @@
     {
       "when": {
         "facing": "east",
+        "color": "white",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_white",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "orange",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_orange",
@@ -219,8 +406,19 @@
     {
       "when": {
         "facing": "east",
+        "color": "orange",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_orange",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "magenta",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_magenta",
@@ -230,8 +428,19 @@
     {
       "when": {
         "facing": "east",
+        "color": "magenta",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_magenta",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "light_blue",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_light_blue",
@@ -241,8 +450,19 @@
     {
       "when": {
         "facing": "east",
+        "color": "light_blue",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_light_blue",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "yellow",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_yellow",
@@ -252,8 +472,19 @@
     {
       "when": {
         "facing": "east",
+        "color": "yellow",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_yellow",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "lime",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_lime",
@@ -263,8 +494,19 @@
     {
       "when": {
         "facing": "east",
+        "color": "lime",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_lime",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "pink",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_pink",
@@ -274,8 +516,19 @@
     {
       "when": {
         "facing": "east",
+        "color": "pink",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_pink",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "gray",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_gray",
@@ -285,8 +538,19 @@
     {
       "when": {
         "facing": "east",
+        "color": "gray",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_gray",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "light_gray",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_light_gray",
@@ -296,8 +560,19 @@
     {
       "when": {
         "facing": "east",
+        "color": "light_gray",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_light_gray",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "cyan",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_cyan",
@@ -307,8 +582,19 @@
     {
       "when": {
         "facing": "east",
+        "color": "cyan",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_cyan",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "purple",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_purple",
@@ -318,8 +604,19 @@
     {
       "when": {
         "facing": "east",
+        "color": "purple",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_purple",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "blue",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_blue",
@@ -329,8 +626,19 @@
     {
       "when": {
         "facing": "east",
+        "color": "blue",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_blue",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "brown",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_brown",
@@ -340,8 +648,19 @@
     {
       "when": {
         "facing": "east",
+        "color": "brown",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_brown",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "green",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_green",
@@ -351,8 +670,19 @@
     {
       "when": {
         "facing": "east",
+        "color": "green",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_green",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "red",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_red",
@@ -362,11 +692,33 @@
     {
       "when": {
         "facing": "east",
+        "color": "red",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_red",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
         "color": "black",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_black",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "color": "black",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_black",
         "y": 90
       }
     },
@@ -383,7 +735,7 @@
       "when": {
         "facing": "south",
         "color": "white",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_white",
@@ -393,8 +745,19 @@
     {
       "when": {
         "facing": "south",
+        "color": "white",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_white",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "orange",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_orange",
@@ -404,8 +767,19 @@
     {
       "when": {
         "facing": "south",
+        "color": "orange",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_orange",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "magenta",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_magenta",
@@ -415,8 +789,19 @@
     {
       "when": {
         "facing": "south",
+        "color": "magenta",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_magenta",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "light_blue",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_light_blue",
@@ -426,8 +811,19 @@
     {
       "when": {
         "facing": "south",
+        "color": "light_blue",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_light_blue",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "yellow",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_yellow",
@@ -437,8 +833,19 @@
     {
       "when": {
         "facing": "south",
+        "color": "yellow",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_yellow",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "lime",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_lime",
@@ -448,8 +855,19 @@
     {
       "when": {
         "facing": "south",
+        "color": "lime",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_lime",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "pink",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_pink",
@@ -459,8 +877,19 @@
     {
       "when": {
         "facing": "south",
+        "color": "pink",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_pink",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "gray",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_gray",
@@ -470,8 +899,19 @@
     {
       "when": {
         "facing": "south",
+        "color": "gray",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_gray",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "light_gray",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_light_gray",
@@ -481,8 +921,19 @@
     {
       "when": {
         "facing": "south",
+        "color": "light_gray",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_light_gray",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "cyan",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_cyan",
@@ -492,8 +943,19 @@
     {
       "when": {
         "facing": "south",
+        "color": "cyan",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_cyan",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "purple",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_purple",
@@ -503,8 +965,19 @@
     {
       "when": {
         "facing": "south",
+        "color": "purple",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_purple",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "blue",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_blue",
@@ -514,8 +987,19 @@
     {
       "when": {
         "facing": "south",
+        "color": "blue",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_blue",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "brown",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_brown",
@@ -525,8 +1009,19 @@
     {
       "when": {
         "facing": "south",
+        "color": "brown",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_brown",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "green",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_green",
@@ -536,8 +1031,19 @@
     {
       "when": {
         "facing": "south",
+        "color": "green",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_green",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "red",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_red",
@@ -547,11 +1053,33 @@
     {
       "when": {
         "facing": "south",
+        "color": "red",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_red",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
         "color": "black",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_black",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "color": "black",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_black",
         "y": 180
       }
     },
@@ -568,7 +1096,7 @@
       "when": {
         "facing": "west",
         "color": "white",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_white",
@@ -578,8 +1106,19 @@
     {
       "when": {
         "facing": "west",
+        "color": "white",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_white",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "orange",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_orange",
@@ -589,8 +1128,19 @@
     {
       "when": {
         "facing": "west",
+        "color": "orange",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_orange",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "magenta",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_magenta",
@@ -600,8 +1150,19 @@
     {
       "when": {
         "facing": "west",
+        "color": "magenta",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_magenta",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "light_blue",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_light_blue",
@@ -611,8 +1172,19 @@
     {
       "when": {
         "facing": "west",
+        "color": "light_blue",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_light_blue",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "yellow",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_yellow",
@@ -622,8 +1194,19 @@
     {
       "when": {
         "facing": "west",
+        "color": "yellow",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_yellow",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "lime",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_lime",
@@ -633,8 +1216,19 @@
     {
       "when": {
         "facing": "west",
+        "color": "lime",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_lime",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "pink",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_pink",
@@ -644,8 +1238,19 @@
     {
       "when": {
         "facing": "west",
+        "color": "pink",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_pink",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "gray",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_gray",
@@ -655,8 +1260,19 @@
     {
       "when": {
         "facing": "west",
+        "color": "gray",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_gray",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "light_gray",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_light_gray",
@@ -666,8 +1282,19 @@
     {
       "when": {
         "facing": "west",
+        "color": "light_gray",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_light_gray",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "cyan",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_cyan",
@@ -677,8 +1304,19 @@
     {
       "when": {
         "facing": "west",
+        "color": "cyan",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_cyan",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "purple",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_purple",
@@ -688,8 +1326,19 @@
     {
       "when": {
         "facing": "west",
+        "color": "purple",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_purple",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "blue",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_blue",
@@ -699,8 +1348,19 @@
     {
       "when": {
         "facing": "west",
+        "color": "blue",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_blue",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "brown",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_brown",
@@ -710,8 +1370,19 @@
     {
       "when": {
         "facing": "west",
+        "color": "brown",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_brown",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "green",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_green",
@@ -721,8 +1392,19 @@
     {
       "when": {
         "facing": "west",
+        "color": "green",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_green",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "red",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_red",
@@ -732,11 +1414,33 @@
     {
       "when": {
         "facing": "west",
+        "color": "red",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_red",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
         "color": "black",
-        "cushion": "wool|leather|paper"
+        "cushion": "wool|paper"
       },
       "apply": {
         "model": "caszual_mtg:block/chair_cushion_black",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "color": "black",
+        "cushion": "leather"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/chair_cushion_leather_black",
         "y": 270
       }
     }
