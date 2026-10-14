@@ -22,7 +22,7 @@ public final class TabletopWire {
  public record Tile(BlockPos pos,String owner,int color,int life,boolean hasLife,boolean active) {}
  public record Card(BlockPos pos,String id,String owner,ItemStack stack,int x,int y,boolean tapped,boolean hidden) {}
  public record ZoneCard(int slot,ItemStack stack) {}
- public record Reply(BlockPos pos,String message,BlockPos seat,List<Tile> tiles,List<Card> cards,List<ItemStack> hand,int libraryCount,List<ZoneCard> grave,List<ZoneCard> exile,List<ItemStack> scry,ItemStack commander) implements CustomPacketPayload {
+ public record Reply(BlockPos pos,String message,BlockPos seat,List<Tile> tiles,List<Card> cards,List<ItemStack> hand,int libraryCount,List<ZoneCard> grave,List<ZoneCard> exile,List<ItemStack> scry,List<ItemStack> reveal,ItemStack commander) implements CustomPacketPayload {
   public static final Type<Reply> TYPE=new Type<>(CaszualMtg.id("tabletop_reply"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Reply> CODEC=StreamCodec.of((b,p)->{
    b.writeBlockPos(p.pos);b.writeUtf(p.message,512);b.writeBlockPos(p.seat);
@@ -38,6 +38,7 @@ public final class TabletopWire {
     b.writeVarInt(zone.size());for(ZoneCard c:zone){b.writeVarInt(c.slot);ItemStack.OPTIONAL_STREAM_CODEC.encode(b,c.stack);}
    }
    b.writeVarInt(p.scry.size());for(ItemStack s:p.scry)ItemStack.OPTIONAL_STREAM_CODEC.encode(b,s);
+   b.writeVarInt(p.reveal.size());for(ItemStack s:p.reveal)ItemStack.OPTIONAL_STREAM_CODEC.encode(b,s);
    ItemStack.OPTIONAL_STREAM_CODEC.encode(b,p.commander);
   },b->{
    BlockPos pos=b.readBlockPos();String message=b.readUtf(512);BlockPos seat=b.readBlockPos();
@@ -55,8 +56,10 @@ public final class TabletopWire {
    }
    n=b.readVarInt();if(n<0||n>7)throw new IllegalArgumentException("Too many scry cards");
    List<ItemStack> scry=new ArrayList<>();for(int i=0;i<n;i++)scry.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(b));
+   n=b.readVarInt();if(n<0||n>20)throw new IllegalArgumentException("Too many revealed cards");
+   List<ItemStack> reveal=new ArrayList<>();for(int i=0;i<n;i++)reveal.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(b));
    ItemStack commander=ItemStack.OPTIONAL_STREAM_CODEC.decode(b);
-   return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),commander);
+   return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),List.copyOf(reveal),commander);
   });
   public Type<Reply> type(){return TYPE;}
  }
