@@ -6,4 +6,8 @@ import net.minecraft.world.item.ItemStack;
 public interface CardStoreBoxAccess {
  ItemStack caszual$getDeckbox();
  void caszual$setDeckbox(ItemStack stack);
+ int caszual$inserted();
+ int caszual$total();
+ int caszual$overflow();
+ long caszual$finishedAt();
 }
