@@ -10,6 +10,7 @@
     "caszual_mtg:deckbox_rack",
     "caszual_mtg:staff_rack",
     "caszual_mtg:counter",
-    "caszual_mtg:targeting_staff"
+    "caszual_mtg:targeting_staff",
+    "caszual_mtg:tabletop"
   ]
 }
