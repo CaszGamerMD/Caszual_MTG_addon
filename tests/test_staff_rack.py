@@ -38,7 +38,13 @@ class StaffRackTests(unittest.TestCase):
         self.assertEqual({states["variants"][k]["y"] for k in states["variants"]},
                          {0, 90, 180, 270})
         block_model = json.loads((ASSETS / "models/block/staff_rack.json").read_text())
-        self.assertGreaterEqual(len(block_model["elements"]), 11)
+        self.assertEqual(len(block_model["elements"]), 7, "Wood rail plus four dark brackets, without iron hooks")
+        self.assertNotIn("hook", block_model["textures"])
+        for bracket in block_model["elements"][3:]:
+            self.assertEqual(bracket["from"][1],10)
+            self.assertEqual(bracket["to"][1],11)
+            self.assertEqual(bracket["to"][2],13)
+            self.assertTrue(all(face["texture"]=="#steel" for face in bracket["faces"].values()))
         for element in block_model["elements"]:
             self.assertTrue(all(0 <= v <= 16 for v in element["from"]))
             self.assertTrue(all(0 <= v <= 16 for v in element["to"]))
