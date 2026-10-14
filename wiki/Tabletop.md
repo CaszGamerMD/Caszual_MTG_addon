@@ -24,8 +24,13 @@ The Card Hand UI also has a **#RRGGBB table color** setting. The tabletop UI use
 
 ## Wooden chairs
 
-Twelve standard wood types are available: oak, spruce, birch, jungle, acacia, dark oak, mangrove, cherry, bamboo, crimson, warped and pale oak. Craft a chair from six matching planks in the pattern `P  / PPP / P P`. Right-click the placed chair with:
+Chairs are now **material-driven**, like Caszual Additions' material-based storage models. Craft the single **Custom Wood Chair** using **six copies of the same wood block**, in the original 3×3 chair pattern `P  / PPP / P P`.
 
+The recipe accepts **planks, logs, stripped logs, wood blocks, stems, stripped stems and hyphae**, including appropriately tagged or named modded wood blocks. The crafted chair remembers the exact block ID (for example `minecraft:oak_log`, `minecraft:stripped_oak_log` or `minecraft:oak_planks`) and uses that block's texture. Its inventory model and placed appearance follow the stored ID. Right-click the placed generic chair with a new wood block to reskin it, consuming one block in survival. Pick-block and drops preserve the wood data.
+
+Older wood-specific chair blocks and saved worlds remain compatible. Their original registry IDs are still supported, but new crafting uses the material-driven chair.
+
+Right-click a chair with:
 - **Wool:** add a cushion matching the wool's color.
 - **Leather:** add a brown leather cushion. Right-click again with a dye to recolor it.
 - **Paper:** add an automatic playmat-matched cushion. When placed beside an MTG Tabletop at the same level, the cushion follows that table's felt color, including later changes from the linked Card Hand.
