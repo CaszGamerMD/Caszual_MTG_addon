@@ -49,6 +49,21 @@ public final class CaszualMtg implements ModInitializer {
   Registry.register(BuiltInRegistries.ITEM,ik,new BlockItem(block,new Item.Properties().setId(ik).useBlockDescriptionPrefix().stacksTo(1)));
   return block;
  }
+ public static final net.minecraft.core.component.DataComponentType<String> CHAIR_MATERIAL=Registry.register(
+  BuiltInRegistries.DATA_COMPONENT_TYPE,id("chair_material"),
+  net.minecraft.core.component.DataComponentType.<String>builder()
+   .persistent(com.mojang.serialization.Codec.STRING)
+   .networkSynchronized(net.minecraft.network.codec.StreamCodec.of((b,v)->b.writeUtf(v,256),b->b.readUtf(256)))
+   .build());
+ public static final ChairBlock MATERIAL_CHAIR=materialChair();
+ static ChairBlock materialChair(){
+  var key=ResourceKey.create(Registries.BLOCK,id("material_chair"));
+  ChairBlock block=Registry.register(BuiltInRegistries.BLOCK,key,
+    new ChairBlock("dynamic",BlockBehaviour.Properties.of().setId(key).strength(2.0f).noOcclusion().sound(net.minecraft.world.level.block.SoundType.WOOD)));
+  var itemKey=ResourceKey.create(Registries.ITEM,id("material_chair"));
+  Registry.register(BuiltInRegistries.ITEM,itemKey,new ChairBlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));
+  return block;
+ }
  public static final Map<String,ChairBlock> CHAIRS=chairs();
  static Map<String,ChairBlock> chairs(){
   Map<String,ChairBlock> list=new LinkedHashMap<>();
@@ -65,6 +80,15 @@ public final class CaszualMtg implements ModInitializer {
   }
   return Collections.unmodifiableMap(list);
  }
+ public static final BlockEntityType<ChairBlockEntity> CHAIR_BE=chairEntityType();
+ static BlockEntityType<ChairBlockEntity> chairEntityType(){
+  var blocks=new ArrayList<Block>();
+  blocks.add(MATERIAL_CHAIR);blocks.addAll(CHAIRS.values());
+  return Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,id("chair"),
+   FabricBlockEntityTypeBuilder.create(ChairBlockEntity::new,blocks.toArray(new Block[0])).build());
+ }
+ public static final net.minecraft.world.item.crafting.RecipeSerializer<ChairRecipe> CHAIR_RECIPE=
+  Registry.register(BuiltInRegistries.RECIPE_SERIALIZER,id("chair_material"),ChairRecipe.SERIALIZER);
  public static final HandBlock HAND=handBlock();
  public static final BlockEntityType<HandBlockEntity> HAND_BE=Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,id("hand_block"),FabricBlockEntityTypeBuilder.create(HandBlockEntity::new,HAND).build());
  static HandBlock handBlock(){var key=ResourceKey.create(Registries.BLOCK,id("hand_block"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new HandBlock(BlockBehaviour.Properties.of().setId(key).strength(2.0f).sound(net.minecraft.world.level.block.SoundType.WOOD)));var itemKey=ResourceKey.create(Registries.ITEM,id("hand_block"));Registry.register(BuiltInRegistries.ITEM,itemKey,new BlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));return block;}
@@ -109,7 +133,7 @@ public final class CaszualMtg implements ModInitializer {
   PayloadTypeRegistry.serverboundPlay().register(Wire.Request.TYPE,Wire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(Wire.Reply.TYPE,Wire.Reply.CODEC);PayloadTypeRegistry.serverboundPlay().register(HandWire.Request.TYPE,HandWire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(HandWire.Reply.TYPE,HandWire.Reply.CODEC);PayloadTypeRegistry.clientboundPlay().register(DeckboxRefreshWire.Refresh.TYPE,DeckboxRefreshWire.Refresh.CODEC);
   ServerPlayNetworking.registerGlobalReceiver(Wire.Request.TYPE,(req,ctx)->ServerLogic.handle(ctx.player(),req));ServerPlayNetworking.registerGlobalReceiver(HandWire.Request.TYPE,(req,ctx)->HandLogic.handle(ctx.player(),req));
   ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);TabletopLogic.close(h.player);StaffTargets.clearAllForDisconnect(h.player);});
-  CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(HAND);e.accept(RACK);e.accept(STAFF_RACK);e.accept(TABLETOP);for(var chair:CHAIRS.values())e.accept(chair);});
+  CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(HAND);e.accept(RACK);e.accept(STAFF_RACK);e.accept(TABLETOP);e.accept(MATERIAL_CHAIR);for(var chair:CHAIRS.values())e.accept(chair);});
   UseEntityCallback.EVENT.register((p,l,hand,e,hit)->{
    if(p.getItemInHand(hand).is(TARGETING_STAFF)){
     if(!l.isClientSide()&&p instanceof ServerPlayer sp)StaffTargets.mark(sp,e,StaffTargets.Color.ORANGE);
