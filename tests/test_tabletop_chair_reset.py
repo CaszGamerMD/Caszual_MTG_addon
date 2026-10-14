@@ -17,20 +17,15 @@ def read(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 class TabletopChairAndResetTests(unittest.TestCase):
-    def test_wood_models_and_recipes(self):
+    def test_one_generic_chair_and_no_old_registered_wood_ids(self):
+        common=(JAVA/"CaszualMtg.java").read_text(encoding="utf-8")
+        self.assertNotIn("CHAIRS=chairs()",common)
+        self.assertIn("MATERIAL_CHAIR=materialChair()",common)
+        self.assertIn("FabricBlockEntityTypeBuilder.create(ChairBlockEntity::new,MATERIAL_CHAIR)",common)
         for wood in WOODS:
-            with self.subTest(wood=wood):
-                name=wood+"_chair"
-                model=read(ASSETS/f"models/block/{name}.json")
-                self.assertEqual(model["textures"]["wood"],f"minecraft:block/{wood}_planks")
-                self.assertTrue(any(e["to"][1]==8 and e["from"][1]==7 for e in model["elements"]),
-                                "Seat should be at eight model pixels, the height of a slab")
-                states=read(ASSETS/f"blockstates/{name}.json")["multipart"]
-                self.assertEqual(len(states),4*(2*len(COLORS)+1))
-                # Old identifiers remain valid for already placed chairs, but
-                # a single universal recipe now crafts the material-bearing chair.
-                self.assertFalse((DATA/f"recipe/{name}.json").exists())
-                self.assertEqual(read(ASSETS/f"items/{name}.json")["model"]["model"],f"caszual_mtg:block/{name}")
+            self.assertNotIn(f'"{wood}_chair"',common)
+            self.assertFalse((DATA/f"recipe/{wood}_chair.json").exists())
+
     def test_dynamic_chair_recipe_and_source_materials(self):
         recipe=read(DATA/"recipe/material_chair.json")
         self.assertEqual(recipe["type"],"caszual_mtg:chair_material")
