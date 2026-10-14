@@ -37,7 +37,8 @@ public final class ChairSeats {
  public static void tick(ServerLevel world){
   var iterator=ACTIVE.entrySet().iterator();
   while(iterator.hasNext()){
-   var entry=iterator.next(),e=entry.getValue();
+   var entry=iterator.next();
+   var e=entry.getValue();
    if(e.world!=world)continue;
    var mount=e.mount();
    boolean valid=mount.isAlive()&&world.getBlockState(e.pos()).getBlock() instanceof ChairBlock
