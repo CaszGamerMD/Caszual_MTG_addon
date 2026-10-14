@@ -30,6 +30,11 @@ public final class TabletopBlockEntity extends BlockEntity {
  }
  private UUID seatOwner;
  private String seatName="";
+ /** Original commander identity is preserved even when the physical card moves zones. */
+ private ItemStack commanderReference=ItemStack.EMPTY;
+ public ItemStack commanderReference(){return commanderReference.copy();}
+ public void rememberCommander(ItemStack card){if(card!=null&&!card.isEmpty()){commanderReference=card.copyWithCount(1);setChanged();}}
+
  private final List<PlayedCard> cards=new ArrayList<>();
  public TabletopBlockEntity(BlockPos pos,BlockState state){super(CaszualMtg.TABLETOP_BE,pos,state);}
  public UUID seatOwner(){return seatOwner;}
@@ -69,12 +74,14 @@ public final class TabletopBlockEntity extends BlockEntity {
   super.saveAdditional(out);
   if(seatOwner!=null)out.putString("SeatOwner",seatOwner.toString());
   out.putString("SeatName",seatName);
+  if(!commanderReference.isEmpty())out.store("CommanderReference",ItemStack.CODEC,commanderReference);
   out.store("PlayedCards",PlayedCard.CODEC.listOf(),cards);
  }
  @Override protected void loadAdditional(ValueInput in){
   super.loadAdditional(in);seatOwner=null;
   try{String s=in.getStringOr("SeatOwner","");if(!s.isBlank())seatOwner=UUID.fromString(s);}catch(IllegalArgumentException ignored){}
   seatName=in.getStringOr("SeatName","");
+  commanderReference=in.read("CommanderReference",ItemStack.CODEC).orElse(ItemStack.EMPTY);
   cards.clear();
   for(PlayedCard c:in.read("PlayedCards",PlayedCard.CODEC.listOf()).orElse(List.of())){
    if(cards.size()<MAX_CARDS&&!c.stack().isEmpty()&&c.stack().is(com.spider.mtgcard.item.ModItemTags.TCG_CARD))
