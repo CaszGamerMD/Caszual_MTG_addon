@@ -42,7 +42,7 @@ public final class TabletopScreen extends LegacyScreen {
  int cardTop(){return bottomY()+38;}
  int columns(){return Math.max(1,(boardW()-16)/83);}
  int visibleRows(){return Math.max(1,(height-cardTop()-23)/112);}
- boolean playing(){return data.tiles().stream().anyMatch(t->t.pos().equals(data.seat())&&!t.owner().isBlank());}
+ boolean playing(){return Minecraft.getInstance().player!=null&&data.tiles().stream().anyMatch(t->t.pos().equals(data.seat())&&t.owner().equals(Minecraft.getInstance().player.getGameProfile().name()));}
  void button(String label,int px,int py,int pw,Runnable action){
   addRenderableWidget(Button.builder(Component.literal(label),b->action.run()).bounds(px,py,pw,20).build());
  }
