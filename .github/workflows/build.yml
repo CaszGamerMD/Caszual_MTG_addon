@@ -65,6 +65,9 @@ jobs:
       - name: Validate tabletop chairs, cushion colors and commander reset
         run: python3 -m unittest discover -s tests -p 'test_tabletop_chair_reset.py' -v
 
+      - name: Validate dynamic material-chair crafting and textures
+        run: python3 -m unittest discover -s tests -p 'test_chair_material.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
