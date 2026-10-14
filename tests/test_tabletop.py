@@ -18,7 +18,8 @@ class TabletopAssetsTest(unittest.TestCase):
         model=json.loads((ASSETS/"models/block/tabletop.json").read_text())
         recipe=json.loads((DATA/"recipe/tabletop.json").read_text())
         loot=json.loads((DATA/"loot_table/blocks/tabletop.json").read_text())
-        self.assertEqual(state["variants"][""]["model"],"caszual_mtg:block/tabletop")
+        self.assertEqual(len([entry for entry in state["multipart"] if "felt" in entry["when"]]),16)
+        self.assertEqual(len([entry for entry in state["multipart"] if "cards" in entry["when"]]),4)
         self.assertEqual(item["model"]["model"],"caszual_mtg:item/tabletop")
         self.assertTrue(any(e["faces"].get("up",{}).get("texture")=="#felt" for e in model["elements"]))
         self.assertEqual(recipe["result"]["id"],"caszual_mtg:tabletop")
@@ -48,10 +49,13 @@ class TabletopAssetsTest(unittest.TestCase):
 
     def test_screen_has_battlefield_and_private_zone_tabs(self):
         screen=self.source("TabletopScreen.java")
-        for label in ("Hand (","Grave (","Exile (","Deck actions","Card actions","Draw 1",
-                      "Draw 7","Scry 1","Scry 3","Mill 1","Mill 5","Shuffle deck"):
+        for label in ("Hand","GY","Exile","Draw","Draw 7","Scry 1","Scry 3","Mill","Mill 5",
+                      "Shuffle","Pass Turn","COMMANDER","mouseReleased(MouseButtonEvent"):
             self.assertIn(label,screen)
-        self.assertIn("cardTop()",screen)
+        self.assertIn("handTop()",screen)
+        self.assertIn("boardHit(mx,my)",screen)
+        self.assertIn("drag=new Drag",screen)
+        self.assertIn("lifeLink()",self.source("HandScreen.java"))
 
 if __name__=="__main__":
     unittest.main()
