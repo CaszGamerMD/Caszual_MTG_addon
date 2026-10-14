@@ -68,6 +68,9 @@ jobs:
       - name: Validate dynamic material-chair crafting and textures
         run: python3 -m unittest discover -s tests -p 'test_chair_material.py' -v
 
+      - name: Validate material-driven tabletop and obsolete chair cleanup
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_wood.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
