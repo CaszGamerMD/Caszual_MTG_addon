@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "decoration",
+  "pattern": [
+    "P  ",
+    "PPP",
+    "P P"
+  ],
+  "key": {
+    "P": "minecraft:birch_planks"
+  },
+  "result": {
+    "id": "caszual_mtg:birch_chair",
+    "count": 1
+  }
+}
