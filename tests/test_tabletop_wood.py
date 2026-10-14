@@ -15,7 +15,7 @@ class MaterialTableTests(unittest.TestCase):
   self.assertEqual(recipe["type"],"caszual_mtg:tabletop_material")
   source=code("TabletopRecipe.java")
   for token in ("ChairWood.eligible(item)","ChairWood.fromItem(item)","source.equals(current)",
-                "Blocks.GREEN_WOOL.asItem()","Items.STICK","table.set(CaszualMtg.TABLE_MATERIAL,id)"):
+                "minecraft:green_wool","Items.STICK","table.set(CaszualMtg.TABLE_MATERIAL,id)"):
    self.assertIn(token,source)
  def test_table_wood_persists_without_changing_battlefield_storage(self):
   block=code("TabletopBlock.java")
