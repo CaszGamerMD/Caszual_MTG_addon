@@ -495,6 +495,7 @@ public final class TabletopLogic {
    var state=tile.getBlockState();
    if(state.hasProperty(TabletopBlock.FELT)&&state.getValue(TabletopBlock.FELT)!=desired)
     player.level().setBlock(pos,state.setValue(TabletopBlock.FELT,desired),3);
+   ChairBlock.refreshNextToTable(player.level(),pos);
   }
  }
  private static net.minecraft.world.item.DyeColor nearestDye(int rgb){
@@ -524,6 +525,7 @@ public final class TabletopLogic {
    if(state.hasProperty(TabletopBlock.FELT)){
     var desired=nearestDye(color);
     if(state.getValue(TabletopBlock.FELT)!=desired)player.level().setBlock(t.getBlockPos(),state.setValue(TabletopBlock.FELT,desired),3);
+    ChairBlock.refreshNextToTable(player.level(),t.getBlockPos());
    }
    tiles.add(new TabletopWire.Tile(t.getBlockPos(),t.seatName(),color,lp==null?0:lp.getLife(),lp!=null,lp!=null&&lp.isTurnActive()));
    for(var card:t.cards()){
