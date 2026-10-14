@@ -66,8 +66,8 @@ class TabletopAssetsTest(unittest.TestCase):
 
     def test_screen_has_battlefield_and_private_zone_tabs(self):
         screen=self.source("TabletopScreen.java")
-        for label in ("Hand","GY","Exile","Draw","Draw 7","Scry 1","Scry 3","Mill","Mill 5",
-                      "Shuffle","Pass Turn","COMMANDER","mouseReleased(MouseButtonEvent"):
+        for label in ("Hand","GY","Exile","Draw","Draw X","Mulligan","Scry X","Mill X",
+                      "Shuffle","Search","Reveal X","RESET","Pass Turn","COMMANDER","mouseReleased(MouseButtonEvent"):
             self.assertIn(label,screen)
         self.assertIn("handTop()",screen)
         self.assertIn("boardHit(mx,my)",screen)
