@@ -31,10 +31,39 @@
           "texture": "#wood"
         },
         "up": {
-          "texture": "#felt"
+          "texture": "#wood"
         },
         "down": {
           "texture": "#wood"
+        }
+      }
+    },
+    {
+      "from": [
+        1,
+        14.02,
+        1
+      ],
+      "to": [
+        15,
+        14.14,
+        15
+      ],
+      "faces": {
+        "up": {
+          "texture": "#felt"
+        },
+        "north": {
+          "texture": "#felt"
+        },
+        "south": {
+          "texture": "#felt"
+        },
+        "east": {
+          "texture": "#felt"
+        },
+        "west": {
+          "texture": "#felt"
         }
       }
     },
