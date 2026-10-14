@@ -123,6 +123,7 @@ public final class CaszualMtg implements ModInitializer {
    }
   });
   UseBlockCallback.EVENT.register((p,l,hand,hit)->{
+   if(p instanceof ServerPlayer sp&&l.getBlockEntity(hit.getBlockPos()) instanceof com.spider.mtgcard.life.LifePointBlockEntity&&HandLogic.completePendingLifeLink(sp,hit.getBlockPos()))return InteractionResult.SUCCESS;
    if(p instanceof ServerPlayer sp&&l.getBlockEntity(hit.getBlockPos()) instanceof DeckControlBlockEntity&&HandLogic.completePendingLink(sp,hit.getBlockPos()))return InteractionResult.SUCCESS;
    if(l.getBlockState(hit.getBlockPos()).is(CUSTOM_BOX)&&p.isShiftKeyDown()&&p.getItemInHand(hand).getItem() instanceof BlockItem)return CUSTOM_BOX.applyMaterial(p.getItemInHand(hand),l,hit.getBlockPos(),p);
    return InteractionResult.PASS;
