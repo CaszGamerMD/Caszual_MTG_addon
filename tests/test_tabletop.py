@@ -22,7 +22,7 @@ class TabletopAssetsTest(unittest.TestCase):
         self.assertEqual(len([entry for entry in state["multipart"] if "cards" in entry["when"]]),4)
         self.assertEqual(item["model"]["model"],"caszual_mtg:item/tabletop")
         self.assertTrue(any(e["faces"].get("up",{}).get("texture")=="#felt" for e in model["elements"]))
-        self.assertEqual(recipe["result"]["id"],"caszual_mtg:tabletop")
+        self.assertEqual(recipe["type"],"caszual_mtg:tabletop_material")
         self.assertEqual(loot["pools"][0]["entries"][0]["name"],"caszual_mtg:tabletop")
 
     def test_registration_and_creative_tag(self):
