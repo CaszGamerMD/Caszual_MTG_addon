@@ -10,5 +10,7 @@
   "block.caszual_mtg.deckbox_rack": "Deckbox Rack",
   "item.caszual_mtg.deckbox_rack": "Deckbox Rack",
   "block.caszual_mtg.staff_rack": "Staff Rack",
-  "item.caszual_mtg.staff_rack": "Staff Rack"
+  "item.caszual_mtg.staff_rack": "Staff Rack",
+  "block.caszual_mtg.tabletop": "MTG Tabletop",
+  "item.caszual_mtg.tabletop": "MTG Tabletop"
 }
