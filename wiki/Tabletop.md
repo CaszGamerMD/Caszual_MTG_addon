@@ -8,7 +8,7 @@ To play with cards, put your **Card Hand** within eight blocks of your seat. In 
 
 In the Card Hand UI, use **Link Life Point**, then right-click your MTGCard Life Point block (within eight blocks of your Hand). Each tabletop player can link a separate Life Point. This reads live health and turn status from the existing MTGCard group system — no duplicate scoreboard. **Pass Turn** works for the currently active player in a started Life Point game, using MTGCard's regular group progression.
 
-The Card Hand UI also has a **#RRGGBB table color** setting. The tabletop UI uses the full color, and the block in the world uses the closest of 16 wool colors.
+The Card Hand UI also has a **#RRGGBB table color** setting. The tabletop UI uses the full color, and the playmat on the block in the world uses the closest of 16 wool colors. The surrounding wood frame is independently customizable.
 
 ## Play screen
 
@@ -22,13 +22,27 @@ The Card Hand UI also has a **#RRGGBB table color** setting. The tabletop UI use
 - **Library count:** The screen displays the linked Deck Control's remaining library count.
 - **World appearance:** a wooden tabletop has an inset colored playmat, leaving a one-pixel wooden edge. A block with cards on its battlefield displays up to four tiny generic, face-down card markers above the mat. These are intentionally not legible actual card art. The world playmat uses the closest of Minecraft's 16 wool colors to the Card Hand's full RGB setting.
 
+## Material-driven wooden tables
+
+The original `caszual_mtg:tabletop` block ID is retained to protect multiplayer seats, battlefield cards, owners, and commander references already saved in worlds. Its **frame wood** now stores the registry ID of the crafting material as a persistent item component and block-entity value. Existing tables without saved wood data default to dark oak.
+
+Craft an MTG Tabletop using **five matching planks/logs/stripped wood blocks**, one green wool block, and two sticks:
+
+```text
+Wood   Wood        Wood
+Wood   Green Wool  Wood
+Stick  (empty)     Stick
+```
+
+Wood choices use the same vanilla/modded compatibility logic as chairs. The texture changes on the wooden top border, sides, and legs, while the colored felt mat and miniature card markers remain separate. Sneak-right-click an existing table with any eligible wood to swap its frame texture (consumes one block in survival). Pick-block and table drops preserve the selected wood.
+
 ## Wooden chairs
 
 Chairs are now **material-driven**, like Caszual Additions' material-based storage models. Craft the single **Custom Wood Chair** using **six copies of the same wood block**, in the original 3×3 chair pattern `P  / PPP / P P`.
 
 The recipe accepts **planks, logs, stripped logs, wood blocks, stems, stripped stems and hyphae**, including appropriately tagged or named modded wood blocks. The crafted chair remembers the exact block ID (for example `minecraft:oak_log`, `minecraft:stripped_oak_log` or `minecraft:oak_planks`) and uses that block's texture. Its inventory model and placed appearance follow the stored ID. Right-click the placed generic chair with a new wood block to reskin it, consuming one block in survival. Pick-block and drops preserve the wood data.
 
-Older wood-specific chair blocks and saved worlds remain compatible. Their original registry IDs are still supported, but new crafting uses the material-driven chair.
+The twelve retired wood-specific chair IDs and their assets are now removed. Only `caszual_mtg:material_chair` remains. Back up your world and replace any old chair variants before upgrading: retired blocks already placed in a world will not resolve after removal.
 
 Right-click a chair with:
 - **Wool:** add a cushion matching the wool's color.
