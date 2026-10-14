@@ -65,7 +65,7 @@ public final class CaszualMtg implements ModInitializer {
  static ChairBlock materialChair(){
   var key=ResourceKey.create(Registries.BLOCK,id("material_chair"));
   ChairBlock block=Registry.register(BuiltInRegistries.BLOCK,key,
-    new ChairBlock("dynamic",BlockBehaviour.Properties.of().setId(key).strength(2.0f).noOcclusion().sound(net.minecraft.world.level.block.SoundType.WOOD)));
+    new ChairBlock(BlockBehaviour.Properties.of().setId(key).strength(2.0f).noOcclusion().sound(net.minecraft.world.level.block.SoundType.WOOD)));
   var itemKey=ResourceKey.create(Registries.ITEM,id("material_chair"));
   Registry.register(BuiltInRegistries.ITEM,itemKey,new ChairBlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));
   return block;
