@@ -2,6 +2,10 @@ package dev.casz.caszualmtg;
 
 import com.spider.mtgcard.deckcontrol.DeckControlBlockEntity;
 import com.spider.mtgcard.graveyard.GraveyardBlockEntity;
+import com.spider.mtgcard.life.LifePointBlockEntity;
+import com.spider.mtgcard.life.LifePlayGroups;
+import com.spider.mtgcard.deckbox.DeckboxBlockEntity;
+import net.minecraft.server.level.ServerLevel;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -52,17 +56,33 @@ public final class TabletopLogic {
   for(var t:tiles)if(t.ownedBy(player))return t;return null;
  }
  private static HandBlockEntity linkedHand(ServerPlayer player,TabletopBlockEntity seat){
+  return linkedHand(player,seat,player.getUUID());
+ }
+ private static HandBlockEntity linkedHand(ServerPlayer player,TabletopBlockEntity seat,UUID owner){
   if(seat==null)return null;
   BlockPos at=seat.getBlockPos();HandBlockEntity best=null;double distance=Double.MAX_VALUE;
   for(BlockPos p:BlockPos.betweenClosed(at.offset(-LINK_RANGE,-LINK_RANGE,-LINK_RANGE),at.offset(LINK_RANGE,LINK_RANGE,LINK_RANGE))){
    if(!player.level().hasChunkAt(p))continue;
    if(player.level().getBlockEntity(p) instanceof HandBlockEntity h
-      &&player.getUUID().equals(h.owner())&&h.linkedControl()!=null){
+      &&owner.equals(h.owner())&&h.linkedControl()!=null){
     double d=at.distSqr(p);
     if(d<distance){best=h;distance=d;}
    }
   }
   return best;
+ }
+ private static LifePointBlockEntity life(ServerPlayer player,HandBlockEntity hand){
+  if(hand==null||hand.linkedLife()==null||!player.level().hasChunkAt(hand.linkedLife()))return null;
+  return player.level().getBlockEntity(hand.linkedLife()) instanceof LifePointBlockEntity lp?lp:null;
+ }
+ private static DeckboxBlockEntity commanderBox(ServerPlayer player,Context c){
+  if(c.deck==null)return null;
+  BlockPos pos=c.deck.getLinkedDeckboxPos();
+  return pos!=null&&player.level().getBlockEntity(pos) instanceof DeckboxBlockEntity db?db:null;
+ }
+ private static ItemStack commander(ServerPlayer player,Context c){
+  DeckboxBlockEntity db=commanderBox(player,c);
+  return db==null?ItemStack.EMPTY:db.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT).copy();
  }
  private static Context context(ServerPlayer player,BlockPos origin){
   var tiles=connected(player,origin);
@@ -101,11 +121,43 @@ public final class TabletopLogic {
   String message="";
   if(req.action().equals("refresh")){reply(player,req.pos(),"");return;}
   if(c.seat==null){reply(player,req.pos(),"Claim an empty tabletop seat to play.");return;}
-  if(!List.of("move","tap","hide","return","grave","exile").contains(req.action())&&c.hand==null){
+  if(!List.of("move","tap","hide","return","grave","exile","commander_home","pass_turn").contains(req.action())&&c.hand==null){
    reply(player,req.pos(),requireLinks(c));return;
   }
   try{
    switch(req.action()){
+    case "pass_turn" -> {
+     LifePointBlockEntity lp=life(player,c.hand);
+     if(lp==null){message="Link your MTGCard Life Point block in your Card Hand first.";break;}
+     if(!lp.isGameStarted()||!lp.isTurnActive()){message="Only the active player may pass their turn.";break;}
+     if(!(player.level() instanceof ServerLevel server)){message="Server unavailable.";break;}
+     LifePlayGroups.passTurn(server,lp.getBlockPos());
+     message="Turn passed to the next player.";
+    }
+    case "play_commander" -> {
+     TabletopBlockEntity dest=tile(c,req.target());
+     DeckboxBlockEntity box=commanderBox(player,c);
+     if(dest==null||dest.cards().size()>=TabletopBlockEntity.MAX_CARDS){message="That battlefield is full.";break;}
+     if(box==null){message="No deckbox connected to your Deck Control.";break;}
+     ItemStack stack=box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT);
+     if(stack.isEmpty()||!stack.is(com.spider.mtgcard.item.ModItemTags.TCG_CARD)){message="Put your commander into the Deckbox Commander slot first.";break;}
+     ItemStack one=stack.copyWithCount(1);
+     var card=new TabletopBlockEntity.PlayedCard("commander:"+UUID.randomUUID(),player.getUUID().toString(),one,req.x(),req.y(),false,false);
+     if(!dest.add(card)){message="Could not place commander.";break;}
+     ItemStack remaining=stack.copy();remaining.shrink(1);
+     box.setStack(DeckboxBlockEntity.SECOND_SIDE_SLOT,remaining);box.sync();
+     message="Commander played.";
+    }
+    case "commander_home" -> {
+     Located found=located(c,req.ref());
+     if(!owned(player,found)||!found.card.id().startsWith("commander:")){message="Only your commander can return to your command zone.";break;}
+     DeckboxBlockEntity box=commanderBox(player,c);
+     if(box==null||!box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT).isEmpty()){
+      message="The deckbox Commander slot is occupied or missing.";break;
+     }
+     box.setStack(DeckboxBlockEntity.SECOND_SIDE_SLOT,found.card.stack().copy());box.sync();
+     found.tile.remove(found.card.id());message="Commander returned to the deckbox Commander slot.";
+    }
     case "put_hand" -> {
      TabletopBlockEntity dest=tile(c,req.target());
      int idx=req.amount();
@@ -244,7 +296,10 @@ public final class TabletopLogic {
   List<TabletopWire.Tile> tiles=new ArrayList<>();
   List<TabletopWire.Card> played=new ArrayList<>();
   for(var t:c.tiles){
-   tiles.add(new TabletopWire.Tile(t.getBlockPos(),t.seatName()));
+   HandBlockEntity other=t.seatOwner()==null?null:linkedHand(player,t,t.seatOwner());
+   LifePointBlockEntity lp=life(player,other);
+   int color=other!=null?StaffColors.rgb(other.tableColor()):0x315348;
+   tiles.add(new TabletopWire.Tile(t.getBlockPos(),t.seatName(),color,lp==null?0:lp.getLife(),lp!=null,lp!=null&&lp.isTurnActive()));
    for(var card:t.cards()){
     // Face-down card identities must never leave the server for opponents.
     ItemStack shown=card.faceDown()&&!uuid.equals(card.owner())?ItemStack.EMPTY:card.stack().copy();
@@ -263,7 +318,7 @@ public final class TabletopLogic {
   ServerPlayNetworking.send(player,new TabletopWire.Reply(
    origin,message,owned,List.copyOf(tiles),List.copyOf(played),
    c.hand==null||c.seat==null?List.of():c.hand.visibleCards(),
-   c.deck==null?0:c.deck.getLibraryCount(),List.copyOf(grave),List.copyOf(exile),scry
+   c.deck==null?0:c.deck.getLibraryCount(),List.copyOf(grave),List.copyOf(exile),scry,commander(player,c)
   ));
  }
  private TabletopLogic(){}
