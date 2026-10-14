@@ -338,6 +338,150 @@ public final class TabletopLogic {
   reply(player,req.pos(),message);
  }
 
+
+ /** Match Card Hand's friendly / strict mulligan behavior. */
+ private static String mulligan(ServerPlayer player,Context c,String action){
+  if(c.hand==null||c.deck==null)return requireLinks(c);
+  if("mulligan_finish".equals(action)){
+   c.hand.finishStrictMulligans();
+   int owed=c.hand.pendingStrictDiscards();
+   return owed>0?"Mulligan complete: discard "+owed+" card(s) from Hand.":"Mulligan complete.";
+  }
+  if(c.hand.pendingStrictDiscards()>0)return "Finish your strict mulligan discards first.";
+  if(REVEALS.containsKey(player.getUUID()))return "Finish the deck reveal before mulligan.";
+  List<ItemStack> returned=c.hand.takeAllCards();
+  if(!returned.isEmpty())c.deck.putCardsOnBottom(returned);
+  c.deck.shuffle();
+  SCRIES.remove(player.getUUID());
+  for(ItemStack card:c.deck.takeTopCards(7))c.hand.addCard(card);
+  if("mulligan_strict".equals(action)){
+   int tries=c.hand.addStrictMulligan();
+   return "Strict mulligan #"+tries+": drew seven. Finish mulligans, then discard required cards.";
+  }
+  c.hand.resetMulligans();
+  return "Friendly mulligan: hand shuffled back and seven new cards drawn.";
+ }
+
+ /** The reveal is just a *view* of the real library until its resolution.
+  * Cards are physically removed once, then unused copies returned shuffled to the bottom. */
+ private static String resolveReveal(ServerPlayer player,Context c,TabletopWire.Request req){
+  ScrySession session=REVEALS.get(player.getUUID());
+  if(session==null||c.deck==null||!session.control.equals(c.deck.getBlockPos()))
+   return "No active reveal.";
+  List<ItemStack> actual=c.deck.peekTopCopies(session.cards.size());
+  if(actual.size()!=session.cards.size()){
+   REVEALS.remove(player.getUUID());return "Library changed; reveal expired.";
+  }
+  for(int i=0;i<actual.size();i++)if(!ItemStack.isSameItemSameComponents(actual.get(i),session.cards.get(i))){
+   REVEALS.remove(player.getUUID());return "Library changed; reveal expired.";
+  }
+  boolean toHand=req.action().equals("reveal_to_hand"),toField=req.action().equals("reveal_to_field");
+  if(toHand&&(c.hand==null||c.hand.cardCount()>=HandBlockEntity.SIZE))return "Card Hand is full.";
+  TabletopBlockEntity dest=toField?tile(c,req.target()):null;
+  if(toField&&(dest==null||dest.cards().size()>=TabletopBlockEntity.MAX_CARDS))return "Battlefield is unavailable or full.";
+  List<ItemStack> cards=new ArrayList<>(c.deck.takeTopCards(actual.size()));
+  if(cards.size()!=actual.size()){
+   if(!cards.isEmpty())c.deck.putCardsOnBottom(cards);
+   REVEALS.remove(player.getUUID());
+   return "Library changed during reveal. Remaining removed cards returned to library.";
+  }
+  ItemStack top=cards.removeFirst();
+  if(toHand&&!c.hand.addCard(top)){
+   cards.add(top);Collections.shuffle(cards);c.deck.putCardsOnBottom(cards);
+   REVEALS.remove(player.getUUID());return "Hand rejected card; all revealed cards returned to library.";
+  }
+  if(toField&&!dest.add(new TabletopBlockEntity.PlayedCard(UUID.randomUUID().toString(),
+    player.getUUID().toString(),top,req.x(),req.y(),false,false))){
+   cards.add(top);Collections.shuffle(cards);c.deck.putCardsOnBottom(cards);
+   REVEALS.remove(player.getUUID());return "Battlefield rejected card; all revealed cards returned to library.";
+  }
+  if(!toHand&&!toField)cards.add(top);
+  Collections.shuffle(cards);
+  c.deck.putCardsOnBottom(cards);
+  REVEALS.remove(player.getUUID());
+  return toHand?"Top revealed card moved to Hand; remainder shuffled to library bottom."
+    :toField?"Top revealed card played; remainder shuffled to library bottom."
+    :"All revealed cards shuffled to library bottom.";
+ }
+
+ private static boolean sameCommander(ItemStack stack,ItemStack reference){
+  if(stack.isEmpty()||reference.isEmpty())return false;
+  String a=com.spider.mtgcard.util.TcgCardMeta.read(stack).id();
+  String b=com.spider.mtgcard.util.TcgCardMeta.read(reference).id();
+  if(!a.isBlank()&&!b.isBlank())return a.equals(b);
+  return ItemStack.isSameItemSameComponents(stack,reference);
+ }
+
+ /** Reset only the requesting player. Preflight deckbox capacity before touching
+  * played cards, their Hand, or the GY/Exile; the reveal contains views, not items. */
+ private static String reset(ServerPlayer player,Context c){
+  if(c.deck==null||c.hand==null)return requireLinks(c);
+  DeckboxBlockEntity box=commanderBox(player,c);
+  if(box==null)return "Cannot reset: the linked deckbox is missing.";
+  UUID owner=player.getUUID();
+  ItemStack reference=c.seat.commanderReference();
+  ItemStack inCommand=box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT);
+  if(reference.isEmpty()&&!inCommand.isEmpty())reference=inCommand.copyWithCount(1);
+  List<Located> battlefield=new ArrayList<>();
+  for(var t:c.tiles)for(var card:t.cards())if(owner.toString().equals(card.owner())){
+   battlefield.add(new Located(t,card));
+   if(reference.isEmpty()&&card.id().startsWith("commander:"))
+    reference=card.stack().copyWithCount(1);
+  }
+  List<ItemStack> hand=c.hand.visibleCards();
+  List<TabletopWire.ZoneCard> zones=new ArrayList<>();
+  if(c.grave!=null)for(int i=0;i<200;i++){
+   ItemStack stack=c.grave.getStack(i);
+   if(!stack.isEmpty())zones.add(new TabletopWire.ZoneCard(i,stack.copy()));
+  }
+  // Determine a single physical commander that isn't already in the command zone.
+  ItemStack commanderReturn=ItemStack.EMPTY;
+  List<ItemStack> returning=new ArrayList<>();
+  for(var entry:battlefield){
+   ItemStack card=entry.card.stack();
+   if(inCommand.isEmpty()&&commanderReturn.isEmpty()
+       &&(entry.card.id().startsWith("commander:")||sameCommander(card,reference)))
+    commanderReturn=card.copy();
+   else returning.add(card.copy());
+  }
+  for(var card:hand){
+   if(inCommand.isEmpty()&&commanderReturn.isEmpty()&&sameCommander(card,reference))
+    commanderReturn=card.copy();
+   else returning.add(card.copy());
+  }
+  for(var entry:zones){
+   ItemStack card=entry.stack();
+   if(inCommand.isEmpty()&&commanderReturn.isEmpty()&&sameCommander(card,reference))
+    commanderReturn=card.copy();
+   else returning.add(card.copy());
+  }
+  int sourceMainSlot=-1;
+  if(inCommand.isEmpty()&&commanderReturn.isEmpty()&&!reference.isEmpty()){
+   for(int i=0;i<DeckboxBlockEntity.MAIN_SLOTS;i++)
+    if(sameCommander(box.getStack(i),reference)){sourceMainSlot=i;commanderReturn=box.getStack(i).copy();break;}
+  }
+  int spaces=0;
+  for(int i=0;i<DeckboxBlockEntity.MAIN_SLOTS;i++)if(box.getStack(i).isEmpty())spaces++;
+  if(sourceMainSlot>=0)spaces++;
+  if(returning.size()>spaces)
+   return "Reset blocked: "+returning.size()+" cards and only "+spaces+" free library slots. No cards moved.";
+  // Commit all zone moves only after checking destination capacities.
+  if(sourceMainSlot>=0)box.setStack(sourceMainSlot,ItemStack.EMPTY);
+  if(!commanderReturn.isEmpty()){
+   box.setStack(DeckboxBlockEntity.SECOND_SIDE_SLOT,commanderReturn);
+   c.seat.rememberCommander(commanderReturn);
+  }else if(!inCommand.isEmpty())c.seat.rememberCommander(inCommand);
+  for(var entry:battlefield)entry.tile.remove(entry.card.id());
+  c.hand.takeAllCards();
+  for(var entry:zones)c.grave.setStack(entry.slot(),ItemStack.EMPTY);
+  if(!returning.isEmpty())c.deck.putCardsOnBottom(returning);
+  REVEALS.remove(owner);SCRIES.remove(owner);
+  c.hand.resetMulligans();
+  c.deck.shuffle();
+  return "Reset complete: "+returning.size()+" cards returned and library shuffled"
+   +(inCommand.isEmpty()&&!commanderReturn.isEmpty()?"; commander restored.":".");
+ }
+
  public static void refreshColor(ServerPlayer player,HandBlockEntity hand){
   if(hand==null||hand.owner()==null)return;
   BlockPos at=hand.getBlockPos();
