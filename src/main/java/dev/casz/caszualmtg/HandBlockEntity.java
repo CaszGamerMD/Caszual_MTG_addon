@@ -19,6 +19,8 @@ public final class HandBlockEntity extends BlockEntity {
  private final LinkedHashSet<UUID> viewers=new LinkedHashSet<>();
  private final LinkedHashMap<UUID,String> viewerNames=new LinkedHashMap<>();
  private BlockPos linkedControl;
+ private BlockPos linkedLife;
+ private String tableColor="#315348";
  private boolean revealAll;
  private int strictMulligans;
  private int pendingStrictDiscards;
@@ -34,6 +36,10 @@ public final class HandBlockEntity extends BlockEntity {
  public boolean canManage(Player player){return owner!=null&&owner.equals(player.getUUID());}
  public boolean revealAll(){return revealAll;}
  public void revealAll(boolean value){revealAll=value;changed();}
+ public BlockPos linkedLife(){return linkedLife==null?null:linkedLife.immutable();}
+ public void linkedLife(BlockPos pos){linkedLife=pos==null?null:pos.immutable();changed();}
+ public String tableColor(){return tableColor;}
+ public void tableColor(String value){if(StaffColors.valid(value)){tableColor=StaffColors.normalize(value);changed();}}
  public BlockPos linkedControl(){return linkedControl==null?null:linkedControl.immutable();}
  public void linkedControl(BlockPos pos){linkedControl=pos==null?null:pos.immutable();changed();}
  public List<String> viewerNames(){return List.copyOf(viewerNames.values());}
@@ -91,7 +97,7 @@ public final class HandBlockEntity extends BlockEntity {
   try{owner=ownerRaw.isBlank()?null:UUID.fromString(ownerRaw);}catch(Exception e){owner=null;}
   viewers.clear();viewerNames.clear();
   for(Viewer v:in.read("Viewers",Viewer.CODEC.listOf()).orElse(List.of())){try{UUID id=UUID.fromString(v.uuid);viewers.add(id);viewerNames.put(id,v.name);}catch(Exception ignored){}}
-  String link=in.getStringOr("LinkedControl","");linkedControl=parsePos(link);revealAll=in.getBooleanOr("RevealAll",false);
+  String link=in.getStringOr("LinkedControl","");linkedControl=parsePos(link);linkedLife=parsePos(in.getStringOr("LinkedLife",""));String shade=in.getStringOr("TableColor","#315348");tableColor=StaffColors.valid(shade)?StaffColors.normalize(shade):"#315348";revealAll=in.getBooleanOr("RevealAll",false);
   strictMulligans=Math.max(0,in.getIntOr("StrictMulligans",0));
   pendingStrictDiscards=Math.max(0,in.getIntOr("PendingStrictDiscards",0));
   String left=in.getStringOr("StaffLeftRGB",StaffColors.LEFT_DEFAULT);
@@ -106,6 +112,8 @@ public final class HandBlockEntity extends BlockEntity {
   if(owner!=null)out.putString("Owner",owner.toString());
   List<Viewer> vs=new ArrayList<>();viewerNames.forEach((id,name)->vs.add(new Viewer(id.toString(),name)));out.store("Viewers",Viewer.CODEC.listOf(),vs);
   if(linkedControl!=null)out.putString("LinkedControl",pos(linkedControl));
+  if(linkedLife!=null)out.putString("LinkedLife",pos(linkedLife));
+  out.putString("TableColor",tableColor);
   out.putBoolean("RevealAll",revealAll);
   out.putInt("StrictMulligans",strictMulligans);
   out.putInt("PendingStrictDiscards",pendingStrictDiscards);
