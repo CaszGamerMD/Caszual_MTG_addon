@@ -1,21 +1,24 @@
-# MTG Tabletop (experimental)
+# MTG Tabletop — multiplayer play surface (experimental)
 
-A shared multiplayer card battlefield for **Minecraft 26.2 / Fabric**.
+## Place seats and link your equipment
 
-## Connect seats
+Each MTG Tabletop block is one seat. Blocks touching at the same height connect; up to 32 tiles share a game. Open the seat you want to claim. Each seat keeps its battlefield cards and owner in the world save.
 
-Place MTG Tabletop blocks directly north, south, east or west of one another at the same height. Up to 32 connected tiles are presented in one interface. Each tile is an individual seat; opening an empty tile claims it for the player. The green felt surface joins into one large battlefield. Tile ownership and cards are saved to the world.
+To play with cards, put your **Card Hand** within eight blocks of your seat. In the Card Hand, **Link Deck Control** by right-clicking your Deck Control; draw, scry, mill and commander interactions use that existing MTGCard setup. An MTGCard **Graveyard** adjoining the Deck Control is used for graveyard and exile storage.
 
-To play, the seat owner must place a **Card Hand** within eight blocks of their seat and link that Hand to an MTGCard **Deck Control** using the Card Hand's existing link command. An MTGCard **Graveyard** directly touching the Deck Control supplies the Graveyard and Exile zones. One block can be used alone as a single-player table.
+In the Card Hand UI, use **Link Life Point**, then right-click your MTGCard Life Point block (within eight blocks of your Hand). Each tabletop player can link a separate Life Point. This reads live health and turn status from the existing MTGCard group system — no duplicate scoreboard. **Pass Turn** works for the currently active player in a started Life Point game, using MTGCard's regular group progression.
 
-## Controls
+The Card Hand UI also has a **#RRGGBB table color** setting. The tabletop UI uses the full color, and the block in the world uses the closest of 16 wool colors.
 
-- The upper half shows the shared battlefield. Select a card from the lower Hand, then click any open area of the upper battlefield to place it.
-- Select an already-played card, then click its new position. Only the card's owner can move, tap, turn face-down, return, graveyard or exile the card.
-- The lower half contains **Hand**, **Graveyard**, **Exile** and temporary **Scry** tabs. A selected zone card can return to Hand or be placed onto the table.
-- The sidebar displays the **real remaining library count**. Draw, mill, shuffle and scry buttons operate through the linked Deck Control. Draw deposits cards directly into the Card Hand. Mill deposits cards directly in Graveyard, refusing when there is insufficient room.
-- Scry 1 or 3 shows the top cards **privately**. Click scry cards to mark them for the bottom; unmarked cards remain on top. Resolve preserves the order within each side. Cancel leaves the library unchanged.
-- A card placed face-down is sent as a hidden placeholder to other players, never as the actual item data.
-- Break a tile to drop all cards currently stored on it; each tile saves its cards and seat owner separately. Normal world backups preserve the game state.
+## Play screen
 
-**Experimental boundaries:** no custom turn engine, stack priority, counter automation, optional life totals, card rotation animations, selecting a new owner for an occupied seat, or per-opponent spectator permissions yet. Tabletop synchronization uses frequent server snapshots while open. The UI is designed for Minecraft 26.2 and still needs testing in-game on a multiplayer server.
+- **Player tabs:** buttons along the top switch the battlefield currently shown. Each shows the player's life total (when linked) and a turn indicator for the active player. The private Hand tray stays yours even when viewing an opponent's field. Opponent hands are never transmitted to the tabletop screen.
+- **Large battlefield:** almost the entire screen above the Hand is dedicated to a single player's field. The **Hand**, **GY**, **Exile**, and temporary **Scry** trays each use only a single row as tall as a card.
+- **Drag and drop:** drag a card from your private Hand, Graveyard or Exile tray and release it anywhere on the selected battlefield. Drag your existing cards to reposition them. Click a played card to select it for Tap, Flip, To Hand, To GY, Exile Card, or Cmd Zone actions.
+- **Commander slot:** the area just left of your Hand tray shows the card from MTGCard's actual **Deckbox Commander slot** (second side slot, #100). Drag to play it. **Cmd Zone** returns a commander originally played from that slot if the slot is empty. The corresponding deckbox item is consumed/restored, not duplicated.
+- **Library actions:** Draw, Draw 7, Scry 1/3, Mill/5 and Shuffle route through the linked Deck Control. Scry is kept private until resolved. The deck counter shows the actual remaining cards.
+- **World appearance:** a block with cards on its battlefield displays up to four tiny generic, face-down card markers. These are intentionally not legible actual card art. Card identities stay in saved server data and the tabletop GUI.
+
+## Limitations
+
+Still experimental: no full stack/priority engine, card-specific rules, team-specific commander targeting, or drag-to-cross-tab automatic seat switching. Seat ownership is persistent; it is not yet transferable from within the UI. Full multiplayer in-game QA is recommended before a long Commander session. The current world model shows approximate card count rather than card-accurate layout.
