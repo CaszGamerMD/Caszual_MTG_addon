@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "decoration",
+  "pattern": [
+    "WWW",
+    "PFP",
+    "S S"
+  ],
+  "key": {
+    "W": "minecraft:dark_oak_slab",
+    "P": "minecraft:dark_oak_planks",
+    "F": "minecraft:green_wool",
+    "S": "minecraft:stick"
+  },
+  "result": {
+    "id": "caszual_mtg:tabletop",
+    "count": 1
+  }
+}
