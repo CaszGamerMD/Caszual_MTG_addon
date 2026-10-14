@@ -8,12 +8,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
 public final class HandScreen extends LegacyScreen {
- HandWire.Reply data;EditBox playerName,staffLeft,staffRight;int x,y,w,h,scroll,selected=-1,ticks;final java.util.LinkedHashSet<Integer> chosen=new java.util.LinkedHashSet<>();String message="";boolean mulliganMenu;
+ HandWire.Reply data;EditBox playerName,staffLeft,staffRight,tableColor;int x,y,w,h,scroll,selected=-1,ticks;final java.util.LinkedHashSet<Integer> chosen=new java.util.LinkedHashSet<>();String message="";boolean mulliganMenu;
  HandScreen(HandWire.Reply data){super(Component.literal("Card Hand"));this.data=data;}
  void update(HandWire.Reply reply){
   boolean controlsChanged=data.authorized()!=reply.authorized()||data.canManage()!=reply.canManage()||data.revealAll()!=reply.revealAll()||data.pendingDiscards()!=reply.pendingDiscards()||data.hasStaff()!=reply.hasStaff();
   data=reply;if(!reply.message().isBlank()){message=reply.message();chosen.clear();selected=-1;}chosen.removeIf(i->i>=reply.cards().size());if(selected>=reply.cards().size())selected=-1;
   if(reply.pendingDiscards()>0)mulliganMenu=false;
+  if(reply.message().equals("Table color saved.")&&tableColor!=null)tableColor.setValue(reply.tableColor());
   if(reply.message().startsWith("Applied ")&&staffLeft!=null&&staffRight!=null){
    staffLeft.setValue(reply.staffLeft());staffRight.setValue(reply.staffRight());
   }
@@ -26,6 +27,13 @@ public final class HandScreen extends LegacyScreen {
   if(data.authorized())button(data.revealAll()?"Hide from all":"Reveal to all",x+90,y+32,112,()->send("reveal",""));
   if(data.canManage()){
    button("Link Deck Control",x+208,y+32,124,()->{send("link","");onClose();});
+   button("Link Life Point",x+338,y+32,110,()->{send("link_life","");onClose();});
+   tableColor=addRenderableWidget(new EditBox(font,x+454,y+32,83,20,Component.literal("Table color")));
+   tableColor.setMaxLength(7);tableColor.setValue(data.tableColor());
+   button("Set table color",x+542,y+32,105,()->{
+    if(!StaffColors.valid(tableColor.getValue())){message="Use #RRGGBB.";return;}
+    send("table_color",tableColor.getValue());
+   });
    playerName=addRenderableWidget(new EditBox(font,x+12,y+58,150,20,Component.literal("Player")));playerName.setMaxLength(32);playerName.setHint(Component.literal("Online player name"));
    button("Add viewer",x+168,y+58,86,()->send("add_viewer",playerName.getValue()));
    button("Remove viewer",x+260,y+58,102,()->send("remove_viewer",playerName.getValue()));
@@ -91,7 +99,7 @@ public final class HandScreen extends LegacyScreen {
   g.fill(0,0,width,height,0xC0080E18);g.fill(x,y,x+w,y+h,0xFF152032);g.drawString(font,title,x+12,y+12,0xFFFFFFFF);
   String privacy=data.revealAll()?"REVEALED TO ALL":data.visible()?"PRIVATE · YOU CAN VIEW":"PRIVATE · HIDDEN";
   g.drawString(font,privacy+" · "+data.count()+"/"+HandBlockEntity.SIZE+" cards · "+chosen.size()+" selected · Deck Control: "+data.linked(),x+12,y+112,data.revealAll()?0xFFFFD37E:0xFFB3DFFF);
-  if(data.canManage())g.drawString(font,"Viewers: "+(data.viewers().isEmpty()?"none":String.join(", ",data.viewers())),x+12,y+124,0xFF9CADC6);
+  if(data.canManage())g.drawString(font,"Life: "+data.lifeLink()+" · Viewers: "+(data.viewers().isEmpty()?"none":String.join(", ",data.viewers())),x+12,y+124,0xFF9CADC6);
   if(data.pendingDiscards()>0)g.drawString(font,"Strict mulligan: discard "+data.pendingDiscards()+" selected card"+(data.pendingDiscards()==1?"":"s")+" to finish.",x+370,y+88,0xFFFFD37E);
   else if(mulliganMenu)g.drawString(font,"Friendly is free · Strict attempts: "+data.strictMulligans()+" · Cancel finishes mulligans.",x+320,y+88,0xFFB3DFFF);
   else g.drawString(font,"Click cards to toggle multi-select · Right-click podium to add.",x+370,y+88,0xFF9CADC6);
