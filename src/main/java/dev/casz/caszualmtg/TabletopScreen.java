@@ -5,247 +5,303 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.network.chat.Component;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import java.util.*;
+import java.util.stream.Collectors;
 
-/** A shared upper battlefield and a private lower hand, with deck/zone controls. */
+/**
+ * One table at a time; top tabs switch seats, while the private hand remains
+ * anchored at the bottom. All drag/drop results are validated by the server.
+ */
 public final class TabletopScreen extends LegacyScreen {
  TabletopWire.Reply data;
+ BlockPos view;
  String message="";
- String bottomTab="hand";
- String pickedBoard="";
- int pickedBottom=-1,scroll=0,ticks=0,preview=-1;
- boolean deckTools=true;
- final Set<Integer> scryBottom=new LinkedHashSet<>();
- TabletopScreen(TabletopWire.Reply reply){super(Component.literal("Caszual MTG Tabletop"));data=reply;}
+ String zone="hand";
+ int zoneScroll=0,tabScroll=0,ticks=0;
+ String selectedCard="";
+ int selectedZone=-1;
+ Set<Integer> scryBottom=new LinkedHashSet<>();
+ Drag drag;
+ record Drag(String source,String id,int index,ItemStack card,int startX,int startY) {}
 
- void update(TabletopWire.Reply reply){
-  boolean rebuild=data.scry().isEmpty()!=reply.scry().isEmpty()
-    ||data.seat().equals(data.pos())!=reply.seat().equals(reply.pos());
+ TabletopScreen(TabletopWire.Reply reply){
+  super(Component.literal("Caszual MTG Tabletop"));
   data=reply;
+  view=reply.seat();
+ }
+ void update(TabletopWire.Reply reply){
+  boolean changed=!data.tiles().equals(reply.tiles())||data.scry().isEmpty()!=reply.scry().isEmpty()
+   ||data.commander().isEmpty()!=reply.commander().isEmpty();
+  data=reply;
+  if(reply.tiles().stream().noneMatch(t->t.pos().equals(view)))view=reply.seat();
   if(!reply.message().isBlank())message=reply.message();
-  if(!reply.scry().isEmpty())bottomTab="scry";
-  else if(bottomTab.equals("scry")){bottomTab="hand";scryBottom.clear();}
-  if(!pickedBoard.isBlank()&&data.cards().stream().noneMatch(c->c.id().equals(pickedBoard)))pickedBoard="";
-  if(pickedBottom>=bottomCards().size())pickedBottom=-1;
-  if(rebuild)rebuildWidgets();
+  if(!reply.scry().isEmpty())zone="scry";
+  else if(zone.equals("scry")){zone="hand";scryBottom.clear();}
+  if(!selectedCard.isBlank()&&reply.cards().stream().noneMatch(c->c.id().equals(selectedCard)))selectedCard="";
+  if(changed)rebuildWidgets();
  }
-
- int boardX(){return 12;}
- int boardY(){return 44;}
- int boardW(){return Math.max(190,width-196);}
- int boardH(){return Math.max(108,height/2-57);}
- int sidebarX(){return width-168;}
- int bottomY(){return height/2+7;}
- int cardTop(){return bottomY()+38;}
- int columns(){return Math.max(1,(boardW()-16)/83);}
- int visibleRows(){return Math.max(1,(height-cardTop()-23)/112);}
- boolean playing(){return Minecraft.getInstance().player!=null&&data.tiles().stream().anyMatch(t->t.pos().equals(data.seat())&&t.owner().equals(Minecraft.getInstance().player.getGameProfile().name()));}
- void button(String label,int px,int py,int pw,Runnable action){
-  addRenderableWidget(Button.builder(Component.literal(label),b->action.run()).bounds(px,py,pw,20).build());
- }
- void selectTab(String tab){bottomTab=tab;pickedBottom=-1;scroll=0;rebuildWidgets();}
  void send(String action,String ref,BlockPos target,int x,int y,int amount){
-  if(ClientPlayNetworking.canSend(TabletopWire.Request.TYPE))ClientPlayNetworking.send(new TabletopWire.Request(data.pos(),action,ref,target,x,y,amount));
+  if(ClientPlayNetworking.canSend(TabletopWire.Request.TYPE))
+   ClientPlayNetworking.send(new TabletopWire.Request(data.pos(),action,ref,target,x,y,amount));
  }
- void action(String name,int count){send(name,"",data.seat(),0,0,count);}
- void tableAction(String name){if(!pickedBoard.isBlank())send(name,pickedBoard,data.seat(),0,0,0);}
- TabletopWire.Card chosenCard(){
-  for(var c:data.cards())if(c.id().equals(pickedBoard))return c;
+ void action(String name,int amount){send(name,"",data.seat(),0,0,amount);}
+ void button(String label,int x,int y,int w,Runnable callback){
+  if(w>18)addRenderableWidget(Button.builder(Component.literal(label),b->callback.run()).bounds(x,y,w,20).build());
+ }
+ boolean playing(){
+  var me=Minecraft.getInstance().player;
+  return me!=null&&data.tiles().stream().anyMatch(t->t.pos().equals(data.seat())&&t.owner().equals(me.getGameProfile().name()));
+ }
+ TabletopWire.Tile shown(){
+  for(var t:data.tiles())if(t.pos().equals(view))return t;
   return null;
  }
- boolean isOwnCard(TabletopWire.Card card){
-  return card!=null&&Minecraft.getInstance().player!=null
-   &&card.owner().equals(Minecraft.getInstance().player.getUUID().toString());
+ List<TabletopWire.Card> displayed(){
+  return data.cards().stream().filter(c->c.pos().equals(view)).toList();
  }
- void setTabButtons(){
-  int y=bottomY()+5,x=boardX();
-  button("Hand ("+data.hand().size()+")",x,y,105,()->selectTab("hand"));
-  button("Grave ("+data.grave().size()+")",x+111,y,112,()->selectTab("grave"));
-  button("Exile ("+data.exile().size()+")",x+229,y,108,()->selectTab("exile"));
-  if(!data.scry().isEmpty())button("Scry ("+data.scry().size()+")",x+344,y,105,()->selectTab("scry"));
+ List<ItemStack> zoneCards(){
+  return switch(zone){
+   case "grave" -> data.grave().stream().map(TabletopWire.ZoneCard::stack).toList();
+   case "exile" -> data.exile().stream().map(TabletopWire.ZoneCard::stack).toList();
+   case "scry" -> data.scry();
+   default -> data.hand();
+  };
+ }
+ void switchZone(String next){
+  zone=next;zoneScroll=0;selectedZone=-1;drag=null;rebuildWidgets();
+ }
+ int boardX(){return 12;}
+ int boardY(){return 76;}
+ int boardW(){return width-24;}
+ int handTop(){return height-139;}
+ int boardH(){return Math.max(100,handTop()-boardY()-8);}
+ int zoneY(){return handTop()+31;}
+ int handCardW(){return 67;}
+ int handCardH(){return 96;}
+ int handStart(){return 93;}
+ int handStride(){return 71;}
+ int visibleHandCards(){return Math.max(1,(width-handStart()-21)/handStride());}
+ int boardCardW(){return Math.max(38,Math.min(70,boardW()/10));}
+ int boardCardH(){return Math.round(boardCardW()*1.43f);}
+ int cardX(TabletopWire.Card c){return boardX()+8+c.x()*Math.max(0,boardW()-boardCardW()-16)/1000;}
+ int cardY(TabletopWire.Card c){return boardY()+8+c.y()*Math.max(0,boardH()-boardCardH()-16)/1000;}
+ int xNormalized(int mx){return Math.clamp((mx-boardX()-8)*1000/Math.max(1,boardW()-boardCardW()-16),0,1000);}
+ int yNormalized(int my){return Math.clamp((my-boardY()-8)*1000/Math.max(1,boardH()-boardCardH()-16),0,1000);}
+ boolean boardHit(int x,int y){return x>=boardX()&&x<boardX()+boardW()&&y>=boardY()&&y<boardY()+boardH();}
+ TabletopWire.Card cardAt(int mx,int my){
+  List<TabletopWire.Card> list=new ArrayList<>(displayed());Collections.reverse(list);
+  for(var c:list){
+   int x=cardX(c),y=cardY(c);
+   if(mx>=x&&mx<x+boardCardW()&&my>=y&&my<y+boardCardH())return c;
+  }
+  return null;
+ }
+ int zoneAt(int mx,int my){
+  if(mx<handStart()||my<zoneY()||my>=zoneY()+handCardH()+2)return -1;
+  int at=(mx-handStart())/handStride();
+  if(at<0||at>=visibleHandCards())return -1;
+  int index=zoneScroll+at;
+  return index>=0&&index<zoneCards().size()?index:-1;
+ }
+ void selectView(BlockPos target){view=target;selectedCard="";drag=null;rebuildWidgets();}
+ String seatLabel(TabletopWire.Tile t){
+  String name=t.owner().isBlank()?"Empty":t.owner();
+  if(name.length()>11)name=name.substring(0,11);
+  return (t.active()?"▶ ":"")+name+(t.hasLife()?"  "+t.life()+" ♥":"  --");
  }
  @Override protected void init(){
   if(MtgGuiScaleHelper.applyAutoFitGuiScale(this,3,680,440))return;
   clearWidgets();
-  int x=sidebarX(),y=47,w=156;
-  button("Deck actions",x,y,76,()->{deckTools=true;rebuildWidgets();});
-  button("Card actions",x+78,y,78,()->{deckTools=false;rebuildWidgets();});
-  if(deckTools){
-   button("Draw 1",x,y+34,76,()->action("draw",1));
-   button("Draw 7",x+80,y+34,76,()->action("draw",7));
-   button("Scry 1",x,y+60,76,()->action("scry_begin",1));
-   button("Scry 3",x+80,y+60,76,()->action("scry_begin",3));
-   button("Mill 1",x,y+86,76,()->action("mill",1));
-   button("Mill 5",x+80,y+86,76,()->action("mill",5));
-   button("Shuffle deck",x,y+112,156,()->action("shuffle",0));
-   if(!data.scry().isEmpty()){
-    button("Resolve scry",x,y+144,156,this::resolveScry);
-    button("Cancel scry",x,y+168,156,()->send("scry_cancel","",data.seat(),0,0,0));
-   }
-  }else{
-   button("Tap / Untap",x,y+34,156,()->tableAction("tap"));
-   button("Face down / up",x,y+60,156,()->tableAction("hide"));
-   button("Return to hand",x,y+86,156,()->tableAction("return"));
-   button("To graveyard",x,y+112,156,()->tableAction("grave"));
-   button("Exile",x,y+138,156,()->tableAction("exile"));
-   if(bottomTab.equals("grave")||bottomTab.equals("exile"))
-    button("Zone → Hand",x,y+170,156,this::zoneToHand);
+  int x=12;
+  int maxTabs=Math.max(1,(width-95)/137);
+  int last=Math.min(data.tiles().size(),tabScroll+maxTabs);
+  for(int i=tabScroll;i<last;i++){
+   TabletopWire.Tile t=data.tiles().get(i);
+   button(seatLabel(t),x,7,132,()->selectView(t.pos()));
+   x+=137;
   }
-  button("Done",x,height-33,156,this::onClose);
-  setTabButtons();
- }
- void zoneToHand(){
-  if(pickedBottom<0)return;
-  var list=bottomTab.equals("grave")?data.grave():data.exile();
-  if(pickedBottom>=list.size())return;
-  send("zone_to_hand","",data.seat(),0,0,list.get(pickedBottom).slot());
+  if(data.tiles().size()>maxTabs){
+   button("◀",width-77,7,31,()->{tabScroll=Math.max(0,tabScroll-maxTabs);rebuildWidgets();});
+   button("▶",width-42,7,31,()->{tabScroll=Math.min(Math.max(0,data.tiles().size()-maxTabs),tabScroll+maxTabs);rebuildWidgets();});
+  }
+  int ux=12,uy=38;
+  button("Draw",ux,uy,57,()->action("draw",1));ux+=61;
+  button("Draw 7",ux,uy,68,()->action("draw",7));ux+=72;
+  button("Scry 1",ux,uy,65,()->action("scry_begin",1));ux+=69;
+  button("Scry 3",ux,uy,65,()->action("scry_begin",3));ux+=69;
+  button("Mill",ux,uy,55,()->action("mill",1));ux+=59;
+  button("Mill 5",ux,uy,61,()->action("mill",5));ux+=65;
+  button("Shuffle",ux,uy,65,()->action("shuffle",0));ux+=69;
+  button("Pass Turn",ux,uy,84,()->action("pass_turn",0));ux+=89;
+  button("Tap",ux,uy,43,()->tableAction("tap"));ux+=47;
+  button("Flip",ux,uy,44,()->tableAction("hide"));ux+=48;
+  if(width-ux>=67)button("Close",width-74,uy,62,this::onClose);
+  int by=handTop()+5;
+  button("Hand",12,by,58,()->switchZone("hand"));
+  button("GY",74,by,35,()->switchZone("grave"));
+  button("Exile",112,by,53,()->switchZone("exile"));
+  if(!data.scry().isEmpty()){
+   button("Scry",169,by,48,()->switchZone("scry"));
+   button("Resolve",width-185,by,84,this::resolveScry);
+   button("Cancel",width-97,by,84,()->action("scry_cancel",0));
+  }else{
+   button("To Hand",width-385,by,78,()->tableAction("return"));
+   button("To GY",width-302,by,66,()->tableAction("grave"));
+   button("Exile Card",width-232,by,81,()->tableAction("exile"));
+   button("Cmd Zone",width-146,by,84,()->tableAction("commander_home"));
+   button("◀",width-60,by,23,()->{zoneScroll=Math.max(0,zoneScroll-visibleHandCards());});
+   button("▶",width-34,by,23,()->{zoneScroll+=visibleHandCards();});
+  }
  }
  void resolveScry(){
-  List<Integer> top=new ArrayList<>(),bottom=new ArrayList<>();
-  for(int i=0;i<data.scry().size();i++)(scryBottom.contains(i)?bottom:top).add(i);
-  String first=top.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
-  String second=bottom.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
-  send("scry_commit",first+"|"+second,data.seat(),0,0,0);
+  List<Integer> first=new ArrayList<>(),second=new ArrayList<>();
+  for(int i=0;i<data.scry().size();i++)(scryBottom.contains(i)?second:first).add(i);
+  String top=first.stream().map(String::valueOf).collect(Collectors.joining(","));
+  String bottom=second.stream().map(String::valueOf).collect(Collectors.joining(","));
+  send("scry_commit",top+"|"+bottom,data.seat(),0,0,0);
  }
- List<ItemStack> bottomCards(){
-  if(bottomTab.equals("scry"))return data.scry();
-  if(bottomTab.equals("grave"))return data.grave().stream().map(TabletopWire.ZoneCard::stack).toList();
-  if(bottomTab.equals("exile"))return data.exile().stream().map(TabletopWire.ZoneCard::stack).toList();
-  return data.hand();
+ void tableAction(String name){
+  if(!selectedCard.isBlank())send(name,selectedCard,data.seat(),0,0,0);
+  else if(name.equals("return")&&(zone.equals("grave")||zone.equals("exile"))&&selectedZone>=0){
+   List<TabletopWire.ZoneCard> list=zone.equals("grave")?data.grave():data.exile();
+   if(selectedZone<list.size())send("zone_to_hand","",data.seat(),0,0,list.get(selectedZone).slot());
+  }
  }
- @Override public boolean isPauseScreen(){return false;}
- @Override public void tick(){
-  super.tick();
-  if(++ticks%30==0)send("refresh","",data.seat(),0,0,0);
+ boolean own(TabletopWire.Card c){
+  var me=Minecraft.getInstance().player;
+  return me!=null&&c.owner().equals(me.getUUID().toString());
  }
- int minX(){return data.tiles().stream().mapToInt(t->t.pos().getX()).min().orElse(0);}
- int minZ(){return data.tiles().stream().mapToInt(t->t.pos().getZ()).min().orElse(0);}
- int countX(){return Math.max(1,data.tiles().stream().mapToInt(t->t.pos().getX()).max().orElse(minX())-minX()+1);}
- int countZ(){return Math.max(1,data.tiles().stream().mapToInt(t->t.pos().getZ()).max().orElse(minZ())-minZ()+1);}
- int tileX(BlockPos pos){return boardX()+(pos.getX()-minX())*boardW()/countX();}
- int tileY(BlockPos pos){return boardY()+(pos.getZ()-minZ())*boardH()/countZ();}
- int tileW(){return Math.max(1,boardW()/countX());}
- int tileH(){return Math.max(1,boardH()/countZ());}
- int cardWidth(){
-  return Math.max(16,Math.min(64,Math.min(tileW()-8,Math.round((tileH()-8)/1.42f))));
- }
- int cardHeight(){return Math.round(cardWidth()*1.42f);}
- int cardX(TabletopWire.Card c){return tileX(c.pos())+4+c.x()*Math.max(0,tileW()-cardWidth()-8)/1000;}
- int cardY(TabletopWire.Card c){return tileY(c.pos())+4+c.y()*Math.max(0,tileH()-cardHeight()-8)/1000;}
- BlockPos tileAt(int mx,int my){
-  if(mx<boardX()||my<boardY()||mx>=boardX()+boardW()||my>=boardY()+boardH())return null;
-  int cx=Math.min(countX()-1,(mx-boardX())*countX()/boardW());
-  int cz=Math.min(countZ()-1,(my-boardY())*countZ()/boardH());
-  int x=minX()+cx,z=minZ()+cz;
-  for(var t:data.tiles())if(t.pos().getX()==x&&t.pos().getZ()==z)return t.pos();
-  return null;
- }
- @Override public boolean mouseClicked(MouseButtonEvent e,boolean twice){
-  int mx=(int)e.x(),my=(int)e.y();
-  BlockPos dest=tileAt(mx,my);
-  if(dest!=null){
-   List<TabletopWire.Card> reversed=new ArrayList<>(data.cards());
-   Collections.reverse(reversed);
-   // Clicking a card selects it; clicking elsewhere then drops it at the chosen pixel.
-   for(var c:reversed)if(mx>=cardX(c)&&mx<cardX(c)+cardWidth()&&my>=cardY(c)&&my<cardY(c)+cardHeight()){
-    if(c.id().equals(pickedBoard))pickedBoard="";else pickedBoard=c.id();
+ @Override public boolean mouseClicked(MouseButtonEvent event,boolean twice){
+  int x=(int)event.x(),y=(int)event.y();
+  if(boardHit(x,y)){
+   TabletopWire.Card c=cardAt(x,y);
+   if(c!=null){selectedCard=c.id();selectedZone=-1;
+    if(own(c))drag=new Drag("board",c.id(),-1,c.stack(),x,y);
     return true;
    }
-   int nx=Math.clamp((mx-tileX(dest)-4)*1000/Math.max(1,tileW()-cardWidth()-8),0,1000);
-   int ny=Math.clamp((my-tileY(dest)-4)*1000/Math.max(1,tileH()-cardHeight()-8),0,1000);
-   TabletopWire.Card selected=chosenCard();
-   if(selected!=null){
-    if(!isOwnCard(selected)){message="You may only move your own cards.";return true;}
-    send("move",selected.id(),dest,nx,ny,0);pickedBoard="";return true;
-   }
-   if(pickedBottom>=0){
-    if(bottomTab.equals("hand"))send("put_hand","",dest,nx,ny,pickedBottom);
-    else if(bottomTab.equals("grave")&&pickedBottom<data.grave().size())send("put_grave","",dest,nx,ny,data.grave().get(pickedBottom).slot());
-    else if(bottomTab.equals("exile")&&pickedBottom<data.exile().size())send("put_exile","",dest,nx,ny,data.exile().get(pickedBottom).slot());
-    pickedBottom=-1;return true;
-   }
-   message="Choose a card below, then click anywhere on the tabletop.";
-   return true;
   }
-  int index=bottomIndex(mx,my);
-  if(index>=0&&index<bottomCards().size()){
-   pickedBottom=index;pickedBoard="";
-   if(bottomTab.equals("scry")){
-    if(!scryBottom.add(index))scryBottom.remove(index);
+  if(!data.commander().isEmpty()&&x>=12&&x<81&&y>=zoneY()&&y<zoneY()+handCardH()){
+   drag=new Drag("commander","",-1,data.commander(),x,y);selectedZone=-1;return true;
+  }
+  int idx=zoneAt(x,y);
+  if(idx>=0){
+   selectedCard="";selectedZone=idx;
+   if(zone.equals("scry")){
+    if(!scryBottom.add(idx))scryBottom.remove(idx);
+   }else{
+    String source=zone;
+    drag=new Drag(source,"",idx,zoneCards().get(idx),x,y);
    }
    return true;
   }
-  return super.mouseClicked(e,twice);
+  return super.mouseClicked(event,twice);
  }
- int bottomIndex(int mx,int my){
-  int dx=mx-boardX()-6,dy=my-cardTop();
-  if(dx<0||dx>=boardW()-12||dy<0||dy>=visibleRows()*112)return -1;
-  int col=dx/83,row=dy/112;
-  if(col>=columns())return -1;
-  return (scroll+row)*columns()+col;
+ @Override public boolean mouseReleased(MouseButtonEvent event){
+  if(drag!=null){
+   Drag held=drag;drag=null;
+   int mx=(int)event.x(),my=(int)event.y();
+   if(boardHit(mx,my)&&view!=null){
+    int x=xNormalized(mx),y=yNormalized(my);
+    switch(held.source()){
+     case "board" -> {
+      if(Math.abs(mx-held.startX())>3||Math.abs(my-held.startY())>3)
+       send("move",held.id(),view,x,y,0);
+     }
+     case "hand" -> send("put_hand","",view,x,y,held.index());
+     case "grave" -> {
+      if(held.index()<data.grave().size())send("put_grave","",view,x,y,data.grave().get(held.index()).slot());
+     }
+     case "exile" -> {
+      if(held.index()<data.exile().size())send("put_exile","",view,x,y,data.exile().get(held.index()).slot());
+     }
+     case "commander" -> send("play_commander","",view,x,y,0);
+    }
+   }
+   return true;
+  }
+  return super.mouseReleased(event);
  }
  @Override public boolean mouseScrolled(double mx,double my,double dx,double dy){
-  if(my>=cardTop()&&mx<boardX()+boardW()){
-   int rows=(bottomCards().size()+columns()-1)/columns();
-   scroll=Math.clamp(scroll-(int)Math.signum(dy),0,Math.max(0,rows-visibleRows()));
+  if(my>=handTop()){
+   int max=Math.max(0,zoneCards().size()-visibleHandCards());
+   zoneScroll=Math.clamp(zoneScroll-(int)Math.signum(dy)*3,0,max);
    return true;
   }
   return super.mouseScrolled(mx,my,dx,dy);
  }
+ @Override public void tick(){
+  super.tick();
+  if(++ticks%25==0)send("refresh","",data.seat(),0,0,0);
+ }
+ @Override public boolean isPauseScreen(){return false;}
+ int darken(int rgb){
+  int r=(rgb>>16&255)*57/100+12,g=(rgb>>8&255)*57/100+12,b=(rgb&255)*57/100+12;
+  return 0xFF000000|(r<<16)|(g<<8)|b;
+ }
+ void drawArt(GuiGraphics g,ItemStack stack,int x,int y,int w,int h){
+  if(stack==null||stack.isEmpty()){
+   g.fill(x,y,x+w,y+h,0xFF22364E);
+   g.drawCenteredString(font,"MTG",x+w/2,y+h/2-4,0xFFEAD29C);
+  }else CaszualMtgClient.art(g,stack,0,x,y,w,h);
+ }
  @Override public void render(GuiGraphics g,int mx,int my,float delta){
-  g.fill(0,0,width,height,0xFF101923);
-  g.fill(0,0,width,32,0xFF283747);
-  g.drawString(font,"CASZUAL MTG  /  TABLETOP",12,11,0xFFF6E0B0);
-  g.fill(boardX()-2,boardY()-2,boardX()+boardW()+2,boardY()+boardH()+2,0xFF836345);
-  g.fill(boardX(),boardY(),boardX()+boardW(),boardY()+boardH(),0xFF283D39);
-  for(var tile:data.tiles()){
-   int tx=tileX(tile.pos()),ty=tileY(tile.pos()),tw=tileW(),th=tileH();
-   boolean own=tile.pos().equals(data.seat())&&playing();
-   g.fill(tx+1,ty+1,tx+tw-2,ty+th-2,own?0xFF315348:0xFF355044);
-   g.drawString(font,font.plainSubstrByWidth(tile.owner().isBlank()?"Empty seat":tile.owner(),tw-6),tx+5,ty+5,own?0xFFFFD58D:0xFFB2C6BE);
+  g.fill(0,0,width,height,0xFF121B28);
+  g.fill(0,0,width,34,0xFF202D3B);
+  TabletopWire.Tile tile=shown();
+  // The active seat is highlighted independently of which battlefield we are viewing.
+  int tabx=12,maxTabs=Math.max(1,(width-95)/137);
+  for(int i=tabScroll;i<Math.min(data.tiles().size(),tabScroll+maxTabs);i++){
+   TabletopWire.Tile t=data.tiles().get(i);
+   int rgb=0xFF000000|(t.color()&0xFFFFFF);
+   if(t.pos().equals(view))g.fill(tabx-2,5,tabx+134,30,rgb);
+   else if(t.active())g.fill(tabx-2,5,tabx+134,30,0xFF7A6A38);
+   tabx+=137;
   }
-  for(var c:data.cards()){
-   int x=cardX(c),y=cardY(c),cw=cardWidth(),ch=cardHeight();
-   boolean chosen=c.id().equals(pickedBoard);
-   int border=chosen?0xFFFFCC66:c.tapped()?0xFF8FB7E0:0xFF101C23;
-   g.fill(x-2,y-2,x+cw+2,y+ch+2,border);
-   if(c.hidden()&&c.stack().isEmpty()){
-    g.fill(x,y,x+cw,y+ch,0xFF172B47);
-    g.fill(x+4,y+4,x+cw-4,y+ch-4,0xFF3D5D83);
-    g.drawCenteredString(font,"MTG",x+cw/2,y+ch/2-5,0xFFF1D89C);
-   }else if(!c.stack().isEmpty())CaszualMtgClient.art(g,c.stack(),0,x,y,cw,ch);
-   if(c.tapped())g.drawString(font,"TAPPED",x,y+ch-10,0xFFFFFFAA);
+  g.fill(boardX()-3,boardY()-3,boardX()+boardW()+3,boardY()+boardH()+3,0xFF7D6548);
+  int bg=tile==null?0xFF2D453B:darken(tile.color());
+  g.fill(boardX(),boardY(),boardX()+boardW(),boardY()+boardH(),bg);
+  if(tile!=null)g.drawString(font,tile.owner().isBlank()?"Empty table":tile.owner()+"'s battlefield"+(tile.active()?"  •  CURRENT TURN":""),boardX()+8,boardY()+7,0xFFE5F3E7);
+  for(var c:displayed()){
+   int x=cardX(c),y=cardY(c),cw=boardCardW(),ch=boardCardH();
+   boolean chosen=c.id().equals(selectedCard);
+   g.fill(x-2,y-2,x+cw+2,y+ch+2,chosen?0xFFFFD078:c.tapped()?0xFF98BDEB:0xFF19212D);
+   drawArt(g,c.stack(),x,y,cw,ch);
+   if(c.tapped())g.drawString(font,"TAP",x+3,y+ch-10,0xFFFFFF80);
   }
-  int bx=boardX(),by=bottomY();
-  g.fill(bx-2,by-2,bx+boardW()+2,height-8,0xFF283748);
-  g.fill(bx,by,bx+boardW(),height-10,0xFF152234);
-  List<ItemStack> cards=bottomCards();
-  int maxRows=Math.min(visibleRows(),Math.max(0,(cards.size()+columns()-1)/columns()-scroll));
-  for(int row=0;row<maxRows;row++)for(int col=0;col<columns();col++){
-   int index=(scroll+row)*columns()+col;if(index>=cards.size())break;
-   int x=bx+6+col*83,y=cardTop()+row*112;
-   boolean selected=index==pickedBottom;
-   boolean bottom=bottomTab.equals("scry")&&scryBottom.contains(index);
-   g.fill(x-2,y-2,x+75,y+108,selected?0xFFE2BD70:bottom?0xFF9D5663:0xFF455D77);
-   CaszualMtgClient.art(g,cards.get(index),0,x+1,y+1,70,103);
-   if(bottomTab.equals("scry"))g.drawString(font,bottom?"BOTTOM":"TOP",x+3,y+93,bottom?0xFFFFCED2:0xFFEAF6A7);
+  g.fill(0,handTop(),width,height,0xFF192738);
+  g.fill(7,handTop()+27,width-7,height-8,0xFF132033);
+  if(data.commander().isEmpty()){
+   g.fill(13,zoneY(),81,zoneY()+handCardH(),0xFF354056);
+   g.drawCenteredString(font,"COMMANDER",47,zoneY()+24,0xFFE1BD7F);
+   g.drawCenteredString(font,"(deckbox)",47,zoneY()+39,0xFF9AB1C6);
+  }else drawArt(g,data.commander(),13,zoneY(),67,handCardH());
+  List<ItemStack> cards=zoneCards();
+  int maxStart=Math.max(0,cards.size()-visibleHandCards());
+  zoneScroll=Math.clamp(zoneScroll,0,maxStart);
+  for(int i=zoneScroll;i<cards.size()&&i<zoneScroll+visibleHandCards();i++){
+   int x=handStart()+(i-zoneScroll)*handStride();
+   int y=zoneY();
+   g.fill(x-2,y-2,x+handCardW()+2,y+handCardH()+2,i==selectedZone?0xFFFFC566:0xFF425A70);
+   drawArt(g,cards.get(i),x,y,handCardW(),handCardH());
+   if(zone.equals("scry"))g.drawString(font,scryBottom.contains(i)?"BOTTOM":"TOP",x+4,y+handCardH()-10,0xFFFFE79E);
   }
-  g.fill(sidebarX()-5,37,width-7,height-8,0xFF202D3D);
-  g.drawString(font,"Library: "+data.libraryCount(),sidebarX()+4,39,0xFFF4D9A6);
-  String owner=playing()?"Your seat: "+data.seat().getX()+","+data.seat().getZ():"Spectator / occupied";
-  g.drawString(font,font.plainSubstrByWidth(owner,155),sidebarX()+4,height-64,0xFFB3CBE2);
-  if(!message.isBlank())g.drawString(font,font.plainSubstrByWidth(message,boardW()-12),bx+4,height-19,0xFFFFD78B);
-  else g.drawString(font,"Click a card below, then place it above. Click a played card to move it.",bx+4,height-19,0xFFAEC2D5);
+  g.drawString(font,"Library "+data.libraryCount()+"  |  Hand "+data.hand().size()+"  |  "+zone.toUpperCase(Locale.ROOT),174,handTop()+12,0xFFD3E0EA);
+  if(!message.isBlank())g.drawString(font,font.plainSubstrByWidth(message,boardW()-16),boardX()+8,boardY()+boardH()-13,0xFFFFD789);
   super.render(g,mx,my,delta);
-  // Hold mouse over an art card for a larger readable preview.
-  int hit=bottomIndex(mx,my);
-  if(hit>=0&&hit<cards.size()&&cards.get(hit)!=null&&!cards.get(hit).isEmpty()){
-   int px=Math.min(width-182,Math.max(8,mx+16)),py=Math.max(35,Math.min(height-246,my-170));
-   g.fill(px-3,py-3,px+158,py+225,0xFFB89B6D);
-   CaszualMtgClient.art(g,cards.get(hit),0,px,py,155,222);
+  if(drag!=null&&drag.card()!=null){
+   int px=mx-25,py=my-36;
+   g.fill(px-2,py-2,px+54,py+78,0xFFFFD187);
+   drawArt(g,drag.card(),px,py,52,76);
+  }else{
+   int index=zoneAt(mx,my);
+   if(index>=0&&index<cards.size()){
+    int pw=126,ph=180,px=Math.max(8,Math.min(width-pw-8,mx+18)),py=Math.max(35,Math.min(height-ph-9,my-150));
+    g.fill(px-3,py-3,px+pw+3,py+ph+3,0xFFB59A70);
+    drawArt(g,cards.get(index),px,py,pw,ph);
+   }
   }
  }
 }
