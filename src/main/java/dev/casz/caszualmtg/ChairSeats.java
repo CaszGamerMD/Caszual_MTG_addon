@@ -23,15 +23,15 @@ public final class ChairSeats {
   // Marker armor stands have no collisions and do not appear through the chair.
   ArmorStand seat=new ArmorStand(EntityTypes.ARMOR_STAND,level);
   seat.setPos(pos.getX()+.5,pos.getY()+.37,pos.getZ()+.5);
-  seat.setSmall(true);
-  seat.setMarker(true);
+  // Invisible mount is sunk into the slab-height chair seat.
+  seat.noPhysics=true;
   seat.setInvisible(true);
   seat.setSilent(true);
   seat.setNoGravity(true);
   seat.setInvulnerable(true);
   seat.addTag("caszual_mtg_chair_seat");
   level.addFreshEntity(seat);
-  if(player.startRiding(seat,true))ACTIVE.put(player.getUUID(),new Seat(level,pos.immutable(),seat));
+  if(player.startRiding(seat))ACTIVE.put(player.getUUID(),new Seat(level,pos.immutable(),seat));
   else seat.discard();
  }
  public static void tick(ServerLevel world){
