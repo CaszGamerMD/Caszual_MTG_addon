@@ -4,6 +4,9 @@ import com.spider.mtgcard.client.compat.*;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import com.spider.mtgcard.util.TcgCardMeta;
+import org.lwjgl.glfw.GLFW;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -20,6 +23,10 @@ public final class TabletopScreen extends LegacyScreen {
  BlockPos view;
  String message="";
  String zone="hand";
+ String menuMode="";
+ EditBox quantity;
+ boolean resetConfirm=false;
+ boolean discardMode=false;
  int zoneScroll=0,tabScroll=0,ticks=0;
  String selectedCard="";
  int selectedZone=-1;
@@ -34,12 +41,14 @@ public final class TabletopScreen extends LegacyScreen {
  }
  void update(TabletopWire.Reply reply){
   boolean changed=!data.tiles().equals(reply.tiles())||data.scry().isEmpty()!=reply.scry().isEmpty()
-   ||data.commander().isEmpty()!=reply.commander().isEmpty();
+   ||data.commander().isEmpty()!=reply.commander().isEmpty()
+   ||data.reveal().isEmpty()!=reply.reveal().isEmpty();
   data=reply;
   if(reply.tiles().stream().noneMatch(t->t.pos().equals(view)))view=reply.seat();
   if(!reply.message().isBlank())message=reply.message();
-  if(!reply.scry().isEmpty())zone="scry";
-  else if(zone.equals("scry")){zone="hand";scryBottom.clear();}
+  if(!reply.reveal().isEmpty())zone="reveal";
+  else if(!reply.scry().isEmpty())zone="scry";
+  else if(zone.equals("scry")||zone.equals("reveal")){zone="hand";scryBottom.clear();}
   if(!selectedCard.isBlank()&&reply.cards().stream().noneMatch(c->c.id().equals(selectedCard)))selectedCard="";
   if(changed)rebuildWidgets();
  }
@@ -67,6 +76,7 @@ public final class TabletopScreen extends LegacyScreen {
    case "grave" -> data.grave().stream().map(TabletopWire.ZoneCard::stack).toList();
    case "exile" -> data.exile().stream().map(TabletopWire.ZoneCard::stack).toList();
    case "scry" -> data.scry();
+   case "reveal" -> data.reveal();
    default -> data.hand();
   };
  }
@@ -74,7 +84,7 @@ public final class TabletopScreen extends LegacyScreen {
   zone=next;zoneScroll=0;selectedZone=-1;drag=null;rebuildWidgets();
  }
  int boardX(){return 12;}
- int boardY(){return 76;}
+ int boardY(){return menuMode.isEmpty()?66:97;}
  int boardW(){return width-24;}
  int handTop(){return height-139;}
  int boardH(){return Math.max(100,handTop()-boardY()-8);}
@@ -107,6 +117,9 @@ public final class TabletopScreen extends LegacyScreen {
   return index>=0&&index<zoneCards().size()?index:-1;
  }
  void selectView(BlockPos target){view=target;selectedCard="";drag=null;rebuildWidgets();}
+ int wanted(){try{return Math.clamp(Integer.parseInt(quantity.getValue().trim()),1,99);}catch(Exception e){message="Enter a number from 1 to 99.";return -1;}}
+ void amountAction(String action){int n=wanted();if(n<0)return;send(action,"",data.seat(),0,0,n);}
+ void openMenu(String name){menuMode=menuMode.equals(name)?"":name;resetConfirm=false;rebuildWidgets();}
  String seatLabel(TabletopWire.Tile t){
   String name=t.owner().isBlank()?"Empty":t.owner();
   if(name.length()>11)name=name.substring(0,11);
@@ -128,22 +141,50 @@ public final class TabletopScreen extends LegacyScreen {
    button("▶",width-42,7,31,()->{tabScroll=Math.min(Math.max(0,data.tiles().size()-maxTabs),tabScroll+maxTabs);rebuildWidgets();});
   }
   int ux=12,uy=38;
-  button("Draw",ux,uy,57,()->action("draw",1));ux+=61;
-  button("Draw 7",ux,uy,68,()->action("draw",7));ux+=72;
-  button("Scry 1",ux,uy,65,()->action("scry_begin",1));ux+=69;
-  button("Scry 3",ux,uy,65,()->action("scry_begin",3));ux+=69;
-  button("Mill",ux,uy,55,()->action("mill",1));ux+=59;
-  button("Mill 5",ux,uy,61,()->action("mill",5));ux+=65;
-  button("Shuffle",ux,uy,65,()->action("shuffle",0));ux+=69;
-  button("Pass Turn",ux,uy,84,()->action("pass_turn",0));ux+=89;
-  button("Tap",ux,uy,43,()->tableAction("tap"));ux+=47;
-  button("Flip",ux,uy,44,()->tableAction("hide"));ux+=48;
-  if(width-ux>=67)button("Close",width-74,uy,62,this::onClose);
+  button("Draw ▾",ux,uy,86,()->openMenu("draw"));ux+=91;
+  button("Deck ▾",ux,uy,86,()->openMenu("deck"));ux+=91;
+  button("Pass Turn",ux,uy,91,()->action("pass_turn",0));ux+=96;
+  button("Flip",ux,uy,58,()->tableAction("flip"));ux+=63;
+  button("Close",width-77,uy,64,this::onClose);
+  if(menuMode.equals("draw")){
+   int mx=12,my=66;
+   quantity=addRenderableWidget(new EditBox(font,mx+62,my+3,48,18,Component.literal("X")));
+   quantity.setMaxLength(2);quantity.setValue("3");
+   button("Draw",mx+115,my,62,()->action("draw",1));
+   button("Draw X",mx+182,my,68,()->amountAction("draw"));
+   button("Mulligan",mx+255,my,89,()->openMenu("mulligan"));
+   button("Scry X",mx+349,my,74,()->amountAction("scry_begin"));
+   button("Mill X",mx+428,my,73,()->amountAction("mill"));
+  }else if(menuMode.equals("mulligan")){
+   int mx=12,my=66;
+   button("Friendly",mx,my,85,()->action("mulligan_friendly",0));
+   button("Strict",mx+90,my,85,()->action("mulligan_strict",0));
+   button("Finish",mx+180,my,85,()->action("mulligan_finish",0));
+   button("Back",mx+270,my,64,()->openMenu("draw"));
+   button("Discard mode",mx+339,my,108,()->{discardMode=!discardMode;message=discardMode?"Click a card in Hand to discard for strict mulligan.":"Discard mode off.";});
+  }else if(menuMode.equals("deck")){
+   int mx=12,my=66;
+   quantity=addRenderableWidget(new EditBox(font,mx,my+3,48,18,Component.literal("Reveal count")));
+   quantity.setMaxLength(2);quantity.setValue("3");
+   button("Shuffle",mx+53,my,83,()->action("shuffle",0));
+   button("Search",mx+141,my,78,()->action("search_deck",0));
+   button("Reveal X",mx+224,my,87,()->amountAction("reveal_begin"));
+   button(resetConfirm?"CONFIRM RESET":"RESET",mx+316,my,135,()->{
+    if(resetConfirm){resetConfirm=false;action("reset",0);}
+    else{resetConfirm=true;rebuildWidgets();}
+   });
+  }
   int by=handTop()+5;
   button("Hand",12,by,58,()->switchZone("hand"));
   button("GY",74,by,35,()->switchZone("grave"));
   button("Exile",112,by,53,()->switchZone("exile"));
-  if(!data.scry().isEmpty()){
+  if(!data.reveal().isEmpty()){
+   button("Reveal",169,by,58,()->switchZone("reveal"));
+   button("Top → Hand",width-310,by,100,()->action("reveal_to_hand",0));
+   button("Top → Field",width-205,by,100,()->{
+    message="Drag the first revealed card into the battlefield.";});
+   button("Rest → Bottom",width-100,by,90,()->action("reveal_end",0));
+  }else if(!data.scry().isEmpty()){
    button("Scry",169,by,48,()->switchZone("scry"));
    button("Resolve",width-185,by,84,this::resolveScry);
    button("Cancel",width-97,by,84,()->action("scry_cancel",0));
@@ -189,11 +230,13 @@ public final class TabletopScreen extends LegacyScreen {
   int idx=zoneAt(x,y);
   if(idx>=0){
    selectedCard="";selectedZone=idx;
-   if(zone.equals("scry")){
+   if(discardMode&&zone.equals("hand")){
+    action("mulligan_discard",idx);discardMode=false;
+   }else if(zone.equals("scry")){
     if(!scryBottom.add(idx))scryBottom.remove(idx);
    }else{
     String source=zone;
-    drag=new Drag(source,"",idx,zoneCards().get(idx),x,y);
+    if(!source.equals("reveal")||idx==0)drag=new Drag(source,"",idx,zoneCards().get(idx),x,y);
    }
    return true;
   }
@@ -209,6 +252,7 @@ public final class TabletopScreen extends LegacyScreen {
      case "board" -> {
       if(Math.abs(mx-held.startX())>3||Math.abs(my-held.startY())>3)
        send("move",held.id(),view,x,y,0);
+      else send("tap",held.id(),view,0,0,0);
      }
      case "hand" -> send("put_hand","",view,x,y,held.index());
      case "grave" -> {
@@ -218,6 +262,7 @@ public final class TabletopScreen extends LegacyScreen {
       if(held.index()<data.exile().size())send("put_exile","",view,x,y,data.exile().get(held.index()).slot());
      }
      case "commander" -> send("play_commander","",view,x,y,0);
+     case "reveal" -> {if(held.index()==0)send("reveal_to_field","",view,x,y,0);}
     }
    }
    return true;
@@ -245,7 +290,7 @@ public final class TabletopScreen extends LegacyScreen {
   if(stack==null||stack.isEmpty()){
    g.fill(x,y,x+w,y+h,0xFF22364E);
    g.drawCenteredString(font,"MTG",x+w/2,y+h/2-4,0xFFEAD29C);
-  }else CaszualMtgClient.art(g,stack,0,x,y,w,h);
+  }else CaszualMtgClient.art(g,stack,TcgCardMeta.read(stack).face(),x,y,w,h);
  }
  @Override public void render(GuiGraphics g,int mx,int my,float delta){
   g.fill(0,0,width,height,0xFF121B28);
@@ -268,7 +313,8 @@ public final class TabletopScreen extends LegacyScreen {
    int x=cardX(c),y=cardY(c),cw=boardCardW(),ch=boardCardH();
    boolean chosen=c.id().equals(selectedCard);
    g.fill(x-2,y-2,x+cw+2,y+ch+2,chosen?0xFFFFD078:c.tapped()?0xFF98BDEB:0xFF19212D);
-   drawArt(g,c.stack(),x,y,cw,ch);
+   if(c.hidden())drawArt(g,ItemStack.EMPTY,x,y,cw,ch);
+   else drawArt(g,c.stack(),x,y,cw,ch);
    if(c.tapped())g.drawString(font,"TAP",x+3,y+ch-10,0xFFFFFF80);
   }
   g.fill(0,handTop(),width,height,0xFF192738);
@@ -291,6 +337,25 @@ public final class TabletopScreen extends LegacyScreen {
   g.drawString(font,"Library "+data.libraryCount()+"  |  Hand "+data.hand().size()+"  |  "+zone.toUpperCase(Locale.ROOT),174,handTop()+12,0xFFD3E0EA);
   if(!message.isBlank())g.drawString(font,font.plainSubstrByWidth(message,boardW()-16),boardX()+8,boardY()+boardH()-13,0xFFFFD789);
   super.render(g,mx,my,delta);
+  // Alt enlarges the hovered card to a legible preview without revealing opponents' hidden cards.
+  boolean alt=GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(),GLFW.GLFW_KEY_LEFT_ALT)==GLFW.GLFW_PRESS
+   ||GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(),GLFW.GLFW_KEY_RIGHT_ALT)==GLFW.GLFW_PRESS;
+  if(alt){
+   ItemStack hovered=ItemStack.EMPTY;
+   var onField=cardAt(mx,my);
+   if(onField!=null&&!onField.hidden())hovered=onField.stack();
+   int zi=zoneAt(mx,my);
+   if(hovered.isEmpty()&&zi>=0&&zi<cards.size())hovered=cards.get(zi);
+   if(hovered.isEmpty()&&!data.commander().isEmpty()&&mx>=12&&mx<81&&my>=zoneY())hovered=data.commander();
+   if(!hovered.isEmpty()){
+    int ph=Math.min(height-65,365),pw=Math.round(ph*.715f);
+    int px=Math.max(6,Math.min(width-pw-8,mx+18)),py=Math.max(35,Math.min(height-ph-8,my-ph/2));
+    g.fill(px-5,py-5,px+pw+5,py+ph+5,0xFFCFAC73);
+    drawArt(g,hovered,px,py,pw,ph);
+    g.drawString(font,font.plainSubstrByWidth(TcgCardMeta.displayName(hovered),pw),px+4,py+ph-12,0xFFFCE9B6);
+    return;
+   }
+  }
   if(drag!=null&&drag.card()!=null){
    int px=mx-25,py=my-36;
    g.fill(px-2,py-2,px+54,py+78,0xFFFFD187);
