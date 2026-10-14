@@ -3,6 +3,13 @@ package dev.casz.caszualmtg;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -27,6 +34,31 @@ public final class TabletopBlockEntity extends BlockEntity {
   public PlayedCard moved(int nx,int ny){return new PlayedCard(id,owner,stack,Math.clamp(nx,0,1000),Math.clamp(ny,0,1000),tapped,faceDown);}
   public PlayedCard tapped(boolean value){return new PlayedCard(id,owner,stack,x,y,value,faceDown);}
   public PlayedCard hidden(boolean value){return new PlayedCard(id,owner,stack,x,y,tapped,value);}
+ }
+ // Keep dark oak as the fallback for tables placed before material selection existed.
+ private String material="minecraft:dark_oak_planks";
+ public String material(){return material;}
+ public void material(String wood){
+  String next=ChairWood.safe(wood);
+  if(next.equals(material))return;
+  material=next;setChanged();
+  if(level!=null){
+   BlockState state=getBlockState();
+   level.sendBlockUpdated(worldPosition,state,state,3);
+  }
+ }
+ public Object getRenderData(){return material;}
+ @Override protected void collectImplicitComponents(DataComponentMap.Builder builder){
+  super.collectImplicitComponents(builder);
+  builder.set(CaszualMtg.TABLE_MATERIAL,material);
+ }
+ @Override public CompoundTag getUpdateTag(HolderLookup.Provider lookup){
+  CompoundTag tag=super.getUpdateTag(lookup);
+  tag.putString("TableWood",material);
+  return tag;
+ }
+ @Override public @Nullable Packet<ClientGamePacketListener> getUpdatePacket(){
+  return ClientboundBlockEntityDataPacket.create(this);
  }
  private UUID seatOwner;
  private String seatName="";
@@ -74,6 +106,7 @@ public final class TabletopBlockEntity extends BlockEntity {
   super.saveAdditional(out);
   if(seatOwner!=null)out.putString("SeatOwner",seatOwner.toString());
   out.putString("SeatName",seatName);
+  out.putString("TableWood",material);
   if(!commanderReference.isEmpty())out.store("CommanderReference",ItemStack.CODEC,commanderReference);
   out.store("PlayedCards",PlayedCard.CODEC.listOf(),cards);
  }
@@ -81,6 +114,7 @@ public final class TabletopBlockEntity extends BlockEntity {
   super.loadAdditional(in);seatOwner=null;
   try{String s=in.getStringOr("SeatOwner","");if(!s.isBlank())seatOwner=UUID.fromString(s);}catch(IllegalArgumentException ignored){}
   seatName=in.getStringOr("SeatName","");
+  material=ChairWood.safe(in.getStringOr("TableWood","minecraft:dark_oak_planks"));
   commanderReference=in.read("CommanderReference",ItemStack.CODEC).orElse(ItemStack.EMPTY);
   cards.clear();
   for(PlayedCard c:in.read("PlayedCards",PlayedCard.CODEC.listOf()).orElse(List.of())){
