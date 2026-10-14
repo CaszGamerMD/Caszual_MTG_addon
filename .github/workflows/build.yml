@@ -59,6 +59,9 @@ jobs:
       - name: Validate experimental multiplayer tabletop assets and behavior
         run: python3 -m unittest discover -s tests -p 'test_tabletop.py' -v
 
+      - name: Validate Card Store progress and rack hover tooltips
+        run: python3 -m unittest discover -s tests -p 'test_card_store_rack_polish.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
