@@ -91,7 +91,7 @@ public final class TabletopScreen extends LegacyScreen {
    button("Return to hand",x,y+86,156,()->tableAction("return"));
    button("To graveyard",x,y+112,156,()->tableAction("grave"));
    button("Exile",x,y+138,156,()->tableAction("exile"));
-   if((bottomTab.equals("grave")||bottomTab.equals("exile"))&&pickedBottom>=0)
+   if(bottomTab.equals("grave")||bottomTab.equals("exile"))
     button("Zone → Hand",x,y+170,156,this::zoneToHand);
   }
   button("Done",x,height-33,156,this::onClose);
