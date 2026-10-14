@@ -1,7 +1,164 @@
 {
-  "variants": {
-    "": {
-      "model": "caszual_mtg:block/tabletop"
+  "multipart": [
+    {
+      "when": {
+        "felt": "white"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_white"
+      }
+    },
+    {
+      "when": {
+        "felt": "orange"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_orange"
+      }
+    },
+    {
+      "when": {
+        "felt": "magenta"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_magenta"
+      }
+    },
+    {
+      "when": {
+        "felt": "light_blue"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_light_blue"
+      }
+    },
+    {
+      "when": {
+        "felt": "yellow"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_yellow"
+      }
+    },
+    {
+      "when": {
+        "felt": "lime"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_lime"
+      }
+    },
+    {
+      "when": {
+        "felt": "pink"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_pink"
+      }
+    },
+    {
+      "when": {
+        "felt": "gray"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_gray"
+      }
+    },
+    {
+      "when": {
+        "felt": "light_gray"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_light_gray"
+      }
+    },
+    {
+      "when": {
+        "felt": "cyan"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_cyan"
+      }
+    },
+    {
+      "when": {
+        "felt": "purple"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_purple"
+      }
+    },
+    {
+      "when": {
+        "felt": "blue"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_blue"
+      }
+    },
+    {
+      "when": {
+        "felt": "brown"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_brown"
+      }
+    },
+    {
+      "when": {
+        "felt": "green"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_green"
+      }
+    },
+    {
+      "when": {
+        "felt": "red"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_red"
+      }
+    },
+    {
+      "when": {
+        "felt": "black"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_black"
+      }
+    },
+    {
+      "when": {
+        "cards": "1"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_cards_1"
+      }
+    },
+    {
+      "when": {
+        "cards": "2"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_cards_2"
+      }
+    },
+    {
+      "when": {
+        "cards": "3"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_cards_3"
+      }
+    },
+    {
+      "when": {
+        "cards": "4"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_cards_4"
+      }
     }
-  }
+  ]
 }
