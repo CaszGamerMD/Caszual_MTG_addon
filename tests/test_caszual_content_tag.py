@@ -11,7 +11,7 @@ SOURCE = ROOT / "src/main/java/dev/casz/caszualmtg/CaszualMtg.java"
 EXPECTED = {
     "land_database", "token_database", "community_database",
     "deck_builder", "custom_deckbox", "hand_block",
-    "deckbox_rack", "staff_rack", "counter", "targeting_staff",
+    "deckbox_rack", "staff_rack", "tabletop", "counter", "targeting_staff",
 }
 
 
@@ -31,7 +31,7 @@ class CaszualContentTagTest(unittest.TestCase):
         database_ids = set(re.findall(r'block\("(\w+)",\s*[012]\)', source))
         other_ids = {
             "deck_builder", "hand_block", "custom_deckbox",
-            "deckbox_rack", "staff_rack", "counter", "targeting_staff",
+            "deckbox_rack", "staff_rack", "tabletop", "counter", "targeting_staff",
         }
         self.assertEqual(database_ids, {"land_database", "token_database", "community_database"})
         for item_id in other_ids:
