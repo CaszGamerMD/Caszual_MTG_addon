@@ -8,6 +8,14 @@ import net.minecraft.world.entity.player.Inventory;
 public final class DeckboxRackScreen extends LegacyContainerScreen<DeckboxRackMenu> {
  public DeckboxRackScreen(DeckboxRackMenu menu,Inventory inv,Component title){super(menu,inv,title,206,246);}
  @Override protected void init(){super.init();addRenderableWidget(Button.builder(Component.literal("Done"),b->onClose()).bounds(leftPos+125,topPos+219,68,20).build());}
+ @Override public void render(GuiGraphics g,int mx,int my,float delta){
+  super.render(g,mx,my,delta);
+  // LegacyContainerScreen does not call extractTooltip automatically. Explicitly
+  // render it for the rack and player-inventory slots, including deckbox NBT.
+  renderTooltip(g,mx,my);
+  if(hoveredSlot!=null&&!hoveredSlot.hasItem()&&menu.slots.indexOf(hoveredSlot)<DeckboxRackEntity.SIZE)
+   g.setTooltipForNextFrame(font,Component.literal("Deckbox slot"),mx,my);
+ }
  @Override protected void renderBg(GuiGraphics g,float delta,int mx,int my){
   int x=leftPos,y=topPos;
   g.fill(x,y,x+206,y+246,0xFF182335);
