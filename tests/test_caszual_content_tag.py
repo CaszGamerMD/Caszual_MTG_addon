@@ -12,8 +12,6 @@ EXPECTED = {
     "land_database", "token_database", "community_database",
     "deck_builder", "custom_deckbox", "hand_block",
     "deckbox_rack", "staff_rack", "tabletop", "counter", "targeting_staff",
-    "oak_chair","spruce_chair","birch_chair","jungle_chair","acacia_chair","dark_oak_chair",
-    "mangrove_chair","cherry_chair","bamboo_chair","crimson_chair","warped_chair","pale_oak_chair",
     "material_chair",
 }
 
@@ -41,7 +39,7 @@ class CaszualContentTagTest(unittest.TestCase):
         for item_id in other_ids:
             self.assertIn(f'id("{item_id}")', source)
         tag = json.loads(TAG.read_text(encoding="utf-8"))
-        self.assertIn('String name=wood+"_chair";',source)
+        self.assertNotIn('String name=wood+"_chair";',source)
         self.assertEqual(set(tag["values"]), {f"caszual_mtg:{key}" for key in EXPECTED})
 
     def test_tag_belongs_to_additions_without_hard_mod_dependency(self):
