@@ -37,6 +37,18 @@ public final class CaszualMtg implements ModInitializer {
  static BuilderBlock builderBlock(){var key=ResourceKey.create(Registries.BLOCK,id("deck_builder"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new BuilderBlock(BlockBehaviour.Properties.of().setId(key).strength(2.5f)));var itemKey=ResourceKey.create(Registries.ITEM,id("deck_builder"));Registry.register(BuiltInRegistries.ITEM,itemKey,new BlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));return block;}
  public static final net.minecraft.core.component.DataComponentType<String> BOX_MATERIAL=Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,id("box_material"),net.minecraft.core.component.DataComponentType.<String>builder().persistent(com.mojang.serialization.Codec.STRING).networkSynchronized(net.minecraft.network.codec.StreamCodec.of((b,v)->b.writeUtf(v,256),b->b.readUtf(256))).build());
  public static final CustomDeckbox CUSTOM_BOX=customBox();
+ public static final TabletopBlock TABLETOP=tabletopBlock();
+ public static final BlockEntityType<TabletopBlockEntity> TABLETOP_BE=Registry.register(
+  BuiltInRegistries.BLOCK_ENTITY_TYPE,id("tabletop"),
+  FabricBlockEntityTypeBuilder.create(TabletopBlockEntity::new,TABLETOP).build());
+ static TabletopBlock tabletopBlock(){
+  var key=ResourceKey.create(Registries.BLOCK,id("tabletop"));
+  var block=Registry.register(BuiltInRegistries.BLOCK,key,
+   new TabletopBlock(BlockBehaviour.Properties.of().setId(key).strength(2.5f).noOcclusion().sound(net.minecraft.world.level.block.SoundType.WOOD)));
+  var ik=ResourceKey.create(Registries.ITEM,id("tabletop"));
+  Registry.register(BuiltInRegistries.ITEM,ik,new BlockItem(block,new Item.Properties().setId(ik).useBlockDescriptionPrefix().stacksTo(1)));
+  return block;
+ }
  public static final HandBlock HAND=handBlock();
  public static final BlockEntityType<HandBlockEntity> HAND_BE=Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,id("hand_block"),FabricBlockEntityTypeBuilder.create(HandBlockEntity::new,HAND).build());
  static HandBlock handBlock(){var key=ResourceKey.create(Registries.BLOCK,id("hand_block"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new HandBlock(BlockBehaviour.Properties.of().setId(key).strength(2.0f).sound(net.minecraft.world.level.block.SoundType.WOOD)));var itemKey=ResourceKey.create(Registries.ITEM,id("hand_block"));Registry.register(BuiltInRegistries.ITEM,itemKey,new BlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));return block;}
@@ -73,10 +85,13 @@ public final class CaszualMtg implements ModInitializer {
   // MTGCard's initializer can run later in the same Fabric initialization pass.
   net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING
       .register(server -> MtgBlockEntitySafety.verifyAtLifecycle("server startup"));
+  PayloadTypeRegistry.serverboundPlay().register(TabletopWire.Request.TYPE,TabletopWire.Request.CODEC);
+  PayloadTypeRegistry.clientboundPlay().register(TabletopWire.Reply.TYPE,TabletopWire.Reply.CODEC);
+  ServerPlayNetworking.registerGlobalReceiver(TabletopWire.Request.TYPE,(req,ctx)->TabletopLogic.handle(ctx.player(),req));
   PayloadTypeRegistry.serverboundPlay().register(Wire.Request.TYPE,Wire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(Wire.Reply.TYPE,Wire.Reply.CODEC);PayloadTypeRegistry.serverboundPlay().register(HandWire.Request.TYPE,HandWire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(HandWire.Reply.TYPE,HandWire.Reply.CODEC);PayloadTypeRegistry.clientboundPlay().register(DeckboxRefreshWire.Refresh.TYPE,DeckboxRefreshWire.Refresh.CODEC);
   ServerPlayNetworking.registerGlobalReceiver(Wire.Request.TYPE,(req,ctx)->ServerLogic.handle(ctx.player(),req));ServerPlayNetworking.registerGlobalReceiver(HandWire.Request.TYPE,(req,ctx)->HandLogic.handle(ctx.player(),req));
-  ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);StaffTargets.clearAllForDisconnect(h.player);});
-  CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(HAND);e.accept(RACK);e.accept(STAFF_RACK);});
+  ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);TabletopLogic.close(h.player);StaffTargets.clearAllForDisconnect(h.player);});
+  CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(HAND);e.accept(RACK);e.accept(STAFF_RACK);e.accept(TABLETOP);});
   UseEntityCallback.EVENT.register((p,l,hand,e,hit)->{
    if(p.getItemInHand(hand).is(TARGETING_STAFF)){
     if(!l.isClientSide()&&p instanceof ServerPlayer sp)StaffTargets.mark(sp,e,StaffTargets.Color.ORANGE);
