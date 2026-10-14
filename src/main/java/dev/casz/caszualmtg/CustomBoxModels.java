@@ -23,12 +23,14 @@ import java.util.function.Predicate;
 public final class CustomBoxModels {
  static final Identifier PANELS=Identifier.fromNamespaceAndPath("minecraft","block/spruce_planks");
  static final Identifier CHAIR_SOURCE=Identifier.fromNamespaceAndPath("minecraft","block/oak_planks");
+ static final Identifier TABLE_SOURCE=Identifier.fromNamespaceAndPath("minecraft","block/dark_oak_planks");
  public static void register(){ModelLoadingPlugin.register(context->{
-  context.modifyBlockModelAfterBake().register((model,ctx)->ctx.state().is(CaszualMtg.CUSTOM_BOX)?new WorldModel(model):ctx.state().is(CaszualMtg.MATERIAL_CHAIR)?new ChairWorldModel(model):model);
-  context.modifyItemModelAfterBake().register((model,ctx)->ctx.itemId().equals(CaszualMtg.id("custom_deckbox"))?new ItemModel(model):ctx.itemId().equals(CaszualMtg.id("material_chair"))?new ChairItemModel(model):model);
+  context.modifyBlockModelAfterBake().register((model,ctx)->ctx.state().is(CaszualMtg.CUSTOM_BOX)?new WorldModel(model):ctx.state().is(CaszualMtg.MATERIAL_CHAIR)?new ChairWorldModel(model):ctx.state().is(CaszualMtg.TABLETOP)?new TableWorldModel(model):model);
+  context.modifyItemModelAfterBake().register((model,ctx)->ctx.itemId().equals(CaszualMtg.id("custom_deckbox"))?new ItemModel(model):ctx.itemId().equals(CaszualMtg.id("material_chair"))?new ChairItemModel(model):ctx.itemId().equals(CaszualMtg.id("tabletop"))?new TableItemModel(model):model);
  });}
  static Material.Baked material(String id){return Minecraft.getInstance().getModelManager().getBlockStateModelSet().getParticleMaterial(BoxMaterial.block(id).defaultBlockState());}
  static Material.Baked chairMaterial(String id){return Minecraft.getInstance().getModelManager().getBlockStateModelSet().getParticleMaterial(ChairWood.block(id).defaultBlockState());}
+ static String tableSkin(BlockAndTintGetter level,BlockPos pos){Object data=level.getBlockEntityRenderData(pos);return data instanceof String id?ChairWood.safe(id):"minecraft:dark_oak_planks";}
  static String chairSkin(BlockAndTintGetter level,BlockPos pos){Object data=level.getBlockEntityRenderData(pos);return data instanceof String id?ChairWood.safe(id):ChairWood.DEFAULT;}
  static String skin(BlockAndTintGetter level,BlockPos pos){Object data=level.getBlockEntityRenderData(pos);return data instanceof String id?BoxMaterial.safe(id):BoxMaterial.DEFAULT;}
  public static BakedQuad remap(BakedQuad quad,Material.Baked material){return remap(quad,material,PANELS);}
@@ -83,6 +85,54 @@ public final class CustomBoxModels {
   }
   @Override public int materialFlags(BlockAndTintGetter level,BlockPos pos,BlockState state,RandomSource random){
    return wrapped.materialFlags()|flags(chairMaterial(chairSkin(level,pos)));
+  }
+ }
+ /** Only frame planks are retargeted; wool playmat and placed-card markers
+  * retain their own textures in the multipart table model. */
+ static final class TablePart implements BlockStateModelPart {
+  final BlockStateModelPart original;final Material.Baked wood;
+  TablePart(BlockStateModelPart original,Material.Baked wood){this.original=original;this.wood=wood;}
+  public List<BakedQuad> getQuads(Direction side){
+   return original.getQuads(side).stream().map(q->remap(q,wood,TABLE_SOURCE)).toList();
+  }
+  public boolean useAmbientOcclusion(){return original.useAmbientOcclusion();}
+  public Material.Baked particleMaterial(){return wood;}
+  public int materialFlags(){return original.materialFlags()|flags(wood);}
+ }
+ static final class TableWorldModel extends WrapperBlockStateModel {
+  TableWorldModel(BlockStateModel model){super(model);}
+  @Override public void emitQuads(QuadEmitter emitter,BlockAndTintGetter level,BlockPos pos,BlockState state,RandomSource random,Predicate<Direction> cull){
+   Material.Baked wood=chairMaterial(tableSkin(level,pos));
+   List<BlockStateModelPart> parts=new ArrayList<>();
+   wrapped.collectParts(random,parts);
+   for(var part:parts)new TablePart(part,wood).emitQuads(emitter,cull);
+  }
+  @Override public Object createGeometryKey(BlockAndTintGetter level,BlockPos pos,BlockState state,RandomSource random){
+   return List.of(state,tableSkin(level,pos));
+  }
+  @Override public Material.Baked particleMaterial(BlockAndTintGetter level,BlockPos pos,BlockState state){
+   return chairMaterial(tableSkin(level,pos));
+  }
+  @Override public int materialFlags(BlockAndTintGetter level,BlockPos pos,BlockState state,RandomSource random){
+   return wrapped.materialFlags()|flags(chairMaterial(tableSkin(level,pos)));
+  }
+ }
+ static final class TableItemModel extends WrapperBakedItemModel {
+  TableItemModel(net.minecraft.client.renderer.item.ItemModel model){super(model);}
+  @Override public void update(ItemStackRenderState state,ItemStack stack,ItemModelResolver resolver,ItemDisplayContext display,
+      net.minecraft.client.multiplayer.ClientLevel level,net.minecraft.world.entity.ItemOwner owner,int seed){
+   int first=((ItemLayersAccess)state).companion$layerCount();
+   wrapped.update(state,stack,resolver,display,level,owner,seed);
+   String id=ChairWood.safe(stack.getOrDefault(CaszualMtg.TABLE_MATERIAL,"minecraft:dark_oak_planks"));
+   Material.Baked wood=chairMaterial(id);
+   var access=(ItemLayersAccess)state;
+   for(int i=first;i<access.companion$layerCount();i++){
+    var layer=access.companion$layers()[i];
+    layer.prepareQuadList().replaceAll(q->remap(q,wood,TABLE_SOURCE));
+    layer.setParticleMaterial(wood);
+   }
+   state.appendModelIdentityElement(id);
+   if(wood.sprite().isAnimated())state.setAnimated();
   }
  }
  static final class ChairItemModel extends WrapperBakedItemModel {
