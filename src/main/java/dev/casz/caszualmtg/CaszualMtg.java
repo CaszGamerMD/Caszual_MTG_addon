@@ -97,7 +97,7 @@ public final class CaszualMtg implements ModInitializer {
    Registry.register(BuiltInRegistries.MENU,id("staff_rack"),
      new ExtendedMenuType<>(StaffRackMenu::new,StaffRackMenu.OpenData.CODEC));
  public void onInitialize(){
-  net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(ChairSeats::tick);
+  net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_LEVEL_TICK.register(ChairSeats::tick);
   // Do not inspect MTGCard's block-entity fields in our main entrypoint:
   // MTGCard's initializer can run later in the same Fabric initialization pass.
   net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING
