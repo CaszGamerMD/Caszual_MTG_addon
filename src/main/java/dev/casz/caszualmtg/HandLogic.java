@@ -17,6 +17,7 @@ public final class HandLogic {
  private static final int LINK_RANGE=8;
  private static final SecureRandom RANDOM=new SecureRandom();
  private static final Map<UUID,BlockPos> PENDING_LINKS=new ConcurrentHashMap<>();
+ private static final Map<UUID,BlockPos> PENDING_LIFE_LINKS=new ConcurrentHashMap<>();
 
  public static void open(ServerPlayer player,BlockPos pos){
   HandBlockEntity hand=get(player,pos);if(hand==null)return;hand.ensureOwner(player);reply(player,hand,"Hand ready.");
@@ -37,6 +38,16 @@ public final class HandLogic {
   switch(req.action()){
    case "refresh" -> reply(player,hand,"");
    case "reveal" -> {if(!hand.isAuthorized(player)){reply(player,hand,"Only selected hand players can change reveal mode.");return;}hand.revealAll(!hand.revealAll());reply(player,hand,hand.revealAll()?"Hand revealed to everyone.":"Hand is private again.");}
+   case "table_color" -> {
+    if(!hand.canManage(player)){reply(player,hand,"Only the hand owner can change their table color.");return;}
+    if(!StaffColors.valid(req.text())){reply(player,hand,"Enter #RRGGBB.");return;}
+    hand.tableColor(req.text());reply(player,hand,"Table color saved.");
+   }
+   case "link_life" -> {
+    if(!hand.canManage(player)){reply(player,hand,"Only the owner can link a Life Point.");return;}
+    PENDING_LIFE_LINKS.put(player.getUUID(),hand.getBlockPos().immutable());
+    reply(player,hand,"Right-click your MTGCard Life Point block to link.");
+   }
    case "link" -> {if(!hand.canManage(player)){reply(player,hand,"Only the hand owner can change its Deck Control link.");return;}PENDING_LINKS.put(player.getUUID(),hand.getBlockPos().immutable());reply(player,hand,"Link mode armed. Right-click the Deck Control you want to use.");}
    case "add_viewer" -> addViewer(player,hand,req.text());
    case "remove_viewer" -> {if(!hand.canManage(player)){reply(player,hand,"Only the hand owner can remove viewers.");return;}if(hand.removeViewer(req.text().trim()))reply(player,hand,"Viewer removed.");else reply(player,hand,"That viewer is not on this hand.");}
@@ -204,7 +215,23 @@ public final class HandLogic {
   player.sendSystemMessage(Component.literal("Card Hand linked to Deck Control at "+shortPos(controlPos)+"."));
   return true;
  }
- public static void clearPendingLink(ServerPlayer player){PENDING_LINKS.remove(player.getUUID());}
+ public static void clearPendingLink(ServerPlayer player){PENDING_LINKS.remove(player.getUUID());PENDING_LIFE_LINKS.remove(player.getUUID());}
+ public static boolean completePendingLifeLink(ServerPlayer player,BlockPos lifePos){
+  BlockPos handPos=PENDING_LIFE_LINKS.get(player.getUUID());if(handPos==null)return false;
+  if(!(player.level().getBlockEntity(lifePos) instanceof com.spider.mtgcard.life.LifePointBlockEntity))return false;
+  PENDING_LIFE_LINKS.remove(player.getUUID());
+  if(!(player.level().getBlockEntity(handPos) instanceof HandBlockEntity hand)||!hand.canManage(player)){
+   player.sendSystemMessage(Component.literal("That Card Hand is missing or not yours."));return true;
+  }
+  if(Math.abs(lifePos.getX()-handPos.getX())>LINK_RANGE
+   ||Math.abs(lifePos.getY()-handPos.getY())>LINK_RANGE
+   ||Math.abs(lifePos.getZ()-handPos.getZ())>LINK_RANGE){
+   player.sendSystemMessage(Component.literal("Life Point must be within 8 blocks of the Card Hand."));return true;
+  }
+  hand.linkedLife(lifePos);
+  player.sendSystemMessage(Component.literal("Card Hand linked to Life Point at "+shortPos(lifePos)+"."));
+  return true;
+ }
 
 
  public static HandBlockEntity findLinked(DeckControlBlockEntity control){
@@ -255,7 +282,7 @@ public final class HandLogic {
   ServerPlayNetworking.send(player,new HandWire.Reply(
    hand.getBlockPos(),message,visible,authorized,hand.canManage(player),hand.revealAll(),hand.cardCount(),linked,
    hand.canManage(player)?hand.viewerNames():java.util.List.of(),visible?hand.visibleCards():java.util.List.of(),
-   hand.strictMulligans(),hand.pendingStrictDiscards(),staffCount(player)>0,hand.staffLeft(),hand.staffRight()
+   hand.strictMulligans(),hand.pendingStrictDiscards(),staffCount(player)>0,hand.staffLeft(),hand.staffRight(),hand.tableColor(),hand.linkedLife()==null?"Not linked":shortPos(hand.linkedLife())
   ));
  }
  static String shortPos(BlockPos p){return p.getX()+", "+p.getY()+", "+p.getZ();}
