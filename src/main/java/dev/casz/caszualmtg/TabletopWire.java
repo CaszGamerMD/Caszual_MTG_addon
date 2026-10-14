@@ -54,7 +54,7 @@ public final class TabletopWire {
     n=b.readVarInt();if(n<0||n>100)throw new IllegalArgumentException("Too many zone cards");
     List<ZoneCard> zone=new ArrayList<>();for(int i=0;i<n;i++)zone.add(new ZoneCard(b.readVarInt(),ItemStack.OPTIONAL_STREAM_CODEC.decode(b)));zones.add(zone);
    }
-   n=b.readVarInt();if(n<0||n>7)throw new IllegalArgumentException("Too many scry cards");
+   n=b.readVarInt();if(n<0||n>20)throw new IllegalArgumentException("Too many scry cards");
    List<ItemStack> scry=new ArrayList<>();for(int i=0;i<n;i++)scry.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(b));
    n=b.readVarInt();if(n<0||n>20)throw new IllegalArgumentException("Too many revealed cards");
    List<ItemStack> reveal=new ArrayList<>();for(int i=0;i<n;i++)reveal.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(b));
