@@ -41,7 +41,7 @@ public final class HandLogic {
    case "table_color" -> {
     if(!hand.canManage(player)){reply(player,hand,"Only the hand owner can change their table color.");return;}
     if(!StaffColors.valid(req.text())){reply(player,hand,"Enter #RRGGBB.");return;}
-    hand.tableColor(req.text());reply(player,hand,"Table color saved.");
+    hand.tableColor(req.text());TabletopLogic.refreshColor(player,hand);reply(player,hand,"Table color saved.");
    }
    case "link_life" -> {
     if(!hand.canManage(player)){reply(player,hand,"Only the owner can link a Life Point.");return;}
