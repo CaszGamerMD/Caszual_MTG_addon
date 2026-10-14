@@ -1,0 +1,132 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "edge": "minecraft:block/black_concrete",
+    "back": "minecraft:block/blue_terracotta",
+    "particle": "minecraft:block/blue_terracotta"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        14.025,
+        2
+      ],
+      "to": [
+        5,
+        14.12,
+        6
+      ],
+      "faces": {
+        "up": {
+          "texture": "#edge"
+        },
+        "down": {
+          "texture": "#edge"
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        2.2,
+        14.122,
+        2.2
+      ],
+      "to": [
+        4.8,
+        14.202,
+        5.8
+      ],
+      "faces": {
+        "up": {
+          "texture": "#back"
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        6,
+        14.025,
+        2.4
+      ],
+      "to": [
+        9,
+        14.12,
+        6.4
+      ],
+      "faces": {
+        "up": {
+          "texture": "#edge"
+        },
+        "down": {
+          "texture": "#edge"
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        6.2,
+        14.122,
+        2.6
+      ],
+      "to": [
+        8.8,
+        14.202,
+        6.199999999999999
+      ],
+      "faces": {
+        "up": {
+          "texture": "#back"
+        },
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        }
+      }
+    }
+  ]
+}
