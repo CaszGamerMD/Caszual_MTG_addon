@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.AABB;
 import java.util.*;
 
@@ -29,6 +30,10 @@ public final class ChairSeats {
   seat.setSilent(true);
   seat.setNoGravity(true);
   seat.setInvulnerable(true);
+  // Passenger position derives from mount height: scale the invisible stand
+  // so players actually sit at 8/16-block seat height rather than hovering.
+  var scale=seat.getAttribute(Attributes.SCALE);
+  if(scale!=null)scale.setBaseValue(0.10);
   seat.addTag("caszual_mtg_chair_seat");
   level.addFreshEntity(seat);
   if(player.startRiding(seat))ACTIVE.put(player.getUUID(),new Seat(level,pos.immutable(),seat));
@@ -41,8 +46,9 @@ public final class ChairSeats {
    var e=entry.getValue();
    if(e.world!=world)continue;
    var mount=e.mount();
+   var rider=world.getServer().getPlayerList().getPlayer(entry.getKey());
    boolean valid=mount.isAlive()&&world.getBlockState(e.pos()).getBlock() instanceof ChairBlock
-     &&mount.hasPassenger(world.getServer().getPlayerList().getPlayer(entry.getKey()));
+     &&rider!=null&&mount.hasPassenger(rider);
    if(!valid){if(mount.isAlive())mount.discard();iterator.remove();}
   }
  }
