@@ -27,10 +27,21 @@ class TabletopChairAndResetTests(unittest.TestCase):
                                 "Seat should be at eight model pixels, the height of a slab")
                 states=read(ASSETS/f"blockstates/{name}.json")["multipart"]
                 self.assertEqual(len(states),4*(2*len(COLORS)+1))
-                recipe=read(DATA/f"recipe/{name}.json")
-                self.assertEqual(recipe["result"]["id"],f"caszual_mtg:{name}")
-                self.assertEqual(recipe["key"]["P"],f"minecraft:{wood}_planks")
+                # Old identifiers remain valid for already placed chairs, but
+                # a single universal recipe now crafts the material-bearing chair.
+                self.assertFalse((DATA/f"recipe/{name}.json").exists())
                 self.assertEqual(read(ASSETS/f"items/{name}.json")["model"]["model"],f"caszual_mtg:block/{name}")
+    def test_dynamic_chair_recipe_and_source_materials(self):
+        recipe=read(DATA/"recipe/material_chair.json")
+        self.assertEqual(recipe["type"],"caszual_mtg:chair_material")
+        chair=(JAVA/"ChairRecipe.java").read_text(encoding="utf-8")
+        self.assertIn("ChairWood.eligible(item)",chair)
+        self.assertIn("CHAIR_MATERIAL",chair)
+        self.assertIn("current.equals",chair) if "current.equals" in chair else self.assertIn("material.equals(current)",chair)
+        model=read(ASSETS/"models/block/material_chair.json")
+        self.assertEqual(model["textures"]["wood"],"minecraft:block/oak_planks")
+        self.assertEqual(len(read(ASSETS/"blockstates/material_chair.json")["multipart"]),4*(2*len(COLORS)+1))
+
     def test_cushion_overlays_are_slightly_above_seat(self):
         for color in COLORS:
             with self.subTest(color=color):
