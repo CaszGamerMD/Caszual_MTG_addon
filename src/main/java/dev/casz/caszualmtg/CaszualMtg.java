@@ -37,6 +37,12 @@ public final class CaszualMtg implements ModInitializer {
  static BuilderBlock builderBlock(){var key=ResourceKey.create(Registries.BLOCK,id("deck_builder"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new BuilderBlock(BlockBehaviour.Properties.of().setId(key).strength(2.5f)));var itemKey=ResourceKey.create(Registries.ITEM,id("deck_builder"));Registry.register(BuiltInRegistries.ITEM,itemKey,new BlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));return block;}
  public static final net.minecraft.core.component.DataComponentType<String> BOX_MATERIAL=Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,id("box_material"),net.minecraft.core.component.DataComponentType.<String>builder().persistent(com.mojang.serialization.Codec.STRING).networkSynchronized(net.minecraft.network.codec.StreamCodec.of((b,v)->b.writeUtf(v,256),b->b.readUtf(256))).build());
  public static final CustomDeckbox CUSTOM_BOX=customBox();
+ public static final net.minecraft.core.component.DataComponentType<String> TABLE_MATERIAL=Registry.register(
+  BuiltInRegistries.DATA_COMPONENT_TYPE,id("table_material"),
+  net.minecraft.core.component.DataComponentType.<String>builder()
+   .persistent(com.mojang.serialization.Codec.STRING)
+   .networkSynchronized(net.minecraft.network.codec.StreamCodec.of((b,v)->b.writeUtf(v,256),b->b.readUtf(256)))
+   .build());
  public static final TabletopBlock TABLETOP=tabletopBlock();
  public static final BlockEntityType<TabletopBlockEntity> TABLETOP_BE=Registry.register(
   BuiltInRegistries.BLOCK_ENTITY_TYPE,id("tabletop"),
@@ -46,7 +52,7 @@ public final class CaszualMtg implements ModInitializer {
   var block=Registry.register(BuiltInRegistries.BLOCK,key,
    new TabletopBlock(BlockBehaviour.Properties.of().setId(key).strength(2.5f).noOcclusion().sound(net.minecraft.world.level.block.SoundType.WOOD)));
   var ik=ResourceKey.create(Registries.ITEM,id("tabletop"));
-  Registry.register(BuiltInRegistries.ITEM,ik,new BlockItem(block,new Item.Properties().setId(ik).useBlockDescriptionPrefix().stacksTo(1)));
+  Registry.register(BuiltInRegistries.ITEM,ik,new TabletopBlockItem(block,new Item.Properties().setId(ik).useBlockDescriptionPrefix().stacksTo(1)));
   return block;
  }
  public static final net.minecraft.core.component.DataComponentType<String> CHAIR_MATERIAL=Registry.register(
@@ -64,31 +70,15 @@ public final class CaszualMtg implements ModInitializer {
   Registry.register(BuiltInRegistries.ITEM,itemKey,new ChairBlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));
   return block;
  }
- public static final Map<String,ChairBlock> CHAIRS=chairs();
- static Map<String,ChairBlock> chairs(){
-  Map<String,ChairBlock> list=new LinkedHashMap<>();
-  for(String wood:List.of("oak","spruce","birch","jungle","acacia","dark_oak",
-      "mangrove","cherry","bamboo","crimson","warped","pale_oak")){
-   String name=wood+"_chair";
-   var key=ResourceKey.create(Registries.BLOCK,id(name));
-   ChairBlock chair=Registry.register(BuiltInRegistries.BLOCK,key,
-    new ChairBlock(wood,BlockBehaviour.Properties.of().setId(key).strength(2.0f).noOcclusion()
-      .sound(net.minecraft.world.level.block.SoundType.WOOD)));
-   var ik=ResourceKey.create(Registries.ITEM,id(name));
-   Registry.register(BuiltInRegistries.ITEM,ik,new BlockItem(chair,new Item.Properties().setId(ik).useBlockDescriptionPrefix()));
-   list.put(wood,chair);
-  }
-  return Collections.unmodifiableMap(list);
- }
  public static final BlockEntityType<ChairBlockEntity> CHAIR_BE=chairEntityType();
  static BlockEntityType<ChairBlockEntity> chairEntityType(){
-  var blocks=new ArrayList<Block>();
-  blocks.add(MATERIAL_CHAIR);blocks.addAll(CHAIRS.values());
   return Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,id("chair"),
-   FabricBlockEntityTypeBuilder.create(ChairBlockEntity::new,blocks.toArray(new Block[0])).build());
+   FabricBlockEntityTypeBuilder.create(ChairBlockEntity::new,MATERIAL_CHAIR).build());
  }
  public static final net.minecraft.world.item.crafting.RecipeSerializer<ChairRecipe> CHAIR_RECIPE=
   Registry.register(BuiltInRegistries.RECIPE_SERIALIZER,id("chair_material"),ChairRecipe.SERIALIZER);
+ public static final net.minecraft.world.item.crafting.RecipeSerializer<TabletopRecipe> TABLE_RECIPE=
+  Registry.register(BuiltInRegistries.RECIPE_SERIALIZER,id("tabletop_material"),TabletopRecipe.SERIALIZER);
  public static final HandBlock HAND=handBlock();
  public static final BlockEntityType<HandBlockEntity> HAND_BE=Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,id("hand_block"),FabricBlockEntityTypeBuilder.create(HandBlockEntity::new,HAND).build());
  static HandBlock handBlock(){var key=ResourceKey.create(Registries.BLOCK,id("hand_block"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new HandBlock(BlockBehaviour.Properties.of().setId(key).strength(2.0f).sound(net.minecraft.world.level.block.SoundType.WOOD)));var itemKey=ResourceKey.create(Registries.ITEM,id("hand_block"));Registry.register(BuiltInRegistries.ITEM,itemKey,new BlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));return block;}
