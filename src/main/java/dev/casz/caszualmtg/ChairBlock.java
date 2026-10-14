@@ -3,6 +3,10 @@ package dev.casz.caszualmtg;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -21,7 +25,7 @@ import java.util.Locale;
 
 /** Real sitting chair. The seat top is eight model pixels tall (half slab).
  * Material is set by the crafting wood; cushion items are inserted by right-click. */
-public final class ChairBlock extends Block {
+public class ChairBlock extends BaseEntityBlock {
  public enum Cushion implements net.minecraft.util.StringRepresentable {
   NONE("none"), WOOL("wool"), LEATHER("leather"), PAPER("paper");
   private final String name;Cushion(String name){this.name=name;}
@@ -40,7 +44,27 @@ public final class ChairBlock extends Block {
   registerDefaultState(stateDefinition.any().setValue(FACING,Direction.NORTH)
       .setValue(CUSHION,Cushion.NONE).setValue(COLOR,DyeColor.WHITE));
  }
- @Override protected MapCodec<? extends Block> codec(){return codec;}
+ @Override protected MapCodec<? extends BaseEntityBlock> codec(){return codec;}
+ @Override public RenderShape getRenderShape(BlockState s){return RenderShape.MODEL;}
+ @Override public @Nullable BlockEntity newBlockEntity(BlockPos pos,BlockState state){return new ChairBlockEntity(pos,state);}
+ @Override public void setPlacedBy(Level level,BlockPos pos,BlockState state,@Nullable LivingEntity placer,ItemStack stack){
+  super.setPlacedBy(level,pos,state,placer,stack);
+  if(level.getBlockEntity(pos) instanceof ChairBlockEntity chair)
+   chair.material(stack.getOrDefault(CaszualMtg.CHAIR_MATERIAL,wood.equals("dynamic")?ChairWood.DEFAULT:"minecraft:"+wood+"_planks"));
+ }
+ @Override protected ItemStack getCloneItemStack(LevelReader level,BlockPos pos,BlockState state,boolean includeData){
+  ItemStack stack=new ItemStack(this);
+  if(level.getBlockEntity(pos) instanceof ChairBlockEntity chair)
+   stack.set(CaszualMtg.CHAIR_MATERIAL,chair.material());
+  return stack;
+ }
+ @Override protected java.util.List<ItemStack> getDrops(BlockState state,LootParams.Builder params){
+  if(!wood.equals("dynamic"))return super.getDrops(state,params);
+  ItemStack result=new ItemStack(this);
+  BlockEntity entity=params.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
+  if(entity instanceof ChairBlockEntity chair)result.set(CaszualMtg.CHAIR_MATERIAL,chair.material());
+  return java.util.List.of(result);
+ }
  @Override protected void createBlockStateDefinition(StateDefinition.Builder<Block,BlockState> b){
   b.add(FACING,CUSHION,COLOR);
  }
@@ -76,6 +100,13 @@ public final class ChairBlock extends Block {
      consumed=true;
     }catch(IllegalArgumentException ignored){}
    }
+  }
+  if(next==null&&wood.equals("dynamic")&&ChairWood.eligible(stack)){
+   if(!level.isClientSide()&&level.getBlockEntity(pos) instanceof ChairBlockEntity chair){
+    chair.material(ChairWood.fromItem(stack));
+    if(!p.getAbilities().instabuild)stack.shrink(1);
+   }
+   return InteractionResult.SUCCESS;
   }
   if(next==null)return useWithoutItem(state,level,pos,p,hit);
   if(!level.isClientSide()){
