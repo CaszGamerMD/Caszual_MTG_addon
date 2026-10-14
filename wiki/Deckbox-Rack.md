@@ -6,9 +6,9 @@ A two-model-pixel-thick, six-model-pixel-deep shelf which holds **five MTGCard d
 
 - Place on a floor to make a short shelf, or click the side of a block to mount it on a wall.
 - Its shape and facing adapt to the clicked face.
-- As of **0.11.3**, the supporting shelf is a slim **2-pixel-high, 6-pixel-deep wooden ledge**. The miniature deckboxes sit with their bases immediately above the top surface, fully supported by the shelf in every rotation. The visible collision matches the narrower ledge, and the dark-oak trim meets the spruce plank without overlapping surfaces.
+- As of **0.11.3**, the supporting shelf is a slim **2-pixel-high, 6-pixel-deep wooden ledge**. The miniature deckboxes have been lowered an additional 0.75 model pixels so their bases meet the top surface visually, fully supported by the shelf in every rotation. The visible collision matches the narrower ledge, and the dark-oak trim meets the spruce plank without overlapping surfaces.
 - Right-click with an MTGCard deckbox to insert it into the first open position.
-- Right-click empty-handed to open its five-slot inventory and take or rearrange deckboxes.
+- Right-click empty-handed to open its five-slot inventory and take or rearrange deckboxes. **Hover over each deckbox** for its normal item tooltip, including the deckbox name and applicable saved metadata.
 
 The miniatures are genuine item/block models, including Custom Deckbox appearances (when their item model supports that material). They use the modern Minecraft block-entity render-state system rather than overlapping static proxy cubes.
 
