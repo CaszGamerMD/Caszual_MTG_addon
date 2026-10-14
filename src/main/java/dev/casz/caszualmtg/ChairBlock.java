@@ -27,7 +27,7 @@ public final class ChairBlock extends Block {
   private final String name;Cushion(String name){this.name=name;}
   @Override public String getSerializedName(){return name;}
  }
- public static final DirectionProperty FACING=BlockStateProperties.HORIZONTAL_FACING;
+ public static final EnumProperty<Direction> FACING=BlockStateProperties.HORIZONTAL_FACING;
  public static final EnumProperty<Cushion> CUSHION=EnumProperty.create("cushion",Cushion.class);
  public static final EnumProperty<DyeColor> COLOR=EnumProperty.create("color",DyeColor.class);
  public final String wood;
@@ -62,7 +62,9 @@ public final class ChairBlock extends Block {
    next=state.setValue(CUSHION,Cushion.LEATHER).setValue(COLOR,DyeColor.BROWN);consumed=true;
   }else if(stack.getItem() instanceof DyeItem dye&&state.getValue(CUSHION)==Cushion.LEATHER){
    // Dyes recolor the leather cushion without replacing it.
-   next=state.setValue(COLOR,dye.getDyeColor());consumed=true;
+   String dyeId=BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
+   try{next=state.setValue(COLOR,DyeColor.valueOf(dyeId.replace("_dye","").toUpperCase(Locale.ROOT)));consumed=true;}
+   catch(IllegalArgumentException ignored){}
   }else{
    var key=BuiltInRegistries.BLOCK.getKey(Block.byItem(stack.getItem()));
    String name=key==null?"":key.getPath();
