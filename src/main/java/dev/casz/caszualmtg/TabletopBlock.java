@@ -7,6 +7,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.*;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -19,8 +23,11 @@ import org.jetbrains.annotations.Nullable;
 /** Adjacent tiles at equal height form one shared multiplayer tabletop. */
 public final class TabletopBlock extends BaseEntityBlock {
  public static final MapCodec<TabletopBlock> CODEC=MapCodec.unit(()->new TabletopBlock(Properties.of()));
+ public static final IntegerProperty CARDS=IntegerProperty.create("cards",0,4);
+ public static final EnumProperty<DyeColor> FELT=EnumProperty.create("felt",DyeColor.class);
  private static final VoxelShape SHAPE=Block.box(0,0,0,16,14,16);
- public TabletopBlock(Properties props){super(props);}
+ public TabletopBlock(Properties props){super(props);registerDefaultState(stateDefinition.any().setValue(FELT,DyeColor.GREEN).setValue(CARDS,0));}
+ @Override protected void createBlockStateDefinition(StateDefinition.Builder<Block,BlockState> builder){builder.add(FELT,CARDS);}
  @Override protected MapCodec<? extends BaseEntityBlock> codec(){return CODEC;}
  @Override public RenderShape getRenderShape(BlockState s){return RenderShape.MODEL;}
  @Override protected VoxelShape getShape(BlockState s,BlockGetter level,BlockPos pos,CollisionContext ctx){return SHAPE;}
