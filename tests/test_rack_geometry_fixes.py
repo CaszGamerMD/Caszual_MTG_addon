@@ -53,20 +53,20 @@ class RackGeometryFixes(unittest.TestCase):
 
     def test_minis_rest_on_shelf_not_behind_or_inside_it(self):
         source=(SRC/"DeckboxRackRenderer.java").read_text()
-        self.assertIn("3.65/16.0",source)
+        self.assertIn("2.90/16.0",source)
         self.assertIn("4.0/16.0",source)
         mini_scale=.195
-        mini_bottom_px=3.65-mini_scale*8
+        mini_bottom_px=2.90-mini_scale*8
         shelf_top_px=2
         clearance=mini_bottom_px-shelf_top_px
-        self.assertGreater(clearance,0,"Miniatures must not penetrate wood")
-        self.assertLess(clearance,.2,"Miniature boxes must rest visually on shelf, not float")
+        self.assertGreater(clearance,-1.0,"Minis should only overlap the ledge slightly to visually rest on it")
+        self.assertLess(clearance,0,"Deckbox models need lowering to eliminate visible hovering")
         # The FIXED item occupies approximately +/-1.56 px in Z at this scale.
         mini_back=4-mini_scale*8
         mini_front=4+mini_scale*8
         self.assertGreater(mini_back,0,"Miniature cannot protrude through back of ledge")
         self.assertLess(mini_front,6,"Miniature cannot float off front of ledge")
-        self.assertAlmostEqual((7+3.65-mini_scale*8)-9,clearance,places=4)
+        self.assertAlmostEqual((7+2.90-mini_scale*8)-9,clearance,places=4)
 
     def test_staff_trim_and_gems_no_longer_overlap(self):
         model=json.loads((ASSETS/"models/block/staff_rack.json").read_text())
