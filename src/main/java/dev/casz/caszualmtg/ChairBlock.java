@@ -34,13 +34,11 @@ public class ChairBlock extends BaseEntityBlock {
  public static final EnumProperty<Direction> FACING=BlockStateProperties.HORIZONTAL_FACING;
  public static final EnumProperty<Cushion> CUSHION=EnumProperty.create("cushion",Cushion.class);
  public static final EnumProperty<DyeColor> COLOR=EnumProperty.create("color",DyeColor.class);
- public final String wood;
  private final MapCodec<ChairBlock> codec;
  private static final VoxelShape SHAPE=Shapes.or(Block.box(1,0,1,15,8,15),Block.box(1,8,13,15,16,15));
- public ChairBlock(String wood,Properties props){
+ public ChairBlock(Properties props){
   super(props);
-  this.wood=wood;
-  codec=MapCodec.unit(()->new ChairBlock(wood,Properties.of()));
+  codec=MapCodec.unit(()->new ChairBlock(Properties.of()));
   registerDefaultState(stateDefinition.any().setValue(FACING,Direction.NORTH)
       .setValue(CUSHION,Cushion.NONE).setValue(COLOR,DyeColor.WHITE));
  }
@@ -50,7 +48,7 @@ public class ChairBlock extends BaseEntityBlock {
  @Override public void setPlacedBy(Level level,BlockPos pos,BlockState state,@Nullable LivingEntity placer,ItemStack stack){
   super.setPlacedBy(level,pos,state,placer,stack);
   if(level.getBlockEntity(pos) instanceof ChairBlockEntity chair)
-   chair.material(stack.getOrDefault(CaszualMtg.CHAIR_MATERIAL,wood.equals("dynamic")?ChairWood.DEFAULT:"minecraft:"+wood+"_planks"));
+   chair.material(stack.getOrDefault(CaszualMtg.CHAIR_MATERIAL,ChairWood.DEFAULT));
  }
  @Override protected ItemStack getCloneItemStack(LevelReader level,BlockPos pos,BlockState state,boolean includeData){
   ItemStack stack=new ItemStack(this);
@@ -59,7 +57,6 @@ public class ChairBlock extends BaseEntityBlock {
   return stack;
  }
  @Override protected java.util.List<ItemStack> getDrops(BlockState state,LootParams.Builder params){
-  if(!wood.equals("dynamic"))return super.getDrops(state,params);
   ItemStack result=new ItemStack(this);
   BlockEntity entity=params.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
   if(entity instanceof ChairBlockEntity chair)result.set(CaszualMtg.CHAIR_MATERIAL,chair.material());
@@ -101,7 +98,7 @@ public class ChairBlock extends BaseEntityBlock {
     }catch(IllegalArgumentException ignored){}
    }
   }
-  if(next==null&&wood.equals("dynamic")&&ChairWood.eligible(stack)){
+  if(next==null&&ChairWood.eligible(stack)){
    if(!level.isClientSide()&&level.getBlockEntity(pos) instanceof ChairBlockEntity chair){
     chair.material(ChairWood.fromItem(stack));
     if(!p.getAbilities().instabuild)stack.shrink(1);
