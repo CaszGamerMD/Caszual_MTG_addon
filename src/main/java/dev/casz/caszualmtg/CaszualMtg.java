@@ -85,6 +85,7 @@ public final class CaszualMtg implements ModInitializer {
   // MTGCard's initializer can run later in the same Fabric initialization pass.
   net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING
       .register(server -> MtgBlockEntitySafety.verifyAtLifecycle("server startup"));
+  PayloadTypeRegistry.clientboundPlay().register(CardStoreStatusWire.Progress.TYPE,CardStoreStatusWire.Progress.CODEC);
   PayloadTypeRegistry.serverboundPlay().register(TabletopWire.Request.TYPE,TabletopWire.Request.CODEC);
   PayloadTypeRegistry.clientboundPlay().register(TabletopWire.Reply.TYPE,TabletopWire.Reply.CODEC);
   ServerPlayNetworking.registerGlobalReceiver(TabletopWire.Request.TYPE,(req,ctx)->TabletopLogic.handle(ctx.player(),req));
