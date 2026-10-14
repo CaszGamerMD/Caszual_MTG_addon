@@ -42,18 +42,28 @@ public final class TabletopBlockEntity extends BlockEntity {
  public List<PlayedCard> cards(){return List.copyOf(cards);}
  public boolean add(PlayedCard card){
   if(cards.size()>=MAX_CARDS||card.stack().isEmpty()||!card.stack().is(com.spider.mtgcard.item.ModItemTags.TCG_CARD))return false;
-  cards.add(card);setChanged();return true;
+  cards.add(card);changed();return true;
  }
  public PlayedCard find(String id){for(var c:cards)if(c.id().equals(id))return c;return null;}
  public PlayedCard remove(String id){
-  for(int i=0;i<cards.size();i++)if(cards.get(i).id().equals(id)){PlayedCard c=cards.remove(i);setChanged();return c;}
+  for(int i=0;i<cards.size();i++)if(cards.get(i).id().equals(id)){PlayedCard c=cards.remove(i);changed();return c;}
   return null;
  }
  public void replace(PlayedCard card){
-  for(int i=0;i<cards.size();i++)if(cards.get(i).id().equals(card.id())){cards.set(i,card);setChanged();return;}
+  for(int i=0;i<cards.size();i++)if(cards.get(i).id().equals(card.id())){cards.set(i,card);changed();return;}
+ }
+ public void changed(){
+  setChanged();
+  if(level!=null&&!level.isClientSide()){
+   BlockState state=getBlockState();
+   int stage=Math.min(4,cards.size());
+   if(state.hasProperty(TabletopBlock.CARDS)&&state.getValue(TabletopBlock.CARDS)!=stage)
+    level.setBlock(worldPosition,state.setValue(TabletopBlock.CARDS,stage),3);
+   else level.sendBlockUpdated(worldPosition,state,state,3);
+  }
  }
  public List<ItemStack> drain(){
-  List<ItemStack> out=new ArrayList<>();for(var c:cards)out.add(c.stack().copy());cards.clear();setChanged();return out;
+  List<ItemStack> out=new ArrayList<>();for(var c:cards)out.add(c.stack().copy());cards.clear();changed();return out;
  }
  @Override protected void saveAdditional(ValueOutput out){
   super.saveAdditional(out);
