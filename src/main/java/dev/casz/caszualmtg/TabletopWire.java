@@ -8,6 +8,10 @@ import net.minecraft.world.item.ItemStack;
 import java.util.*;
 
 public final class TabletopWire {
+ /** Standard card IDs are UUIDs (36 chars); commanders include a "commander:"
+  * prefix (46 chars). Old worlds already contain those longer IDs, so the
+  * network format must handle them without truncation or remapping. */
+ public static final int MAX_CARD_ID_LENGTH=64;
  public record Request(BlockPos pos,String action,String ref,BlockPos target,int x,int y,int amount) implements CustomPacketPayload {
   public static final Type<Request> TYPE=new Type<>(CaszualMtg.id("tabletop_request"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Request> CODEC=StreamCodec.of(
@@ -24,7 +28,7 @@ public final class TabletopWire {
    b.writeBlockPos(p.pos);b.writeUtf(p.message,512);b.writeBlockPos(p.seat);
    b.writeVarInt(p.tiles.size());for(Tile t:p.tiles){b.writeBlockPos(t.pos);b.writeUtf(t.owner,64);b.writeInt(t.color);b.writeInt(t.life);b.writeBoolean(t.hasLife);b.writeBoolean(t.active);}
    b.writeVarInt(p.cards.size());for(Card c:p.cards){
-    b.writeBlockPos(c.pos);b.writeUtf(c.id,40);b.writeUtf(c.owner,40);
+    b.writeBlockPos(c.pos);b.writeUtf(c.id,MAX_CARD_ID_LENGTH);b.writeUtf(c.owner,40);
     ItemStack.OPTIONAL_STREAM_CODEC.encode(b,c.stack);
     b.writeVarInt(c.x);b.writeVarInt(c.y);b.writeBoolean(c.tapped);b.writeBoolean(c.hidden);
    }
@@ -40,7 +44,7 @@ public final class TabletopWire {
    int n=b.readVarInt();if(n<0||n>32)throw new IllegalArgumentException("Table too large");
    List<Tile> tiles=new ArrayList<>();for(int i=0;i<n;i++)tiles.add(new Tile(b.readBlockPos(),b.readUtf(64),b.readInt(),b.readInt(),b.readBoolean(),b.readBoolean()));
    n=b.readVarInt();if(n<0||n>3072)throw new IllegalArgumentException("Too many played cards");
-   List<Card> cards=new ArrayList<>();for(int i=0;i<n;i++)cards.add(new Card(b.readBlockPos(),b.readUtf(40),b.readUtf(40),ItemStack.OPTIONAL_STREAM_CODEC.decode(b),b.readVarInt(),b.readVarInt(),b.readBoolean(),b.readBoolean()));
+   List<Card> cards=new ArrayList<>();for(int i=0;i<n;i++)cards.add(new Card(b.readBlockPos(),b.readUtf(MAX_CARD_ID_LENGTH),b.readUtf(40),ItemStack.OPTIONAL_STREAM_CODEC.decode(b),b.readVarInt(),b.readVarInt(),b.readBoolean(),b.readBoolean()));
    n=b.readVarInt();if(n<0||n>100)throw new IllegalArgumentException("Too many hand cards");
    List<ItemStack> hand=new ArrayList<>();for(int i=0;i<n;i++)hand.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(b));
    int library=b.readVarInt();
