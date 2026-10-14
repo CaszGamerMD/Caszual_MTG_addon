@@ -26,7 +26,7 @@ class TabletopChairAndResetTests(unittest.TestCase):
                 self.assertTrue(any(e["to"][1]==8 and e["from"][1]==7 for e in model["elements"]),
                                 "Seat should be at eight model pixels, the height of a slab")
                 states=read(ASSETS/f"blockstates/{name}.json")["multipart"]
-                self.assertEqual(len(states),4*(len(COLORS)+1))
+                self.assertEqual(len(states),4*(2*len(COLORS)+1))
                 recipe=read(DATA/f"recipe/{name}.json")
                 self.assertEqual(recipe["result"]["id"],f"caszual_mtg:{name}")
                 self.assertEqual(recipe["key"]["P"],f"minecraft:{wood}_planks")
@@ -37,6 +37,8 @@ class TabletopChairAndResetTests(unittest.TestCase):
                 model=read(ASSETS/f"models/block/chair_cushion_{color}.json")
                 self.assertEqual(model["textures"]["fabric"],f"minecraft:block/{color}_wool")
                 self.assertTrue(all(e["from"][1]>8 for e in model["elements"]))
+                leather=read(ASSETS/f"models/block/chair_cushion_leather_{color}.json")
+                self.assertEqual(leather["textures"]["fabric"],f"minecraft:block/{color}_terracotta")
     def test_paper_color_is_linked_not_manual(self):
         chair=(JAVA/"ChairBlock.java").read_text(encoding="utf-8")
         table=(JAVA/"TabletopLogic.java").read_text(encoding="utf-8")
