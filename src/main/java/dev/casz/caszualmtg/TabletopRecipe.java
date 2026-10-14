@@ -28,7 +28,7 @@ public final class TabletopRecipe extends CustomRecipe {
     if(source!=null&&!source.equals(current))return null;
     source=current;
    }else if(y==1){
-    if(!item.is(net.minecraft.world.level.block.Blocks.GREEN_WOOL.asItem()))return null;
+    if(!"minecraft:green_wool".equals(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item.getItem()).toString()))return null;
    }else if(x!=1){
     if(!item.is(Items.STICK))return null;
    }else if(!item.isEmpty())return null;
