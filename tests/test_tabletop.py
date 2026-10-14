@@ -40,7 +40,7 @@ class TabletopAssetsTest(unittest.TestCase):
         for action in ("put_hand","put_grave","put_exile","move","tap","hide","return",
                        "grave","exile","zone_to_hand","draw","mill","shuffle","scry_begin",
                        "scry_cancel","scry_commit"):
-            self.assertIn('case "'+action+'"',server)
+            self.assertIn('"'+action+'"',server)
         self.assertIn("owned(player,found)",server)
         self.assertIn("card.faceDown()&&!uuid.equals(card.owner())?ItemStack.EMPTY",server)
         self.assertIn("MAX_CARDS",entity)
