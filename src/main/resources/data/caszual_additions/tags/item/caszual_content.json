@@ -11,6 +11,18 @@
     "caszual_mtg:staff_rack",
     "caszual_mtg:counter",
     "caszual_mtg:targeting_staff",
-    "caszual_mtg:tabletop"
+    "caszual_mtg:tabletop",
+    "caszual_mtg:oak_chair",
+    "caszual_mtg:spruce_chair",
+    "caszual_mtg:birch_chair",
+    "caszual_mtg:jungle_chair",
+    "caszual_mtg:acacia_chair",
+    "caszual_mtg:dark_oak_chair",
+    "caszual_mtg:mangrove_chair",
+    "caszual_mtg:cherry_chair",
+    "caszual_mtg:bamboo_chair",
+    "caszual_mtg:crimson_chair",
+    "caszual_mtg:warped_chair",
+    "caszual_mtg:pale_oak_chair"
   ]
 }
