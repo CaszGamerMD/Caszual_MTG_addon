@@ -1,4 +1,4 @@
-"""Check the universal material chair keeps wood block IDs, visuals and old-world IDs."""
+"""Check the universal material chair keeps wood block IDs and drops obsolete IDs."""
 import unittest,json
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
@@ -45,15 +45,15 @@ class UniversalChairTests(unittest.TestCase):
                'getUpdatePacket','getRenderData','builder.set(CaszualMtg.CHAIR_MATERIAL,material)'):
    self.assertIn(text,entity)
 
- def test_legacy_ids_are_kept_but_old_recipes_are_not(self):
+ def test_only_generic_chair_is_registered(self):
   common=src("CaszualMtg.java")
-  self.assertIn("CHAIRS=chairs()",common)
+  self.assertNotIn("CHAIRS=chairs()",common)
   self.assertIn("CHAIR_BE=chairEntityType()",common)
   self.assertIn("e.accept(MATERIAL_CHAIR)",common)
   for wood in ("oak","spruce","birch","jungle","acacia","dark_oak","mangrove","cherry",
                "bamboo","crimson","warped","pale_oak"):
    with self.subTest(wood=wood):
-    self.assertTrue((ASSETS/f"blockstates/{wood}_chair.json").exists())
+    self.assertNotIn('"'+wood+'_chair"',common)
     self.assertFalse((DATA/f"recipe/{wood}_chair.json").exists())
 
 if __name__=="__main__":unittest.main()
