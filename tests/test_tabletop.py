@@ -47,6 +47,23 @@ class TabletopAssetsTest(unittest.TestCase):
         self.assertIn("MAX_CARDS",entity)
         self.assertIn('out.store("PlayedCards"',entity)
 
+    def test_existing_commanders_survive_packet_roundtrips(self):
+        """A commander can already be saved using 'commander:' plus a UUID."""
+        wire=self.source("TabletopWire.java")
+        logic=self.source("TabletopLogic.java")
+        be=self.source("TabletopBlockEntity.java")
+        commander_id="commander:"+"00000000-0000-0000-0000-000000000000"
+        self.assertEqual(len(commander_id),46)
+        self.assertIn("MAX_CARD_ID_LENGTH=64",wire)
+        self.assertGreaterEqual(64,len(commander_id))
+        self.assertIn("b.writeUtf(c.id,MAX_CARD_ID_LENGTH)",wire)
+        self.assertIn("b.readUtf(MAX_CARD_ID_LENGTH)",wire)
+        self.assertIn("id.length()>TabletopWire.MAX_CARD_ID_LENGTH",logic)
+        self.assertIn('"commander:"+UUID.randomUUID()',logic)
+        self.assertIn('found.card.id().startsWith("commander:")',logic)
+        self.assertIn("Codec.STRING.fieldOf(\"Id\")",be)
+        self.assertIn('out.store("PlayedCards"',be)
+
     def test_screen_has_battlefield_and_private_zone_tabs(self):
         screen=self.source("TabletopScreen.java")
         for label in ("Hand","GY","Exile","Draw","Draw 7","Scry 1","Scry 3","Mill","Mill 5",
