@@ -49,6 +49,22 @@ public final class CaszualMtg implements ModInitializer {
   Registry.register(BuiltInRegistries.ITEM,ik,new BlockItem(block,new Item.Properties().setId(ik).useBlockDescriptionPrefix().stacksTo(1)));
   return block;
  }
+ public static final Map<String,ChairBlock> CHAIRS=chairs();
+ static Map<String,ChairBlock> chairs(){
+  Map<String,ChairBlock> list=new LinkedHashMap<>();
+  for(String wood:List.of("oak","spruce","birch","jungle","acacia","dark_oak",
+      "mangrove","cherry","bamboo","crimson","warped","pale_oak")){
+   String name=wood+"_chair";
+   var key=ResourceKey.create(Registries.BLOCK,id(name));
+   ChairBlock chair=Registry.register(BuiltInRegistries.BLOCK,key,
+    new ChairBlock(wood,BlockBehaviour.Properties.of().setId(key).strength(2.0f).noOcclusion()
+      .sound(net.minecraft.world.level.block.SoundType.WOOD)));
+   var ik=ResourceKey.create(Registries.ITEM,id(name));
+   Registry.register(BuiltInRegistries.ITEM,ik,new BlockItem(chair,new Item.Properties().setId(ik).useBlockDescriptionPrefix()));
+   list.put(wood,chair);
+  }
+  return Collections.unmodifiableMap(list);
+ }
  public static final HandBlock HAND=handBlock();
  public static final BlockEntityType<HandBlockEntity> HAND_BE=Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,id("hand_block"),FabricBlockEntityTypeBuilder.create(HandBlockEntity::new,HAND).build());
  static HandBlock handBlock(){var key=ResourceKey.create(Registries.BLOCK,id("hand_block"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new HandBlock(BlockBehaviour.Properties.of().setId(key).strength(2.0f).sound(net.minecraft.world.level.block.SoundType.WOOD)));var itemKey=ResourceKey.create(Registries.ITEM,id("hand_block"));Registry.register(BuiltInRegistries.ITEM,itemKey,new BlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));return block;}
@@ -81,6 +97,7 @@ public final class CaszualMtg implements ModInitializer {
    Registry.register(BuiltInRegistries.MENU,id("staff_rack"),
      new ExtendedMenuType<>(StaffRackMenu::new,StaffRackMenu.OpenData.CODEC));
  public void onInitialize(){
+  net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_WORLD_TICK.register(ChairSeats::tick);
   // Do not inspect MTGCard's block-entity fields in our main entrypoint:
   // MTGCard's initializer can run later in the same Fabric initialization pass.
   net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING
@@ -92,7 +109,7 @@ public final class CaszualMtg implements ModInitializer {
   PayloadTypeRegistry.serverboundPlay().register(Wire.Request.TYPE,Wire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(Wire.Reply.TYPE,Wire.Reply.CODEC);PayloadTypeRegistry.serverboundPlay().register(HandWire.Request.TYPE,HandWire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(HandWire.Reply.TYPE,HandWire.Reply.CODEC);PayloadTypeRegistry.clientboundPlay().register(DeckboxRefreshWire.Refresh.TYPE,DeckboxRefreshWire.Refresh.CODEC);
   ServerPlayNetworking.registerGlobalReceiver(Wire.Request.TYPE,(req,ctx)->ServerLogic.handle(ctx.player(),req));ServerPlayNetworking.registerGlobalReceiver(HandWire.Request.TYPE,(req,ctx)->HandLogic.handle(ctx.player(),req));
   ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);TabletopLogic.close(h.player);StaffTargets.clearAllForDisconnect(h.player);});
-  CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(HAND);e.accept(RACK);e.accept(STAFF_RACK);e.accept(TABLETOP);});
+  CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(HAND);e.accept(RACK);e.accept(STAFF_RACK);e.accept(TABLETOP);for(var chair:CHAIRS.values())e.accept(chair);});
   UseEntityCallback.EVENT.register((p,l,hand,e,hit)->{
    if(p.getItemInHand(hand).is(TARGETING_STAFF)){
     if(!l.isClientSide()&&p instanceof ServerPlayer sp)StaffTargets.mark(sp,e,StaffTargets.Color.ORANGE);
