@@ -97,7 +97,7 @@ public final class TabletopLogic {
   return null;
  }
  private static Located located(Context c,String id){
-  if(id==null||id.length()>40)return null;
+  if(id==null||id.isEmpty()||id.length()>TabletopWire.MAX_CARD_ID_LENGTH)return null;
   for(var t:c.tiles){var card=t.find(id);if(card!=null)return new Located(t,card);}
   return null;
  }
