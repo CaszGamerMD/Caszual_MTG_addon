@@ -14,10 +14,23 @@ The Card Hand UI also has a **#RRGGBB table color** setting. The tabletop UI use
 
 - **Player tabs:** buttons along the top switch the battlefield currently shown. Each shows the player's life total (when linked) and a turn indicator for the active player. The private Hand tray stays yours even when viewing an opponent's field. Opponent hands are never transmitted to the tabletop screen.
 - **Large battlefield:** almost the entire screen above the Hand is dedicated to a single player's field. The **Hand**, **GY**, **Exile**, and temporary **Scry** trays each use only a single row as tall as a card.
-- **Drag and drop:** drag a card from your private Hand, Graveyard or Exile tray and release it anywhere on the selected battlefield. Drag your existing cards to reposition them. Click a played card to select it for Tap, Flip, To Hand, To GY, Exile Card, or Cmd Zone actions.
+- **Drag and drop:** drag a card from your private Hand, Graveyard or Exile tray and release it anywhere on the selected battlefield. Drag your existing cards to reposition them. Click a played card to tap or untap it; drag it to move. Use Flip on a selected card to change the physical face of a double-faced card (or conceal a single-faced card). Hold Alt over an eligible card to read it in an enlarged art preview.
 - **Commander slot:** the area just left of your Hand tray shows the card from MTGCard's actual **Deckbox Commander slot** (second side slot, #100). Drag to play it. **Cmd Zone** returns a commander originally played from that slot if the slot is empty. The corresponding deckbox item is consumed/restored, not duplicated.
-- **Library actions:** Draw, Draw 7, Scry 1/3, Mill/5 and Shuffle route through the linked Deck Control. Scry is kept private until resolved. The deck counter shows the actual remaining cards.
-- **World appearance:** a block with cards on its battlefield displays up to four tiny generic, face-down card markers. These are intentionally not legible actual card art. Card identities stay in saved server data and the tabletop GUI.
+- **Draw ▾ menu:** Draw one, Draw X, Scry X, Mill X and friendly/strict mulligans. Enter X in the adjacent number field. Strict mulligans allow discarding owed cards via Discard mode; finish the mulligan before discarding.
+- **Deck ▾ menu:** Shuffle the linked library, Search (open the linked deckbox), Reveal X, or RESET. Reveal shows the top X cards only to the player; send the top one to your Hand or drag it to the battlefield, then shuffle the unused revealed cards onto the bottom of the library. You can also return all revealed cards to the bottom.
+- **RESET:** Requires confirmation. Collects the requesting player's cards from this connected battlefield, Card Hand, Graveyard and Exile back into their own deckbox, shuffles the library, and remembers/restores the commander to the Commander side slot. Reset pre-checks capacity; if there are not enough slots it leaves cards where they are and reports why. It does not move opponents' tabletop cards.
+- **Library count:** The screen displays the linked Deck Control's remaining library count.
+- **World appearance:** a wooden tabletop has an inset colored playmat, leaving a one-pixel wooden edge. A block with cards on its battlefield displays up to four tiny generic, face-down card markers above the mat. These are intentionally not legible actual card art. The world playmat uses the closest of Minecraft's 16 wool colors to the Card Hand's full RGB setting.
+
+## Wooden chairs
+
+Twelve standard wood types are available: oak, spruce, birch, jungle, acacia, dark oak, mangrove, cherry, bamboo, crimson, warped and pale oak. Craft a chair from six matching planks in the pattern `P  / PPP / P P`. Right-click the placed chair with:
+
+- **Wool:** add a cushion matching the wool's color.
+- **Leather:** add a brown leather cushion. Right-click again with a dye to recolor it.
+- **Paper:** add an automatic playmat-matched cushion. When placed beside an MTG Tabletop at the same level, the cushion follows that table's felt color, including later changes from the linked Card Hand.
+
+Chairs have a slab-height (8 pixel) seat. Right-click without upholstery material to sit; dismount normally to stand up. Cushions are currently consumed on application. Seat mounts are cleared when riders leave or when chairs are removed.
 
 ## Limitations
 
