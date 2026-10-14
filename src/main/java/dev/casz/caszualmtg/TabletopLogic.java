@@ -53,12 +53,12 @@ public final class TabletopLogic {
  }
  private static HandBlockEntity linkedHand(ServerPlayer player,TabletopBlockEntity seat){
   if(seat==null)return null;
-  BlockPos at=seat.getBlockPos();HandBlockEntity best=null;long distance=Long.MAX_VALUE;
+  BlockPos at=seat.getBlockPos();HandBlockEntity best=null;double distance=Double.MAX_VALUE;
   for(BlockPos p:BlockPos.betweenClosed(at.offset(-LINK_RANGE,-LINK_RANGE,-LINK_RANGE),at.offset(LINK_RANGE,LINK_RANGE,LINK_RANGE))){
    if(!player.level().hasChunkAt(p))continue;
    if(player.level().getBlockEntity(p) instanceof HandBlockEntity h
       &&player.getUUID().equals(h.owner())&&h.linkedControl()!=null){
-    long d=at.distSqr(p);
+    double d=at.distSqr(p);
     if(d<distance){best=h;distance=d;}
    }
   }
