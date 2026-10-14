@@ -23,11 +23,12 @@ public final class TabletopLogic {
  private static final int MAX_TILES=32;
  private static final int LINK_RANGE=8;
  private static final Map<UUID,ScrySession> SCRIES=new ConcurrentHashMap<>();
+ private static final Map<UUID,ScrySession> REVEALS=new ConcurrentHashMap<>();
  private record ScrySession(BlockPos control,List<ItemStack> cards) {}
  private record Located(TabletopBlockEntity tile,TabletopBlockEntity.PlayedCard card) {}
  private record Context(List<TabletopBlockEntity> tiles,TabletopBlockEntity seat,HandBlockEntity hand,DeckControlBlockEntity deck,GraveyardBlockEntity grave) {}
 
- public static void close(ServerPlayer player){SCRIES.remove(player.getUUID());}
+ public static void close(ServerPlayer player){SCRIES.remove(player.getUUID());REVEALS.remove(player.getUUID());}
  public static void open(ServerPlayer player,BlockPos origin){
   List<TabletopBlockEntity> tiles=connected(player,origin);if(tiles.isEmpty())return;
   TabletopBlockEntity own=seat(tiles,player);
@@ -121,7 +122,7 @@ public final class TabletopLogic {
   String message="";
   if(req.action().equals("refresh")){reply(player,req.pos(),"");return;}
   if(c.seat==null){reply(player,req.pos(),"Claim an empty tabletop seat to play.");return;}
-  if(!List.of("move","tap","hide","return","grave","exile","commander_home","pass_turn").contains(req.action())&&c.hand==null){
+  if(!List.of("move","tap","hide","flip","return","grave","exile","commander_home","pass_turn").contains(req.action())&&c.hand==null){
    reply(player,req.pos(),requireLinks(c));return;
   }
   try{
@@ -144,6 +145,7 @@ public final class TabletopLogic {
      ItemStack one=stack.copyWithCount(1);
      var card=new TabletopBlockEntity.PlayedCard("commander:"+UUID.randomUUID(),player.getUUID().toString(),one,req.x(),req.y(),false,false);
      if(!dest.add(card)){message="Could not place commander.";break;}
+     c.seat.rememberCommander(one);
      ItemStack remaining=stack.copy();remaining.shrink(1);
      box.setStack(DeckboxBlockEntity.SECOND_SIDE_SLOT,remaining);box.sync();
      message="Commander played.";
@@ -196,11 +198,26 @@ public final class TabletopLogic {
      found.tile.remove(found.card.id());
      message="Card moved.";
     }
-    case "tap", "hide" -> {
+    case "tap", "hide", "flip" -> {
      Located found=located(c,req.ref());
      if(!owned(player,found)){message="Only the card's owner can change it.";break;}
-     found.tile.replace(req.action().equals("tap")?found.card.tapped(!found.card.tapped()):found.card.hidden(!found.card.faceDown()));
-     message=req.action().equals("tap")?"Card tapped / untapped.":"Card face changed.";
+     if(req.action().equals("tap")){
+      found.tile.replace(found.card.tapped(!found.card.tapped()));
+      message="Card tapped / untapped.";
+     }else{
+      int count=com.spider.mtgcard.util.TcgCardMeta.faceCount(found.card.stack());
+      if(count>1){
+       ItemStack flipped=found.card.stack().copy();
+       int next=(com.spider.mtgcard.util.TcgCardMeta.read(flipped).face()+1)%count;
+       com.spider.mtgcard.util.StackData.writeFace(flipped,next);
+       var old=found.card;
+       found.tile.replace(new TabletopBlockEntity.PlayedCard(old.id(),old.owner(),flipped,old.x(),old.y(),old.tapped(),false));
+       message="Showing card face "+(next+1)+" of "+count+".";
+      }else{
+       found.tile.replace(found.card.hidden(!found.card.faceDown()));
+       message=found.card.faceDown()?"Card face up.":"Card face down.";
+      }
+     }
     }
     case "return" -> {
      Located found=located(c,req.ref());
@@ -229,7 +246,7 @@ public final class TabletopLogic {
     }
     case "draw" -> {
      if(c.deck==null){message=requireLinks(c);break;}
-     int count=Math.clamp(req.amount(),1,20),room=HandBlockEntity.SIZE-c.hand.cardCount();
+     int count=Math.clamp(req.amount(),1,99),room=HandBlockEntity.SIZE-c.hand.cardCount();
      if(room<count){message="Not enough room in the Card Hand.";break;}
      List<ItemStack> drawn=c.deck.takeTopCards(count);
      for(ItemStack card:drawn)if(!c.hand.addCard(card))throw new IllegalStateException("Card Hand rejected a Deck Control card.");
@@ -237,7 +254,7 @@ public final class TabletopLogic {
     }
     case "mill" -> {
      if(c.deck==null){message=requireLinks(c);break;}
-     int count=Math.clamp(req.amount(),1,20);
+     int count=Math.clamp(req.amount(),1,99);
      if(freeSlots(c.grave,0)<count){message="The graveyard needs "+count+" free slots to mill safely.";break;}
      List<ItemStack> milled=c.deck.takeTopCards(count);
      for(ItemStack stack:milled){
@@ -247,10 +264,43 @@ public final class TabletopLogic {
      }
      message="Milled "+milled.size()+" card(s) to your graveyard.";
     }
-    case "shuffle" -> {if(c.deck==null){message=requireLinks(c);break;}c.deck.shuffle();SCRIES.remove(player.getUUID());message="Shuffled your library.";}
+    case "shuffle" -> {
+     if(c.deck==null){message=requireLinks(c);break;}
+     if(REVEALS.containsKey(player.getUUID())){message="Finish the reveal before shuffling.";break;}
+     c.deck.shuffle();SCRIES.remove(player.getUUID());message="Shuffled your library.";
+    }
+    case "search_deck" -> {
+     DeckboxBlockEntity box=commanderBox(player,c);
+     if(box==null){message="No linked deckbox. Attach one to your Deck Control.";break;}
+     player.openMenu(box);
+     message="Opened linked deckbox.";
+    }
+    case "reset" -> message=reset(player,c);
+    case "mulligan_friendly","mulligan_strict","mulligan_finish" -> message=mulligan(player,c,req.action());
+    case "mulligan_discard" -> {
+     if(c.hand==null||c.hand.pendingStrictDiscards()<=0){message="No strict mulligan discards are owed.";break;}
+     int index=req.amount(),slot=emptySlot(c.grave,0);
+     if(slot<0){message="Link a Graveyard with a free slot.";break;}
+     if(index<0||index>=c.hand.cardCount()){message="Choose a card to discard from your hand.";break;}
+     ItemStack card=c.hand.removeVisibleIndex(index);
+     if(card.isEmpty()){message="Selected card no longer in hand.";break;}
+     c.grave.setStack(slot,card);
+     c.hand.consumeStrictDiscard();
+     message="Discarded for mulligan. Remaining: "+c.hand.pendingStrictDiscards();
+    }
+    case "reveal_begin" -> {
+     if(c.deck==null){message=requireLinks(c);break;}
+     if(REVEALS.containsKey(player.getUUID())){message="Finish the current reveal first.";break;}
+     int count=Math.clamp(req.amount(),1,20);
+     List<ItemStack> shown=c.deck.peekTopCopies(count);
+     if(shown.isEmpty()){message="Library is empty.";break;}
+     REVEALS.put(player.getUUID(),new ScrySession(c.deck.getBlockPos(),List.copyOf(shown)));
+     message="Revealed "+shown.size()+" cards. Take the top card or shuffle all revealed cards to the bottom.";
+    }
+    case "reveal_to_hand","reveal_to_field","reveal_end" -> message=resolveReveal(player,c,req);
     case "scry_begin" -> {
      if(c.deck==null){message=requireLinks(c);break;}
-     int count=Math.clamp(req.amount(),1,7);
+     int count=Math.clamp(req.amount(),1,20);
      List<ItemStack> preview=c.deck.peekTopCopies(count);
      if(preview.isEmpty()){message="Your library is empty.";break;}
      SCRIES.put(player.getUUID(),new ScrySession(c.deck.getBlockPos(),List.copyOf(preview)));
@@ -347,10 +397,12 @@ public final class TabletopLogic {
   }
   ScrySession session=SCRIES.get(player.getUUID());
   List<ItemStack> scry=session!=null&&c.deck!=null&&session.control.equals(c.deck.getBlockPos())?session.cards:List.of();
+  ScrySession revealSession=REVEALS.get(player.getUUID());
+  List<ItemStack> reveal=revealSession!=null&&c.deck!=null&&revealSession.control.equals(c.deck.getBlockPos())?revealSession.cards:List.of();
   ServerPlayNetworking.send(player,new TabletopWire.Reply(
    origin,message,owned,List.copyOf(tiles),List.copyOf(played),
    c.hand==null||c.seat==null?List.of():c.hand.visibleCards(),
-   c.deck==null?0:c.deck.getLibraryCount(),List.copyOf(grave),List.copyOf(exile),scry,commander(player,c)
+   c.deck==null?0:c.deck.getLibraryCount(),List.copyOf(grave),List.copyOf(exile),scry,reveal,commander(player,c)
   ));
  }
  private TabletopLogic(){}
