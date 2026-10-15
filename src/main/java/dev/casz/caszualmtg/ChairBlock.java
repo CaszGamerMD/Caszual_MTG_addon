@@ -102,7 +102,7 @@ public class ChairBlock extends BaseEntityBlock {
  }
  @Override public BlockState getStateForPlacement(BlockPlaceContext c){
   BlockState state=defaultBlockState().setValue(FACING,c.getHorizontalDirection().getOpposite());
-  return matchPaper(c.getLevel(),c.getClickedPos(),state);
+  return state;
  }
  @Override protected VoxelShape getShape(BlockState state,BlockGetter level,BlockPos pos,CollisionContext context){return shapeFor(state);}
  @Override protected VoxelShape getCollisionShape(BlockState state,BlockGetter level,BlockPos pos,CollisionContext context){return shapeFor(state);}
@@ -114,7 +114,7 @@ public class ChairBlock extends BaseEntityBlock {
   BlockState next=null;boolean consumed=false;
   if(stack.is(Items.PAPER)){
    next=state.setValue(CUSHION,Cushion.PAPER);
-   next=matchPaper(level,pos,next);consumed=true;
+   consumed=true;
   }else if(stack.is(Items.LEATHER)){
    next=state.setValue(CUSHION,Cushion.LEATHER).setValue(COLOR,DyeColor.BROWN);consumed=true;
   }else if(stack.getItem() instanceof DyeItem dye&&state.getValue(CUSHION)==Cushion.LEATHER){
@@ -144,34 +144,34 @@ public class ChairBlock extends BaseEntityBlock {
   if(next==null)return useWithoutItem(state,level,pos,p,hit);
   if(!level.isClientSide()){
    level.setBlock(pos,next,Block.UPDATE_ALL);
+   if(next.getValue(CUSHION)==Cushion.PAPER)refreshPaperColor(level,pos);
    if(consumed&&!p.getAbilities().instabuild)stack.shrink(1);
   }
   return InteractionResult.SUCCESS;
  }
- public static BlockState matchPaper(LevelReader level,BlockPos pos,BlockState state){
-  if(!(state.getBlock() instanceof ChairBlock)||state.getValue(CUSHION)!=Cushion.PAPER)return state;
+ /** A paper cushion uses the adjacent table's full RGB value, not its old
+  * nearest-wool blockstate. It stays independent of the wool/leather colors. */
+ public static void refreshPaperColor(Level level,BlockPos chairPos){
+  if(level.isClientSide())return;
+  BlockState state=level.getBlockState(chairPos);
+  if(!(state.getBlock() instanceof ChairBlock)||state.getValue(CUSHION)!=Cushion.PAPER)return;
+  int rgb=0xFFFFFF;
   for(Direction d:Direction.Plane.HORIZONTAL){
-   BlockState neighbor=level.getBlockState(pos.relative(d));
-   if(neighbor.getBlock() instanceof TabletopBlock&&neighbor.hasProperty(TabletopBlock.FELT))
-    return state.setValue(COLOR,neighbor.getValue(TabletopBlock.FELT));
+   if(level.getBlockEntity(chairPos.relative(d)) instanceof TabletopBlockEntity table){
+    rgb=table.matRgb();
+    break;
+   }
   }
-  return state;
+  if(level.getBlockEntity(chairPos) instanceof ChairBlockEntity chair)chair.paperRgb(rgb);
  }
  public static void refreshNextToTable(Level level,BlockPos tablePos){
   if(level.isClientSide())return;
-  for(Direction d:Direction.Plane.HORIZONTAL){
-   BlockPos chair=tablePos.relative(d);
-   BlockState current=level.getBlockState(chair);
-   if(!(current.getBlock() instanceof ChairBlock))continue;
-   BlockState next=matchPaper(level,chair,current);
-   if(next!=current)level.setBlock(chair,next,Block.UPDATE_ALL);
-  }
+  for(Direction d:Direction.Plane.HORIZONTAL)
+   refreshPaperColor(level,tablePos.relative(d));
  }
  @Override public void onPlace(BlockState state,Level level,BlockPos pos,BlockState old,boolean moved){
   super.onPlace(state,level,pos,old,moved);
-  if(!level.isClientSide()&&state.getValue(CUSHION)==Cushion.PAPER){
-   BlockState matched=matchPaper(level,pos,state);
-   if(matched!=state)level.setBlock(pos,matched,Block.UPDATE_ALL);
-  }
+  if(!level.isClientSide()&&state.getValue(CUSHION)==Cushion.PAPER)
+   refreshPaperColor(level,pos);
  }
 }
