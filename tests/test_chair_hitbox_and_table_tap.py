@@ -31,7 +31,7 @@ class ChairAndTapTests(unittest.TestCase):
   for token in ("if(c.tapped())","pose.pushMatrix()","pose.rotate((float)(Math.PI/2.0))",
                 "g.pose().popMatrix()","int left=c.tapped()?x+(w-h)/2:x",
                 "int top=c.tapped()?y+(h-w)/2:y",
-                "int visualW=c.tapped()?h:w","int visualH=c.tapped()?w:h",
+                "int visualW=c.tapped()?h:w","visualH=c.tapped()?w:h",
                 'button("Untap All"','action("untap_all",0)'):
    self.assertIn(token,screen)
 
