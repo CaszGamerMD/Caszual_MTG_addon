@@ -35,7 +35,7 @@ class TabletopChairAndResetTests(unittest.TestCase):
         self.assertIn("current.equals",chair) if "current.equals" in chair else self.assertIn("material.equals(current)",chair)
         model=read(ASSETS/"models/block/material_chair.json")
         self.assertEqual(model["textures"]["wood"],"minecraft:block/oak_planks")
-        self.assertEqual(len(read(ASSETS/"blockstates/material_chair.json")["multipart"]),4*(2*len(COLORS)+1))
+        self.assertEqual(len(read(ASSETS/"blockstates/material_chair.json")["multipart"]),4*(2*len(COLORS)+2))
 
     def test_cushion_overlays_are_slightly_above_seat(self):
         for color in COLORS:
@@ -49,10 +49,11 @@ class TabletopChairAndResetTests(unittest.TestCase):
         chair=(JAVA/"ChairBlock.java").read_text(encoding="utf-8")
         table=(JAVA/"TabletopLogic.java").read_text(encoding="utf-8")
         seat=(JAVA/"ChairSeats.java").read_text(encoding="utf-8")
-        for token in ("Items.PAPER","Items.LEATHER","_wool","DyeItem","ChairBlock.matchPaper"):
+        for token in ("Items.PAPER","Items.LEATHER","_wool","DyeItem","refreshPaperColor"):
             if token=="ChairBlock.matchPaper":continue
             self.assertIn(token,chair)
-        self.assertIn("neighbor.getValue(TabletopBlock.FELT)",chair)
+        self.assertIn("rgb=table.matRgb()",chair)
+        self.assertIn("chair.paperRgb(rgb)",chair)
         self.assertIn("ChairBlock.refreshNextToTable",table)
         self.assertIn("Attributes.SCALE",seat)
         self.assertIn("startRiding(seat)",seat)
