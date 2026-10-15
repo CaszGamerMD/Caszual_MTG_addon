@@ -26,6 +26,33 @@ public final class CaszualMtgClient implements ClientModInitializer {
   net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED
       .register(client -> MtgBlockEntitySafety.verifyAtLifecycle("client startup"));
   CustomBoxModels.register();
+  // Per-vertex block tinting in 26.2: exact 24-bit playmat and paper cushion.
+  // A pure-white texture is used so RGB is not multiplied by a wool/carpet dye.
+  net.fabricmc.fabric.api.client.rendering.v1.BlockColorRegistry.register(
+   java.util.List.of(new net.minecraft.client.color.block.BlockTintSource(){
+    @Override public int color(net.minecraft.world.level.block.state.BlockState state){
+     return 0xFF315348;
+    }
+    @Override public int colorInWorld(net.minecraft.world.level.block.state.BlockState state,
+      net.minecraft.client.renderer.block.BlockAndTintGetter level,net.minecraft.core.BlockPos pos){
+     Object data=level.getBlockEntityRenderData(pos);
+     return data instanceof TabletopBlockEntity.RenderData rendered
+      ?0xFF000000|(rendered.rgb()&0xFFFFFF):0xFF315348;
+    }
+   }),CaszualMtg.TABLETOP);
+  net.fabricmc.fabric.api.client.rendering.v1.BlockColorRegistry.register(
+   java.util.List.of(new net.minecraft.client.color.block.BlockTintSource(){
+    @Override public int color(net.minecraft.world.level.block.state.BlockState state){
+     return 0xFFFFFFFF;
+    }
+    @Override public int colorInWorld(net.minecraft.world.level.block.state.BlockState state,
+      net.minecraft.client.renderer.block.BlockAndTintGetter level,net.minecraft.core.BlockPos pos){
+     if(state.getValue(ChairBlock.CUSHION)!=ChairBlock.Cushion.PAPER)return 0xFFFFFFFF;
+     Object data=level.getBlockEntityRenderData(pos);
+     return data instanceof ChairBlockEntity.RenderData rendered
+      ?0xFF000000|(rendered.paperRgb()&0xFFFFFF):0xFFFFFFFF;
+    }
+   }),CaszualMtg.MATERIAL_CHAIR);
   // The native MTGCard block-entity type includes both vanilla and Caszual deckboxes.
   // Register only a world block renderer; inventory items stay visually unchanged.
   if(com.spider.mtgcard.registry.ModBlockEntities.DECKBOX!=null)
