@@ -37,6 +37,20 @@ public final class TabletopBlockEntity extends BlockEntity {
  }
  // Keep dark oak as the fallback for tables placed before material selection existed.
  private String material="minecraft:dark_oak_planks";
+ // Exact 24-bit color from the owning player's Card Hand. No wool palette.
+ private int matRgb=0x315348;
+ public record RenderData(String wood,int rgb) {}
+ public int matRgb(){return matRgb;}
+ public void matRgb(int rgb){
+  int next=rgb&0xFFFFFF;
+  if(matRgb==next)return;
+  matRgb=next;
+  setChanged();
+  if(level!=null){
+   BlockState state=getBlockState();
+   level.sendBlockUpdated(worldPosition,state,state,3);
+  }
+ }
  public String material(){return material;}
  public void material(String wood){
   String next=ChairWood.safe(wood);
@@ -47,7 +61,7 @@ public final class TabletopBlockEntity extends BlockEntity {
    level.sendBlockUpdated(worldPosition,state,state,3);
   }
  }
- public Object getRenderData(){return material;}
+ public Object getRenderData(){return new RenderData(material,matRgb);}
  @Override protected void collectImplicitComponents(DataComponentMap.Builder builder){
   super.collectImplicitComponents(builder);
   builder.set(CaszualMtg.TABLE_MATERIAL,material);
@@ -55,6 +69,7 @@ public final class TabletopBlockEntity extends BlockEntity {
  @Override public CompoundTag getUpdateTag(HolderLookup.Provider lookup){
   CompoundTag tag=super.getUpdateTag(lookup);
   tag.putString("TableWood",material);
+  tag.putInt("MatRgb",matRgb);
   return tag;
  }
  @Override public @Nullable Packet<ClientGamePacketListener> getUpdatePacket(){
@@ -107,6 +122,7 @@ public final class TabletopBlockEntity extends BlockEntity {
   if(seatOwner!=null)out.putString("SeatOwner",seatOwner.toString());
   out.putString("SeatName",seatName);
   out.putString("TableWood",material);
+  out.putInt("MatRgb",matRgb);
   if(!commanderReference.isEmpty())out.store("CommanderReference",ItemStack.CODEC,commanderReference);
   out.store("PlayedCards",PlayedCard.CODEC.listOf(),cards);
  }
@@ -115,6 +131,7 @@ public final class TabletopBlockEntity extends BlockEntity {
   try{String s=in.getStringOr("SeatOwner","");if(!s.isBlank())seatOwner=UUID.fromString(s);}catch(IllegalArgumentException ignored){}
   seatName=in.getStringOr("SeatName","");
   material=ChairWood.safe(in.getStringOr("TableWood","minecraft:dark_oak_planks"));
+  matRgb=in.getIntOr("MatRgb",0x315348)&0xFFFFFF;
   commanderReference=in.read("CommanderReference",ItemStack.CODEC).orElse(ItemStack.EMPTY);
   cards.clear();
   for(PlayedCard c:in.read("PlayedCards",PlayedCard.CODEC.listOf()).orElse(List.of())){
