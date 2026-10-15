@@ -2,7 +2,7 @@
   "parent": "minecraft:block/block",
   "textures": {
     "particle": "minecraft:block/dark_oak_planks",
-    "felt": "minecraft:block/green_wool",
+    "felt": "caszual_mtg:block/flat_white",
     "wood": "minecraft:block/dark_oak_planks"
   },
   "elements": [
@@ -51,19 +51,24 @@
       ],
       "faces": {
         "up": {
-          "texture": "#felt"
+          "texture": "#felt",
+          "tintindex": 0
         },
         "north": {
-          "texture": "#felt"
+          "texture": "#felt",
+          "tintindex": 0
         },
         "south": {
-          "texture": "#felt"
+          "texture": "#felt",
+          "tintindex": 0
         },
         "east": {
-          "texture": "#felt"
+          "texture": "#felt",
+          "tintindex": 0
         },
         "west": {
-          "texture": "#felt"
+          "texture": "#felt",
+          "tintindex": 0
         }
       }
     },
