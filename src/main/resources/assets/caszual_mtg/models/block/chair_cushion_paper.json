@@ -1,0 +1,47 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "fabric": "caszual_mtg:block/flat_white",
+    "particle": "caszual_mtg:block/flat_white"
+  },
+  "elements": [
+    {
+      "from": [
+        1,
+        8.02,
+        1
+      ],
+      "to": [
+        15,
+        9.22,
+        13.5
+      ],
+      "faces": {
+        "up": {
+          "texture": "#fabric",
+          "tintindex": 0
+        },
+        "down": {
+          "texture": "#fabric",
+          "tintindex": 0
+        },
+        "north": {
+          "texture": "#fabric",
+          "tintindex": 0
+        },
+        "south": {
+          "texture": "#fabric",
+          "tintindex": 0
+        },
+        "east": {
+          "texture": "#fabric",
+          "tintindex": 0
+        },
+        "west": {
+          "texture": "#fabric",
+          "tintindex": 0
+        }
+      }
+    }
+  ]
+}
