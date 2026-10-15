@@ -122,7 +122,7 @@ public final class TabletopLogic {
   String message="";
   if(req.action().equals("refresh")){reply(player,req.pos(),"");return;}
   if(c.seat==null){reply(player,req.pos(),"Claim an empty tabletop seat to play.");return;}
-  if(!List.of("move","tap","hide","flip","return","grave","exile","commander_home","pass_turn").contains(req.action())&&c.hand==null){
+  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn").contains(req.action())&&c.hand==null){
    reply(player,req.pos(),requireLinks(c));return;
   }
   try{
@@ -197,6 +197,19 @@ public final class TabletopLogic {
      if(!dest.add(updated)){message="Destination tile is full.";break;}
      found.tile.remove(found.card.id());
      message="Card moved.";
+    }
+    case "untap_all" -> {
+     // Cards can span multiple connected tabletop blocks. Untap only this
+     // player's cards, regardless of which battlefield view is currently open.
+     String owner=player.getUUID().toString();
+     int count=0;
+     for(TabletopBlockEntity table:c.tiles)
+      for(TabletopBlockEntity.PlayedCard card:table.cards())
+       if(owner.equals(card.owner())&&card.tapped()){
+        table.replace(card.tapped(false));
+        count++;
+       }
+     message=count==0?"All your cards are already untapped.":"Untapped "+count+" of your cards.";
     }
     case "tap", "hide", "flip" -> {
      Located found=located(c,req.ref());
