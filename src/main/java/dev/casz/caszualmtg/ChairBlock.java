@@ -35,7 +35,42 @@ public class ChairBlock extends BaseEntityBlock {
  public static final EnumProperty<Cushion> CUSHION=EnumProperty.create("cushion",Cushion.class);
  public static final EnumProperty<DyeColor> COLOR=EnumProperty.create("color",DyeColor.class);
  private final MapCodec<ChairBlock> codec;
- private static final VoxelShape SHAPE=Shapes.or(Block.box(1,0,1,15,8,15),Block.box(1,8,13,15,16,15));
+ // Follow all eight cuboids in models/block/material_chair.json: four legs,
+ // the half-slab seat, two back uprights and the high back crossbar.
+ // A VoxelShape never follows a blockstate model's "y" rotation automatically.
+ private static final VoxelShape NORTH_SHAPE=Shapes.or(
+  Block.box(1,0,1,3,7,3), Block.box(13,0,1,15,7,3),
+  Block.box(1,0,13,3,7,15), Block.box(13,0,13,15,7,15),
+  Block.box(0,7,0,16,8,16),
+  Block.box(0,8,14,2,14,16), Block.box(14,8,14,16,14,16),
+  Block.box(0,14,14,16,16,16)
+ ).optimize();
+ // Blockstate rotations: north=0, east=90, south=180, west=270.
+ private static final VoxelShape EAST_SHAPE=rotateClockwise(NORTH_SHAPE);
+ private static final VoxelShape SOUTH_SHAPE=rotateClockwise(EAST_SHAPE);
+ private static final VoxelShape WEST_SHAPE=rotateClockwise(SOUTH_SHAPE);
+
+ private static VoxelShape rotateClockwise(VoxelShape source){
+  VoxelShape rotated=Shapes.empty();
+  // Rotation by +90 degrees around the block center:
+  // (x,z) -> (z, 1-x). All AABBs use block coordinates 0..1.
+  for(var box:source.toAabbs()){
+   rotated=Shapes.or(rotated,Block.box(
+    box.minZ*16,box.minY*16,(1-box.maxX)*16,
+    box.maxZ*16,box.maxY*16,(1-box.minX)*16
+   ));
+  }
+  return rotated.optimize();
+ }
+ private static VoxelShape shapeFor(BlockState state){
+  return switch(state.getValue(FACING)){
+   case NORTH -> NORTH_SHAPE;
+   case EAST -> EAST_SHAPE;
+   case SOUTH -> SOUTH_SHAPE;
+   case WEST -> WEST_SHAPE;
+   default -> NORTH_SHAPE;
+  };
+ }
  public ChairBlock(Properties props){
   super(props);
   codec=MapCodec.unit(()->new ChairBlock(Properties.of()));
@@ -69,7 +104,8 @@ public class ChairBlock extends BaseEntityBlock {
   BlockState state=defaultBlockState().setValue(FACING,c.getHorizontalDirection().getOpposite());
   return matchPaper(c.getLevel(),c.getClickedPos(),state);
  }
- @Override protected VoxelShape getShape(BlockState state,BlockGetter level,BlockPos pos,CollisionContext context){return SHAPE;}
+ @Override protected VoxelShape getShape(BlockState state,BlockGetter level,BlockPos pos,CollisionContext context){return shapeFor(state);}
+ @Override protected VoxelShape getCollisionShape(BlockState state,BlockGetter level,BlockPos pos,CollisionContext context){return shapeFor(state);}
  @Override protected InteractionResult useWithoutItem(BlockState state,Level level,BlockPos pos,Player p,BlockHitResult hit){
   if(p instanceof ServerPlayer sp)ChairSeats.sit(sp,pos);
   return InteractionResult.SUCCESS;
