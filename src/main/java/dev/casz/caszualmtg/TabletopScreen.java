@@ -104,8 +104,13 @@ public final class TabletopScreen extends LegacyScreen {
  TabletopWire.Card cardAt(int mx,int my){
   List<TabletopWire.Card> list=new ArrayList<>(displayed());Collections.reverse(list);
   for(var c:list){
-   int x=cardX(c),y=cardY(c);
-   if(mx>=x&&mx<x+boardCardW()&&my>=y&&my<y+boardCardH())return c;
+   int x=cardX(c),y=cardY(c),w=boardCardW(),h=boardCardH();
+   // Tapped cards are rotated around the center of their upright bounds.
+   // Match the actual sideways artwork for click and Alt-to-zoom hit testing.
+   int left=c.tapped()?x+(w-h)/2:x;
+   int top=c.tapped()?y+(h-w)/2:y;
+   int visualW=c.tapped()?h:w,visualH=c.tapped()?w:h;
+   if(mx>=left&&mx<left+visualW&&my>=top&&my<top+visualH)return c;
   }
   return null;
  }
@@ -145,6 +150,7 @@ public final class TabletopScreen extends LegacyScreen {
   button("Deck ▾",ux,uy,86,()->openMenu("deck"));ux+=91;
   button("Pass Turn",ux,uy,91,()->action("pass_turn",0));ux+=96;
   button("Flip",ux,uy,58,()->tableAction("flip"));ux+=63;
+  button("Untap All",ux,uy,92,()->action("untap_all",0));ux+=97;
   button("Close",width-77,uy,64,this::onClose);
   if(menuMode.equals("draw")){
    int mx=12,my=66;
@@ -312,10 +318,19 @@ public final class TabletopScreen extends LegacyScreen {
   for(var c:displayed()){
    int x=cardX(c),y=cardY(c),cw=boardCardW(),ch=boardCardH();
    boolean chosen=c.id().equals(selectedCard);
+   // Rotate card art and selection border together. The server keeps original
+   // coordinates, so tapped/untapped cards never shift their anchor position.
+   if(c.tapped()){
+    var pose=g.pose();
+    pose.pushMatrix();
+    pose.translate(x+cw/2.0f,y+ch/2.0f);
+    pose.rotate((float)(Math.PI/2.0));
+    pose.translate(-x-cw/2.0f,-y-ch/2.0f);
+   }
    g.fill(x-2,y-2,x+cw+2,y+ch+2,chosen?0xFFFFD078:c.tapped()?0xFF98BDEB:0xFF19212D);
    if(c.hidden())drawArt(g,ItemStack.EMPTY,x,y,cw,ch);
    else drawArt(g,c.stack(),x,y,cw,ch);
-   if(c.tapped())g.drawString(font,"TAP",x+3,y+ch-10,0xFFFFFF80);
+   if(c.tapped())g.pose().popMatrix();
   }
   g.fill(0,handTop(),width,height,0xFF192738);
   g.fill(7,handTop()+27,width-7,height-8,0xFF132033);
