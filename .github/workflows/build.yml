@@ -74,6 +74,9 @@ jobs:
       - name: Validate chair direction hitbox and tapped-card interactions
         run: python3 -m unittest discover -s tests -p 'test_chair_hitbox_and_table_tap.py' -v
 
+      - name: Validate exact 24-bit playmat and paper cushion tinting
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_hex_tint.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
