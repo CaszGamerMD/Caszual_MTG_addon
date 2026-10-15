@@ -71,6 +71,9 @@ jobs:
       - name: Validate material-driven tabletop and obsolete chair cleanup
         run: python3 -m unittest discover -s tests -p 'test_tabletop_wood.py' -v
 
+      - name: Validate chair direction hitbox and tapped-card interactions
+        run: python3 -m unittest discover -s tests -p 'test_chair_hitbox_and_table_tap.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
