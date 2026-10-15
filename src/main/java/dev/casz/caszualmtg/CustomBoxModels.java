@@ -30,8 +30,16 @@ public final class CustomBoxModels {
  });}
  static Material.Baked material(String id){return Minecraft.getInstance().getModelManager().getBlockStateModelSet().getParticleMaterial(BoxMaterial.block(id).defaultBlockState());}
  static Material.Baked chairMaterial(String id){return Minecraft.getInstance().getModelManager().getBlockStateModelSet().getParticleMaterial(ChairWood.block(id).defaultBlockState());}
- static String tableSkin(BlockAndTintGetter level,BlockPos pos){Object data=level.getBlockEntityRenderData(pos);return data instanceof String id?ChairWood.safe(id):"minecraft:dark_oak_planks";}
- static String chairSkin(BlockAndTintGetter level,BlockPos pos){Object data=level.getBlockEntityRenderData(pos);return data instanceof String id?ChairWood.safe(id):ChairWood.DEFAULT;}
+ static String tableSkin(BlockAndTintGetter level,BlockPos pos){
+  Object data=level.getBlockEntityRenderData(pos);
+  if(data instanceof TabletopBlockEntity.RenderData render)return ChairWood.safe(render.wood());
+  return data instanceof String id?ChairWood.safe(id):"minecraft:dark_oak_planks";
+ }
+ static String chairSkin(BlockAndTintGetter level,BlockPos pos){
+  Object data=level.getBlockEntityRenderData(pos);
+  if(data instanceof ChairBlockEntity.RenderData render)return ChairWood.safe(render.wood());
+  return data instanceof String id?ChairWood.safe(id):ChairWood.DEFAULT;
+ }
  static String skin(BlockAndTintGetter level,BlockPos pos){Object data=level.getBlockEntityRenderData(pos);return data instanceof String id?BoxMaterial.safe(id):BoxMaterial.DEFAULT;}
  public static BakedQuad remap(BakedQuad quad,Material.Baked material){return remap(quad,material,PANELS);}
  public static BakedQuad remap(BakedQuad quad,Material.Baked material,Identifier source){
