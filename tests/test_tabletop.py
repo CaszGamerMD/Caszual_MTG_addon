@@ -20,7 +20,7 @@ class TabletopAssetsTest(unittest.TestCase):
         loot=json.loads((DATA/"loot_table/blocks/tabletop.json").read_text())
         self.assertEqual(len([entry for entry in state["multipart"] if not entry.get("when")]),1)
         self.assertEqual(state["multipart"][0]["apply"]["model"],"caszual_mtg:block/tabletop")
-        self.assertEqual(len([entry for entry in state["multipart"] if "cards" in entry["when"]]),4)
+        self.assertEqual(len([entry for entry in state["multipart"] if "cards" in entry.get("when",{})]),4)
         self.assertEqual(item["model"]["model"],"caszual_mtg:item/tabletop")
         self.assertTrue(any(e["faces"].get("up",{}).get("texture")=="#felt" for e in model["elements"]))
         self.assertEqual(recipe["type"],"caszual_mtg:tabletop_material")
