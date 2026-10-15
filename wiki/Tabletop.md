@@ -8,7 +8,7 @@ To play with cards, put your **Card Hand** within eight blocks of your seat. In 
 
 In the Card Hand UI, use **Link Life Point**, then right-click your MTGCard Life Point block (within eight blocks of your Hand). Each tabletop player can link a separate Life Point. This reads live health and turn status from the existing MTGCard group system — no duplicate scoreboard. **Pass Turn** works for the currently active player in a started Life Point game, using MTGCard's regular group progression.
 
-The Card Hand UI also has a **#RRGGBB table color** setting. The tabletop UI uses the full color, and the playmat on the block in the world uses the closest of 16 wool colors. The surrounding wood frame is independently customizable.
+The Card Hand UI also has a **#RRGGBB table color** setting. The tabletop UI uses the full color, and the playmat uses the exact 24-bit RGB value. The surrounding wood frame is independently customizable.
 
 ## Play screen
 
@@ -20,7 +20,7 @@ The Card Hand UI also has a **#RRGGBB table color** setting. The tabletop UI use
 - **Deck ▾ menu:** Shuffle the linked library, Search (open the linked deckbox), Reveal X, or RESET. Reveal shows the top X cards only to the player; send the top one to your Hand or drag it to the battlefield, then shuffle the unused revealed cards onto the bottom of the library. You can also return all revealed cards to the bottom.
 - **RESET:** Requires confirmation. Collects the requesting player's cards from this connected battlefield, Card Hand, Graveyard and Exile back into their own deckbox, shuffles the library, and remembers/restores the commander to the Commander side slot. Reset pre-checks capacity; if there are not enough slots it leaves cards where they are and reports why. It does not move opponents' tabletop cards.
 - **Library count:** The screen displays the linked Deck Control's remaining library count.
-- **World appearance:** a wooden tabletop has an inset colored playmat, leaving a one-pixel wooden edge. A block with cards on its battlefield displays up to four tiny generic, face-down card markers above the mat. These are intentionally not legible actual card art. The world playmat uses the closest of Minecraft's 16 wool colors to the Card Hand's full RGB setting.
+- **World appearance:** a wooden tabletop has an inset colored playmat, leaving a one-pixel wooden edge. A block with cards on its battlefield displays up to four tiny generic, face-down card markers above the mat. These are intentionally not legible actual card art. The playmat now uses a pure-white base texture tinted to the full #RRGGBB value rather than approximating it with one of sixteen wool colors.
 
 ## Material-driven wooden tables
 
@@ -47,7 +47,7 @@ The twelve retired wood-specific chair IDs and their assets are now removed. Onl
 Right-click a chair with:
 - **Wool:** add a cushion matching the wool's color.
 - **Leather:** add a brown leather cushion. Right-click again with a dye to recolor it.
-- **Paper:** add an automatic playmat-matched cushion. When placed beside an MTG Tabletop at the same level, the cushion follows that table's felt color, including later changes from the linked Card Hand.
+- **Paper:** add an automatic playmat-matched cushion. When placed beside an MTG Tabletop at the same level, the cushion uses that table's exact #RRGGBB playmat color, including later changes from the linked Card Hand.
 
 Chairs have a slab-height (8 pixel) seat. Right-click without upholstery material to sit; dismount normally to stand up. Cushions are currently consumed on application. Seat mounts are cleared when riders leave or when chairs are removed.
 
