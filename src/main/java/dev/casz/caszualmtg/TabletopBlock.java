@@ -71,13 +71,20 @@ public final class TabletopBlock extends BaseEntityBlock {
   }
   return useWithoutItem(s,level,pos,p,hit);
  }
+ @Override public void onPlace(BlockState state,Level level,BlockPos pos,BlockState old,boolean moved){
+  super.onPlace(state,level,pos,old,moved);
+  if(!level.isClientSide())ChairBlock.refreshNextToTable(level,pos);
+ }
  private static void dropContents(Level level,BlockPos pos){
   if(level.isClientSide())return;
   if(level.getBlockEntity(pos) instanceof TabletopBlockEntity tile)for(ItemStack card:tile.drain())popResource(level,pos,card);
  }
  @Override public BlockState playerWillDestroy(Level level,BlockPos pos,BlockState state,Player p){dropContents(level,pos);return super.playerWillDestroy(level,pos,state,p);}
  @Override protected void affectNeighborsAfterRemoval(BlockState state,ServerLevel level,BlockPos pos,boolean moved){
-  if(!level.getBlockState(pos).is(CaszualMtg.TABLETOP))dropContents(level,pos);
+  if(!level.getBlockState(pos).is(CaszualMtg.TABLETOP)){
+   dropContents(level,pos);
+   ChairBlock.refreshNextToTable(level,pos);
+  }
   super.affectNeighborsAfterRemoval(state,level,pos,moved);
  }
 }
