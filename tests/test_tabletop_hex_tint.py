@@ -73,7 +73,7 @@ class ExactPlaymatColorTest(unittest.TestCase):
 
  def test_white_base_is_opaque_not_carpet_colored(self):
   png=(RES/"textures/block/flat_white.png").read_bytes()
-  self.assertTrue(png.startswith(b"\\x89PNG\\r\\n\\x1a\\n"))
+  self.assertEqual(png[:8],bytes([137,80,78,71,13,10,26,10]))
   self.assertEqual((struct.unpack(">I",png[16:20])[0],struct.unpack(">I",png[20:24])[0]),(16,16))
   self.assertEqual(png[25],6) # true RGBA
   pieces=[]
