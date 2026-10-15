@@ -499,29 +499,14 @@ public final class TabletopLogic {
   if(hand==null||hand.owner()==null)return;
   BlockPos at=hand.getBlockPos();
   int rgb=StaffColors.rgb(hand.tableColor());
-  var desired=nearestDye(rgb);
   for(BlockPos pos:BlockPos.betweenClosed(at.offset(-LINK_RANGE,-LINK_RANGE,-LINK_RANGE),
                                         at.offset(LINK_RANGE,LINK_RANGE,LINK_RANGE))){
    if(!player.level().hasChunkAt(pos))continue;
    if(!(player.level().getBlockEntity(pos) instanceof TabletopBlockEntity tile))continue;
    if(!hand.owner().equals(tile.seatOwner()))continue;
-   var state=tile.getBlockState();
-   if(state.hasProperty(TabletopBlock.FELT)&&state.getValue(TabletopBlock.FELT)!=desired)
-    player.level().setBlock(pos,state.setValue(TabletopBlock.FELT,desired),3);
+   tile.matRgb(rgb);
    ChairBlock.refreshNextToTable(player.level(),pos);
   }
- }
- private static net.minecraft.world.item.DyeColor nearestDye(int rgb){
-  net.minecraft.world.item.DyeColor[] choices=net.minecraft.world.item.DyeColor.values();
-  int[] palette={0xF9FFFE,0xF9801D,0xC74EBD,0x3AB3DA,0xFED83D,0x80C71F,0xF38BAA,0x474F52,0x9D9D97,0x169C9C,0x8932B8,0x3C44AA,0x835432,0x5E7C16,0xB02E26,0x1D1D21};
-  int min=Integer.MAX_VALUE;net.minecraft.world.item.DyeColor best=net.minecraft.world.item.DyeColor.GREEN;
-  for(net.minecraft.world.item.DyeColor dye:choices){
-   int c=palette[Math.clamp(dye.getId(),0,15)];
-   int dr=(rgb>>16&255)-(c>>16&255),dg=(rgb>>8&255)-(c>>8&255),db=(rgb&255)-(c&255);
-   int d=dr*dr+dg*dg+db*db;
-   if(d<min){min=d;best=dye;}
-  }
-  return best;
  }
  private static void reply(ServerPlayer player,BlockPos origin,String message){
   Context c=context(player,origin);
@@ -534,12 +519,9 @@ public final class TabletopLogic {
    HandBlockEntity other=t.seatOwner()==null?null:linkedHand(player,t,t.seatOwner());
    LifePointBlockEntity lp=life(player,other);
    int color=other!=null?StaffColors.rgb(other.tableColor()):0x315348;
-   var state=t.getBlockState();
-   if(state.hasProperty(TabletopBlock.FELT)){
-    var desired=nearestDye(color);
-    if(state.getValue(TabletopBlock.FELT)!=desired)player.level().setBlock(t.getBlockPos(),state.setValue(TabletopBlock.FELT,desired),3);
-    ChairBlock.refreshNextToTable(player.level(),t.getBlockPos());
-   }
+   // Exact 24-bit seat color; legacy FELT blockstate is no longer used to tint.
+   t.matRgb(color);
+   ChairBlock.refreshNextToTable(player.level(),t.getBlockPos());
    tiles.add(new TabletopWire.Tile(t.getBlockPos(),t.seatName(),color,lp==null?0:lp.getLife(),lp!=null,lp!=null&&lp.isTurnActive()));
    for(var card:t.cards()){
     // Face-down card identities must never leave the server for opponents.
