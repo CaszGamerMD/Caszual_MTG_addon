@@ -1,6 +1,8 @@
 package dev.casz.caszualmtg;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
@@ -24,10 +26,17 @@ public final class ChairBlockEntity extends BlockEntity {
   int next=rgb&0xFFFFFF;
   if(matRgb==next)return;
   matRgb=next;
+  refreshAppearance();
+ }
+ /** A BE packet alone does not invalidate Fabric's already-baked chunk mesh.
+  * Apply the normal block-entity sync then explicitly rebuild nearby clients'
+  * chunk sections, just as the custom material deckboxes already do. */
+ private void refreshAppearance(){
   setChanged();
-  if(level!=null){
+  if(level instanceof ServerLevel server){
    BlockState state=getBlockState();
-   level.sendBlockUpdated(worldPosition,state,state,3);
+   level.sendBlockUpdated(worldPosition,state,state,Block.UPDATE_ALL);
+   DeckboxRefreshWire.broadcast(server,worldPosition);
   }
  }
  public ChairBlockEntity(BlockPos pos,BlockState state){super(CaszualMtg.CHAIR_BE,pos,state);}
@@ -36,11 +45,7 @@ public final class ChairBlockEntity extends BlockEntity {
   String next=ChairWood.safe(source);
   if(next.equals(material))return;
   material=next;
-  setChanged();
-  if(level!=null){
-   BlockState state=getBlockState();
-   level.sendBlockUpdated(worldPosition,state,state,3);
-  }
+  refreshAppearance();
  }
  /** Read by Fabric's per-block render-data model wrapper. */
  public Object getRenderData(){return new RenderData(material,matRgb);}
