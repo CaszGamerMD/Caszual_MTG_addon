@@ -35,6 +35,10 @@ public final class CustomBoxModels {
   if(data instanceof TabletopBlockEntity.RenderData render)return ChairWood.safe(render.wood());
   return data instanceof String id?ChairWood.safe(id):"minecraft:dark_oak_planks";
  }
+ static int chairPaperRgb(BlockAndTintGetter level,BlockPos pos){
+  Object data=level.getBlockEntityRenderData(pos);
+  return data instanceof ChairBlockEntity.RenderData render?render.paperRgb():0xFFFFFF;
+ }
  static String chairSkin(BlockAndTintGetter level,BlockPos pos){
   Object data=level.getBlockEntityRenderData(pos);
   if(data instanceof ChairBlockEntity.RenderData render)return ChairWood.safe(render.wood());
@@ -86,7 +90,8 @@ public final class CustomBoxModels {
    for(var part:parts)new ChairPart(part,material).emitQuads(emitter,cull);
   }
   @Override public Object createGeometryKey(BlockAndTintGetter level,BlockPos pos,BlockState state,RandomSource random){
-   return List.of(state,chairSkin(level,pos));
+   return List.of(state,chairSkin(level,pos),
+    state.getValue(ChairBlock.CUSHION)==ChairBlock.Cushion.PAPER?chairPaperRgb(level,pos):-1);
   }
   @Override public Material.Baked particleMaterial(BlockAndTintGetter level,BlockPos pos,BlockState state){
    return chairMaterial(chairSkin(level,pos));
