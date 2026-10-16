@@ -77,6 +77,9 @@ jobs:
       - name: Validate exact 24-bit playmat and paper cushion tinting
         run: python3 -m unittest discover -s tests -p 'test_tabletop_hex_tint.py' -v
 
+      - name: Validate live chair wood and paper cushion refresh
+        run: python3 -m unittest discover -s tests -p 'test_chair_refresh.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
