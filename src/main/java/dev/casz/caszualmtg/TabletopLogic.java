@@ -128,11 +128,24 @@ public final class TabletopLogic {
   String message="";
   if(req.action().equals("refresh")){reply(player,req.pos(),"");return;}
   if(c.seat==null){reply(player,req.pos(),"Claim an empty tabletop seat to play.");return;}
-  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove","quick_send","copy_token","scry_cancel","reveal_hand").contains(req.action())&&c.hand==null){
+  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove","quick_send","copy_token","scry_cancel","reveal_hand","card_scale").contains(req.action())&&c.hand==null){
    reply(player,req.pos(),requireLinks(c));return;
   }
   try{
    switch(req.action()){
+    case "card_scale" -> {
+     TabletopBlockEntity target=tile(c,req.target());
+     if(target==null||!target.ownedBy(player)||!target.getBlockPos().equals(c.seat.getBlockPos())){
+      message="Only the table owner can resize this battlefield.";break;
+     }
+     // Delta, rather than arbitrary absolute size, means rapid wheel input
+     // can be applied without losing steps to delayed network replies.
+     if(req.amount()<-2||req.amount()>2||req.amount()==0){
+      message="Invalid card-size adjustment.";break;
+     }
+     target.cardScale(target.cardScale()+req.amount()*5);
+     message="Battlefield cards: "+target.cardScale()+"%.";
+    }
     case "reveal_hand" -> {
      if(c.hand==null){message="Link a Card Hand to reveal it.";break;}
      if(!c.hand.owner().equals(player.getUUID())){message="You can only reveal your own hand.";break;}
@@ -708,7 +721,7 @@ public final class TabletopLogic {
    // Exact 24-bit seat color; legacy FELT blockstate is no longer used to tint.
    t.matRgb(color);
    ChairBlock.refreshNextToTable(player.level(),t.getBlockPos());
-   tiles.add(new TabletopWire.Tile(t.getBlockPos(),t.seatName(),color,lp==null?0:lp.getLife(),lp!=null,lp!=null&&lp.isTurnActive()));
+   tiles.add(new TabletopWire.Tile(t.getBlockPos(),t.seatName(),color,lp==null?0:lp.getLife(),lp!=null,lp!=null&&lp.isTurnActive(),t.cardScale()));
    for(var card:t.cards()){
     // Face-down card identities must never leave the server for opponents.
     ItemStack shown=card.faceDown()&&!uuid.equals(card.owner())?ItemStack.EMPTY:card.stack().copy();
