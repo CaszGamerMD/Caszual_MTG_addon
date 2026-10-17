@@ -127,7 +127,7 @@ public final class TabletopLogic {
   String message="";
   if(req.action().equals("refresh")){reply(player,req.pos(),"");return;}
   if(c.seat==null){reply(player,req.pos(),"Claim an empty tabletop seat to play.");return;}
-  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove","quick_send","copy_token").contains(req.action())&&c.hand==null){
+  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove","quick_send","copy_token","scry_cancel").contains(req.action())&&c.hand==null){
    reply(player,req.pos(),requireLinks(c));return;
   }
   try{
@@ -245,17 +245,17 @@ public final class TabletopLogic {
       if(!box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT).isEmpty()){
        message="Commander slot is occupied. Card was not moved.";break;
       }
-      box.setStack(DeckboxBlockEntity.SECOND_SIDE_SLOT,card.copy());box.sync();
+      box.setStack(DeckboxBlockEntity.SECOND_SIDE_SLOT,TabletopCounters.leavingBattlefield(card));box.sync();
       found.tile.remove(found.card.id());
       message="Commander returned to command zone.";
      }else if(Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(card).typeLine())){
-      if(!c.seat.addToken(card)){message="Token tray is full. Token remains on battlefield.";break;}
+      if(!c.seat.addToken(TabletopCounters.leavingBattlefield(card))){message="Token tray is full. Token remains on battlefield.";break;}
       found.tile.remove(found.card.id());
       message="Token returned to your tray.";
      }else{
       int slot=emptySlot(c.grave,0);
       if(slot<0){message="No linked Graveyard or no free slot. Card was not moved.";break;}
-      c.grave.setStack(slot,card.copy());
+      c.grave.setStack(slot,TabletopCounters.leavingBattlefield(card));
       found.tile.remove(found.card.id());
       message="Card sent to graveyard.";
      }
@@ -268,7 +268,7 @@ public final class TabletopLogic {
      if(!owned(player,found)||!Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(found.card.stack()).typeLine())){
       message="Only your token cards can return to the tray.";break;
      }
-     if(!c.seat.addToken(found.card.stack())){message="Token tray full.";break;}
+     if(!c.seat.addToken(TabletopCounters.leavingBattlefield(found.card.stack()))){message="Token tray full.";break;}
      found.tile.remove(found.card.id());
      message="Token returned to tray.";
     }
@@ -302,7 +302,7 @@ public final class TabletopLogic {
      if(box==null||!box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT).isEmpty()){
       message="The deckbox Commander slot is occupied or missing.";break;
      }
-     box.setStack(DeckboxBlockEntity.SECOND_SIDE_SLOT,found.card.stack().copy());box.sync();
+     box.setStack(DeckboxBlockEntity.SECOND_SIDE_SLOT,TabletopCounters.leavingBattlefield(found.card.stack()));box.sync();
      found.tile.remove(found.card.id());message="Commander returned to the deckbox Commander slot.";
     }
     case "put_hand" -> {
@@ -383,7 +383,7 @@ public final class TabletopLogic {
      if(found.card.id().startsWith("copy:")){
       found.tile.remove(found.card.id());message="Token copy vanished instead of entering your hand.";break;
      }
-     if(c.hand==null||c.hand.cardCount()>=HandBlockEntity.SIZE||!c.hand.addCard(found.card.stack())){message="Your Card Hand is missing or full.";break;}
+     if(c.hand==null||c.hand.cardCount()>=HandBlockEntity.SIZE||!c.hand.addCard(TabletopCounters.leavingBattlefield(found.card.stack()))){message="Your Card Hand is missing or full.";break;}
      found.tile.remove(found.card.id());message="Card returned to your private hand.";
     }
     case "grave", "exile" -> {
@@ -394,7 +394,7 @@ public final class TabletopLogic {
      }
      int slot=emptySlot(c.grave,req.action().equals("exile")?100:0);
      if(slot<0){message="No linked Graveyard or the target zone is full.";break;}
-     c.grave.setStack(slot,found.card.stack().copy());
+     c.grave.setStack(slot,TabletopCounters.leavingBattlefield(found.card.stack()));
      found.tile.remove(found.card.id());
      message=req.action().equals("exile")?"Exiled card.":"Card sent to graveyard.";
     }
@@ -470,7 +470,7 @@ public final class TabletopLogic {
      SCRIES.put(player.getUUID(),new ScrySession(c.deck.getBlockPos(),List.copyOf(preview)));
      message="Scry "+preview.size()+": choose which cards stay on top.";
     }
-    case "scry_cancel" -> {SCRIES.remove(player.getUUID());message="Scry closed; library order unchanged.";}
+    case "scry_cancel" -> {SCRIES.remove(player.getUUID());message="Scry cancelled; library order unchanged.";}
     case "scry_commit" -> {
      ScrySession session=SCRIES.get(player.getUUID());
      if(session==null||c.deck==null||!session.control.equals(c.deck.getBlockPos())){message="Scry session has expired.";break;}
@@ -590,7 +590,7 @@ public final class TabletopLogic {
   for(var t:c.tiles)for(var card:t.cards())if(owner.toString().equals(card.owner())){
    battlefield.add(new Located(t,card));
    if(reference.isEmpty()&&card.id().startsWith("commander:"))
-    reference=card.stack().copyWithCount(1);
+    reference=TabletopCounters.leavingBattlefield(card.stack()).copyWithCount(1);
   }
   List<ItemStack> hand=c.hand.visibleCards();
   List<TabletopWire.ZoneCard> zones=new ArrayList<>();
@@ -606,9 +606,9 @@ public final class TabletopLogic {
    if(entry.card.id().startsWith("copy:"))continue;
    if(inCommand.isEmpty()&&commanderReturn.isEmpty()
        &&(entry.card.id().startsWith("commander:")||sameCommander(card,reference)))
-    commanderReturn=card.copy();
+    commanderReturn=TabletopCounters.leavingBattlefield(card);
    else if(!entry.card.id().startsWith("copy:")
-      &&!Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(card).typeLine()))returning.add(card.copy());
+      &&!Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(card).typeLine()))returning.add(TabletopCounters.leavingBattlefield(card));
   }
   for(var card:hand){
    if(inCommand.isEmpty()&&commanderReturn.isEmpty()&&sameCommander(card,reference))
