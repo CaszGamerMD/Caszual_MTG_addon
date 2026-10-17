@@ -45,6 +45,13 @@ public final class TabletopWire {
    b.writeVarInt(p.tray.size());for(ItemStack t:p.tray)ItemStack.OPTIONAL_STREAM_CODEC.encode(b,t);
    b.writeVarInt(p.tokenResults.size());for(TokenResult t:p.tokenResults){b.writeUtf(t.key,512);ItemStack.OPTIONAL_STREAM_CODEC.encode(b,t.stack);}
    b.writeVarInt(p.tokenPage);b.writeBoolean(p.tokenMore);
+   b.writeBoolean(p.ownHandRevealed);
+   b.writeVarInt(p.shownHands.size());
+   for(ShownHand shown:p.shownHands){
+    b.writeBlockPos(shown.seat);b.writeUtf(shown.owner,64);
+    b.writeVarInt(shown.cards.size());
+    for(ItemStack card:shown.cards)ItemStack.OPTIONAL_STREAM_CODEC.encode(b,card);
+   }
   },b->{
    BlockPos pos=b.readBlockPos();String message=b.readUtf(512);BlockPos seat=b.readBlockPos();
    int n=b.readVarInt();if(n<0||n>32)throw new IllegalArgumentException("Table too large");
