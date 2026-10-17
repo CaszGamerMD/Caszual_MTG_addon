@@ -605,7 +605,6 @@ public final class TabletopScreen extends LegacyScreen {
    int zi=zoneAt(mx,my);
    if(hovered.isEmpty()&&zi>=0&&zi<cards.size())hovered=cards.get(zi);
    if(hovered.isEmpty()&&!data.commander().isEmpty()&&mx>=12&&mx<81&&my>=zoneY())hovered=data.commander();
-   TabletopWire.ShownHand publicHand=shownHand();
    if(hovered.isEmpty()&&publicHand!=null&&!tokenTrayOpen){
     int bx=boardX()+11,by=boardY()+boardH()-89;
     if(mx>=bx&&my>=by&&my<by+67){
