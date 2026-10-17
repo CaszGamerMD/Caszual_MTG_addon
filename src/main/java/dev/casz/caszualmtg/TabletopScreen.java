@@ -313,8 +313,14 @@ public final class TabletopScreen extends LegacyScreen {
    TabletopWire.Card c=cardAt(x,y);
    if(c!=null){selectedCard=c.id();selectedZone=-1;
     if(event.button()==1){
-     if(own(c)&&!c.hidden()){counterCard=c.id();counterOpen=true;tokenTrayOpen=false;rebuildWidgets();}
-     else message="Counters can only be changed on your face-up cards.";
+     boolean shift=GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(),GLFW.GLFW_KEY_LEFT_SHIFT)==GLFW.GLFW_PRESS
+      ||GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(),GLFW.GLFW_KEY_RIGHT_SHIFT)==GLFW.GLFW_PRESS;
+     if(shift){
+      if(own(c))send("quick_send",c.id(),data.seat(),0,0,0);
+      else message="Only your own cards can be quick-sent.";
+     }else if(own(c)&&!c.hidden()){
+      counterCard=c.id();counterOpen=true;tokenTrayOpen=false;rebuildWidgets();
+     }else message="Counters can only be changed on your face-up cards.";
      return true;
     }
     if(own(c)&&event.button()==0)drag=new Drag("board",c.id(),-1,c.stack(),x,y);
