@@ -70,3 +70,9 @@ The tray contents persist with your claimed tabletop seat; other players have th
 ## Quick-send from battlefield
 
 **Shift + right-click** one of your battlefield cards to return it to the appropriate zone without opening the counter editor. Commanders (including cards matching the seat's remembered commander) return to the linked deckbox Command Zone, tokens return to your persistent Token Tray, and other cards go to the linked Graveyard. The server checks card ownership and destination capacity before removing the card, so a missing/occupied Commander slot, a full Token Tray or an unavailable/full Graveyard leaves the card on the battlefield. Normal right-click continues to open the counter editor.
+
+## Temporary token copies and token-search improvements
+
+Right-click one of your face-up battlefield cards and select **Create Token Copy**. A new token copy appears beside that card with the same card art and printed characteristics but no copied counters. Copies have a **TOKEN COPY** label. They may be tapped, moved or given new counters while on the battlefield, but when moved to the hand, graveyard, exile or token tray they cease to exist, rather than becoming a permanent deck or tray card. Reset also removes them without restoring them to the library or command zone.
+
+The token drawer now automatically searches when opened. Token search results are displayed directly from the token catalogue (eight per page), so you no longer depend on the global token cache being populated first. Search pagination is aligned with the catalogue's 40-card batches; the global cache remains an offline fallback. Select a result and choose **Add selected** to save it into the tray, or select a saved template and drag/play it onto the battlefield.
