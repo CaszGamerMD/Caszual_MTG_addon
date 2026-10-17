@@ -24,11 +24,14 @@ public final class TabletopLogic {
  private static final int LINK_RANGE=8;
  private static final Map<UUID,ScrySession> SCRIES=new ConcurrentHashMap<>();
  private static final Map<UUID,ScrySession> REVEALS=new ConcurrentHashMap<>();
+ private static final Map<UUID,TokenQuery> TOKEN_QUERIES=new ConcurrentHashMap<>();
+ private record TokenQuery(String text,int page) {}
+ private static final int TOKEN_PAGE_SIZE=8;
  private record ScrySession(BlockPos control,List<ItemStack> cards) {}
  private record Located(TabletopBlockEntity tile,TabletopBlockEntity.PlayedCard card) {}
  private record Context(List<TabletopBlockEntity> tiles,TabletopBlockEntity seat,HandBlockEntity hand,DeckControlBlockEntity deck,GraveyardBlockEntity grave) {}
 
- public static void close(ServerPlayer player){SCRIES.remove(player.getUUID());REVEALS.remove(player.getUUID());}
+ public static void close(ServerPlayer player){SCRIES.remove(player.getUUID());REVEALS.remove(player.getUUID());TOKEN_QUERIES.remove(player.getUUID());}
  public static void open(ServerPlayer player,BlockPos origin){
   List<TabletopBlockEntity> tiles=connected(player,origin);if(tiles.isEmpty())return;
   TabletopBlockEntity own=seat(tiles,player);
@@ -122,11 +125,81 @@ public final class TabletopLogic {
   String message="";
   if(req.action().equals("refresh")){reply(player,req.pos(),"");return;}
   if(c.seat==null){reply(player,req.pos(),"Claim an empty tabletop seat to play.");return;}
-  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn").contains(req.action())&&c.hand==null){
+  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove").contains(req.action())&&c.hand==null){
    reply(player,req.pos(),requireLinks(c));return;
   }
   try{
    switch(req.action()){
+    case "counter_set" -> {
+     int separator=req.ref().indexOf('|');
+     if(separator<=0){message="Choose one of your battlefield cards.";break;}
+     String id=req.ref().substring(0,separator),key=req.ref().substring(separator+1).trim().toLowerCase(Locale.ROOT);
+     Located found=located(c,id);
+     if(!owned(player,found)||found.card.faceDown()){message="Only the owner may edit face-up card counters.";break;}
+     if(key.isEmpty()||key.length()>40||!key.matches("[a-z0-9 +/\\-]+")||req.amount()<0||req.amount()>1000000){
+      message="Invalid counter name or total.";break;
+     }
+     ItemStack modified=found.card.stack().copy();
+     com.spider.mtgcard.util.CardCounterNbt.setCounter(modified,key,req.amount());
+     var card=found.card;
+     found.tile.replace(new TabletopBlockEntity.PlayedCard(card.id(),card.owner(),modified,card.x(),card.y(),card.tapped(),card.faceDown()));
+     message=req.amount()==0?"Removed "+key+" counters.":key+" counters: "+req.amount()+".";
+    }
+    case "token_query" -> {
+     String query=req.ref().trim();
+     if(query.length()>120){message="Token search must be 120 characters or shorter.";break;}
+     int page=Math.clamp(req.amount(),0,50);
+     var current=new TokenQuery(query,page);
+     TOKEN_QUERIES.put(player.getUUID(),current);
+     message="Searching tokens...";
+     // Cached results are immediate; remote catalogue lookup is non-blocking.
+     Catalogue.search(1,query,0,page).whenComplete((result,error)->player.getServer().execute(()->{
+      if(!player.isRemoved()&&current.equals(TOKEN_QUERIES.get(player.getUUID()))){
+       if(error==null&&result!=null){
+        Banks bank=Banks.get(player.getServer());
+        for(var hit:result.cards()){
+         ItemStack token=com.spider.mtgcard.util.CardStackBuilders.buildScryfallStackFromModel(hit.model(),false);
+         if(Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(token).typeLine()))bank.add(token,1,1);
+        }
+       }
+       reply(player,req.pos(),error==null?"Token search updated.":"Offline: showing saved tokens.");
+      }
+     }));
+    }
+    case "token_add" -> {
+     if(c.seat.tokenTray().size()>=TabletopBlockEntity.MAX_TOKEN_TEMPLATES){message="Token tray full (32 templates).";break;}
+     TokenQuery query=TOKEN_QUERIES.getOrDefault(player.getUUID(),new TokenQuery("",0));
+     var results=Banks.get(player.getServer()).search(1,query.text());
+     int from=query.page()*TOKEN_PAGE_SIZE;
+     boolean added=false;
+     for(int i=from;i<Math.min(results.size(),from+TOKEN_PAGE_SIZE);i++){
+      var entry=results.get(i);
+      if(!entry.getKey().equals(req.ref()))continue;
+      added=c.seat.addToken(entry.getValue().card());
+      break;
+     }
+     message=added?"Token saved to tray.":"Choose a token from this search page.";
+    }
+    case "token_remove" -> message=c.seat.removeToken(req.amount())?"Removed token template.":"Invalid token slot.";
+    case "token_play" -> {
+     TabletopBlockEntity dest=tile(c,req.target());
+     if(dest==null||dest.cards().size()>=TabletopBlockEntity.MAX_CARDS){message="Choose an open battlefield tile.";break;}
+     ItemStack template=c.seat.tokenAt(req.amount());
+     if(template.isEmpty()){message="Select a stored token first.";break;}
+     ItemStack token=com.spider.mtgcard.api.CardDatabaseCards.copyForExtraction(template);
+     if(!dest.add(new TabletopBlockEntity.PlayedCard("token:"+UUID.randomUUID(),player.getUUID().toString(),token,
+       req.x(),req.y(),false,false))){message="Could not place token.";break;}
+     message="Token placed. Template stays in tray.";
+    }
+    case "token_store" -> {
+     Located found=located(c,req.ref());
+     if(!owned(player,found)||!Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(found.card.stack()).typeLine())){
+      message="Only your token cards can return to the tray.";break;
+     }
+     if(!c.seat.addToken(found.card.stack())){message="Token tray full.";break;}
+     found.tile.remove(found.card.id());
+     message="Token returned to tray.";
+    }
     case "pass_turn" -> {
      LifePointBlockEntity lp=life(player,c.hand);
      if(lp==null){message="Link your MTGCard Life Point block in your Card Hand first.";break;}
@@ -455,7 +528,7 @@ public final class TabletopLogic {
    if(inCommand.isEmpty()&&commanderReturn.isEmpty()
        &&(entry.card.id().startsWith("commander:")||sameCommander(card,reference)))
     commanderReturn=card.copy();
-   else returning.add(card.copy());
+   else if(!Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(card).typeLine()))returning.add(card.copy());
   }
   for(var card:hand){
    if(inCommand.isEmpty()&&commanderReturn.isEmpty()&&sameCommander(card,reference))
@@ -540,10 +613,17 @@ public final class TabletopLogic {
   List<ItemStack> scry=session!=null&&c.deck!=null&&session.control.equals(c.deck.getBlockPos())?session.cards:List.of();
   ScrySession revealSession=REVEALS.get(player.getUUID());
   List<ItemStack> reveal=revealSession!=null&&c.deck!=null&&revealSession.control.equals(c.deck.getBlockPos())?revealSession.cards:List.of();
+  TokenQuery query=TOKEN_QUERIES.getOrDefault(player.getUUID(),new TokenQuery("",0));
+  var matches=Banks.get(player.getServer()).search(1,query.text());
+  int offset=query.page()*TOKEN_PAGE_SIZE;
+  List<TabletopWire.TokenResult> tokenResults=new ArrayList<>();
+  for(int i=offset;i<Math.min(matches.size(),offset+TOKEN_PAGE_SIZE);i++)
+   tokenResults.add(new TabletopWire.TokenResult(matches.get(i).getKey(),matches.get(i).getValue().card().copy()));
   ServerPlayNetworking.send(player,new TabletopWire.Reply(
    origin,message,owned,List.copyOf(tiles),List.copyOf(played),
    c.hand==null||c.seat==null?List.of():c.hand.visibleCards(),
-   c.deck==null?0:c.deck.getLibraryCount(),List.copyOf(grave),List.copyOf(exile),scry,reveal,commander(player,c)
+   c.deck==null?0:c.deck.getLibraryCount(),List.copyOf(grave),List.copyOf(exile),scry,reveal,commander(player,c),
+   c.seat==null?List.of():c.seat.tokenTray(),List.copyOf(tokenResults),query.page(),matches.size()>offset+TOKEN_PAGE_SIZE
   ));
  }
  private TabletopLogic(){}
