@@ -33,6 +33,8 @@ public final class TabletopScreen extends LegacyScreen {
  EditBox counterName,counterTotal,tokenSearch;
  int zoneScroll=0,tabScroll=0,ticks=0;
  String selectedCard="";
+ String pendingHandZone="";
+ int pendingHandSlot=-1;
  int selectedZone=-1;
  Set<Integer> scryBottom=new LinkedHashSet<>();
  Drag drag;
@@ -54,6 +56,7 @@ public final class TabletopScreen extends LegacyScreen {
   else if(!reply.scry().isEmpty())zone="scry";
   else if(zone.equals("scry")||zone.equals("reveal")){zone="hand";scryBottom.clear();}
   if(!selectedCard.isBlank()&&reply.cards().stream().noneMatch(c->c.id().equals(selectedCard)))selectedCard="";
+  if(pendingHandSlot>=reply.hand().size()){pendingHandZone="";pendingHandSlot=-1;rebuildWidgets();}
   if(changed)rebuildWidgets();
   if(counterOpen&&data.cards().stream().noneMatch(c->c.id().equals(counterCard))){counterOpen=false;rebuildWidgets();}
  }
@@ -86,7 +89,7 @@ public final class TabletopScreen extends LegacyScreen {
   };
  }
  void switchZone(String next){
-  zone=next;zoneScroll=0;selectedZone=-1;drag=null;rebuildWidgets();
+  zone=next;zoneScroll=0;selectedZone=-1;drag=null;pendingHandZone="";pendingHandSlot=-1;rebuildWidgets();
  }
  int boardX(){return 12;}
  int boardY(){return menuMode.isEmpty()?66:97;}
@@ -235,6 +238,7 @@ public final class TabletopScreen extends LegacyScreen {
    button("▼",px+211,foot,23,()->{trayScroll=Math.min(Math.max(0,data.tray().size()-3),trayScroll+3);});
   }
   int by=handTop()+5;
+  button(data.ownHandRevealed()?"HIDE HAND !":"Reveal Hand",169,by,116,()->action("reveal_hand",0));
   button("Hand",12,by,58,()->switchZone("hand"));
   button("GY",74,by,35,()->switchZone("grave"));
   button("Exile",112,by,53,()->switchZone("exile"));
@@ -249,9 +253,14 @@ public final class TabletopScreen extends LegacyScreen {
    button("Resolve",width-185,by,84,this::resolveScry);
    button("Cancel",width-97,by,84,()->action("scry_cancel",0));
   }else{
-   button("To Hand",width-385,by,78,()->tableAction("return"));
-   button("To GY",width-302,by,66,()->tableAction("grave"));
-   button("Exile Card",width-232,by,81,()->tableAction("exile"));
+   if(!pendingHandZone.isBlank()){
+    button("Cancel",width-385,by,78,()->{pendingHandZone="";pendingHandSlot=-1;rebuildWidgets();});
+    button(pendingHandZone.equals("exile")?"CONFIRM EXILE":"CONFIRM GY",width-302,by,145,this::confirmHandMove);
+   }else{
+    button("To Hand",width-385,by,78,()->tableAction("return"));
+    button("To GY",width-302,by,66,()->tableAction("grave"));
+    button("Exile Card",width-232,by,81,()->tableAction("exile"));
+   }
    button("Cmd Zone",width-146,by,84,()->tableAction("commander_home"));
    button("◀",width-60,by,23,()->{zoneScroll=Math.max(0,zoneScroll-visibleHandCards());});
    button("▶",width-34,by,23,()->{zoneScroll+=visibleHandCards();});
@@ -288,11 +297,27 @@ public final class TabletopScreen extends LegacyScreen {
   send("scry_commit",top+"|"+bottom,data.seat(),0,0,0);
  }
  void tableAction(String name){
+  if((name.equals("grave")||name.equals("exile"))&&zone.equals("hand")&&selectedZone>=0){
+   if(selectedZone>=data.hand().size()){message="Select a card in hand first.";return;}
+   pendingHandZone=name;pendingHandSlot=selectedZone;rebuildWidgets();
+   message="Confirm moving selected hand card to "+(name.equals("grave")?"graveyard":"exile")+".";
+   return;
+  }
   if(!selectedCard.isBlank())send(name,selectedCard,data.seat(),0,0,0);
   else if(name.equals("return")&&(zone.equals("grave")||zone.equals("exile"))&&selectedZone>=0){
    List<TabletopWire.ZoneCard> list=zone.equals("grave")?data.grave():data.exile();
    if(selectedZone<list.size())send("zone_to_hand","",data.seat(),0,0,list.get(selectedZone).slot());
   }
+ }
+ void confirmHandMove(){
+  if(pendingHandSlot<0||pendingHandSlot>=data.hand().size()||!zone.equals("hand")){
+   message="Hand changed. Select the card again.";pendingHandZone="";pendingHandSlot=-1;rebuildWidgets();return;
+  }
+  ItemStack card=data.hand().get(pendingHandSlot);
+  String id=com.spider.mtgcard.util.TcgCardMeta.read(card).id();
+  if(id.isBlank())id=com.spider.mtgcard.util.TcgCardMeta.read(card).name();
+  send("hand_to_zone",pendingHandZone+"|"+id,data.seat(),0,0,pendingHandSlot);
+  pendingHandZone="";pendingHandSlot=-1;selectedZone=-1;rebuildWidgets();
  }
  boolean own(TabletopWire.Card c){
   var me=Minecraft.getInstance().player;
@@ -343,6 +368,7 @@ public final class TabletopScreen extends LegacyScreen {
   }
   int idx=zoneAt(x,y);
   if(idx>=0){
+   pendingHandZone="";pendingHandSlot=-1;
    selectedCard="";selectedZone=idx;
    if(discardMode&&zone.equals("hand")){
     action("mulligan_discard",idx);discardMode=false;
@@ -364,9 +390,15 @@ public final class TabletopScreen extends LegacyScreen {
     int x=xNormalized(mx),y=yNormalized(my);
     switch(held.source()){
      case "board" -> {
-      if(Math.abs(mx-held.startX())>3||Math.abs(my-held.startY())>3)
-       send("move",held.id(),view,x,y,0);
-      else send("tap",held.id(),view,0,0,0);
+      if(Math.abs(mx-held.startX())>3||Math.abs(my-held.startY())>3){
+       // Preserve the grab point instead of snapping the card under the pointer.
+       TabletopWire.Card origin=data.cards().stream().filter(c->c.id().equals(held.id())).findFirst().orElse(null);
+       if(origin!=null){
+        int dx=(mx-held.startX())*1000/Math.max(1,boardW()-boardCardW()-16);
+        int dy=(my-held.startY())*1000/Math.max(1,boardH()-boardCardH()-16);
+        send("move",held.id(),view,Math.clamp(origin.x()+dx,0,1000),Math.clamp(origin.y()+dy,0,1000),0);
+       }
+      }else send("tap",held.id(),view,0,0,0);
      }
      case "hand" -> send("put_hand","",view,x,y,held.index());
      case "grave" -> {
