@@ -92,6 +92,9 @@ jobs:
       - name: Validate battlefield counter cleanup and Scry Cancel
         run: python3 -m unittest discover -s tests -p 'test_tabletop_counter_exit.py' -v
 
+      - name: Verify precision dragging, confirm hand moves and reveal-hand privacy
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_free_drag_hand_reveal.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
