@@ -156,7 +156,10 @@ public final class TabletopScreen extends LegacyScreen {
   button("Pass Turn",ux,uy,91,()->action("pass_turn",0));ux+=96;
   button("Flip",ux,uy,58,()->tableAction("flip"));ux+=63;
   button("Untap All",ux,uy,92,()->action("untap_all",0));ux+=97;
-  button(tokenTrayOpen?"Tokens ▴":"Tokens ▾",ux,uy,94,()->{tokenTrayOpen=!tokenTrayOpen;counterOpen=false;rebuildWidgets();});
+  button(tokenTrayOpen?"Tokens ▴":"Tokens ▾",ux,uy,94,()->{
+   tokenTrayOpen=!tokenTrayOpen;counterOpen=false;rebuildWidgets();
+   if(tokenTrayOpen)searchTokens(0);
+  });
   button("Close",width-77,uy,64,this::onClose);
   if(menuMode.equals("draw")){
    int mx=12,my=66;
@@ -200,10 +203,15 @@ public final class TabletopScreen extends LegacyScreen {
    button("-1",px+74,py+86,58,()->changeCounter(-1));
    button("Set",px+136,py+86,56,()->setCounter(false));
    button("Remove",px+196,py+86,74,()->setCounter(true));
+   button("Create Token Copy",px+12,py+111,136,()->{
+    send("copy_token",counterCard,data.seat(),0,0,0);
+    counterOpen=false;rebuildWidgets();
+   });
    if(data.cards().stream().anyMatch(c->c.id().equals(counterCard)&&
-       Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(c.stack()).typeLine())))
-    button("Return to tray",px+12,py+111,118,()->{send("token_store",counterCard,data.seat(),0,0,0);counterOpen=false;rebuildWidgets();});
-   button("Close",px+236,py+111,68,()->{counterOpen=false;rebuildWidgets();});
+       Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(c.stack()).typeLine()))
+       &&!counterCard.startsWith("copy:"))
+    button("Return to tray",px+152,py+111,106,()->{send("token_store",counterCard,data.seat(),0,0,0);counterOpen=false;rebuildWidgets();});
+   button("Close",px+263,py+111,44,()->{counterOpen=false;rebuildWidgets();});
   }
   if(tokenTrayOpen){
    int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW();
@@ -211,7 +219,10 @@ public final class TabletopScreen extends LegacyScreen {
    tokenSearch.setMaxLength(120);tokenSearch.setValue(tokenText);
    button("Search",px+pw-71,py+25,65,()->searchTokens(0));
    button("◀",px+pw/2+6,py+51,24,()->{tokenResultScroll=0;searchTokens(Math.max(0,data.tokenPage()-1));});
-   button("▶",px+pw/2+34,py+51,24,()->{tokenResultScroll=0;searchTokens(Math.min(50,data.tokenPage()+1));});
+   button("▶",px+pw/2+34,py+51,24,()->{
+    if(data.tokenMore()){tokenResultScroll=0;searchTokens(Math.min(50,data.tokenPage()+1));}
+    else message="No more token results.";
+   });
    button("Add selected",px+pw-119,py+51,113,()->{
     if(tokenResultSelected>=0&&tokenResultSelected<data.tokenResults().size())
      send("token_add",data.tokenResults().get(tokenResultSelected).key(),data.seat(),0,0,0);
@@ -446,6 +457,10 @@ public final class TabletopScreen extends LegacyScreen {
    int x=cardX(card),y=cardY(card),w=boardCardW(),h=boardCardH();
    int left=card.tapped()?x+(w-h)/2:x,top=card.tapped()?y+(h-w)/2:y;
    int bw=card.tapped()?h:w,bh=card.tapped()?w:h;
+   if(card.id().startsWith("copy:")){
+    g.fill(left,top+bh-29,left+Math.min(bw,67),top+bh-17,0xED355A72);
+    g.drawString(font,"TOKEN COPY",left+3,top+bh-27,0xFFE6F6FF);
+   }
    String pt=TabletopCardStats.powerToughness(card.stack());
    if(!pt.isEmpty()){
     int labelW=Math.max(30,font.width(pt)+12),bx=left+bw-labelW,by=top+bh-14;
@@ -468,8 +483,10 @@ public final class TabletopScreen extends LegacyScreen {
    g.fill(px,py,px+pw,bottom,0xF11A2839);
    g.fill(px+4,py+4,px+pw-4,py+22,0xFF334B61);
    g.drawString(font,"TOKEN TRAY  "+data.tray().size()+"/32",px+10,py+9,0xFFF5DAAA);
-   g.drawString(font,"Search / catalogue",px+pw/2+8,py+9,0xFFCCE3EF);
+   g.drawString(font,"Search / catalogue (page "+(data.tokenPage()+1)+")",px+pw/2+8,py+9,0xFFCCE3EF);
    g.drawString(font,"Stored templates · drag to field",px+8,py+53,0xFFB4CADB);
+   if(data.tokenResults().isEmpty())
+    g.drawString(font,"No results yet — search by token name",px+pw/2+8,py+83,0xFFB4CADB);
    int start=py+79,visible=Math.max(2,(boardH()-119)/15);
    for(int i=0;i<visible;i++){
     int at=trayScroll+i,yy=start+i*15;
