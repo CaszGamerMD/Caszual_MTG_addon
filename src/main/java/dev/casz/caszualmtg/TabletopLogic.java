@@ -125,7 +125,7 @@ public final class TabletopLogic {
   String message="";
   if(req.action().equals("refresh")){reply(player,req.pos(),"");return;}
   if(c.seat==null){reply(player,req.pos(),"Claim an empty tabletop seat to play.");return;}
-  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove").contains(req.action())&&c.hand==null){
+  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove","quick_send").contains(req.action())&&c.hand==null){
    reply(player,req.pos(),requireLinks(c));return;
   }
   try{
@@ -190,6 +190,35 @@ public final class TabletopLogic {
      if(!dest.add(new TabletopBlockEntity.PlayedCard("token:"+UUID.randomUUID(),player.getUUID().toString(),token,
        req.x(),req.y(),false,false))){message="Could not place token.";break;}
      message="Token placed. Template stays in tray.";
+    }
+    case "quick_send" -> {
+     // Destination is determined exclusively by the server; the client cannot
+     // disguise a commander or a token as an ordinary graveyard card.
+     Located found=located(c,req.ref());
+     if(!owned(player,found)){message="You can only quick-send your own battlefield cards.";break;}
+     ItemStack card=found.card.stack();
+     boolean commander=found.card.id().startsWith("commander:")
+      ||(!c.seat.commanderReference().isEmpty()&&sameCommander(card,c.seat.commanderReference()));
+     if(commander){
+      DeckboxBlockEntity box=commanderBox(player,c);
+      if(box==null){message="No linked deckbox to receive your commander. Card was not moved.";break;}
+      if(!box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT).isEmpty()){
+       message="Commander slot is occupied. Card was not moved.";break;
+      }
+      box.setStack(DeckboxBlockEntity.SECOND_SIDE_SLOT,card.copy());box.sync();
+      found.tile.remove(found.card.id());
+      message="Commander returned to command zone.";
+     }else if(Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(card).typeLine())){
+      if(!c.seat.addToken(card)){message="Token tray is full. Token remains on battlefield.";break;}
+      found.tile.remove(found.card.id());
+      message="Token returned to your tray.";
+     }else{
+      int slot=emptySlot(c.grave,0);
+      if(slot<0){message="No linked Graveyard or no free slot. Card was not moved.";break;}
+      c.grave.setStack(slot,card.copy());
+      found.tile.remove(found.card.id());
+      message="Card sent to graveyard.";
+     }
     }
     case "token_store" -> {
      Located found=located(c,req.ref());
