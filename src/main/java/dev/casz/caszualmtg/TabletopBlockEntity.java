@@ -21,6 +21,7 @@ import java.util.*;
 /** One persistent seat / tabletop tile. Cards stay in the tile under their location. */
 public final class TabletopBlockEntity extends BlockEntity {
  public static final int MAX_CARDS=96;
+ public static final int MAX_TOKEN_TEMPLATES=32;
  public record PlayedCard(String id,String owner,ItemStack stack,int x,int y,boolean tapped,boolean faceDown) {
   public static final Codec<PlayedCard> CODEC=RecordCodecBuilder.create(i->i.group(
    Codec.STRING.fieldOf("Id").forGetter(PlayedCard::id),
@@ -83,6 +84,25 @@ public final class TabletopBlockEntity extends BlockEntity {
  public void rememberCommander(ItemStack card){if(card!=null&&!card.isEmpty()){commanderReference=card.copyWithCount(1);setChanged();}}
 
  private final List<PlayedCard> cards=new ArrayList<>();
+ // Per-seat persistent virtual token templates. Storing a template does not
+ // remove an inventory item and playing one never consumes its source.
+ private final List<ItemStack> tokenTray=new ArrayList<>();
+ public List<ItemStack> tokenTray(){return tokenTray.stream().map(ItemStack::copy).toList();}
+ public boolean addToken(ItemStack original){
+  if(original==null||original.isEmpty()||!Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(original).typeLine()))return false;
+  String key=Banks.key(1,original);
+  for(ItemStack card:tokenTray)if(Banks.key(1,card).equals(key))return true;
+  if(tokenTray.size()>=MAX_TOKEN_TEMPLATES)return false;
+  tokenTray.add(com.spider.mtgcard.api.CardDatabaseCards.copyForExtraction(original));
+  changed();return true;
+ }
+ public boolean removeToken(int index){
+  if(index<0||index>=tokenTray.size())return false;
+  tokenTray.remove(index);changed();return true;
+ }
+ public ItemStack tokenAt(int index){
+  return index<0||index>=tokenTray.size()?ItemStack.EMPTY:tokenTray.get(index).copy();
+ }
  public TabletopBlockEntity(BlockPos pos,BlockState state){super(CaszualMtg.TABLETOP_BE,pos,state);}
  public UUID seatOwner(){return seatOwner;}
  public String seatName(){return seatName;}
@@ -125,6 +145,7 @@ public final class TabletopBlockEntity extends BlockEntity {
   out.putInt("MatRgb",matRgb);
   if(!commanderReference.isEmpty())out.store("CommanderReference",ItemStack.CODEC,commanderReference);
   out.store("PlayedCards",PlayedCard.CODEC.listOf(),cards);
+  out.store("TokenTray",ItemStack.CODEC.listOf(),tokenTray);
  }
  @Override protected void loadAdditional(ValueInput in){
   super.loadAdditional(in);seatOwner=null;
@@ -133,6 +154,9 @@ public final class TabletopBlockEntity extends BlockEntity {
   material=ChairWood.safe(in.getStringOr("TableWood","minecraft:dark_oak_planks"));
   matRgb=in.getIntOr("MatRgb",0x315348)&0xFFFFFF;
   commanderReference=in.read("CommanderReference",ItemStack.CODEC).orElse(ItemStack.EMPTY);
+  tokenTray.clear();
+  for(ItemStack token:in.read("TokenTray",ItemStack.CODEC.listOf()).orElse(List.of()))
+   if(tokenTray.size()<MAX_TOKEN_TEMPLATES&&!token.isEmpty()&&Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(token).typeLine()))tokenTray.add(token.copyWithCount(1));
   cards.clear();
   for(PlayedCard c:in.read("PlayedCards",PlayedCard.CODEC.listOf()).orElse(List.of())){
    if(cards.size()<MAX_CARDS&&!c.stack().isEmpty()&&c.stack().is(com.spider.mtgcard.item.ModItemTags.TCG_CARD))
