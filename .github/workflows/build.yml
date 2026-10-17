@@ -86,6 +86,9 @@ jobs:
       - name: Validate Shift-right-click safe battlefield quick-send
         run: python3 -m unittest discover -s tests -p 'test_tabletop_quick_send.py' -v
 
+      - name: Validate ephemeral token copies and reliable token search
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_copy_token_search.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
