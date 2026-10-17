@@ -23,7 +23,8 @@ public final class TabletopWire {
  public record Card(BlockPos pos,String id,String owner,ItemStack stack,int x,int y,boolean tapped,boolean hidden) {}
  public record ZoneCard(int slot,ItemStack stack) {}
  public record TokenResult(String key,ItemStack stack) {}
- public record Reply(BlockPos pos,String message,BlockPos seat,List<Tile> tiles,List<Card> cards,List<ItemStack> hand,int libraryCount,List<ZoneCard> grave,List<ZoneCard> exile,List<ItemStack> scry,List<ItemStack> reveal,ItemStack commander,List<ItemStack> tray,List<TokenResult> tokenResults,int tokenPage,boolean tokenMore) implements CustomPacketPayload {
+ public record ShownHand(BlockPos seat,String owner,List<ItemStack> cards) {}
+ public record Reply(BlockPos pos,String message,BlockPos seat,List<Tile> tiles,List<Card> cards,List<ItemStack> hand,int libraryCount,List<ZoneCard> grave,List<ZoneCard> exile,List<ItemStack> scry,List<ItemStack> reveal,ItemStack commander,List<ItemStack> tray,List<TokenResult> tokenResults,int tokenPage,boolean tokenMore,boolean ownHandRevealed,List<ShownHand> shownHands) implements CustomPacketPayload {
   public static final Type<Reply> TYPE=new Type<>(CaszualMtg.id("tabletop_reply"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Reply> CODEC=StreamCodec.of((b,p)->{
    b.writeBlockPos(p.pos);b.writeUtf(p.message,512);b.writeBlockPos(p.seat);
@@ -69,7 +70,7 @@ public final class TabletopWire {
    List<TokenResult> tokenResults=new ArrayList<>();for(int i=0;i<n;i++)tokenResults.add(new TokenResult(b.readUtf(512),ItemStack.OPTIONAL_STREAM_CODEC.decode(b)));
    int tokenPage=b.readVarInt();if(tokenPage<0||tokenPage>50)throw new IllegalArgumentException("Invalid token page");
    boolean tokenMore=b.readBoolean();
-   return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),List.copyOf(reveal),commander,List.copyOf(tray),List.copyOf(tokenResults),tokenPage,tokenMore);
+   return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),List.copyOf(reveal),commander,List.copyOf(tray),List.copyOf(tokenResults),tokenPage,tokenMore,ownHandRevealed,List.copyOf(shownHands));
   });
   public Type<Reply> type(){return TYPE;}
  }
