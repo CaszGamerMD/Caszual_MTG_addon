@@ -54,3 +54,15 @@ Chairs have a slab-height (8 pixel) seat. Right-click without upholstery materia
 ## Limitations
 
 Still experimental: no full stack/priority engine, card-specific rules, team-specific commander targeting, or drag-to-cross-tab automatic seat switching. Seat ownership is persistent; it is not yet transferable from within the UI. Full multiplayer in-game QA is recommended before a long Commander session. The current world model shows approximate card count rather than card-accurate layout.
+
+## Battlefield creature statistics and counters
+
+Creature cards display a legible **power/toughness plaque** in the lower-right corner of the card, even if the card is tapped sideways. Double-faced cards use the active face's statistics, and numeric +1/+1 and −1/−1 counters adjust the displayed values. Hidden cards do not reveal their statistics.
+
+**Right-click your own face-up battlefield card** to open its counter editor. Presets are available for +1/+1, −1/−1, loyalty, and charge, or type a custom counter name; use +1/−1, Set total or Remove. Counters are stored in the underlying MTG card data and display as compact stacked badges on the battlefield. Opponents cannot change counters on cards they do not own.
+
+## Token tray
+
+Use **Tokens ▾** at the top of the tabletop UI to open or close the token tray. The left column is your private set of **up to 32 stored token templates**. On the right, search the same shared token catalogue as the Caszual Token Database; previous results are available offline, and new Scryfall results load asynchronously. Select a search result and choose **Add selected** to store it. Select a saved token, then **Play selected** to create a copy on your active battlefield tile, or drag the token from the tray onto a battlefield position. The original template remains available for future plays.
+
+The tray contents persist with your claimed tabletop seat; other players have their own trays. The tray can also accept one of your existing token cards from the battlefield using the **Return to tray** context action. Removing a template does not remove tokens already on the battlefield. When resetting a deck, token cards vanish from the battlefield without being erroneously shuffled into the library.
