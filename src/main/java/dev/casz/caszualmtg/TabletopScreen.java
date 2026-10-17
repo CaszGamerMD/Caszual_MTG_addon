@@ -368,6 +368,15 @@ public final class TabletopScreen extends LegacyScreen {
   return super.mouseReleased(event);
  }
  @Override public boolean mouseScrolled(double mx,double my,double dx,double dy){
+  if(inTokenPanel((int)mx,(int)my)){
+   int visible=Math.max(2,(boardH()-119)/15);
+   int delta=(int)Math.signum(dy)*3;
+   if(mx<tokenPanelX()+tokenPanelW()/2)
+    trayScroll=Math.clamp(trayScroll-delta,0,Math.max(0,data.tray().size()-visible));
+   else
+    tokenResultScroll=Math.clamp(tokenResultScroll-delta,0,Math.max(0,data.tokenResults().size()-visible));
+   return true;
+  }
   if(my>=handTop()){
    int max=Math.max(0,zoneCards().size()-visibleHandCards());
    zoneScroll=Math.clamp(zoneScroll-(int)Math.signum(dy)*3,0,max);
