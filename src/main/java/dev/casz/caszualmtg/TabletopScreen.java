@@ -27,6 +27,10 @@ public final class TabletopScreen extends LegacyScreen {
  EditBox quantity;
  boolean resetConfirm=false;
  boolean discardMode=false;
+ boolean tokenTrayOpen=false,counterOpen=false;
+ String counterCard="",tokenText="";
+ int traySelected=-1,tokenResultSelected=-1,trayScroll=0,tokenResultScroll=0;
+ EditBox counterName,counterTotal,tokenSearch;
  int zoneScroll=0,tabScroll=0,ticks=0;
  String selectedCard="";
  int selectedZone=-1;
@@ -51,6 +55,7 @@ public final class TabletopScreen extends LegacyScreen {
   else if(zone.equals("scry")||zone.equals("reveal")){zone="hand";scryBottom.clear();}
   if(!selectedCard.isBlank()&&reply.cards().stream().noneMatch(c->c.id().equals(selectedCard)))selectedCard="";
   if(changed)rebuildWidgets();
+  if(counterOpen&&data.cards().stream().noneMatch(c->c.id().equals(counterCard))){counterOpen=false;rebuildWidgets();}
  }
  void send(String action,String ref,BlockPos target,int x,int y,int amount){
   if(ClientPlayNetworking.canSend(TabletopWire.Request.TYPE))
@@ -151,6 +156,7 @@ public final class TabletopScreen extends LegacyScreen {
   button("Pass Turn",ux,uy,91,()->action("pass_turn",0));ux+=96;
   button("Flip",ux,uy,58,()->tableAction("flip"));ux+=63;
   button("Untap All",ux,uy,92,()->action("untap_all",0));ux+=97;
+  button(tokenTrayOpen?"Tokens ▴":"Tokens ▾",ux,uy,94,()->{tokenTrayOpen=!tokenTrayOpen;counterOpen=false;rebuildWidgets();});
   button("Close",width-77,uy,64,this::onClose);
   if(menuMode.equals("draw")){
    int mx=12,my=66;
@@ -180,6 +186,40 @@ public final class TabletopScreen extends LegacyScreen {
     else{resetConfirm=true;rebuildWidgets();}
    });
   }
+  if(counterOpen){
+   int px=Math.max(14,width-330),py=boardY()+13;
+   counterName=addRenderableWidget(new EditBox(font,px+12,py+33,162,19,Component.literal("Counter name")));
+   counterName.setMaxLength(40);counterName.setValue("+1/+1");
+   counterTotal=addRenderableWidget(new EditBox(font,px+180,py+33,48,19,Component.literal("Total")));
+   counterTotal.setMaxLength(7);counterTotal.setValue("1");
+   button("+1/+1",px+12,py+58,68,()->counterPreset("+1/+1"));
+   button("-1/-1",px+84,py+58,68,()->counterPreset("-1/-1"));
+   button("Loyalty",px+156,py+58,70,()->counterPreset("loyalty"));
+   button("Charge",px+230,py+58,74,()->counterPreset("charge"));
+   button("+1",px+12,py+86,58,()->changeCounter(1));
+   button("-1",px+74,py+86,58,()->changeCounter(-1));
+   button("Set",px+136,py+86,56,()->setCounter(false));
+   button("Remove",px+196,py+86,74,()->setCounter(true));
+   button("Close",px+236,py+111,68,()->{counterOpen=false;rebuildWidgets();});
+  }
+  if(tokenTrayOpen){
+   int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW();
+   tokenSearch=addRenderableWidget(new EditBox(font,px+pw/2+7,py+25,pw/2-82,19,Component.literal("Token search")));
+   tokenSearch.setMaxLength(120);tokenSearch.setValue(tokenText);
+   button("Search",px+pw-71,py+25,65,()->searchTokens(0));
+   button("◀",px+pw/2+6,py+51,24,()->{tokenResultScroll=0;searchTokens(Math.max(0,data.tokenPage()-1));});
+   button("▶",px+pw/2+34,py+51,24,()->{tokenResultScroll=0;searchTokens(Math.min(50,data.tokenPage()+1));});
+   button("Add selected",px+pw-119,py+51,113,()->{
+    if(tokenResultSelected>=0&&tokenResultSelected<data.tokenResults().size())
+     send("token_add",data.tokenResults().get(tokenResultSelected).key(),data.seat(),0,0,0);
+    else message="Select a token search result.";
+   });
+   int foot=boardY()+boardH()-27;
+   button("Play selected",px+7,foot,98,()->playSelectedToken());
+   button("Remove",px+111,foot,68,()->{if(traySelected>=0)send("token_remove","",data.seat(),0,0,traySelected);});
+   button("▲",px+184,foot,23,()->{trayScroll=Math.max(0,trayScroll-3);});
+   button("▼",px+211,foot,23,()->{trayScroll=Math.min(Math.max(0,data.tray().size()-3),trayScroll+3);});
+  }
   int by=handTop()+5;
   button("Hand",12,by,58,()->switchZone("hand"));
   button("GY",74,by,35,()->switchZone("grave"));
@@ -203,6 +243,29 @@ public final class TabletopScreen extends LegacyScreen {
    button("▶",width-34,by,23,()->{zoneScroll+=visibleHandCards();});
   }
  }
+ int tokenPanelW(){return Math.min(485,Math.max(352,width-58));}
+ int tokenPanelX(){return (width-tokenPanelW())/2;}
+ boolean inTokenPanel(int x,int y){return tokenTrayOpen&&x>=tokenPanelX()&&x<tokenPanelX()+tokenPanelW()&&y>=boardY()+10&&y<=boardY()+boardH()-2;}
+ boolean inCounterPanel(int x,int y){return counterOpen&&x>=Math.max(14,width-330)&&x<width-12&&y>=boardY()+13&&y<boardY()+151;}
+ void searchTokens(int page){tokenText=tokenSearch==null?tokenText:tokenSearch.getValue();tokenResultSelected=-1;send("token_query",tokenText,data.seat(),0,0,page);}
+ void playSelectedToken(){
+  if(traySelected<0||traySelected>=data.tray().size()){message="Select a token in your tray first.";return;}
+  send("token_play","",view,500,500,traySelected);
+ }
+ void counterPreset(String name){if(counterName!=null)counterName.setValue(name);if(counterTotal!=null)counterTotal.setValue(Integer.toString(counterCount(name)));}
+ int counterCount(String name){
+  for(var c:data.cards())if(c.id().equals(counterCard))return TabletopCardStats.counters(c.stack()).getOrDefault(name.trim().toLowerCase(Locale.ROOT),0);
+  return 0;
+ }
+ void changeCounter(int amount){if(counterName==null)return;String name=counterName.getValue().trim().toLowerCase(Locale.ROOT);int total=Math.max(0,Math.min(1000000,counterCount(name)+amount));send("counter_set",counterCard+"|"+name,data.seat(),0,0,total);counterTotal.setValue(Integer.toString(total));}
+ void setCounter(boolean remove){
+  if(counterName==null||counterTotal==null)return;
+  String name=counterName.getValue().trim().toLowerCase(Locale.ROOT);
+  int amount=0;
+  if(!remove)try{amount=Integer.parseInt(counterTotal.getValue());}catch(NumberFormatException ex){message="Use a numeric counter total.";return;}
+  if(amount<0||amount>1000000||name.isBlank()||name.length()>40){message="Invalid counter name or total.";return;}
+  send("counter_set",counterCard+"|"+name,data.seat(),0,0,amount);
+ }
  void resolveScry(){
   List<Integer> first=new ArrayList<>(),second=new ArrayList<>();
   for(int i=0;i<data.scry().size();i++)(scryBottom.contains(i)?second:first).add(i);
@@ -223,10 +286,35 @@ public final class TabletopScreen extends LegacyScreen {
  }
  @Override public boolean mouseClicked(MouseButtonEvent event,boolean twice){
   int x=(int)event.x(),y=(int)event.y();
+  if(inCounterPanel(x,y))return super.mouseClicked(event,twice);
+  if(inTokenPanel(x,y)){
+   int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW(),start=py+79;
+   int visible=Math.max(2,(boardH()-119)/15);
+   if(y>=start&&y<start+visible*15){
+    int row=(y-start)/15;
+    if(x<px+pw/2){
+     int at=trayScroll+row;
+     if(at<data.tray().size()){
+      traySelected=at;
+      if(event.button()==0)drag=new Drag("token","",at,data.tray().get(at),x,y);
+     }
+    }else{
+     int at=tokenResultScroll+row;
+     if(at<data.tokenResults().size())tokenResultSelected=at;
+    }
+    return true;
+   }
+   return super.mouseClicked(event,twice);
+  }
   if(boardHit(x,y)){
    TabletopWire.Card c=cardAt(x,y);
    if(c!=null){selectedCard=c.id();selectedZone=-1;
-    if(own(c))drag=new Drag("board",c.id(),-1,c.stack(),x,y);
+    if(event.button()==1){
+     if(own(c)&&!c.hidden()){counterCard=c.id();counterOpen=true;tokenTrayOpen=false;rebuildWidgets();}
+     else message="Counters can only be changed on your face-up cards.";
+     return true;
+    }
+    if(own(c)&&event.button()==0)drag=new Drag("board",c.id(),-1,c.stack(),x,y);
     return true;
    }
   }
@@ -268,6 +356,7 @@ public final class TabletopScreen extends LegacyScreen {
       if(held.index()<data.exile().size())send("put_exile","",view,x,y,data.exile().get(held.index()).slot());
      }
      case "commander" -> send("play_commander","",view,x,y,0);
+     case "token" -> send("token_play","",view,x,y,held.index());
      case "reveal" -> {if(held.index()==0)send("reveal_to_field","",view,x,y,0);}
     }
    }
@@ -331,6 +420,60 @@ public final class TabletopScreen extends LegacyScreen {
    if(c.hidden())drawArt(g,ItemStack.EMPTY,x,y,cw,ch);
    else drawArt(g,c.stack(),x,y,cw,ch);
    if(c.tapped())g.pose().popMatrix();
+  }
+  // Overlays are drawn in screen orientation even on sideways (tapped) cards,
+  // keeping P/T and counters readable at their actual visible lower-right edge.
+  for(var card:displayed()){
+   if(card.hidden()||card.stack().isEmpty())continue;
+   int x=cardX(card),y=cardY(card),w=boardCardW(),h=boardCardH();
+   int left=card.tapped()?x+(w-h)/2:x,top=card.tapped()?y+(h-w)/2:y;
+   int bw=card.tapped()?h:w,bh=card.tapped()?w:h;
+   String pt=TabletopCardStats.powerToughness(card.stack());
+   if(!pt.isEmpty()){
+    int labelW=Math.max(30,font.width(pt)+12),bx=left+bw-labelW,by=top+bh-14;
+    g.fill(bx,by,bx+labelW,by+14,0xF0192636);
+    g.fill(bx,by,bx+labelW,by+1,0xFFE6C079);
+    g.drawCenteredString(font,pt,bx+labelW/2,by+3,0xFFFFFFFF);
+   }
+   int line=0;
+   for(var counter:TabletopCardStats.counters(card.stack()).entrySet()){
+    if(line>=3)break;
+    String label=counter.getKey()+" ×"+counter.getValue();
+    int lw=Math.min(bw-2,Math.max(22,font.width(label)+9)),ly=top+line*13;
+    g.fill(left,ly,left+lw,ly+12,0xF0273650);
+    g.drawString(font,font.plainSubstrByWidth(label,lw-6),left+3,ly+2,0xFFFFE19F);
+    line++;
+   }
+  }
+  if(tokenTrayOpen){
+   int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW(),bottom=boardY()+boardH()-2;
+   g.fill(px,py,px+pw,bottom,0xF11A2839);
+   g.fill(px+4,py+4,px+pw-4,py+22,0xFF334B61);
+   g.drawString(font,"TOKEN TRAY  "+data.tray().size()+"/32",px+10,py+9,0xFFF5DAAA);
+   g.drawString(font,"Search / catalogue",px+pw/2+8,py+9,0xFFCCE3EF);
+   g.drawString(font,"Stored templates · drag to field",px+8,py+53,0xFFB4CADB);
+   int start=py+79,visible=Math.max(2,(boardH()-119)/15);
+   for(int i=0;i<visible;i++){
+    int at=trayScroll+i,yy=start+i*15;
+    if(at<data.tray().size()){
+     g.fill(px+5,yy,px+pw/2-4,yy+14,at==traySelected?0xFF557495:0xFF26384C);
+     String name=com.spider.mtgcard.util.TcgCardMeta.displayName(data.tray().get(at));
+     g.drawString(font,font.plainSubstrByWidth(name,pw/2-18),px+9,yy+3,0xFFFFFFFF);
+    }
+    int found=tokenResultScroll+i;
+    if(found<data.tokenResults().size()){
+     g.fill(px+pw/2+4,yy,px+pw-6,yy+14,found==tokenResultSelected?0xFF557495:0xFF26384C);
+     String name=com.spider.mtgcard.util.TcgCardMeta.displayName(data.tokenResults().get(found).stack());
+     g.drawString(font,font.plainSubstrByWidth(name,pw/2-18),px+pw/2+8,yy+3,0xFFFFFFFF);
+    }
+   }
+  }
+  if(counterOpen){
+   int px=Math.max(14,width-330),py=boardY()+13;
+   g.fill(px,py,px+314,py+146,0xF4192839);
+   g.fill(px+3,py+3,px+311,py+26,0xFF41536A);
+   g.drawString(font,"CARD COUNTERS",px+12,py+9,0xFFFFD694);
+   g.drawString(font,"Name                    Total",px+12,py+26,0xFFAAC4D9);
   }
   g.fill(0,handTop(),width,height,0xFF192738);
   g.fill(7,handTop()+27,width-7,height-8,0xFF132033);
