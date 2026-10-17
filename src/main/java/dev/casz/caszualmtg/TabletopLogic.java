@@ -26,6 +26,7 @@ public final class TabletopLogic {
  private static final Map<UUID,ScrySession> REVEALS=new ConcurrentHashMap<>();
  private static final Map<UUID,TokenQuery> TOKEN_QUERIES=new ConcurrentHashMap<>();
  private static final Map<UUID,TokenPage> TOKEN_RESULTS=new ConcurrentHashMap<>();
+ private static final Set<UUID> REVEALED_HANDS=ConcurrentHashMap.newKeySet();
  private record TokenQuery(String text,int page) {}
  private record TokenPage(TokenQuery query,List<TabletopWire.TokenResult> cards,boolean more) {}
  private static final int TOKEN_PAGE_SIZE=8;
@@ -33,7 +34,7 @@ public final class TabletopLogic {
  private record Located(TabletopBlockEntity tile,TabletopBlockEntity.PlayedCard card) {}
  private record Context(List<TabletopBlockEntity> tiles,TabletopBlockEntity seat,HandBlockEntity hand,DeckControlBlockEntity deck,GraveyardBlockEntity grave) {}
 
- public static void close(ServerPlayer player){SCRIES.remove(player.getUUID());REVEALS.remove(player.getUUID());TOKEN_QUERIES.remove(player.getUUID());TOKEN_RESULTS.remove(player.getUUID());}
+ public static void close(ServerPlayer player){SCRIES.remove(player.getUUID());REVEALS.remove(player.getUUID());TOKEN_QUERIES.remove(player.getUUID());TOKEN_RESULTS.remove(player.getUUID());REVEALED_HANDS.remove(player.getUUID());}
  public static void open(ServerPlayer player,BlockPos origin){
   List<TabletopBlockEntity> tiles=connected(player,origin);if(tiles.isEmpty())return;
   TabletopBlockEntity own=seat(tiles,player);
@@ -127,11 +128,36 @@ public final class TabletopLogic {
   String message="";
   if(req.action().equals("refresh")){reply(player,req.pos(),"");return;}
   if(c.seat==null){reply(player,req.pos(),"Claim an empty tabletop seat to play.");return;}
-  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove","quick_send","copy_token","scry_cancel").contains(req.action())&&c.hand==null){
+  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove","quick_send","copy_token","scry_cancel","reveal_hand").contains(req.action())&&c.hand==null){
    reply(player,req.pos(),requireLinks(c));return;
   }
   try{
    switch(req.action()){
+    case "reveal_hand" -> {
+     if(c.hand==null){message="Link a Card Hand to reveal it.";break;}
+     if(!c.hand.owner().equals(player.getUUID())){message="You can only reveal your own hand.";break;}
+     if(REVEALED_HANDS.remove(player.getUUID())){
+      message="Hand hidden from other players.";
+     }else{
+      REVEALED_HANDS.add(player.getUUID());
+      message="YOUR HAND IS REVEALED to other tabletop players.";
+     }
+    }
+    case "hand_to_zone" -> {
+     if(c.hand==null){message="No linked Card Hand.";break;}
+     int slot=req.amount(),start="exile".equals(req.ref())?100:0;
+     if(!req.ref().equals("grave")&&!req.ref().equals("exile")){
+      message="Invalid hand destination.";break;
+     }
+     // Validate all preconditions before removing anything from the private hand.
+     if(slot<0||slot>=c.hand.cardCount()){message="Hand changed. Select the card again.";break;}
+     int target=emptySlot(c.grave,start);
+     if(target<0){message="No linked Graveyard or the destination is full. Card stayed in hand.";break;}
+     ItemStack taken=c.hand.removeVisibleIndex(slot);
+     if(taken.isEmpty()){message="Hand changed. Card not moved.";break;}
+     c.grave.setStack(target,taken);
+     message=start==100?"Hand card moved to exile.":"Hand card sent to graveyard.";
+    }
     case "copy_token" -> {
      Located found=located(c,req.ref());
      if(!owned(player,found)||found.card.faceDown()){
@@ -707,11 +733,19 @@ public final class TabletopLogic {
     tokenResults.add(new TabletopWire.TokenResult(matches.get(i).getKey(),matches.get(i).getValue().card().copy()));
    tokenMore=matches.size()>offset+TOKEN_PAGE_SIZE;
   }
+  List<TabletopWire.ShownHand> shownHands=new ArrayList<>();
+  for(TabletopBlockEntity t:c.tiles){
+   UUID handOwner=t.seatOwner();
+   if(handOwner==null||!REVEALED_HANDS.contains(handOwner))continue;
+   HandBlockEntity revealed=linkedHand(player,t,handOwner);
+   if(revealed==null)continue;
+   shownHands.add(new TabletopWire.ShownHand(t.getBlockPos(),t.seatName(),revealed.visibleCards()));
+  }
   ServerPlayNetworking.send(player,new TabletopWire.Reply(
    origin,message,owned,List.copyOf(tiles),List.copyOf(played),
    c.hand==null||c.seat==null?List.of():c.hand.visibleCards(),
    c.deck==null?0:c.deck.getLibraryCount(),List.copyOf(grave),List.copyOf(exile),scry,reveal,commander(player,c),
-   c.seat==null?List.of():c.seat.tokenTray(),List.copyOf(tokenResults),query.page(),tokenMore
+   c.seat==null?List.of():c.seat.tokenTray(),List.copyOf(tokenResults),query.page(),tokenMore,REVEALED_HANDS.contains(player.getUUID()),List.copyOf(shownHands)
   ));
  }
  private TabletopLogic(){}
