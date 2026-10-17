@@ -54,7 +54,7 @@ class BattlefieldCounterExitTests(unittest.TestCase):
 
  def test_scry_cancel_can_work_without_card_hand_and_does_not_change_library(self):
   code=java("TabletopLogic.java")
-  self.assertIn('"scry_cancel").contains(req.action())',code)
+  self.assertIn('"scry_cancel","reveal_hand").contains(req.action())',code)
   self.assertIn('case "scry_cancel" -> {SCRIES.remove(player.getUUID());message="Scry cancelled; library order unchanged.";}',code)
   ui=java("TabletopScreen.java")
   self.assertIn('button("Cancel",width-97,by,84,()->action("scry_cancel",0))',ui)
