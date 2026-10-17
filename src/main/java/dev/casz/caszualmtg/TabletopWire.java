@@ -22,7 +22,8 @@ public final class TabletopWire {
  public record Tile(BlockPos pos,String owner,int color,int life,boolean hasLife,boolean active) {}
  public record Card(BlockPos pos,String id,String owner,ItemStack stack,int x,int y,boolean tapped,boolean hidden) {}
  public record ZoneCard(int slot,ItemStack stack) {}
- public record Reply(BlockPos pos,String message,BlockPos seat,List<Tile> tiles,List<Card> cards,List<ItemStack> hand,int libraryCount,List<ZoneCard> grave,List<ZoneCard> exile,List<ItemStack> scry,List<ItemStack> reveal,ItemStack commander) implements CustomPacketPayload {
+ public record TokenResult(String key,ItemStack stack) {}
+ public record Reply(BlockPos pos,String message,BlockPos seat,List<Tile> tiles,List<Card> cards,List<ItemStack> hand,int libraryCount,List<ZoneCard> grave,List<ZoneCard> exile,List<ItemStack> scry,List<ItemStack> reveal,ItemStack commander,List<ItemStack> tray,List<TokenResult> tokenResults,int tokenPage,boolean tokenMore) implements CustomPacketPayload {
   public static final Type<Reply> TYPE=new Type<>(CaszualMtg.id("tabletop_reply"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Reply> CODEC=StreamCodec.of((b,p)->{
    b.writeBlockPos(p.pos);b.writeUtf(p.message,512);b.writeBlockPos(p.seat);
@@ -40,6 +41,9 @@ public final class TabletopWire {
    b.writeVarInt(p.scry.size());for(ItemStack s:p.scry)ItemStack.OPTIONAL_STREAM_CODEC.encode(b,s);
    b.writeVarInt(p.reveal.size());for(ItemStack s:p.reveal)ItemStack.OPTIONAL_STREAM_CODEC.encode(b,s);
    ItemStack.OPTIONAL_STREAM_CODEC.encode(b,p.commander);
+   b.writeVarInt(p.tray.size());for(ItemStack t:p.tray)ItemStack.OPTIONAL_STREAM_CODEC.encode(b,t);
+   b.writeVarInt(p.tokenResults.size());for(TokenResult t:p.tokenResults){b.writeUtf(t.key,512);ItemStack.OPTIONAL_STREAM_CODEC.encode(b,t.stack);}
+   b.writeVarInt(p.tokenPage);b.writeBoolean(p.tokenMore);
   },b->{
    BlockPos pos=b.readBlockPos();String message=b.readUtf(512);BlockPos seat=b.readBlockPos();
    int n=b.readVarInt();if(n<0||n>32)throw new IllegalArgumentException("Table too large");
@@ -59,7 +63,13 @@ public final class TabletopWire {
    n=b.readVarInt();if(n<0||n>20)throw new IllegalArgumentException("Too many revealed cards");
    List<ItemStack> reveal=new ArrayList<>();for(int i=0;i<n;i++)reveal.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(b));
    ItemStack commander=ItemStack.OPTIONAL_STREAM_CODEC.decode(b);
-   return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),List.copyOf(reveal),commander);
+   n=b.readVarInt();if(n<0||n>32)throw new IllegalArgumentException("Token tray too large");
+   List<ItemStack> tray=new ArrayList<>();for(int i=0;i<n;i++)tray.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(b));
+   n=b.readVarInt();if(n<0||n>12)throw new IllegalArgumentException("Token search page too large");
+   List<TokenResult> tokenResults=new ArrayList<>();for(int i=0;i<n;i++)tokenResults.add(new TokenResult(b.readUtf(512),ItemStack.OPTIONAL_STREAM_CODEC.decode(b)));
+   int tokenPage=b.readVarInt();if(tokenPage<0||tokenPage>50)throw new IllegalArgumentException("Invalid token page");
+   boolean tokenMore=b.readBoolean();
+   return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),List.copyOf(reveal),commander,List.copyOf(tray),List.copyOf(tokenResults),tokenPage,tokenMore);
   });
   public Type<Reply> type(){return TYPE;}
  }
