@@ -95,6 +95,9 @@ jobs:
       - name: Verify precision dragging, confirm hand moves and reveal-hand privacy
         run: python3 -m unittest discover -s tests -p 'test_tabletop_free_drag_hand_reveal.py' -v
 
+      - name: Validate visible public hands and server-synchronized battlefield zoom
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_reveal_zoom.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
