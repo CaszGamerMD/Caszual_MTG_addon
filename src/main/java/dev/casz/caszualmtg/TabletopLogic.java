@@ -125,11 +125,32 @@ public final class TabletopLogic {
   String message="";
   if(req.action().equals("refresh")){reply(player,req.pos(),"");return;}
   if(c.seat==null){reply(player,req.pos(),"Claim an empty tabletop seat to play.");return;}
-  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove","quick_send").contains(req.action())&&c.hand==null){
+  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove","quick_send","copy_token").contains(req.action())&&c.hand==null){
    reply(player,req.pos(),requireLinks(c));return;
   }
   try{
    switch(req.action()){
+    case "copy_token" -> {
+     Located found=located(c,req.ref());
+     if(!owned(player,found)||found.card.faceDown()){
+      message="Only your own face-up cards can be copied.";break;
+     }
+     TabletopBlockEntity dest=found.tile;
+     if(dest.cards().size()>=TabletopBlockEntity.MAX_CARDS){
+      message="That battlefield is full; no copy was created.";break;
+     }
+     ItemStack copy=com.spider.mtgcard.api.CardDatabaseCards.copyForExtraction(found.card.stack());
+     // A copy retains the source artwork and card type, but not existing counters.
+     for(String key:com.spider.mtgcard.util.CardCounterNbt.readCounterMap(copy).keySet())
+      com.spider.mtgcard.util.CardCounterNbt.setCounter(copy,key,0);
+     TabletopBlockEntity.PlayedCard original=found.card;
+     if(!dest.add(new TabletopBlockEntity.PlayedCard("copy:"+UUID.randomUUID(),
+       player.getUUID().toString(),copy,Math.clamp(original.x()+55,0,1000),
+       Math.clamp(original.y()+35,0,1000),false,false))){
+      message="Could not create token copy.";break;
+     }
+     message="Created a token copy. It disappears when it leaves the battlefield.";
+    }
     case "counter_set" -> {
      int separator=req.ref().indexOf('|');
      if(separator<=0){message="Choose one of your battlefield cards.";break;}
@@ -196,6 +217,11 @@ public final class TabletopLogic {
      // disguise a commander or a token as an ordinary graveyard card.
      Located found=located(c,req.ref());
      if(!owned(player,found)){message="You can only quick-send your own battlefield cards.";break;}
+     if(found.card.id().startsWith("copy:")){
+      found.tile.remove(found.card.id());
+      message="Token copy ceased to exist.";
+      break;
+     }
      ItemStack card=found.card.stack();
      boolean commander=found.card.id().startsWith("commander:")
       ||(!c.seat.commanderReference().isEmpty()&&sameCommander(card,c.seat.commanderReference()));
@@ -222,6 +248,9 @@ public final class TabletopLogic {
     }
     case "token_store" -> {
      Located found=located(c,req.ref());
+     if(owned(player,found)&&found.card.id().startsWith("copy:")){
+      found.tile.remove(found.card.id());message="Token copy vanished; it was not saved to the tray.";break;
+     }
      if(!owned(player,found)||!Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(found.card.stack()).typeLine())){
       message="Only your token cards can return to the tray.";break;
      }
@@ -337,12 +366,18 @@ public final class TabletopLogic {
     case "return" -> {
      Located found=located(c,req.ref());
      if(!owned(player,found)){message="Only your own cards can return to hand.";break;}
+     if(found.card.id().startsWith("copy:")){
+      found.tile.remove(found.card.id());message="Token copy vanished instead of entering your hand.";break;
+     }
      if(c.hand==null||c.hand.cardCount()>=HandBlockEntity.SIZE||!c.hand.addCard(found.card.stack())){message="Your Card Hand is missing or full.";break;}
      found.tile.remove(found.card.id());message="Card returned to your private hand.";
     }
     case "grave", "exile" -> {
      Located found=located(c,req.ref());
      if(!owned(player,found)){message="You can only move your own cards into a zone.";break;}
+     if(found.card.id().startsWith("copy:")){
+      found.tile.remove(found.card.id());message="Token copy vanished instead of entering a zone.";break;
+     }
      int slot=emptySlot(c.grave,req.action().equals("exile")?100:0);
      if(slot<0){message="No linked Graveyard or the target zone is full.";break;}
      c.grave.setStack(slot,found.card.stack().copy());
@@ -557,7 +592,8 @@ public final class TabletopLogic {
    if(inCommand.isEmpty()&&commanderReturn.isEmpty()
        &&(entry.card.id().startsWith("commander:")||sameCommander(card,reference)))
     commanderReturn=card.copy();
-   else if(!Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(card).typeLine()))returning.add(card.copy());
+   else if(!entry.card.id().startsWith("copy:")
+      &&!Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(card).typeLine()))returning.add(card.copy());
   }
   for(var card:hand){
    if(inCommand.isEmpty()&&commanderReturn.isEmpty()&&sameCommander(card,reference))
