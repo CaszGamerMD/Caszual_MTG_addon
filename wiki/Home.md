@@ -4,7 +4,7 @@
 
 ## Main features
 
-- **Caszual item tag integration** — all 10 addon items join Caszual Additions' shared Creative tab and Barrel of Caszual Fun when installed.
+- **Caszual item tag integration** — all 11 addon items join Caszual Additions' shared Creative tab and Barrel of Caszual Fun when installed.
 - **Player-facing utility boxes** — the three database fronts and Deck Builder screen face the player when placed.
 - **Community Land Catalogue** — searchable, Commander-aware unlimited land catalogue with mana filters and artwork selection.
 - **Community Token Catalogue** — searchable unlimited token catalogue with optional Oracle-text and P/T filtering.
@@ -14,7 +14,7 @@
 - **Deckbox Rack** — store five deckboxes on a thin floor/wall shelf, with real miniature models and contents retained on break.
 - **Staff Rack** — store four RGB-configured targeting staffs on a wall rail; their 3D shafts hang two blocks below it.
 - **Card Store output** — a built-in deckbox slot routes purchases directly into the chosen deckbox.
-- **Card Hand** — private 100-card hand linked to a specific Deck Control, with viewers, reveal mode, mulligans, draw routing and graveyard discards.
+- **MTG Tabletop** — experimental modular multiplayer card table with persistent card positions, linked private hands, library actions, graveyard and exile zones. See [Tabletop](Tabletop.md).\n- **Card Hand** — private 100-card hand linked to a specific Deck Control, with viewers, reveal mode, mulligans, draw routing and graveyard discards.
 - **Custom Deckbox** — an MTGCard deckbox whose main panels can inherit the representative texture of a vanilla or modded block.
 - **Card Counter** — named counters, world markers and a readable HUD for placed MTG cards.
 - **MTG Staff** — multiplayer-visible white/orange target declaration highlights.
@@ -43,7 +43,7 @@ Install Caszual MTG on the **server and every client** that connects to it.
 - [Deckbox Rack](Deckbox-Rack.md)
 - [Staff Rack](Staff-Rack.md)
 - [Card Store output](Card-Store-Output.md)
-- [Card Hand](Card-Hand.md)
+- [Card Hand](Card-Hand.md)\n- [Tabletop](Tabletop.md)
 - [Custom Deckbox](Custom-Deckbox.md)
 - [Card Counter](Card-Counter.md)
 - [MTG Staff](MTG-Staff.md)

@@ -1,12 +1,12 @@
 # Staff Rack
 
-The Staff Rack is a slim **wall-mounted** rail with **four** hooks. It stores Caszual MTG targeting staffs and displays their actual tall 3D models hanging vertically.
+The Staff Rack is a slim **wall-mounted** rail with **four** dark hanging supports. It stores Caszual MTG targeting staffs and displays their actual tall 3D models hanging vertically.
 
 ## Placement and appearance
 
 - Right-click the **side face of a wall** to mount the rack; it faces outward automatically.
 - **0.11.1:** Staff models were raised **one block** relative to the earlier hanging layout. If you want their lower ends to touch the floor, mount the rack about **one block above the floor**. At a two-block-high mounting point, the staff bottoms now remain about one block off the floor.
-- The wooden rail has four metal hooks across one block. The shafts are narrow enough to hang side by side without the amethyst heads clipping.
+- The wooden rail has four dark slate-colored supports that connect directly to its underside; the old protruding iron hooks have been removed. The shafts are narrow enough to hang side by side without the amethyst heads clipping.
 - The hanging staffs are visuals. Their storage and interaction are handled by the wall rack, not the empty space below it.
 
 ## Using the rack

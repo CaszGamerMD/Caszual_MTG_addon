@@ -26,6 +26,33 @@ public final class CaszualMtgClient implements ClientModInitializer {
   net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED
       .register(client -> MtgBlockEntitySafety.verifyAtLifecycle("client startup"));
   CustomBoxModels.register();
+  // Per-vertex block tinting in 26.2: exact 24-bit playmat and paper cushion.
+  // A pure-white texture is used so RGB is not multiplied by a wool/carpet dye.
+  net.fabricmc.fabric.api.client.rendering.v1.BlockColorRegistry.register(
+   java.util.List.of(new net.minecraft.client.color.block.BlockTintSource(){
+    @Override public int color(net.minecraft.world.level.block.state.BlockState state){
+     return 0xFF315348;
+    }
+    @Override public int colorInWorld(net.minecraft.world.level.block.state.BlockState state,
+      net.minecraft.client.renderer.block.BlockAndTintGetter level,net.minecraft.core.BlockPos pos){
+     Object data=level.getBlockEntityRenderData(pos);
+     return data instanceof TabletopBlockEntity.RenderData rendered
+      ?0xFF000000|(rendered.rgb()&0xFFFFFF):0xFF315348;
+    }
+   }),CaszualMtg.TABLETOP);
+  net.fabricmc.fabric.api.client.rendering.v1.BlockColorRegistry.register(
+   java.util.List.of(new net.minecraft.client.color.block.BlockTintSource(){
+    @Override public int color(net.minecraft.world.level.block.state.BlockState state){
+     return 0xFFFFFFFF;
+    }
+    @Override public int colorInWorld(net.minecraft.world.level.block.state.BlockState state,
+      net.minecraft.client.renderer.block.BlockAndTintGetter level,net.minecraft.core.BlockPos pos){
+     if(state.getValue(ChairBlock.CUSHION)!=ChairBlock.Cushion.PAPER)return 0xFFFFFFFF;
+     Object data=level.getBlockEntityRenderData(pos);
+     return data instanceof ChairBlockEntity.RenderData rendered
+      ?0xFF000000|(rendered.paperRgb()&0xFFFFFF):0xFFFFFFFF;
+    }
+   }),CaszualMtg.MATERIAL_CHAIR);
   // The native MTGCard block-entity type includes both vanilla and Caszual deckboxes.
   // Register only a world block renderer; inventory items stay visually unchanged.
   if(com.spider.mtgcard.registry.ModBlockEntities.DECKBOX!=null)
@@ -51,10 +78,20 @@ public final class CaszualMtgClient implements ClientModInitializer {
     gg.fill(px-2,py,px,py+16,0xFFC2A66F);
     gg.fill(px+16,py,px+18,py+16,0xFFC2A66F);
     gg.drawString(mc.font,"Deckbox output",px+24,py+4,0xFFFFDDA2);
+    CardStoreDeckboxLayout.drawProgress(store,gg,mc.font);
    });
   });
   ClientPlayNetworking.registerGlobalReceiver(Wire.Reply.TYPE,(reply,ctx)->{if(reply.kind()==2){if(ctx.client().gui.screen() instanceof CommunityScreen screen&&screen.getMenu().pos.equals(reply.pos()))screen.update(reply);return;}if(reply.kind()==3){if(ctx.client().gui.screen() instanceof BuilderScreen screen&&screen.getMenu().pos.equals(reply.pos()))screen.update(reply);return;}if(ctx.client().gui.screen() instanceof BankScreen screen&&screen.pos.equals(reply.pos())&&screen.kind==reply.kind())screen.update(reply);else if(!(ctx.client().gui.screen() instanceof BankScreen))ctx.client().gui.setScreen(new BankScreen(reply));});
+  ClientPlayNetworking.registerGlobalReceiver(TabletopWire.Reply.TYPE,(reply,ctx)->{
+   if(ctx.client().gui.screen() instanceof TabletopScreen screen&&screen.data.pos().equals(reply.pos()))
+    screen.update(reply);
+   else if(reply.message().equals("Table ready."))ctx.client().gui.setScreen(new TabletopScreen(reply));
+  });
   ClientPlayNetworking.registerGlobalReceiver(HandWire.Reply.TYPE,(reply,ctx)->{if(ctx.client().gui.screen() instanceof HandScreen screen&&screen.data.pos().equals(reply.pos()))screen.update(reply);else if(reply.message().equals("Hand ready."))ctx.client().gui.setScreen(new HandScreen(reply));});
+  ClientPlayNetworking.registerGlobalReceiver(CardStoreStatusWire.Progress.TYPE,(progress,ctx)->{
+   if(ctx.client().gui.screen() instanceof com.spider.mtgcard.client.gui.CardStoreScreen store)
+    CardStoreDeckboxLayout.updateProgress(store,progress);
+  });
   ClientPlayNetworking.registerGlobalReceiver(DeckboxRefreshWire.Refresh.TYPE,(refresh,ctx)->{
    var pos=refresh.pos();
    if(ctx.client().level!=null)ctx.client().level.setSectionDirtyWithNeighbors(SectionPos.blockToSectionCoord(pos.getX()),SectionPos.blockToSectionCoord(pos.getY()),SectionPos.blockToSectionCoord(pos.getZ()));

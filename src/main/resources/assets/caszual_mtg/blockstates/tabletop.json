@@ -1,0 +1,41 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "caszual_mtg:block/tabletop"
+      }
+    },
+    {
+      "when": {
+        "cards": "1"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_cards_1"
+      }
+    },
+    {
+      "when": {
+        "cards": "2"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_cards_2"
+      }
+    },
+    {
+      "when": {
+        "cards": "3"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_cards_3"
+      }
+    },
+    {
+      "when": {
+        "cards": "4"
+      },
+      "apply": {
+        "model": "caszual_mtg:block/tabletop_cards_4"
+      }
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "fabric": "minecraft:block/blue_wool",
+    "particle": "minecraft:block/blue_wool"
+  },
+  "elements": [
+    {
+      "from": [
+        1,
+        8.02,
+        1
+      ],
+      "to": [
+        15,
+        9.22,
+        13.5
+      ],
+      "faces": {
+        "up": {
+          "texture": "#fabric"
+        },
+        "down": {
+          "texture": "#fabric"
+        },
+        "north": {
+          "texture": "#fabric"
+        },
+        "south": {
+          "texture": "#fabric"
+        },
+        "east": {
+          "texture": "#fabric"
+        },
+        "west": {
+          "texture": "#fabric"
+        }
+      }
+    }
+  ]
+}
