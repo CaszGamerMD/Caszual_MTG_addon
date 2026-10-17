@@ -76,3 +76,9 @@ The tray contents persist with your claimed tabletop seat; other players have th
 Right-click one of your face-up battlefield cards and select **Create Token Copy**. A new token copy appears beside that card with the same card art and printed characteristics but no copied counters. Copies have a **TOKEN COPY** label. They may be tapped, moved or given new counters while on the battlefield, but when moved to the hand, graveyard, exile or token tray they cease to exist, rather than becoming a permanent deck or tray card. Reset also removes them without restoring them to the library or command zone.
 
 The token drawer now automatically searches when opened. Token search results are displayed directly from the token catalogue (eight per page), so you no longer depend on the global token cache being populated first. Search pagination is aligned with the catalogue's 40-card batches; the global cache remains an offline fallback. Select a result and choose **Add selected** to save it into the tray, or select a saved template and drag/play it onto the battlefield.
+
+## Counter cleanup when leaving the battlefield
+
+Every MTG counter and counter-icon marker is cleared when a card actually **leaves the battlefield**, including return to hand, graveyard, exile, the commander slot, the token tray, deck reset, and cards dropped by breaking the table. The removal preserves the card's identity, face, artwork and unrelated metadata. Moves or taps within the battlefield retain counters. If a destination is full or unavailable, no move occurs and the battlefield counters remain intact.
+
+The Scry screen's **Cancel** action also works without a linked Card Hand and discards the scry selection without changing the library order.
