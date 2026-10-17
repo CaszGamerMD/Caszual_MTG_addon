@@ -200,6 +200,9 @@ public final class TabletopScreen extends LegacyScreen {
    button("-1",px+74,py+86,58,()->changeCounter(-1));
    button("Set",px+136,py+86,56,()->setCounter(false));
    button("Remove",px+196,py+86,74,()->setCounter(true));
+   if(data.cards().stream().anyMatch(c->c.id().equals(counterCard)&&
+       Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(c.stack()).typeLine())))
+    button("Return to tray",px+12,py+111,118,()->{send("token_store",counterCard,data.seat(),0,0,0);counterOpen=false;rebuildWidgets();});
    button("Close",px+236,py+111,68,()->{counterOpen=false;rebuildWidgets();});
   }
   if(tokenTrayOpen){
@@ -340,7 +343,7 @@ public final class TabletopScreen extends LegacyScreen {
   if(drag!=null){
    Drag held=drag;drag=null;
    int mx=(int)event.x(),my=(int)event.y();
-   if(boardHit(mx,my)&&view!=null){
+   if(boardHit(mx,my)&&view!=null&&!inTokenPanel(mx,my)&&!inCounterPanel(mx,my)){
     int x=xNormalized(mx),y=yNormalized(my);
     switch(held.source()){
      case "board" -> {
