@@ -637,15 +637,17 @@ public final class TabletopScreen extends LegacyScreen {
    ||GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(),GLFW.GLFW_KEY_RIGHT_ALT)==GLFW.GLFW_PRESS;
   if(alt){
    ItemStack hovered=ItemStack.EMPTY;
-   var onField=cardAt(mx,my);
-   if(onField!=null&&!onField.hidden())hovered=onField.stack();
-   int zi=zoneAt(mx,my);
-   if(hovered.isEmpty()&&zi>=0&&zi<cards.size())hovered=cards.get(zi);
-   if(hovered.isEmpty()&&!data.commander().isEmpty()&&mx>=12&&mx<81&&my>=zoneY())hovered=data.commander();
-   if(hovered.isEmpty()&&publicHand!=null&&!tokenTrayOpen){
+   // The public-hand strip is layered over the battlefield, so it wins
+   // the Alt hit-test even when an underlying played card overlaps it.
+   if(publicHand!=null&&!tokenTrayOpen){
     int at=shownCardAt(mx,my);
     if(at>=0)hovered=publicHand.cards().get(at);
    }
+   var onField=cardAt(mx,my);
+   if(hovered.isEmpty()&&onField!=null&&!onField.hidden())hovered=onField.stack();
+   int zi=zoneAt(mx,my);
+   if(hovered.isEmpty()&&zi>=0&&zi<cards.size())hovered=cards.get(zi);
+   if(hovered.isEmpty()&&!data.commander().isEmpty()&&mx>=12&&mx<81&&my>=zoneY())hovered=data.commander();
    if(!hovered.isEmpty()){
     int ph=Math.min(height-65,365),pw=Math.round(ph*.715f);
     int px=Math.max(6,Math.min(width-pw-8,mx+18)),py=Math.max(35,Math.min(height-ph-8,my-ph/2));
