@@ -40,6 +40,15 @@ public final class TabletopBlockEntity extends BlockEntity {
  private String material="minecraft:dark_oak_planks";
  // Exact 24-bit color from the owning player's Card Hand. No wool palette.
  private int matRgb=0x315348;
+ /** Per-seat size of all battlefield cards, persisted and shared with viewers.
+  * Percent: 45..180 (100 = original card size). */
+ private int cardScale=100;
+ public int cardScale(){return cardScale;}
+ public void cardScale(int percent){
+  int next=Math.clamp(percent,45,180);
+  if(next==cardScale)return;
+  cardScale=next;setChanged();
+ }
  public record RenderData(String wood,int rgb) {}
  public int matRgb(){return matRgb;}
  public void matRgb(int rgb){
@@ -145,6 +154,7 @@ public final class TabletopBlockEntity extends BlockEntity {
   out.putString("SeatName",seatName);
   out.putString("TableWood",material);
   out.putInt("MatRgb",matRgb);
+  out.putInt("CardScale",cardScale);
   if(!commanderReference.isEmpty())out.store("CommanderReference",ItemStack.CODEC,commanderReference);
   out.store("PlayedCards",PlayedCard.CODEC.listOf(),cards);
   out.store("TokenTray",ItemStack.CODEC.listOf(),tokenTray);
@@ -155,6 +165,7 @@ public final class TabletopBlockEntity extends BlockEntity {
   seatName=in.getStringOr("SeatName","");
   material=ChairWood.safe(in.getStringOr("TableWood","minecraft:dark_oak_planks"));
   matRgb=in.getIntOr("MatRgb",0x315348)&0xFFFFFF;
+  cardScale=Math.clamp(in.getIntOr("CardScale",100),45,180);
   commanderReference=in.read("CommanderReference",ItemStack.CODEC).orElse(ItemStack.EMPTY);
   tokenTray.clear();
   for(ItemStack token:in.read("TokenTray",ItemStack.CODEC.listOf()).orElse(List.of()))
