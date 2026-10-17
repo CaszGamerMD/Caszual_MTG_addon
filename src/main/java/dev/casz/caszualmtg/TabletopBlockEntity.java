@@ -135,7 +135,9 @@ public final class TabletopBlockEntity extends BlockEntity {
   }
  }
  public List<ItemStack> drain(){
-  List<ItemStack> out=new ArrayList<>();for(var c:cards)out.add(c.stack().copy());cards.clear();changed();return out;
+  List<ItemStack> out=new ArrayList<>();for(var c:cards)if(!c.id().startsWith("copy:"))
+   out.add(TabletopCounters.leavingBattlefield(c.stack()));
+  cards.clear();changed();return out;
  }
  @Override protected void saveAdditional(ValueOutput out){
   super.saveAdditional(out);
