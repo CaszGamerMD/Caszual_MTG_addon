@@ -48,7 +48,8 @@ public final class TabletopScreen extends LegacyScreen {
  void update(TabletopWire.Reply reply){
   boolean changed=!data.tiles().equals(reply.tiles())||data.scry().isEmpty()!=reply.scry().isEmpty()
    ||data.commander().isEmpty()!=reply.commander().isEmpty()
-   ||data.reveal().isEmpty()!=reply.reveal().isEmpty();
+   ||data.reveal().isEmpty()!=reply.reveal().isEmpty()
+    ||data.ownHandRevealed()!=reply.ownHandRevealed();
   data=reply;
   if(reply.tiles().stream().noneMatch(t->t.pos().equals(view)))view=reply.seat();
   if(!reply.message().isBlank())message=reply.message();
