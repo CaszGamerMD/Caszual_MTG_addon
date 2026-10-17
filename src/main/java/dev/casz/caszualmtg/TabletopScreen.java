@@ -69,9 +69,27 @@ public final class TabletopScreen extends LegacyScreen {
  void button(String label,int x,int y,int w,Runnable callback){
   if(w>18)addRenderableWidget(Button.builder(Component.literal(label),b->callback.run()).bounds(x,y,w,20).build());
  }
+ // The public hand is displayed on its owner's table for all viewers.
  TabletopWire.ShownHand shownHand(){
-  for(var shown:data.shownHands())if(shown.seat().equals(view)&&!shown.seat().equals(data.seat()))return shown;
+  for(var hand:data.shownHands())if(hand.seat().equals(view))return hand;
   return null;
+ }
+ boolean isHandRevealed(BlockPos seat){
+  return data.shownHands().stream().anyMatch(hand->hand.seat().equals(seat));
+ }
+ int shownHandX(){return boardX()+11;}
+ int shownHandY(){return boardY()+boardH()-103;}
+ int shownCardW(){return 54;}
+ int shownCardH(){return 80;}
+ int shownCardStride(){return 61;}
+ int shownHandVisible(){return Math.max(1,(boardW()-27)/shownCardStride());}
+ int shownCardAt(int mx,int my){
+  TabletopWire.ShownHand hand=shownHand();
+  if(hand==null||tokenTrayOpen||mx<shownHandX()||my<shownHandY()||my>=shownHandY()+shownCardH())return -1;
+  int col=(mx-shownHandX())/shownCardStride();
+  if(col>=shownHandVisible()||mx>=shownHandX()+col*shownCardStride()+shownCardW())return -1;
+  int index=shownScroll+col;
+  return index<hand.cards().size()?index:-1;
  }
  boolean playing(){
   var me=Minecraft.getInstance().player;
@@ -107,7 +125,13 @@ public final class TabletopScreen extends LegacyScreen {
  int handStart(){return 93;}
  int handStride(){return 71;}
  int visibleHandCards(){return Math.max(1,(width-handStart()-21)/handStride());}
- int boardCardW(){return Math.max(38,Math.min(70,boardW()/10));}
+ int boardCardW(){
+  int base=Math.max(38,Math.min(70,boardW()/10));
+  TabletopWire.Tile tile=shown();
+  int scale=tile==null?100:Math.clamp(tile.cardScale(),45,180);
+  int heightLimit=Math.max(18,Math.round((boardH()-18)/1.43f));
+  return Math.max(18,Math.min(Math.round(base*scale/100f),heightLimit));
+ }
  int boardCardH(){return Math.round(boardCardW()*1.43f);}
  int cardX(TabletopWire.Card c){return boardX()+8+c.x()*Math.max(0,boardW()-boardCardW()-16)/1000;}
  int cardY(TabletopWire.Card c){return boardY()+8+c.y()*Math.max(0,boardH()-boardCardH()-16)/1000;}
@@ -331,6 +355,7 @@ public final class TabletopScreen extends LegacyScreen {
  @Override public boolean mouseClicked(MouseButtonEvent event,boolean twice){
   int x=(int)event.x(),y=(int)event.y();
   if(inCounterPanel(x,y))return super.mouseClicked(event,twice);
+  if(shownCardAt(x,y)>=0&&event.button()==0)return true; // Read-only public hand.
   if(inTokenPanel(x,y)){
    int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW(),start=py+79;
    int visible=Math.max(2,(boardH()-119)/15);
@@ -423,10 +448,10 @@ public final class TabletopScreen extends LegacyScreen {
  }
  @Override public boolean mouseScrolled(double mx,double my,double dx,double dy){
   TabletopWire.ShownHand shown=shownHand();
-  if(shown!=null&&mx>=boardX()+6&&mx<=boardX()+boardW()-6
-    &&my>=boardY()+boardH()-91&&my<boardY()+boardH()-13&&!tokenTrayOpen){
-   int visible=Math.max(1,(boardW()-26)/54);
-   shownScroll=Math.clamp(shownScroll-(int)Math.signum(dy)*3,0,Math.max(0,shown.cards().size()-visible));
+  if(shown!=null&&!tokenTrayOpen&&mx>=boardX()+6&&mx<=boardX()+boardW()-6
+    &&my>=shownHandY()-16&&my<shownHandY()+shownCardH()){
+   shownScroll=Math.clamp(shownScroll-(int)Math.signum(dy)*3,0,
+    Math.max(0,shown.cards().size()-shownHandVisible()));
    return true;
   }
   if(inTokenPanel((int)mx,(int)my)){
@@ -441,6 +466,11 @@ public final class TabletopScreen extends LegacyScreen {
   if(my>=handTop()){
    int max=Math.max(0,zoneCards().size()-visibleHandCards());
    zoneScroll=Math.clamp(zoneScroll-(int)Math.signum(dy)*3,0,max);
+   return true;
+  }
+  if(boardHit((int)mx,(int)my)&&!tokenTrayOpen&&!counterOpen
+    &&view!=null&&view.equals(data.seat())&&dy!=0){
+   send("card_scale","",view,0,0,(int)Math.signum(dy));
    return true;
   }
   return super.mouseScrolled(mx,my,dx,dy);
@@ -469,14 +499,20 @@ public final class TabletopScreen extends LegacyScreen {
   for(int i=tabScroll;i<Math.min(data.tiles().size(),tabScroll+maxTabs);i++){
    TabletopWire.Tile t=data.tiles().get(i);
    int rgb=0xFF000000|(t.color()&0xFFFFFF);
-   if(t.pos().equals(view))g.fill(tabx-2,5,tabx+134,30,rgb);
+   if(isHandRevealed(t.pos()))g.fill(tabx-2,5,tabx+134,30,0xFFFF3939);
+   else if(t.pos().equals(view))g.fill(tabx-2,5,tabx+134,30,rgb);
    else if(t.active())g.fill(tabx-2,5,tabx+134,30,0xFF7A6A38);
+   if(isHandRevealed(t.pos()))g.fill(tabx-2,27,tabx+134,30,0xFFFFA0A0);
    tabx+=137;
   }
   g.fill(boardX()-3,boardY()-3,boardX()+boardW()+3,boardY()+boardH()+3,0xFF7D6548);
   int bg=tile==null?0xFF2D453B:darken(tile.color());
   g.fill(boardX(),boardY(),boardX()+boardW(),boardY()+boardH(),bg);
-  if(tile!=null)g.drawString(font,tile.owner().isBlank()?"Empty table":tile.owner()+"'s battlefield"+(tile.active()?"  •  CURRENT TURN":""),boardX()+8,boardY()+7,0xFFE5F3E7);
+  if(tile!=null){
+   g.drawString(font,tile.owner().isBlank()?"Empty table":tile.owner()+"'s battlefield"+(tile.active()?"  •  CURRENT TURN":""),boardX()+8,boardY()+7,0xFFE5F3E7);
+   String scaleLabel="CARDS "+tile.cardScale()+"%"+(view.equals(data.seat())?" · Scroll to resize":"");
+   g.drawString(font,scaleLabel,boardX()+boardW()-font.width(scaleLabel)-10,boardY()+7,0xFFE5F3E7);
+  }
   for(var c:displayed()){
    int x=cardX(c),y=cardY(c),cw=boardCardW(),ch=boardCardH();
    boolean chosen=c.id().equals(selectedCard);
@@ -525,14 +561,15 @@ public final class TabletopScreen extends LegacyScreen {
   // Revealed opponent cards are read-only, scrollable and ALT-previewable.
   TabletopWire.ShownHand publicHand=shownHand();
   if(publicHand!=null&&!tokenTrayOpen){
-   int bx=boardX()+7,by=boardY()+boardH()-89,visible=Math.max(1,(boardW()-26)/54);
-   g.fill(bx-3,by-15,boardX()+boardW()-7,by+77,0xEB481C22);
-   g.drawString(font,"REVEALED HAND · "+publicHand.owner()+" · "+publicHand.cards().size()+" cards (scroll for more)",bx+4,by-12,0xFFFFF0ED);
+   int bx=shownHandX(),by=shownHandY(),visible=shownHandVisible();
+   g.fill(bx-6,by-19,boardX()+boardW()-7,by+shownCardH()+4,0xEE511C25);
+   String label="REVEALED HAND · "+publicHand.owner()+" · "+publicHand.cards().size()+" cards · Scroll / Alt to inspect";
+   g.drawString(font,font.plainSubstrByWidth(label,boardW()-28),bx,by-15,0xFFFFF2EF);
    shownScroll=Math.clamp(shownScroll,0,Math.max(0,publicHand.cards().size()-visible));
    for(int i=shownScroll;i<publicHand.cards().size()&&i<shownScroll+visible;i++){
-    int x=bx+4+(i-shownScroll)*54;
-    g.fill(x-2,by-2,x+47,by+70,0xFFFF4848);
-    drawArt(g,publicHand.cards().get(i),x,by,45,67);
+    int x=bx+(i-shownScroll)*shownCardStride();
+    g.fill(x-2,by-2,x+shownCardW()+2,by+shownCardH()+2,0xFFFF5151);
+    drawArt(g,publicHand.cards().get(i),x,by,shownCardW(),shownCardH());
    }
   }
   if(tokenTrayOpen){
@@ -606,11 +643,8 @@ public final class TabletopScreen extends LegacyScreen {
    if(hovered.isEmpty()&&zi>=0&&zi<cards.size())hovered=cards.get(zi);
    if(hovered.isEmpty()&&!data.commander().isEmpty()&&mx>=12&&mx<81&&my>=zoneY())hovered=data.commander();
    if(hovered.isEmpty()&&publicHand!=null&&!tokenTrayOpen){
-    int bx=boardX()+11,by=boardY()+boardH()-89;
-    if(mx>=bx&&my>=by&&my<by+67){
-     int at=shownScroll+(mx-bx)/54;
-     if(at>=0&&at<publicHand.cards().size())hovered=publicHand.cards().get(at);
-    }
+    int at=shownCardAt(mx,my);
+    if(at>=0)hovered=publicHand.cards().get(at);
    }
    if(!hovered.isEmpty()){
     int ph=Math.min(height-65,365),pw=Math.round(ph*.715f);
