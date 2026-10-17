@@ -89,6 +89,9 @@ jobs:
       - name: Validate ephemeral token copies and reliable token search
         run: python3 -m unittest discover -s tests -p 'test_tabletop_copy_token_search.py' -v
 
+      - name: Validate battlefield counter cleanup and Scry Cancel
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_counter_exit.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
