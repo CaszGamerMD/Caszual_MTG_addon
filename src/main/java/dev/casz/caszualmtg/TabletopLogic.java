@@ -145,12 +145,19 @@ public final class TabletopLogic {
     }
     case "hand_to_zone" -> {
      if(c.hand==null){message="No linked Card Hand.";break;}
-     int slot=req.amount(),start="exile".equals(req.ref())?100:0;
-     if(!req.ref().equals("grave")&&!req.ref().equals("exile")){
+     int split=req.ref().indexOf('|');
+     if(split<0){message="Invalid hand destination.";break;}
+     String zone=req.ref().substring(0,split),expected=req.ref().substring(split+1);
+     if(!zone.equals("grave")&&!zone.equals("exile")){
       message="Invalid hand destination.";break;
      }
-     // Validate all preconditions before removing anything from the private hand.
+     int slot=req.amount(),start=zone.equals("exile")?100:0;
      if(slot<0||slot>=c.hand.cardCount()){message="Hand changed. Select the card again.";break;}
+     ItemStack selected=c.hand.visibleCards().get(slot);
+     String id=com.spider.mtgcard.util.TcgCardMeta.read(selected).id();
+     if(id.isBlank())id=com.spider.mtgcard.util.TcgCardMeta.read(selected).name();
+     if(!id.equals(expected)){message="Hand changed. Re-select and confirm the card.";break;}
+     // Validate all preconditions before removing anything from the private hand.
      int target=emptySlot(c.grave,start);
      if(target<0){message="No linked Graveyard or the destination is full. Card stayed in hand.";break;}
      ItemStack taken=c.hand.removeVisibleIndex(slot);
