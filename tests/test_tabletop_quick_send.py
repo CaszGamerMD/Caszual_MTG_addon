@@ -27,7 +27,7 @@ class QuickSendTests(unittest.TestCase):
   self.assertIn("sameCommander(card,c.seat.commanderReference())",action)
   self.assertLess(action.index("if(commander){"),action.index("}else if(Catalogue.isToken("))
   self.assertLess(action.index("}else if(Catalogue.isToken("),action.index("}else{"))
-  self.assertIn('"quick_send","copy_token").contains(req.action())',logic)
+  self.assertIn('"quick_send","copy_token","scry_cancel").contains(req.action())',logic)
 
  def test_server_preflights_each_destination_before_removing_card(self):
   logic=(JAVA/"TabletopLogic.java").read_text(encoding="utf-8")
@@ -38,8 +38,8 @@ class QuickSendTests(unittest.TestCase):
   self.assertIn("if(box==null)",commander)
   self.assertIn("SECOND_SIDE_SLOT).isEmpty()",commander)
   self.assertLess(commander.index("box.setStack("),commander.index("found.tile.remove("))
-  self.assertIn("if(!c.seat.addToken(card))",token)
-  self.assertLess(token.index("if(!c.seat.addToken(card))"),token.index("found.tile.remove("))
+  self.assertIn("if(!c.seat.addToken(TabletopCounters.leavingBattlefield(card)))",token)
+  self.assertLess(token.index("if(!c.seat.addToken(TabletopCounters.leavingBattlefield(card)))"),token.index("found.tile.remove("))
   self.assertIn("int slot=emptySlot(c.grave,0)",grave)
   self.assertIn("if(slot<0)",grave)
   self.assertLess(grave.index("c.grave.setStack("),grave.index("found.tile.remove("))
