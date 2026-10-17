@@ -38,7 +38,7 @@ class TabletopHandSafetyTests(unittest.TestCase):
   wire=read("TabletopWire.java")
   for token in ('Set<UUID> REVEALED_HANDS','case "reveal_hand" -> {',
                 'if(!c.hand.owner().equals(player.getUUID()))',
-                'if(!REVEALED_HANDS.contains(handOwner))continue',
+                '!REVEALED_HANDS.contains(handOwner)',
                 'HandBlockEntity revealed=linkedHand(player,t,handOwner)',
                 'shownHands.add(new TabletopWire.ShownHand('):
    self.assertIn(token,logic)
