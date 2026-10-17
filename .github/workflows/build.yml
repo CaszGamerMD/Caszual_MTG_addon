@@ -80,6 +80,9 @@ jobs:
       - name: Validate live chair wood and paper cushion refresh
         run: python3 -m unittest discover -s tests -p 'test_chair_refresh.py' -v
 
+      - name: Validate tabletop token tray, counter actions, and P/T previews
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_token_counters.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
