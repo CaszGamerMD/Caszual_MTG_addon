@@ -153,10 +153,10 @@ public final class TabletopLogic {
      TOKEN_QUERIES.put(player.getUUID(),current);
      message="Searching tokens...";
      // Cached results are immediate; remote catalogue lookup is non-blocking.
-     Catalogue.search(1,query,0,page).whenComplete((result,error)->player.getServer().execute(()->{
+     Catalogue.search(1,query,0,page).whenComplete((result,error)->player.level().getServer().execute(()->{
       if(!player.isRemoved()&&current.equals(TOKEN_QUERIES.get(player.getUUID()))){
        if(error==null&&result!=null){
-        Banks bank=Banks.get(player.getServer());
+        Banks bank=Banks.get(player.level().getServer());
         for(var hit:result.cards()){
          ItemStack token=com.spider.mtgcard.util.CardStackBuilders.buildScryfallStackFromModel(hit.model(),false);
          if(Catalogue.isToken(com.spider.mtgcard.util.TcgCardMeta.read(token).typeLine()))bank.add(token,1,1);
@@ -169,7 +169,7 @@ public final class TabletopLogic {
     case "token_add" -> {
      if(c.seat.tokenTray().size()>=TabletopBlockEntity.MAX_TOKEN_TEMPLATES){message="Token tray full (32 templates).";break;}
      TokenQuery query=TOKEN_QUERIES.getOrDefault(player.getUUID(),new TokenQuery("",0));
-     var results=Banks.get(player.getServer()).search(1,query.text());
+     var results=Banks.get(player.level().getServer()).search(1,query.text());
      int from=query.page()*TOKEN_PAGE_SIZE;
      boolean added=false;
      for(int i=from;i<Math.min(results.size(),from+TOKEN_PAGE_SIZE);i++){
@@ -614,7 +614,7 @@ public final class TabletopLogic {
   ScrySession revealSession=REVEALS.get(player.getUUID());
   List<ItemStack> reveal=revealSession!=null&&c.deck!=null&&revealSession.control.equals(c.deck.getBlockPos())?revealSession.cards:List.of();
   TokenQuery query=TOKEN_QUERIES.getOrDefault(player.getUUID(),new TokenQuery("",0));
-  var matches=Banks.get(player.getServer()).search(1,query.text());
+  var matches=Banks.get(player.level().getServer()).search(1,query.text());
   int offset=query.page()*TOKEN_PAGE_SIZE;
   List<TabletopWire.TokenResult> tokenResults=new ArrayList<>();
   for(int i=offset;i<Math.min(matches.size(),offset+TOKEN_PAGE_SIZE);i++)
