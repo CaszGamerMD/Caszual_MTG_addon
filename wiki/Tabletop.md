@@ -82,3 +82,11 @@ The token drawer now automatically searches when opened. Token search results ar
 Every MTG counter and counter-icon marker is cleared when a card actually **leaves the battlefield**, including return to hand, graveyard, exile, the commander slot, the token tray, deck reset, and cards dropped by breaking the table. The removal preserves the card's identity, face, artwork and unrelated metadata. Moves or taps within the battlefield retain counters. If a destination is full or unavailable, no move occurs and the battlefield counters remain intact.
 
 The Scry screen's **Cancel** action also works without a linked Card Hand and discards the scry selection without changing the library order.
+
+## Free positioning and confirmed private-hand zone changes
+
+Cards dragged across the battlefield now keep the point at which they were grabbed rather than snapping their top-left corners to the mouse. Their saved normalized coordinates remain precise and are not quantized to any grid.
+
+To send a card from **Hand** to **GY** or **Exile**, first select the card and click the corresponding zone button. The screen then displays an explicit **CONFIRM GY** or **CONFIRM EXILE** and a **Cancel** button. The server checks the selected card identity, the destination and capacity before removing it from Hand. The existing To GY and Exile Card buttons still work directly for cards already on the battlefield.
+
+**Reveal Hand** toggles your private cards' visibility to other players at your connected tabletop until you turn it off. While revealed, the hand tray has a conspicuous **red border and warning text**. Other players can switch to your seat tab to inspect and scroll through a read-only copy of your visible cards; they cannot move your cards. Cards are never sent to opponents unless you expressly opt in, and snapshots are only included in connected tabletop replies.
