@@ -27,7 +27,7 @@ class QuickSendTests(unittest.TestCase):
   self.assertIn("sameCommander(card,c.seat.commanderReference())",action)
   self.assertLess(action.index("if(commander){"),action.index("}else if(Catalogue.isToken("))
   self.assertLess(action.index("}else if(Catalogue.isToken("),action.index("}else{"))
-  self.assertIn('"quick_send","copy_token","scry_cancel").contains(req.action())',logic)
+  self.assertIn('"quick_send","copy_token","scry_cancel","reveal_hand"',logic)
 
  def test_server_preflights_each_destination_before_removing_card(self):
   logic=(JAVA/"TabletopLogic.java").read_text(encoding="utf-8")
