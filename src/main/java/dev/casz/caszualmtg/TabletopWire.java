@@ -70,6 +70,16 @@ public final class TabletopWire {
    List<TokenResult> tokenResults=new ArrayList<>();for(int i=0;i<n;i++)tokenResults.add(new TokenResult(b.readUtf(512),ItemStack.OPTIONAL_STREAM_CODEC.decode(b)));
    int tokenPage=b.readVarInt();if(tokenPage<0||tokenPage>50)throw new IllegalArgumentException("Invalid token page");
    boolean tokenMore=b.readBoolean();
+   boolean ownHandRevealed=b.readBoolean();
+   n=b.readVarInt();if(n<0||n>32)throw new IllegalArgumentException("Too many public hands");
+   List<ShownHand> shownHands=new ArrayList<>();
+   for(int i=0;i<n;i++){
+    BlockPos shownSeat=b.readBlockPos();String owner=b.readUtf(64);
+    int count=b.readVarInt();if(count<0||count>100)throw new IllegalArgumentException("Too many public hand cards");
+    List<ItemStack> publicCards=new ArrayList<>();
+    for(int j=0;j<count;j++)publicCards.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(b));
+    shownHands.add(new ShownHand(shownSeat,owner,List.copyOf(publicCards)));
+   }
    return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),List.copyOf(reveal),commander,List.copyOf(tray),List.copyOf(tokenResults),tokenPage,tokenMore,ownHandRevealed,List.copyOf(shownHands));
   });
   public Type<Reply> type(){return TYPE;}
