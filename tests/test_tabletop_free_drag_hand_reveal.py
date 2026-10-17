@@ -51,7 +51,8 @@ class TabletopHandSafetyTests(unittest.TestCase):
   self.assertIn('0xFFFF2020',gui)
   self.assertIn('TabletopWire.ShownHand publicHand=shownHand()',gui)
   self.assertIn('data.shownHands()',gui)
-  self.assertIn('shown.seat().equals(view)&&!shown.seat().equals(data.seat())',gui)
+  self.assertIn('hand.seat().equals(view)',gui)
+  self.assertNotIn('shown.seat().equals(view)&&!shown.seat().equals(data.seat())',gui)
   self.assertIn('shownScroll=Math.clamp',gui)
   self.assertIn('data.ownHandRevealed()!=reply.ownHandRevealed()',gui)
 
