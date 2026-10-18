@@ -33,3 +33,29 @@ The goal for the next stage is a server-authoritative legal-action enumerator an
 ## Development
 
 Run `./gradlew clean build` with Java 25. The Gradle `check` task includes `verifyCommanderGolem`; the branch's GitHub Actions workflow also builds and uploads test artifacts. This is an experimental branch only; do **not** merge it into `main` until the rules and game integration are verified.
+
+## October 18 experimental tabletop updates
+
+- The **Token Tray** now displays artwork thumbnails for stored and searched tokens. Hold **Alt** over a token result for a large preview.
+- Search by **name**, **Oracle text contains**, and an exact numeric **P/T** such as `1/1`. Filters are applied to Scryfall results and cached catalogue fallback; invalid P/T input is rejected.
+- **Target ▾** opens targeting mode. Select your own battlefield card as the source, change seat tabs if needed, then click a card to announce it as the target. **Target Player** targets the currently viewed seat, and **Clear Target** removes your declaration.
+- Targets appear as red card borders / player-seat tabs, blue source highlights and public announcements; cards sharing a battlefield show a dotted target connector. Declarations expire after 20 seconds. All viewers poll the same server-authoritative markers.
+- The golem now announces when it casts supported creature cards, using the same mechanism.
+- **Important:** target indicators currently declare *intent*. They do not automatically validate or resolve spells, blocks, attacks, targets, priority, or the stack.
+
+## Full Commander readiness gate
+
+The game is **not yet ready to be described as fully playable under the Magic Comprehensive Rules**. To close that gap, a real game/rules kernel must own all zones, the stack, priority, targeting legality, mana abilities, state-based actions, replacement effects, continuous effects, triggers, multiplayer combat, commander identity/damage, and the loss/win conditions. Human actions and golem actions should both be legal actions supplied by that same kernel; the visible Minecraft tabletop should be only the presentation/synchronization layer.
+
+A credible candidate is the maintained open-source Java **Card-Forge/forge** project (`https://github.com/Card-Forge/forge`), which already plays Commander against its AI. However Forge is **GPL-3.0**, while this mod is **MIT**, so code/dependency distribution and the boundary of any separated rules companion must be reviewed before implementation. Do not simply copy or package Forge into this mod and silently retain MIT licensing.
+
+An integration spike should first prove one deterministic **headless** two-player Commander match in the chosen rules engine, then bind each engine zone/card to a unique physical MTGCard item ID without duplication. Follow with a legal-action RPC boundary, serialized game snapshots/resume, human prompts for priority/target/block choices, 3–4-player testing, and replayable test fixtures for game completion. The current simple-card pilot can serve as a safe fallback, not as a substitute for the full engine.
+
+### Test acceptance criteria (not yet met)
+
+1. Play and finish 100 complete two-player matches with decks containing creatures, instants, sorceries, artifacts, enchantments, planeswalkers, activated/triggered abilities and removal.
+2. Play 100 complete multiplayer Commander matches with priority passing, stack responses, combat, commander tax and 21 commander-damage elimination.
+3. Verify player-private zones, card identity, undo/rollback on invalid actions, crash/restart recovery, token ownership, and no item loss or duplication.
+4. Match observable resolutions against a trusted rules engine/reference; zero unexplained illegal transitions before shipping as a real opponent.
+
+**Installation safety:** keep this experimental JAR and worlds separate from your normal multiplayer setup. Avoid valuable saved decks until a full integration/game-restart test passes.
