@@ -45,6 +45,19 @@ class GolemTabletopUiTests(unittest.TestCase):
         self.assertIn('mark.targetSeat().equals(view)',screen)
         self.assertIn('mark.sourceCard().equals(c.id())',screen)
 
+    def test_blocking_requires_defender_and_preserves_storage(self):
+        combat=read("CommanderCombat.java")
+        table=read("TabletopBlockEntity.java")
+        server=read("TabletopLogic.java")
+        self.assertIn('aiAttack()',table)
+        self.assertIn('out.putString("AiAttacker"',table)
+        self.assertIn('in.getStringOr("AiAttacker"',table)
+        self.assertIn('Only the defending player can choose blockers',combat)
+        self.assertIn('CommanderSimpleCards.canBlock',combat)
+        self.assertIn('Golem\'s Graveyard is missing or full.',combat)
+        self.assertIn('blockGrave=CommanderBattleActions.graveyard',combat)
+        self.assertIn('case "ai_damage", "ai_block"',server)
+
     def test_bot_marks_real_creature_casts(self):
         battle=read("CommanderBattleActions.java")
         self.assertIn('TabletopTargets.mark(',battle)
