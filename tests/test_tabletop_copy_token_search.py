@@ -43,7 +43,7 @@ class CopyTokenAndSearchTests(unittest.TestCase):
     def test_online_token_results_are_shown_directly_not_only_through_bank(self):
         logic=read("TabletopLogic.java")
         self.assertIn('private static final Map<UUID,TokenPage> TOKEN_RESULTS',logic)
-        self.assertIn('Catalogue.search(1,name,0,page/5)',logic)
+        self.assertIn('Catalogue.search(1,name,0,page/5,oracle,stats)',logic)
         self.assertIn('int start=(page%5)*TOKEN_PAGE_SIZE',logic)
         self.assertIn('new TabletopWire.TokenResult(Banks.key(1,token),token)',logic)
         self.assertIn('TOKEN_RESULTS.put(player.getUUID(),new TokenPage',logic)
