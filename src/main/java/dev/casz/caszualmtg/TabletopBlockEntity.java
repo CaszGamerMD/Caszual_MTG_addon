@@ -86,6 +86,16 @@ public final class TabletopBlockEntity extends BlockEntity {
   return ClientboundBlockEntityDataPacket.create(this);
  }
  private UUID seatOwner;
+ /** One persisted AI attack declaration. Human response is required. */
+ public record AiAttack(String attackerId,BlockPos defender) {}
+ private String aiAttackerId="";
+ private BlockPos aiDefender;
+ public AiAttack aiAttack(){return aiAttackerId.isBlank()||aiDefender==null?null:new AiAttack(aiAttackerId,aiDefender);}
+ public boolean declareAiAttack(String attackerId,BlockPos defender){
+  if(aiAttack()!=null||attackerId==null||attackerId.isBlank()||defender==null)return false;
+  aiAttackerId=attackerId;aiDefender=defender.immutable();setChanged();return true;
+ }
+ public void clearAiAttack(){aiAttackerId="";aiDefender=null;setChanged();}
  /** Casts from this bot seat's command zone. Survives reloads; never resets mid-game. */
  private int aiCommanderCasts;
  public int aiCommanderCasts(){return aiCommanderCasts;}
@@ -165,6 +175,10 @@ public final class TabletopBlockEntity extends BlockEntity {
   if(seatOwner!=null)out.putString("SeatOwner",seatOwner.toString());
   out.putString("SeatName",seatName);
   out.putInt("AiCommanderCasts",aiCommanderCasts);
+  if(aiAttack()!=null){
+   out.putString("AiAttacker",aiAttackerId);
+   out.putString("AiDefender",HandBlockEntity.pos(aiDefender));
+  }
   out.putString("TableWood",material);
   out.putInt("MatRgb",matRgb);
   out.putInt("CardScale",cardScale);
@@ -177,6 +191,9 @@ public final class TabletopBlockEntity extends BlockEntity {
   try{String s=in.getStringOr("SeatOwner","");if(!s.isBlank())seatOwner=UUID.fromString(s);}catch(IllegalArgumentException ignored){}
   seatName=in.getStringOr("SeatName","");
   aiCommanderCasts=Math.clamp(in.getIntOr("AiCommanderCasts",0),0,100);
+  aiAttackerId=in.getStringOr("AiAttacker","");
+  aiDefender=HandBlockEntity.parsePos(in.getStringOr("AiDefender",""));
+  if(aiAttackerId.length()>TabletopWire.MAX_CARD_ID_LENGTH){aiAttackerId="";aiDefender=null;}
   material=ChairWood.safe(in.getStringOr("TableWood","minecraft:dark_oak_planks"));
   matRgb=in.getIntOr("MatRgb",0x315348)&0xFFFFFF;
   cardScale=Math.clamp(in.getIntOr("CardScale",100),45,180);
