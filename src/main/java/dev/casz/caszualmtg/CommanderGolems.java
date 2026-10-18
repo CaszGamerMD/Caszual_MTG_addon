@@ -95,17 +95,24 @@ public final class CommanderGolems {
    double distance=at.distSqr(p);
    if(be instanceof HandBlockEntity h && (golem.getUUID().equals(h.owner()) || h.owner()==null)
       && distance<hd){hand=h;hd=distance;}
-   if(be instanceof DeckControlBlockEntity dc && dc.hasLinkedDeckbox()
-      && hand!=null && p.distSqr(hand.getBlockPos())<=9 && distance<cd){control=dc;cd=distance;}
-   // Counter must be explicitly named for the bot. Never select a human counter.
+    // Counter must be explicitly named for the bot. Never select a human counter.
    if(be instanceof LifePointBlockEntity lp &&"Commander Golem".equalsIgnoreCase(lp.getDisplayName())
       && distance<ld){life=lp;ld=distance;}
   }
-  if(hand!=null && bind && hand.owner()==null){
-   if(control==null || life==null)return new Setup(table,null,control,life);
-   hand.claimBot(golem.getUUID(),"Commander Golem");
-   hand.linkedControl(control.getBlockPos());
-   if(life!=null)hand.linkedLife(life.getBlockPos());
+  // Find a Deck Control only after choosing the hand; block iteration order
+  // must never determine whether a valid setup is recognized.
+  if(hand!=null)for(BlockPos p:BlockPos.betweenClosed(hand.getBlockPos().offset(-3,-2,-3),hand.getBlockPos().offset(3,2,3))){
+   if(!world.hasChunkAt(p))continue;
+   if(world.getBlockEntity(p) instanceof DeckControlBlockEntity dc && dc.hasLinkedDeckbox()){
+    double distance=hand.getBlockPos().distSqr(p);
+    if(distance<cd){control=dc;cd=distance;}
+   }
+  }
+  if(hand!=null && bind && hand.owner()==null && control!=null && life!=null){
+   if(hand.claimBot(golem.getUUID(),"Commander Golem")){
+    hand.linkedControl(control.getBlockPos());
+    hand.linkedLife(life.getBlockPos());
+   }
   }
   if(hand!=null&&!golem.getUUID().equals(hand.owner()))hand=null;
   if(hand!=null&&hand.linkedControl()!=null && world.getBlockEntity(hand.linkedControl()) instanceof DeckControlBlockEntity assigned)
