@@ -29,7 +29,7 @@ public final class TabletopScreen extends LegacyScreen {
  boolean discardMode=false;
  boolean tokenTrayOpen=false,counterOpen=false;
  String counterCard="",tokenText="";
- int traySelected=-1,tokenResultSelected=-1,trayScroll=0,tokenResultScroll=0,shownScroll=0;
+ int traySelected=-1,tokenResultSelected=-1,trayScroll=0,tokenResultScroll=0,shownScroll=0,publicRevealScroll=0;
  EditBox counterName,counterTotal,tokenSearch;
  int zoneScroll=0,tabScroll=0,ticks=0;
  String selectedCard="";
@@ -73,6 +73,25 @@ public final class TabletopScreen extends LegacyScreen {
  TabletopWire.ShownHand shownHand(){
   for(var hand:data.shownHands())if(hand.seat().equals(view))return hand;
   return null;
+ }
+ TabletopWire.PublicReveal displayedReveal(){
+  for(var deck:data.publicReveals())if(deck.seat().equals(view))return deck;
+  return null;
+ }
+ int revealStripX(){return boardX()+12;}
+ int revealStripY(){return boardY()+36;}
+ int revealStripStep(){return 60;}
+ int revealStripCardW(){return 52;}
+ int revealStripCardH(){return 75;}
+ int revealStripVisible(){return Math.max(1,(boardW()-28)/revealStripStep());}
+ int revealStripAt(int mx,int my){
+  TabletopWire.PublicReveal shown=displayedReveal();
+  if(shown==null||tokenTrayOpen||counterOpen||mx<revealStripX()||my<revealStripY()
+     ||my>=revealStripY()+revealStripCardH())return -1;
+  int col=(mx-revealStripX())/revealStripStep();
+  if(col>=revealStripVisible()||mx>=revealStripX()+col*revealStripStep()+revealStripCardW())return -1;
+  int index=publicRevealScroll+col;
+  return index<shown.cards().size()?index:-1;
  }
  boolean isHandRevealed(BlockPos seat){
   return data.shownHands().stream().anyMatch(hand->hand.seat().equals(seat));
@@ -158,7 +177,7 @@ public final class TabletopScreen extends LegacyScreen {
   int index=zoneScroll+at;
   return index>=0&&index<zoneCards().size()?index:-1;
  }
- void selectView(BlockPos target){view=target;selectedCard="";drag=null;shownScroll=0;rebuildWidgets();}
+ void selectView(BlockPos target){view=target;selectedCard="";drag=null;shownScroll=0;publicRevealScroll=0;rebuildWidgets();}
  int wanted(){try{return Math.clamp(Integer.parseInt(quantity.getValue().trim()),1,99);}catch(Exception e){message="Enter a number from 1 to 99.";return -1;}}
  void amountAction(String action){int n=wanted();if(n<0)return;send(action,"",data.seat(),0,0,n);}
  void openMenu(String name){menuMode=menuMode.equals(name)?"":name;resetConfirm=false;rebuildWidgets();}
@@ -355,6 +374,7 @@ public final class TabletopScreen extends LegacyScreen {
  @Override public boolean mouseClicked(MouseButtonEvent event,boolean twice){
   int x=(int)event.x(),y=(int)event.y();
   if(inCounterPanel(x,y))return super.mouseClicked(event,twice);
+  if(revealStripAt(x,y)>=0)return true; // Public deck-reveal cards are read-only.
   if(shownCardAt(x,y)>=0&&event.button()==0)return true; // Read-only public hand.
   if(inTokenPanel(x,y)){
    int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW(),start=py+79;
@@ -447,6 +467,14 @@ public final class TabletopScreen extends LegacyScreen {
   return super.mouseReleased(event);
  }
  @Override public boolean mouseScrolled(double mx,double my,double dx,double dy){
+  TabletopWire.PublicReveal revealed=displayedReveal();
+  if(revealed!=null&&!tokenTrayOpen&&!counterOpen
+     &&my>=revealStripY()-17&&my<revealStripY()+revealStripCardH()
+     &&mx>=boardX()+7&&mx<boardX()+boardW()-7){
+   publicRevealScroll=Math.clamp(publicRevealScroll-(int)Math.signum(dy)*2,0,
+     Math.max(0,revealed.cards().size()-revealStripVisible()));
+   return true;
+  }
   TabletopWire.ShownHand shown=shownHand();
   if(shown!=null&&!tokenTrayOpen&&mx>=boardX()+6&&mx<=boardX()+boardW()-6
     &&my>=shownHandY()-16&&my<shownHandY()+shownCardH()){
@@ -558,6 +586,22 @@ public final class TabletopScreen extends LegacyScreen {
     line++;
    }
   }
+  // Public Deck Control reveal: the owner and all opponents see the real
+  // revealed card art on the revealing player's battlefield tab.
+  TabletopWire.PublicReveal revealedDeck=displayedReveal();
+  if(revealedDeck!=null&&!tokenTrayOpen&&!counterOpen){
+   int x=revealStripX(),y=revealStripY(),visible=revealStripVisible();
+   publicRevealScroll=Math.clamp(publicRevealScroll,0,
+     Math.max(0,revealedDeck.cards().size()-visible));
+   g.fill(x-6,y-19,boardX()+boardW()-7,y+revealStripCardH()+5,0xE84A3D25);
+   String text="DECK REVEAL · "+revealedDeck.owner()+" · "+revealedDeck.cards().size()+" cards · Scroll / Alt to inspect";
+   g.drawString(font,font.plainSubstrByWidth(text,boardW()-26),x,y-15,0xFFFFE5A5);
+   for(int i=publicRevealScroll;i<revealedDeck.cards().size()&&i<publicRevealScroll+visible;i++){
+    int xx=x+(i-publicRevealScroll)*revealStripStep();
+    g.fill(xx-2,y-2,xx+revealStripCardW()+2,y+revealStripCardH()+2,0xFFE4BC6A);
+    drawArt(g,revealedDeck.cards().get(i),xx,y,revealStripCardW(),revealStripCardH());
+   }
+  }
   // Revealed opponent cards are read-only, scrollable and ALT-previewable.
   TabletopWire.ShownHand publicHand=shownHand();
   if(publicHand!=null&&!tokenTrayOpen){
@@ -637,6 +681,10 @@ public final class TabletopScreen extends LegacyScreen {
    ||GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(),GLFW.GLFW_KEY_RIGHT_ALT)==GLFW.GLFW_PRESS;
   if(alt){
    ItemStack hovered=ItemStack.EMPTY;
+   if(revealedDeck!=null&&!tokenTrayOpen&&!counterOpen){
+    int index=revealStripAt(mx,my);
+    if(index>=0)hovered=revealedDeck.cards().get(index);
+   }
    // The public-hand strip is layered over the battlefield, so it wins
    // the Alt hit-test even when an underlying played card overlaps it.
    if(publicHand!=null&&!tokenTrayOpen){
