@@ -18,6 +18,9 @@ public final class CustomGraveyard extends GraveyardBlock {
  public static final MapCodec<CustomGraveyard> CODEC=simpleCodec(CustomGraveyard::new);
  public CustomGraveyard(Properties properties){super(properties);}
  @Override protected MapCodec<CustomGraveyard> codec(){return CODEC;}
+ @Override public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos,BlockState state){
+  return new CustomGraveyardEntity(pos,state);
+ }
  @Override protected InteractionResult useItemOn(ItemStack stack,BlockState state,Level level,BlockPos pos,Player player,InteractionHand hand,BlockHitResult hit){
   InteractionResult selected=CustomGameDeviceMaterial.apply(stack,level,pos,player);
   return selected!=InteractionResult.PASS?selected:super.useItemOn(stack,state,level,pos,player,hand,hit);
