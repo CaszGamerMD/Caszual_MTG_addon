@@ -24,7 +24,8 @@ public final class TabletopWire {
  public record ZoneCard(int slot,ItemStack stack) {}
  public record TokenResult(String key,ItemStack stack) {}
  public record ShownHand(BlockPos seat,String owner,List<ItemStack> cards) {}
- public record Reply(BlockPos pos,String message,BlockPos seat,List<Tile> tiles,List<Card> cards,List<ItemStack> hand,int libraryCount,List<ZoneCard> grave,List<ZoneCard> exile,List<ItemStack> scry,List<ItemStack> reveal,ItemStack commander,List<ItemStack> tray,List<TokenResult> tokenResults,int tokenPage,boolean tokenMore,boolean ownHandRevealed,List<ShownHand> shownHands) implements CustomPacketPayload {
+ public record PublicReveal(BlockPos seat,String owner,List<ItemStack> cards) {}
+ public record Reply(BlockPos pos,String message,BlockPos seat,List<Tile> tiles,List<Card> cards,List<ItemStack> hand,int libraryCount,List<ZoneCard> grave,List<ZoneCard> exile,List<ItemStack> scry,List<ItemStack> reveal,ItemStack commander,List<ItemStack> tray,List<TokenResult> tokenResults,int tokenPage,boolean tokenMore,boolean ownHandRevealed,List<ShownHand> shownHands,List<PublicReveal> publicReveals) implements CustomPacketPayload {
   public static final Type<Reply> TYPE=new Type<>(CaszualMtg.id("tabletop_reply"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Reply> CODEC=StreamCodec.of((b,p)->{
    b.writeBlockPos(p.pos);b.writeUtf(p.message,512);b.writeBlockPos(p.seat);
@@ -51,6 +52,12 @@ public final class TabletopWire {
     b.writeBlockPos(shown.seat);b.writeUtf(shown.owner,64);
     b.writeVarInt(shown.cards.size());
     for(ItemStack card:shown.cards)ItemStack.OPTIONAL_STREAM_CODEC.encode(b,card);
+   }
+   b.writeVarInt(p.publicReveals.size());
+   for(PublicReveal reveal:p.publicReveals){
+    b.writeBlockPos(reveal.seat);b.writeUtf(reveal.owner,64);
+    b.writeVarInt(reveal.cards.size());
+    for(ItemStack card:reveal.cards)ItemStack.OPTIONAL_STREAM_CODEC.encode(b,card);
    }
   },b->{
    BlockPos pos=b.readBlockPos();String message=b.readUtf(512);BlockPos seat=b.readBlockPos();
@@ -87,7 +94,16 @@ public final class TabletopWire {
     for(int j=0;j<count;j++)publicCards.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(b));
     shownHands.add(new ShownHand(shownSeat,owner,List.copyOf(publicCards)));
    }
-   return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),List.copyOf(reveal),commander,List.copyOf(tray),List.copyOf(tokenResults),tokenPage,tokenMore,ownHandRevealed,List.copyOf(shownHands));
+   n=b.readVarInt();if(n<0||n>32)throw new IllegalArgumentException("Too many revealed decks");
+   List<PublicReveal> publicReveals=new ArrayList<>();
+   for(int i=0;i<n;i++){
+    BlockPos revealSeat=b.readBlockPos();String owner=b.readUtf(64);
+    int count=b.readVarInt();if(count<0||count>20)throw new IllegalArgumentException("Too many publicly revealed cards");
+    List<ItemStack> revealed=new ArrayList<>();
+    for(int j=0;j<count;j++)revealed.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(b));
+    publicReveals.add(new PublicReveal(revealSeat,owner,List.copyOf(revealed)));
+   }
+   return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),List.copyOf(reveal),commander,List.copyOf(tray),List.copyOf(tokenResults),tokenPage,tokenMore,ownHandRevealed,List.copyOf(shownHands),List.copyOf(publicReveals));
   });
   public Type<Reply> type(){return TYPE;}
  }
