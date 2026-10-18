@@ -1,0 +1,7 @@
+{
+  "parent": "mtgcard:block/graveyard_block_close",
+  "textures": {
+    "1": "minecraft:block/oak_planks",
+    "particle": "minecraft:block/oak_planks"
+  }
+}
