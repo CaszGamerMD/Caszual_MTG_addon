@@ -101,6 +101,9 @@ jobs:
       - name: Verify multiplayer deck reveals and native-compatible custom devices
         run: python3 -m unittest discover -s tests -p 'test_tabletop_public_reveal_devices.py' -v
 
+      - name: Validate custom device reskinning and persistent Graveyard lid
+        run: python3 -m unittest discover -s tests -p 'test_custom_mtg_device_material_lid.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
