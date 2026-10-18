@@ -86,6 +86,11 @@ public final class TabletopBlockEntity extends BlockEntity {
   return ClientboundBlockEntityDataPacket.create(this);
  }
  private UUID seatOwner;
+ /** Casts from this bot seat's command zone. Survives reloads; never resets mid-game. */
+ private int aiCommanderCasts;
+ public int aiCommanderCasts(){return aiCommanderCasts;}
+ public void aiCommanderCast(){aiCommanderCasts=Math.min(100,aiCommanderCasts+1);setChanged();}
+ public void resetAiCommanderTax(){aiCommanderCasts=0;setChanged();}
  private String seatName="";
  /** Original commander identity is preserved even when the physical card moves zones. */
  private ItemStack commanderReference=ItemStack.EMPTY;
@@ -159,6 +164,7 @@ public final class TabletopBlockEntity extends BlockEntity {
   super.saveAdditional(out);
   if(seatOwner!=null)out.putString("SeatOwner",seatOwner.toString());
   out.putString("SeatName",seatName);
+  out.putInt("AiCommanderCasts",aiCommanderCasts);
   out.putString("TableWood",material);
   out.putInt("MatRgb",matRgb);
   out.putInt("CardScale",cardScale);
@@ -170,6 +176,7 @@ public final class TabletopBlockEntity extends BlockEntity {
   super.loadAdditional(in);seatOwner=null;
   try{String s=in.getStringOr("SeatOwner","");if(!s.isBlank())seatOwner=UUID.fromString(s);}catch(IllegalArgumentException ignored){}
   seatName=in.getStringOr("SeatName","");
+  aiCommanderCasts=Math.clamp(in.getIntOr("AiCommanderCasts",0),0,100);
   material=ChairWood.safe(in.getStringOr("TableWood","minecraft:dark_oak_planks"));
   matRgb=in.getIntOr("MatRgb",0x315348)&0xFFFFFF;
   cardScale=Math.clamp(in.getIntOr("CardScale",100),45,180);
