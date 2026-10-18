@@ -574,6 +574,8 @@ public final class TabletopScreen extends LegacyScreen {
   for(var c:displayed()){
    int x=cardX(c),y=cardY(c),cw=boardCardW(),ch=boardCardH();
    boolean chosen=c.id().equals(selectedCard);
+   boolean targeted=data.targets().stream().anyMatch(mark->mark.targetSeat().equals(view)&&mark.targetCard().equals(c.id()));
+   boolean origin=data.targets().stream().anyMatch(mark->mark.fromSeat().equals(view)&&mark.sourceCard().equals(c.id()));
    // Rotate card art and selection border together. The server keeps original
    // coordinates, so tapped/untapped cards never shift their anchor position.
    if(c.tapped()){
@@ -583,7 +585,7 @@ public final class TabletopScreen extends LegacyScreen {
     pose.rotate((float)(Math.PI/2.0));
     pose.translate(-x-cw/2.0f,-y-ch/2.0f);
    }
-   g.fill(x-2,y-2,x+cw+2,y+ch+2,chosen?0xFFFFD078:c.tapped()?0xFF98BDEB:0xFF19212D);
+   g.fill(x-3,y-3,x+cw+3,y+ch+3,targeted?0xFFFF5555:origin?0xFF77DFFF:chosen?0xFFFFD078:c.tapped()?0xFF98BDEB:0xFF19212D);
    if(c.hidden())drawArt(g,ItemStack.EMPTY,x,y,cw,ch);
    else drawArt(g,c.stack(),x,y,cw,ch);
    if(c.tapped())g.pose().popMatrix();
@@ -615,6 +617,19 @@ public final class TabletopScreen extends LegacyScreen {
     g.drawString(font,font.plainSubstrByWidth(label,lw-6),left+3,ly+2,0xFFFFE19F);
     line++;
    }
+  }
+  // Red targets, blue source cards, and one shared announcement for the table.
+  int targetLine=0;
+  for(TabletopWire.TargetMark mark:data.targets()){
+   if(!mark.targetSeat().equals(view)&&!mark.fromSeat().equals(view))continue;
+   String destination=mark.targetCard().isBlank()
+     ?data.tiles().stream().filter(t->t.pos().equals(mark.targetSeat())).map(TabletopWire.Tile::owner).findFirst().orElse("player")
+     :"card";
+   String label=mark.fromName()+" "+mark.kind()+" → "+destination;
+   int ty=boardY()+24+targetLine*12;
+   g.fill(boardX()+5,ty-2,boardX()+7+Math.min(boardW()-20,font.width(label)+12),ty+11,0xD04F2531);
+   g.drawString(font,font.plainSubstrByWidth(label,boardW()-25),boardX()+9,ty,0xFFFFD9D9);
+   if(++targetLine>=3)break;
   }
   // Public Deck Control reveal: the owner and all opponents see the real
   // revealed card art on the revealing player's battlefield tab.
@@ -650,24 +665,32 @@ public final class TabletopScreen extends LegacyScreen {
    int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW(),bottom=boardY()+boardH()-2;
    g.fill(px,py,px+pw,bottom,0xF11A2839);
    g.fill(px+4,py+4,px+pw-4,py+22,0xFF334B61);
-   g.drawString(font,"TOKEN TRAY  "+data.tray().size()+"/32",px+10,py+9,0xFFF5DAAA);
-   g.drawString(font,"Search / catalogue (page "+(data.tokenPage()+1)+")",px+pw/2+8,py+9,0xFFCCE3EF);
-   g.drawString(font,"Stored templates · drag to field",px+8,py+53,0xFFB4CADB);
+   g.drawString(font,"TOKEN TRAY "+data.tray().size()+"/32",px+10,py+9,0xFFF5DAAA);
+   g.drawString(font,"Token catalogue · page "+(data.tokenPage()+1),px+pw/2+8,py+9,0xFFCCE3EF);
+   g.drawString(font,"Stored templates",px+8,py+112,0xFFB4CADB);
+   g.drawString(font,"P/T    Oracle",px+pw/2+104,py+87,0xFFB4CADB);
    if(data.tokenResults().isEmpty())
-    g.drawString(font,"No results yet — search by token name",px+pw/2+8,py+83,0xFFB4CADB);
-   int start=py+79,visible=Math.max(2,(boardH()-119)/15);
+    g.drawString(font,"No results yet — refine token filters",px+pw/2+8,py+119,0xFFB4CADB);
+   int start=py+129,visible=tokenVisibleRows();
    for(int i=0;i<visible;i++){
-    int at=trayScroll+i,yy=start+i*15;
+    int at=trayScroll+i,yy=start+i*38;
     if(at<data.tray().size()){
-     g.fill(px+5,yy,px+pw/2-4,yy+14,at==traySelected?0xFF557495:0xFF26384C);
-     String name=com.spider.mtgcard.util.TcgCardMeta.displayName(data.tray().get(at));
-     g.drawString(font,font.plainSubstrByWidth(name,pw/2-18),px+9,yy+3,0xFFFFFFFF);
+     ItemStack token=data.tray().get(at);
+     g.fill(px+5,yy,px+pw/2-4,yy+37,at==traySelected?0xFF557495:0xFF26384C);
+     drawArt(g,token,px+7,yy+2,24,34);
+     var meta=TcgCardMeta.read(token);
+     g.drawString(font,font.plainSubstrByWidth(TcgCardMeta.displayName(token),pw/2-48),px+36,yy+5,0xFFFFFFFF);
+     g.drawString(font,meta.power().isBlank()?"":meta.power()+"/"+meta.toughness(),px+36,yy+22,0xFFE4C999);
     }
     int found=tokenResultScroll+i;
     if(found<data.tokenResults().size()){
-     g.fill(px+pw/2+4,yy,px+pw-6,yy+14,found==tokenResultSelected?0xFF557495:0xFF26384C);
-     String name=com.spider.mtgcard.util.TcgCardMeta.displayName(data.tokenResults().get(found).stack());
-     g.drawString(font,font.plainSubstrByWidth(name,pw/2-18),px+pw/2+8,yy+3,0xFFFFFFFF);
+     ItemStack token=data.tokenResults().get(found).stack();
+     g.fill(px+pw/2+4,yy,px+pw-6,yy+37,found==tokenResultSelected?0xFF557495:0xFF26384C);
+     drawArt(g,token,px+pw/2+6,yy+2,24,34);
+     var meta=TcgCardMeta.read(token);
+     g.drawString(font,font.plainSubstrByWidth(TcgCardMeta.displayName(token),pw/2-49),px+pw/2+34,yy+4,0xFFFFFFFF);
+     String stats=meta.power().isBlank()?"":meta.power()+"/"+meta.toughness()+" ";
+     g.drawString(font,font.plainSubstrByWidth(stats+meta.oracleText(),pw/2-48),px+pw/2+34,yy+22,0xFFDBD6BC);
     }
    }
   }
@@ -711,6 +734,18 @@ public final class TabletopScreen extends LegacyScreen {
    ||GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(),GLFW.GLFW_KEY_RIGHT_ALT)==GLFW.GLFW_PRESS;
   if(alt){
    ItemStack hovered=ItemStack.EMPTY;
+   if(tokenTrayOpen&&inTokenPanel(mx,my)&&my>=boardY()+139){
+    int row=(my-boardY()-139)/38;
+    if(row>=0&&row<tokenVisibleRows()){
+     if(mx<tokenPanelX()+tokenPanelW()/2){
+      int index=trayScroll+row;
+      if(index<data.tray().size())hovered=data.tray().get(index);
+     }else{
+      int index=tokenResultScroll+row;
+      if(index<data.tokenResults().size())hovered=data.tokenResults().get(index).stack();
+     }
+    }
+   }
    if(revealedDeck!=null&&!tokenTrayOpen&&!counterOpen){
     int index=revealStripAt(mx,my);
     if(index>=0)hovered=revealedDeck.cards().get(index);
