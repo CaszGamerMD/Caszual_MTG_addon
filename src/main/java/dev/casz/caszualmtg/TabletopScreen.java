@@ -202,13 +202,13 @@ public final class TabletopScreen extends LegacyScreen {
    button("▶",width-42,7,31,()->{tabScroll=Math.min(Math.max(0,data.tiles().size()-maxTabs),tabScroll+maxTabs);rebuildWidgets();});
   }
   int ux=12,uy=38;
-  button("Draw ▾",ux,uy,86,()->openMenu("draw"));ux+=91;
-  button("Deck ▾",ux,uy,86,()->openMenu("deck"));ux+=91;
-  button("Pass Turn",ux,uy,91,()->action("pass_turn",0));ux+=96;
-  button("Flip",ux,uy,58,()->tableAction("flip"));ux+=63;
-  button("Untap All",ux,uy,92,()->action("untap_all",0));ux+=97;
-  button("Target ▾",ux,uy,78,()->{tokenTrayOpen=false;counterOpen=false;menuMode="target";rebuildWidgets();});ux+=83;
-  button(tokenTrayOpen?"Tokens ▴":"Tokens ▾",ux,uy,94,()->{
+  button("Draw ▾",ux,uy,70,()->openMenu("draw"));ux+=75;
+  button("Deck ▾",ux,uy,70,()->openMenu("deck"));ux+=75;
+  button("Pass Turn",ux,uy,84,()->action("pass_turn",0));ux+=89;
+  button("Flip",ux,uy,50,()->tableAction("flip"));ux+=55;
+  button("Untap All",ux,uy,82,()->action("untap_all",0));ux+=87;
+  button("Target ▾",ux,uy,70,()->{tokenTrayOpen=false;counterOpen=false;menuMode="target";rebuildWidgets();});ux+=75;
+  button(tokenTrayOpen?"Tokens ▴":"Tokens ▾",ux,uy,82,()->{
    tokenTrayOpen=!tokenTrayOpen;counterOpen=false;rebuildWidgets();
    if(tokenTrayOpen)searchTokens(0);
   });
