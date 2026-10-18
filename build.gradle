@@ -58,3 +58,10 @@ tasks.register('verifyHandPrivacy', JavaExec) {
     mainClass = 'dev.casz.caszualmtg.HandPrivacyCheck'
 }
 tasks.named('check') { dependsOn verifyHandPrivacy }
+
+tasks.register('verifyCommanderGolem', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.casz.caszualmtg.CommanderRulesCheck'
+}
+tasks.named('check') { dependsOn verifyCommanderGolem }
