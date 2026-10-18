@@ -157,6 +157,7 @@ public final class CommanderGolems {
   }
   if(s.life==null)return "Rename a nearby Life Point counter to Commander Golem to link it safely.";
   if(!s.life.isGameStarted())return "Golem ready. Join Commander Golem's Life Point counter to the play group, then start the game.";
+  if(s.table.aiAttack()!=null)return "Commander Golem is waiting for the defender to choose a block or take damage.";
   int incoming=incomingTargets(level,golem,s.table);
   return "Golem "+(s.life.isTurnActive()?"is taking its turn":"is waiting")+" | life "+s.life.getLife()
     +" | hand "+s.hand.cardCount()+" | library "+s.deck.getLibraryCount()
@@ -233,6 +234,12 @@ public final class CommanderGolems {
   // If a missing Graveyard blocked cleanup, retry only cleanup. The opening
   // draw and land play must not happen twice on the same turn.
   if(golem.entityTags().contains(ACTION_DONE)){
+   var combat=s.table.aiAttack();
+   if(combat!=null){
+    if(world.getGameTime()%100==0)TabletopTargets.mark(world,golem.getUUID(),
+     s.table.getBlockPos(),s.table.seatName(),combat.attackerId(),combat.defender(),"","attack");
+    return; // Never advance the turn while another player is deciding blocks.
+   }
    if(CommanderBattleActions.cleanup(world,s.hand,s.deck))
     LifePlayGroups.passTurn(world,s.life.getBlockPos());
    return;
@@ -249,6 +256,7 @@ public final class CommanderGolems {
   CommanderBattleActions.castHand(golem,s.table,s.hand);
   CommanderBattleActions.castCommander(golem,s.table,box);
   CommanderBattleActions.castHand(golem,s.table,s.hand);
+  if(CommanderCombat.declare(world,golem,s.table,s.life))return;
   if(CommanderBattleActions.cleanup(world,s.hand,s.deck))
    LifePlayGroups.passTurn(world,s.life.getBlockPos());
  }
