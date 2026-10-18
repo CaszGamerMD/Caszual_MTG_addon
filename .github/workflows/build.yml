@@ -98,6 +98,9 @@ jobs:
       - name: Validate visible public hands and server-synchronized battlefield zoom
         run: python3 -m unittest discover -s tests -p 'test_tabletop_reveal_zoom.py' -v
 
+      - name: Verify multiplayer deck reveals and native-compatible custom devices
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_public_reveal_devices.py' -v
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
