@@ -116,6 +116,13 @@ public final class TabletopBlockEntity extends BlockEntity {
  public UUID seatOwner(){return seatOwner;}
  public String seatName(){return seatName;}
  public boolean ownedBy(Player p){return seatOwner!=null&&seatOwner.equals(p.getUUID());}
+ public boolean claim(UUID id,String name){
+  if(id==null||name==null||name.isBlank())return false;
+  if(seatOwner==null){
+   seatOwner=id;seatName=name.length()>64?name.substring(0,64):name;setChanged();return true;
+  }
+  return seatOwner.equals(id);
+ }
  public boolean claim(Player p){
   if(seatOwner==null){seatOwner=p.getUUID();seatName=p.getGameProfile().name();setChanged();return true;}
   return ownedBy(p);
