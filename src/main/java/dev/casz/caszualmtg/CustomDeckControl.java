@@ -18,6 +18,9 @@ public final class CustomDeckControl extends DeckControlBlock {
  public static final MapCodec<CustomDeckControl> CODEC=simpleCodec(CustomDeckControl::new);
  public CustomDeckControl(Properties properties){super(properties);}
  @Override protected MapCodec<CustomDeckControl> codec(){return CODEC;}
+ @Override public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos,BlockState state){
+  return new CustomDeckControlEntity(pos,state);
+ }
  @Override public InteractionResult useItemOn(ItemStack stack,BlockState state,Level level,BlockPos pos,Player player,InteractionHand hand,BlockHitResult hit){
   InteractionResult selected=CustomGameDeviceMaterial.apply(stack,level,pos,player);
   return selected!=InteractionResult.PASS?selected:super.useItemOn(stack,state,level,pos,player,hand,hit);
