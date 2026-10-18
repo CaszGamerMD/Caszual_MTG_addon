@@ -1,0 +1,45 @@
+{
+  "multipart": [
+    { "when": { "facing": "up" }, "apply": { "model": "caszual_mtg:block/custom_deck_control" } },
+    { "when": { "facing": "down" }, "apply": { "model": "caszual_mtg:block/custom_deck_control", "x": 180 } },
+    { "when": { "facing": "north" }, "apply": { "model": "caszual_mtg:block/custom_deck_control", "x": 90 } },
+    { "when": { "facing": "south" }, "apply": { "model": "caszual_mtg:block/custom_deck_control", "x": 90, "y": 180} },
+    { "when": { "facing": "west" }, "apply": { "model": "caszual_mtg:block/custom_deck_control", "x": 90, "y": 270 } },
+    { "when": { "facing": "east" }, "apply": { "model": "caszual_mtg:block/custom_deck_control", "x": 90, "y": 90} },
+
+    { "when": { "facing": "up", "lit": "false" }, "apply": { "model": "mtgcard:block/deck_control_unlit" } },
+    { "when": { "facing": "down", "lit": "false" }, "apply": { "model": "mtgcard:block/deck_control_unlit", "x": 180 } },
+    { "when": { "facing": "north", "lit": "false" }, "apply": { "model": "mtgcard:block/deck_control_unlit", "x": 90 } },
+    { "when": { "facing": "south", "lit": "false" }, "apply": { "model": "mtgcard:block/deck_control_unlit", "x": 90, "y": 180} },
+    { "when": { "facing": "west", "lit": "false" }, "apply": { "model": "mtgcard:block/deck_control_unlit", "x": 90, "y": 270 } },
+    { "when": { "facing": "east", "lit": "false" }, "apply": { "model": "mtgcard:block/deck_control_unlit", "x": 90, "y": 90 } },
+
+    { "when": { "facing": "up", "lit": "true", "color": "default" }, "apply": { "model": "mtgcard:block/deck_control_lit" } },
+    { "when": { "facing": "down", "lit": "true", "color": "default" }, "apply": { "model": "mtgcard:block/deck_control_lit", "x": 180 } },
+    { "when": { "facing": "north", "lit": "true", "color": "default" }, "apply": { "model": "mtgcard:block/deck_control_lit", "x": 90 } },
+    { "when": { "facing": "south", "lit": "true", "color": "default" }, "apply": { "model": "mtgcard:block/deck_control_lit", "x": 90, "y": 180 } },
+    { "when": { "facing": "west", "lit": "true", "color": "default" }, "apply": { "model": "mtgcard:block/deck_control_lit", "x": 90, "y": 270 } },
+    { "when": { "facing": "east", "lit": "true", "color": "default" }, "apply": { "model": "mtgcard:block/deck_control_lit", "x": 90, "y": 90 } },
+
+    { "when": { "facing": "up", "lit": "true", "color": "soulfire" }, "apply": { "model": "mtgcard:block/deck_control_soulfire" } },
+    { "when": { "facing": "down", "lit": "true", "color": "soulfire" }, "apply": { "model": "mtgcard:block/deck_control_soulfire", "x": 180 } },
+    { "when": { "facing": "north", "lit": "true", "color": "soulfire" }, "apply": { "model": "mtgcard:block/deck_control_soulfire", "x": 90 } },
+    { "when": { "facing": "south", "lit": "true", "color": "soulfire" }, "apply": { "model": "mtgcard:block/deck_control_soulfire", "x": 90, "y": 180 } },
+    { "when": { "facing": "west", "lit": "true", "color": "soulfire" }, "apply": { "model": "mtgcard:block/deck_control_soulfire", "x": 90, "y": 270 } },
+    { "when": { "facing": "east", "lit": "true", "color": "soulfire" }, "apply": { "model": "mtgcard:block/deck_control_soulfire", "x": 90, "y": 90 } },
+
+    { "when": { "facing": "up", "lit": "true", "color": "redstone" }, "apply": { "model": "mtgcard:block/deck_control_redstone" } },
+    { "when": { "facing": "down", "lit": "true", "color": "redstone" }, "apply": { "model": "mtgcard:block/deck_control_redstone", "x": 180 } },
+    { "when": { "facing": "north", "lit": "true", "color": "redstone" }, "apply": { "model": "mtgcard:block/deck_control_redstone", "x": 90 } },
+    { "when": { "facing": "south", "lit": "true", "color": "redstone" }, "apply": { "model": "mtgcard:block/deck_control_redstone", "x": 90, "y": 180 } },
+    { "when": { "facing": "west", "lit": "true", "color": "redstone" }, "apply": { "model": "mtgcard:block/deck_control_redstone", "x": 90, "y": 270 } },
+    { "when": { "facing": "east", "lit": "true", "color": "redstone" }, "apply": { "model": "mtgcard:block/deck_control_redstone", "x": 90, "y": 90 } },
+
+    { "when": { "facing": "up", "lit": "true", "color": "copper" }, "apply": { "model": "mtgcard:block/deck_control_copper" } },
+    { "when": { "facing": "down", "lit": "true", "color": "copper" }, "apply": { "model": "mtgcard:block/deck_control_copper", "x": 180 } },
+    { "when": { "facing": "north", "lit": "true", "color": "copper" }, "apply": { "model": "mtgcard:block/deck_control_copper", "x": 90 } },
+    { "when": { "facing": "south", "lit": "true", "color": "copper" }, "apply": { "model": "mtgcard:block/deck_control_copper", "x": 90, "y": 180 } },
+    { "when": { "facing": "west", "lit": "true", "color": "copper" }, "apply": { "model": "mtgcard:block/deck_control_copper", "x": 90, "y": 270 } },
+    { "when": { "facing": "east", "lit": "true", "color": "copper" }, "apply": { "model": "mtgcard:block/deck_control_copper", "x": 90, "y": 90 } }
+  ]
+}
