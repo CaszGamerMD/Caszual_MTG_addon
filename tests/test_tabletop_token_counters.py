@@ -37,7 +37,7 @@ class TabletopTokensAndCounters(unittest.TestCase):
                 "List<ItemStack> tokenTray()","Banks.key(1,original)"):
    self.assertIn(token,tile)
   for token in ('case "token_query"','case "token_add"','case "token_play"','case "token_store"',
-                'case "token_remove"','TOKEN_PAGE_SIZE=8','Catalogue.search(1,name,0,page/5)',
+                'case "token_remove"','TOKEN_PAGE_SIZE=8','Catalogue.search(1,name,0,page/5,oracle,stats)',
                 'new TabletopBlockEntity.PlayedCard("token:"+UUID.randomUUID()'):
    self.assertIn(token,logic)
   self.assertIn("ItemStack template=c.seat.tokenAt(req.amount())",logic)
