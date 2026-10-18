@@ -197,8 +197,9 @@ public final class CommanderGolems {
   if(!golem.entityTags().contains(FIRST_HAND)){
    // Verify a single-commander 100-card deck before removing anything.
    if(deckError(box)!=null)return;
-   // Seven cards from the actual MTGCard Deck Control's library order.
+   // Shuffle the physical library before the opening seven.
    if(s.deck.getLibraryCount()<7||s.hand.cardCount()!=0)return;
+   s.deck.shuffle();
    for(ItemStack card:s.deck.takeTopCards(7))s.hand.addCard(card);
    golem.addTag(FIRST_HAND);
    s.table.rememberCommander(box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT));
@@ -207,29 +208,26 @@ public final class CommanderGolems {
    golem.removeTag(ACTION_DONE);
    return;
   }
-  if(golem.entityTags().contains(ACTION_DONE))return;
-  golem.addTag(ACTION_DONE); // idempotent across ticks and world saves
-  // Untap only the golem's cards, not an opponent's; then draw once.
-  for(var card:s.table.cards())if(golem.getUUID().toString().equals(card.owner())&&card.tapped())
-   s.table.replace(card.tapped(false));
-  for(ItemStack card:s.deck.takeTopCards(1))s.hand.addCard(card);
-  // Conservative Commander turn: one basic/nonbasic land from Hand in a main phase.
-  // We intentionally do not auto-cast spells without mana/stack/priority validation.
-  List<ItemStack> cards=s.hand.visibleCards();
-  for(int i=0;i<cards.size();i++){
-   ItemStack c=cards.get(i);
-   String type=TcgCardMeta.read(c).typeLine().toLowerCase(Locale.ROOT);
-   if(!type.contains("land")||type.contains("creature")||type.contains("spell"))continue;
-   if(s.table.cards().size()>=TabletopBlockEntity.MAX_CARDS)break;
-   ItemStack moved=s.hand.removeVisibleIndex(i);
-   if(moved.isEmpty())break;
-   var played=new TabletopBlockEntity.PlayedCard(UUID.randomUUID().toString(),
-     golem.getUUID().toString(),moved,280+(s.table.cards().size()%5)*90,700,false,false);
-   if(!s.table.add(played))s.hand.addCard(moved);
-   break;
+  // If a missing Graveyard blocked cleanup, retry only cleanup. The opening
+  // draw and land play must not happen twice on the same turn.
+  if(golem.entityTags().contains(ACTION_DONE)){
+   if(CommanderBattleActions.cleanup(world,s.hand,s.deck))
+    LifePlayGroups.passTurn(world,s.life.getBlockPos());
+   return;
   }
-  // This experiment does not resolve the stack, combat, activated abilities,
-  // commander tax or unknown oracle text. Pass rather than fabricate an illegal cast.
-  LifePlayGroups.passTurn(world,s.life.getBlockPos());
+  golem.addTag(ACTION_DONE);
+  // Mark creatures that survived to this untap as old enough to attack.
+  CommanderBattleActions.untapAndMarkReady(golem,s.table);
+  if(s.deck.getLibraryCount()==0){
+   LifePlayGroups.setDead(world,s.life.getBlockPos(),true);
+   return;
+  }
+  for(ItemStack card:s.deck.takeTopCards(1))s.hand.addCard(card);
+  CommanderBattleActions.playLand(golem,s.table,s.hand);
+  CommanderBattleActions.castHand(golem,s.table,s.hand);
+  CommanderBattleActions.castCommander(golem,s.table,box);
+  CommanderBattleActions.castHand(golem,s.table,s.hand);
+  if(CommanderBattleActions.cleanup(world,s.hand,s.deck))
+   LifePlayGroups.passTurn(world,s.life.getBlockPos());
  }
 }
