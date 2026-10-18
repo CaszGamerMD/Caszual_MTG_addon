@@ -25,8 +25,12 @@ public final class CustomBoxModels {
  static final Identifier CHAIR_SOURCE=Identifier.fromNamespaceAndPath("minecraft","block/oak_planks");
  static final Identifier TABLE_SOURCE=Identifier.fromNamespaceAndPath("minecraft","block/dark_oak_planks");
  public static void register(){ModelLoadingPlugin.register(context->{
-  context.modifyBlockModelAfterBake().register((model,ctx)->ctx.state().is(CaszualMtg.CUSTOM_BOX)?new WorldModel(model):ctx.state().is(CaszualMtg.MATERIAL_CHAIR)?new ChairWorldModel(model):ctx.state().is(CaszualMtg.TABLETOP)?new TableWorldModel(model):model);
-  context.modifyItemModelAfterBake().register((model,ctx)->ctx.itemId().equals(CaszualMtg.id("custom_deckbox"))?new ItemModel(model):ctx.itemId().equals(CaszualMtg.id("material_chair"))?new ChairItemModel(model):ctx.itemId().equals(CaszualMtg.id("tabletop"))?new TableItemModel(model):model);
+  context.modifyBlockModelAfterBake().register((model,ctx)->ctx.state().is(CaszualMtg.CUSTOM_BOX)?new WorldModel(model)
+    :ctx.state().is(CaszualMtg.CUSTOM_DECK_CONTROL)||ctx.state().is(CaszualMtg.CUSTOM_GRAVEYARD)?new DeviceWorldModel(model)
+    :ctx.state().is(CaszualMtg.MATERIAL_CHAIR)?new ChairWorldModel(model):ctx.state().is(CaszualMtg.TABLETOP)?new TableWorldModel(model):model);
+  context.modifyItemModelAfterBake().register((model,ctx)->ctx.itemId().equals(CaszualMtg.id("custom_deckbox"))?new ItemModel(model)
+    :ctx.itemId().equals(CaszualMtg.id("custom_deck_control"))||ctx.itemId().equals(CaszualMtg.id("custom_graveyard"))?new DeviceItemModel(model)
+    :ctx.itemId().equals(CaszualMtg.id("material_chair"))?new ChairItemModel(model):ctx.itemId().equals(CaszualMtg.id("tabletop"))?new TableItemModel(model):model);
  });}
  static Material.Baked material(String id){return Minecraft.getInstance().getModelManager().getBlockStateModelSet().getParticleMaterial(BoxMaterial.block(id).defaultBlockState());}
  static Material.Baked chairMaterial(String id){return Minecraft.getInstance().getModelManager().getBlockStateModelSet().getParticleMaterial(ChairWood.block(id).defaultBlockState());}
@@ -128,6 +132,48 @@ public final class CustomBoxModels {
   }
   @Override public int materialFlags(BlockAndTintGetter level,BlockPos pos,BlockState state,RandomSource random){
    return wrapped.materialFlags()|flags(chairMaterial(tableSkin(level,pos)));
+  }
+ }
+ /** Retarget only the wooden panels of new native-compatible MTGCard
+  * devices. Their original status lights, inked face, hinges and icons stay. */
+ static String deviceSkin(BlockAndTintGetter level,BlockPos pos){
+  Object data=level.getBlockEntityRenderData(pos);
+  return data instanceof String material?BoxMaterial.safe(material):BoxMaterial.DEFAULT;
+ }
+ static final class DeviceWorldModel extends WrapperBlockStateModel {
+  DeviceWorldModel(BlockStateModel model){super(model);}
+  @Override public void emitQuads(QuadEmitter emitter,BlockAndTintGetter level,BlockPos pos,BlockState state,RandomSource random,Predicate<Direction> cull){
+   Material.Baked skin=material(deviceSkin(level,pos));
+   List<BlockStateModelPart> parts=new ArrayList<>();
+   wrapped.collectParts(random,parts);
+   for(var part:parts)new ChairPart(part,skin).emitQuads(emitter,cull);
+  }
+  @Override public Object createGeometryKey(BlockAndTintGetter level,BlockPos pos,BlockState state,RandomSource random){
+   return List.of(state,deviceSkin(level,pos));
+  }
+  @Override public Material.Baked particleMaterial(BlockAndTintGetter level,BlockPos pos,BlockState state){
+   return material(deviceSkin(level,pos));
+  }
+  @Override public int materialFlags(BlockAndTintGetter level,BlockPos pos,BlockState state,RandomSource random){
+   return wrapped.materialFlags()|flags(material(deviceSkin(level,pos)));
+  }
+ }
+ static final class DeviceItemModel extends WrapperBakedItemModel {
+  DeviceItemModel(net.minecraft.client.renderer.item.ItemModel model){super(model);}
+  @Override public void update(ItemStackRenderState state,ItemStack stack,ItemModelResolver resolver,ItemDisplayContext display,
+       net.minecraft.client.multiplayer.ClientLevel level,net.minecraft.world.entity.ItemOwner owner,int seed){
+   int first=((ItemLayersAccess)state).companion$layerCount();
+   wrapped.update(state,stack,resolver,display,level,owner,seed);
+   String selected=BoxMaterial.safe(stack.getOrDefault(CaszualMtg.BOX_MATERIAL,BoxMaterial.DEFAULT));
+   Material.Baked skin=material(selected);
+   var access=(ItemLayersAccess)state;
+   for(int i=first;i<access.companion$layerCount();i++){
+    var layer=access.companion$layers()[i];
+    layer.prepareQuadList().replaceAll(q->remap(q,skin,CHAIR_SOURCE));
+    layer.setParticleMaterial(skin);
+   }
+   state.appendModelIdentityElement(selected);
+   if(skin.sprite().isAnimated())state.setAnimated();
   }
  }
  static final class TableItemModel extends WrapperBakedItemModel {
