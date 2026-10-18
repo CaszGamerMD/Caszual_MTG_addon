@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "mtgcard:graveyard",
+    "minecraft:oak_planks"
+  ],
+  "result": {
+    "id": "caszual_mtg:custom_graveyard",
+    "count": 1
+  }
+}
