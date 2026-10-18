@@ -12,7 +12,7 @@ EXPECTED = {
     "land_database", "token_database", "community_database",
     "deck_builder", "custom_deckbox", "hand_block",
     "deckbox_rack", "staff_rack", "tabletop", "counter", "targeting_staff",
-    "material_chair",
+    "material_chair", "commander_golem",
 }
 
 
@@ -33,7 +33,7 @@ class CaszualContentTagTest(unittest.TestCase):
         other_ids = {
             "deck_builder", "hand_block", "custom_deckbox",
             "deckbox_rack", "staff_rack", "tabletop", "counter", "targeting_staff",
-            "material_chair",
+            "material_chair", "commander_golem",
         }
         self.assertEqual(database_ids, {"land_database", "token_database", "community_database"})
         for item_id in other_ids:
