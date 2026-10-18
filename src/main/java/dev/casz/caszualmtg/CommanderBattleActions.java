@@ -17,6 +17,11 @@ import java.util.*;
  * This does not implement priority, the stack or replacement effects. */
 public final class CommanderBattleActions {
  private CommanderBattleActions(){}
+ private static void announce(IronGolem bot,TabletopBlockEntity table,String id,String kind){
+  if(table.getLevel() instanceof ServerLevel level)
+   TabletopTargets.mark(level,bot.getUUID(),table.getBlockPos(),table.seatName(),
+    "",table.getBlockPos(),id,kind);
+ }
  public static final String READY="caszual_mtg_ai_ready_";
  public static boolean mine(IronGolem bot,TabletopBlockEntity.PlayedCard c){
   return bot.getUUID().toString().equals(c.owner());
@@ -103,6 +108,7 @@ public final class CommanderBattleActions {
     hand.addCard(selected);break;
    }
    tapPaid(table,payment);
+   announce(bot,table,played.id(),"cast");
    cast++;
   }
   return cast;
@@ -127,6 +133,8 @@ public final class CommanderBattleActions {
   table.rememberCommander(one);
   table.aiCommanderCast();
   tapPaid(table,payment.get());
+  // The real CardStack is on the table before the target marker is broadcast.
+  announce(bot,table,table.cards().getLast().id(),"cast");
   return true;
  }
  /** Find the same physically adjacent Graveyard that MTGCard's Deck Control uses. */
