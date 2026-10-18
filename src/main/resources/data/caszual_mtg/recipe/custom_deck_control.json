@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "mtgcard:deck_control_stone",
+    "minecraft:oak_planks"
+  ],
+  "result": {
+    "id": "caszual_mtg:custom_deck_control",
+    "count": 1
+  }
+}
