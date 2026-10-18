@@ -25,7 +25,8 @@ public final class TabletopWire {
  public record TokenResult(String key,ItemStack stack) {}
  public record ShownHand(BlockPos seat,String owner,List<ItemStack> cards) {}
  public record PublicReveal(BlockPos seat,String owner,List<ItemStack> cards) {}
- public record Reply(BlockPos pos,String message,BlockPos seat,List<Tile> tiles,List<Card> cards,List<ItemStack> hand,int libraryCount,List<ZoneCard> grave,List<ZoneCard> exile,List<ItemStack> scry,List<ItemStack> reveal,ItemStack commander,List<ItemStack> tray,List<TokenResult> tokenResults,int tokenPage,boolean tokenMore,boolean ownHandRevealed,List<ShownHand> shownHands,List<PublicReveal> publicReveals) implements CustomPacketPayload {
+ public record TargetMark(BlockPos fromSeat,String fromName,String sourceCard,BlockPos targetSeat,String targetCard,String kind) {}
+ public record Reply(BlockPos pos,String message,BlockPos seat,List<Tile> tiles,List<Card> cards,List<ItemStack> hand,int libraryCount,List<ZoneCard> grave,List<ZoneCard> exile,List<ItemStack> scry,List<ItemStack> reveal,ItemStack commander,List<ItemStack> tray,List<TokenResult> tokenResults,int tokenPage,boolean tokenMore,boolean ownHandRevealed,List<ShownHand> shownHands,List<PublicReveal> publicReveals,List<TargetMark> targets) implements CustomPacketPayload {
   public static final Type<Reply> TYPE=new Type<>(CaszualMtg.id("tabletop_reply"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Reply> CODEC=StreamCodec.of((b,p)->{
    b.writeBlockPos(p.pos);b.writeUtf(p.message,512);b.writeBlockPos(p.seat);
@@ -58,6 +59,13 @@ public final class TabletopWire {
     b.writeBlockPos(reveal.seat);b.writeUtf(reveal.owner,64);
     b.writeVarInt(reveal.cards.size());
     for(ItemStack card:reveal.cards)ItemStack.OPTIONAL_STREAM_CODEC.encode(b,card);
+   }
+   b.writeVarInt(p.targets.size());
+   for(TargetMark target:p.targets){
+    b.writeBlockPos(target.fromSeat);b.writeUtf(target.fromName,64);
+    b.writeUtf(target.sourceCard,MAX_CARD_ID_LENGTH);
+    b.writeBlockPos(target.targetSeat);b.writeUtf(target.targetCard,MAX_CARD_ID_LENGTH);
+    b.writeUtf(target.kind,16);
    }
   },b->{
    BlockPos pos=b.readBlockPos();String message=b.readUtf(512);BlockPos seat=b.readBlockPos();
@@ -103,7 +111,11 @@ public final class TabletopWire {
     for(int j=0;j<count;j++)revealed.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(b));
     publicReveals.add(new PublicReveal(revealSeat,owner,List.copyOf(revealed)));
    }
-   return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),List.copyOf(reveal),commander,List.copyOf(tray),List.copyOf(tokenResults),tokenPage,tokenMore,ownHandRevealed,List.copyOf(shownHands),List.copyOf(publicReveals));
+   n=b.readVarInt();if(n<0||n>64)throw new IllegalArgumentException("Too many target markers");
+   List<TargetMark> targets=new ArrayList<>();
+   for(int i=0;i<n;i++)targets.add(new TargetMark(b.readBlockPos(),b.readUtf(64),
+      b.readUtf(MAX_CARD_ID_LENGTH),b.readBlockPos(),b.readUtf(MAX_CARD_ID_LENGTH),b.readUtf(16)));
+   return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),List.copyOf(reveal),commander,List.copyOf(tray),List.copyOf(tokenResults),tokenPage,tokenMore,ownHandRevealed,List.copyOf(shownHands),List.copyOf(publicReveals),List.copyOf(targets));
   });
   public Type<Reply> type(){return TYPE;}
  }
