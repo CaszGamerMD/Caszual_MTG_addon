@@ -28,9 +28,9 @@ public final class TabletopScreen extends LegacyScreen {
  boolean resetConfirm=false;
  boolean discardMode=false;
  boolean tokenTrayOpen=false,counterOpen=false;
- String counterCard="",tokenText="";
+ String counterCard="",tokenText="",tokenOracleText="",tokenPtText="",targetSource="";
  int traySelected=-1,tokenResultSelected=-1,trayScroll=0,tokenResultScroll=0,shownScroll=0,publicRevealScroll=0;
- EditBox counterName,counterTotal,tokenSearch;
+ EditBox counterName,counterTotal,tokenSearch,tokenOracle,tokenPt;
  int zoneScroll=0,tabScroll=0,ticks=0;
  String selectedCard="";
  String pendingHandZone="";
@@ -207,12 +207,18 @@ public final class TabletopScreen extends LegacyScreen {
   button("Pass Turn",ux,uy,91,()->action("pass_turn",0));ux+=96;
   button("Flip",ux,uy,58,()->tableAction("flip"));ux+=63;
   button("Untap All",ux,uy,92,()->action("untap_all",0));ux+=97;
+  button("Target ▾",ux,uy,83,()->{tokenTrayOpen=false;counterOpen=false;openMenu("target");});ux+=88;
   button(tokenTrayOpen?"Tokens ▴":"Tokens ▾",ux,uy,94,()->{
    tokenTrayOpen=!tokenTrayOpen;counterOpen=false;rebuildWidgets();
    if(tokenTrayOpen)searchTokens(0);
   });
   button("Close",width-77,uy,64,this::onClose);
-  if(menuMode.equals("draw")){
+  if(menuMode.equals("target")){
+   int tx=12,ty=66;
+   button("Target Player",tx,ty,112,()->{send("target_player",targetSource,view,0,0,0);message="Declared player target.";});
+   button("Clear Target",tx+117,ty,110,()->{action("target_clear",0);targetSource="";});
+   button("Exit Targeting",tx+232,ty,125,()->{targetSource="";openMenu("");});
+  }else if(menuMode.equals("draw")){
    int mx=12,my=66;
    quantity=addRenderableWidget(new EditBox(font,mx+62,my+3,48,18,Component.literal("X")));
    quantity.setMaxLength(2);quantity.setValue("3");
@@ -266,15 +272,19 @@ public final class TabletopScreen extends LegacyScreen {
   }
   if(tokenTrayOpen){
    int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW();
-   tokenSearch=addRenderableWidget(new EditBox(font,px+pw/2+7,py+25,pw/2-82,19,Component.literal("Token search")));
-   tokenSearch.setMaxLength(120);tokenSearch.setValue(tokenText);
+   tokenSearch=addRenderableWidget(new EditBox(font,px+pw/2+7,py+25,pw/2-82,19,Component.literal("Token name")));
+   tokenSearch.setMaxLength(100);tokenSearch.setValue(tokenText);
    button("Search",px+pw-71,py+25,65,()->searchTokens(0));
-   button("◀",px+pw/2+6,py+51,24,()->{tokenResultScroll=0;searchTokens(Math.max(0,data.tokenPage()-1));});
-   button("▶",px+pw/2+34,py+51,24,()->{
+   tokenOracle=addRenderableWidget(new EditBox(font,px+pw/2+7,py+49,pw/2-14,19,Component.literal("Oracle text (contains)")));
+   tokenOracle.setMaxLength(90);tokenOracle.setValue(tokenOracleText);
+   tokenPt=addRenderableWidget(new EditBox(font,px+pw/2+7,py+73,88,19,Component.literal("P/T e.g. 1/1")));
+   tokenPt.setMaxLength(16);tokenPt.setValue(tokenPtText);
+   button("◀",px+pw/2+7,py+100,29,()->{tokenResultScroll=0;searchTokens(Math.max(0,data.tokenPage()-1));});
+   button("▶",px+pw/2+41,py+100,29,()->{
     if(data.tokenMore()){tokenResultScroll=0;searchTokens(Math.min(50,data.tokenPage()+1));}
     else message="No more token results.";
    });
-   button("Add selected",px+pw-119,py+51,113,()->{
+   button("Add selected",px+pw-123,py+100,117,()->{
     if(tokenResultSelected>=0&&tokenResultSelected<data.tokenResults().size())
      send("token_add",data.tokenResults().get(tokenResultSelected).key(),data.seat(),0,0,0);
     else message="Select a token search result.";
@@ -316,9 +326,18 @@ public final class TabletopScreen extends LegacyScreen {
  }
  int tokenPanelW(){return Math.min(485,Math.max(352,width-58));}
  int tokenPanelX(){return (width-tokenPanelW())/2;}
+ int tokenVisibleRows(){return Math.max(1,(boardH()-171)/38);}
  boolean inTokenPanel(int x,int y){return tokenTrayOpen&&x>=tokenPanelX()&&x<tokenPanelX()+tokenPanelW()&&y>=boardY()+10&&y<=boardY()+boardH()-2;}
  boolean inCounterPanel(int x,int y){return counterOpen&&x>=Math.max(14,width-330)&&x<width-12&&y>=boardY()+13&&y<boardY()+151;}
- void searchTokens(int page){tokenText=tokenSearch==null?tokenText:tokenSearch.getValue();tokenResultSelected=-1;send("token_query",tokenText,data.seat(),0,0,page);}
+ void searchTokens(int page){
+  tokenText=tokenSearch==null?tokenText:tokenSearch.getValue();
+  tokenOracleText=tokenOracle==null?tokenOracleText:tokenOracle.getValue();
+  tokenPtText=tokenPt==null?tokenPtText:tokenPt.getValue();
+  if(!tokenPtText.isBlank())try{Catalogue.stats(tokenPtText);}
+  catch(IllegalArgumentException error){message=error.getMessage();return;}
+  tokenResultSelected=-1;
+  send("token_query",tokenText+"\\n"+tokenOracleText+"\\n"+tokenPtText,data.seat(),0,0,page);
+ }
  void playSelectedToken(){
   if(traySelected<0||traySelected>=data.tray().size()){message="Select a token in your tray first.";return;}
   send("token_play","",view,500,500,traySelected);
@@ -377,10 +396,10 @@ public final class TabletopScreen extends LegacyScreen {
   if(revealStripAt(x,y)>=0)return true; // Public deck-reveal cards are read-only.
   if(shownCardAt(x,y)>=0&&event.button()==0)return true; // Read-only public hand.
   if(inTokenPanel(x,y)){
-   int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW(),start=py+79;
-   int visible=Math.max(2,(boardH()-119)/15);
-   if(y>=start&&y<start+visible*15){
-    int row=(y-start)/15;
+   int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW(),start=py+129;
+   int visible=tokenVisibleRows();
+   if(y>=start&&y<start+visible*38){
+    int row=(y-start)/38;
     if(x<px+pw/2){
      int at=trayScroll+row;
      if(at<data.tray().size()){
@@ -397,6 +416,17 @@ public final class TabletopScreen extends LegacyScreen {
   }
   if(boardHit(x,y)){
    TabletopWire.Card c=cardAt(x,y);
+   if(c!=null&&menuMode.equals("target")&&event.button()==0){
+    if(own(c)&&targetSource.isBlank()){
+     targetSource=c.id();message="Source selected. Switch seat tabs and click a target card.";
+    }else if(own(c)&&c.id().equals(targetSource)){
+     targetSource="";message="Source cleared.";
+    }else {
+     send("target_card",targetSource+"|"+c.id(),c.pos(),0,0,0);
+     message="Target declared on "+TcgCardMeta.displayName(c.stack())+".";
+    }
+    return true;
+   }
    if(c!=null){selectedCard=c.id();selectedZone=-1;
     if(event.button()==1){
      boolean shift=GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(),GLFW.GLFW_KEY_LEFT_SHIFT)==GLFW.GLFW_PRESS
