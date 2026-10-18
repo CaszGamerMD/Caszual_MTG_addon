@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "open=false,facing=north": { "model": "caszual_mtg:block/custom_graveyard_closed", "y": 0 },
+    "open=false,facing=east":  { "model": "caszual_mtg:block/custom_graveyard_closed", "y": 90 },
+    "open=false,facing=south": { "model": "caszual_mtg:block/custom_graveyard_closed", "y": 180 },
+    "open=false,facing=west":  { "model": "caszual_mtg:block/custom_graveyard_closed", "y": 270 },
+
+    "open=true,facing=north":  { "model": "caszual_mtg:block/custom_graveyard_open", "y": 0 },
+    "open=true,facing=east":   { "model": "caszual_mtg:block/custom_graveyard_open", "y": 90 },
+    "open=true,facing=south":  { "model": "caszual_mtg:block/custom_graveyard_open", "y": 180 },
+    "open=true,facing=west":   { "model": "caszual_mtg:block/custom_graveyard_open", "y": 270 }
+  }
+}
