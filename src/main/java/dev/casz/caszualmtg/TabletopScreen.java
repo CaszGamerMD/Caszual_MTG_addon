@@ -558,6 +558,8 @@ public final class TabletopScreen extends LegacyScreen {
    TabletopWire.Tile t=data.tiles().get(i);
    int rgb=0xFF000000|(t.color()&0xFFFFFF);
    if(isHandRevealed(t.pos()))g.fill(tabx-2,5,tabx+134,30,0xFFFF3939);
+   else if(data.targets().stream().anyMatch(mark->mark.targetSeat().equals(t.pos())))
+    g.fill(tabx-2,5,tabx+134,30,0xFFB83F4A);
    else if(t.pos().equals(view))g.fill(tabx-2,5,tabx+134,30,rgb);
    else if(t.active())g.fill(tabx-2,5,tabx+134,30,0xFF7A6A38);
    if(isHandRevealed(t.pos()))g.fill(tabx-2,27,tabx+134,30,0xFFFFA0A0);
@@ -589,6 +591,21 @@ public final class TabletopScreen extends LegacyScreen {
    if(c.hidden())drawArt(g,ItemStack.EMPTY,x,y,cw,ch);
    else drawArt(g,c.stack(),x,y,cw,ch);
    if(c.tapped())g.pose().popMatrix();
+  }
+  // Same-seat targeting connectors: a dotted line from source to target.
+  for(TabletopWire.TargetMark mark:data.targets()){
+   if(!mark.fromSeat().equals(view)||!mark.targetSeat().equals(view)
+      ||mark.sourceCard().isBlank()||mark.targetCard().isBlank())continue;
+   TabletopWire.Card source=data.cards().stream().filter(c->c.id().equals(mark.sourceCard())).findFirst().orElse(null);
+   TabletopWire.Card target=data.cards().stream().filter(c->c.id().equals(mark.targetCard())).findFirst().orElse(null);
+   if(source==null||target==null)continue;
+   int x1=cardX(source)+boardCardW()/2,y1=cardY(source)+boardCardH()/2;
+   int x2=cardX(target)+boardCardW()/2,y2=cardY(target)+boardCardH()/2;
+   for(int step=0;step<=36;step++){
+    if((step&1)==1)continue;
+    int x=x1+(x2-x1)*step/36,y=y1+(y2-y1)*step/36;
+    g.fill(x-2,y-2,x+2,y+2,0xFFFF5A5A);
+   }
   }
   // Overlays are drawn in screen orientation even on sideways (tapped) cards,
   // keeping P/T and counters readable at their actual visible lower-right edge.
