@@ -59,7 +59,7 @@ public final class CommanderCombat {
   return pos!=null&&world.hasChunkAt(pos)&&world.getBlockEntity(pos) instanceof LifePointBlockEntity lp?lp:null;
  }
  private static boolean simple(TabletopBlockEntity.PlayedCard card){
-  return card!=null&&TabletopCardStats.counters(card.stack()).isEmpty()
+  return card!=null&&!card.faceDown()&&TabletopCardStats.counters(card.stack()).isEmpty()
    &&CommanderBattleActions.traits(card.stack()).isPresent();
  }
  public static boolean declare(ServerLevel world,IronGolem bot,TabletopBlockEntity table,LifePointBlockEntity botLife){
