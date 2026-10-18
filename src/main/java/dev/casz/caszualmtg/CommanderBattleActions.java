@@ -139,6 +139,7 @@ public final class CommanderBattleActions {
  }
  /** Find the same physically adjacent Graveyard that MTGCard's Deck Control uses. */
  public static GraveyardBlockEntity graveyard(ServerLevel world,DeckControlBlockEntity deck){
+  if(deck==null)return null;
   for(Direction direction:Direction.values()){
    BlockPos pos=deck.getBlockPos().relative(direction);
    if(world.hasChunkAt(pos)&&world.getBlockEntity(pos) instanceof GraveyardBlockEntity grave)
