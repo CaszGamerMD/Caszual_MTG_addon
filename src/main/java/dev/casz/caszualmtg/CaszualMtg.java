@@ -150,7 +150,7 @@ public final class CaszualMtg implements ModInitializer {
   ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);TabletopLogic.close(h.player);StaffTargets.clearAllForDisconnect(h.player);});
   CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(CUSTOM_DECK_CONTROL);e.accept(CUSTOM_GRAVEYARD);e.accept(HAND);e.accept(RACK);e.accept(STAFF_RACK);e.accept(TABLETOP);e.accept(MATERIAL_CHAIR);e.accept(COMMANDER_GOLEM);});
   UseEntityCallback.EVENT.register((p,l,hand,e,hit)->{
-   if(e instanceof net.minecraft.world.entity.animal.IronGolem iron
+   if(e instanceof net.minecraft.world.entity.animal.golem.IronGolem iron
        &&iron.getTags().contains(CommanderGolems.TAG)){
     if(p instanceof ServerPlayer sp &&l instanceof net.minecraft.server.level.ServerLevel level)
      sp.sendSystemMessage(Component.literal(CommanderGolems.status(level,iron)));
