@@ -46,6 +46,13 @@ class PublicDeckReveals(unittest.TestCase):
   self.assertIn('ensure(ModBlockEntities.DECK_CONTROL, CaszualMtg.CUSTOM_DECK_CONTROL',safe)
   self.assertIn('ensure(ModBlockEntities.GRAVEYARD, CaszualMtg.CUSTOM_GRAVEYARD',safe)
   self.assertIn('e.accept(CUSTOM_DECK_CONTROL);e.accept(CUSTOM_GRAVEYARD)',reg)
+  self.assertIn('return new CustomDeckControlEntity(pos,state)',dc)
+  self.assertIn('return new CustomGraveyardEntity(pos,state)',gy)
+  self.assertIn('extends DeckControlBlockEntity',source('CustomDeckControlEntity.java'))
+  self.assertIn('extends GraveyardBlockEntity',source('CustomGraveyardEntity.java'))
+  self.assertIn('ClientboundBlockEntityDataPacket.create(this)',source('CustomDeckControlEntity.java'))
+  self.assertIn('ClientboundBlockEntityDataPacket.create(this)',source('CustomGraveyardEntity.java'))
+  self.assertIn('out.putString("CaszualMaterial"',source('CustomGraveyardEntity.java'))
 
  def test_materials_and_all_models_have_stable_assets(self):
   mix=json.loads((D/"caszual_mtg.mixins.json").read_text())
