@@ -38,7 +38,7 @@ public final class CommanderGolems {
   if(table.seatOwner()!=null)return "That tabletop seat is already claimed.";
   AABB seatBox=new AABB(chair).inflate(.25);
   if(!level.getEntitiesOfClass(IronGolem.class,seatBox,
-    golem->golem.getTags().contains(TAG)).isEmpty())return "That chair has an AI golem already.";
+    golem->golem.hasTag(TAG)).isEmpty())return "That chair has an AI golem already.";
   IronGolem golem=new IronGolem(EntityTypes.IRON_GOLEM,level);
   golem.addTag(TAG);
   golem.setCustomName(Component.literal("Commander Golem"));
@@ -134,7 +134,7 @@ public final class CommanderGolems {
   Set<UUID> visited=new HashSet<>();
   for(ServerPlayer player:world.players()){
    for(IronGolem golem:world.getEntitiesOfClass(IronGolem.class,
-       player.getBoundingBox().inflate(32),g->g.getTags().contains(TAG))){
+       player.getBoundingBox().inflate(32),g->g.hasTag(TAG))){
     if(!visited.add(golem.getUUID()))continue;
     run(world,golem);
    }
@@ -149,7 +149,7 @@ public final class CommanderGolems {
   BlockPos boxPos=s.deck.getLinkedDeckboxPos();
   if(boxPos==null||!(world.getBlockEntity(boxPos) instanceof DeckboxBlockEntity box)
     ||box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT).isEmpty())return;
-  if(!golem.getTags().contains(FIRST_HAND)){
+  if(!golem.hasTag(FIRST_HAND)){
    // Seven cards from the actual MTGCard Deck Control's library order.
    if(s.deck.getLibraryCount()<7||s.hand.cardCount()!=0)return;
    for(ItemStack card:s.deck.takeTopCards(7))s.hand.addCard(card);
@@ -160,7 +160,7 @@ public final class CommanderGolems {
    golem.removeTag(ACTION_DONE);
    return;
   }
-  if(golem.getTags().contains(ACTION_DONE))return;
+  if(golem.hasTag(ACTION_DONE))return;
   golem.addTag(ACTION_DONE); // idempotent across ticks and world saves
   // Untap only the golem's cards, not an opponent's; then draw once.
   for(var card:s.table.cards())if(golem.getUUID().toString().equals(card.owner())&&card.tapped())
