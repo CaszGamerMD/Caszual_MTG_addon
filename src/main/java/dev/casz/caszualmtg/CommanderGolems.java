@@ -38,7 +38,7 @@ public final class CommanderGolems {
   if(table.seatOwner()!=null)return "That tabletop seat is already claimed.";
   AABB seatBox=new AABB(chair).inflate(.25);
   if(!level.getEntitiesOfClass(IronGolem.class,seatBox,
-    golem->golem.hasTag(TAG)).isEmpty())return "That chair has an AI golem already.";
+    golem->golem.entityTags().contains(TAG)).isEmpty())return "That chair has an AI golem already.";
   IronGolem golem=new IronGolem(EntityTypes.IRON_GOLEM,level);
   golem.addTag(TAG);
   golem.setCustomName(Component.literal("Commander Golem"));
@@ -124,7 +124,7 @@ public final class CommanderGolems {
    return "Golem waiting for a linked deckbox.";
   if(box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT).isEmpty())
    return "Insert a legal commander in the deckbox Commander slot.";
-  if(!golem.hasTag(FIRST_HAND)){
+  if(!golem.entityTags().contains(FIRST_HAND)){
    String reason=deckError(box);
    if(reason!=null)return reason;
   }
@@ -172,7 +172,7 @@ public final class CommanderGolems {
   Set<UUID> visited=new HashSet<>();
   for(ServerPlayer player:world.players()){
    for(IronGolem golem:world.getEntitiesOfClass(IronGolem.class,
-       player.getBoundingBox().inflate(32),g->g.hasTag(TAG))){
+       player.getBoundingBox().inflate(32),g->g.entityTags().contains(TAG))){
     if(!visited.add(golem.getUUID()))continue;
     run(world,golem);
    }
@@ -187,7 +187,7 @@ public final class CommanderGolems {
   BlockPos boxPos=s.deck.getLinkedDeckboxPos();
   if(boxPos==null||!(world.getBlockEntity(boxPos) instanceof DeckboxBlockEntity box)
     ||box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT).isEmpty())return;
-  if(!golem.hasTag(FIRST_HAND)){
+  if(!golem.entityTags().contains(FIRST_HAND)){
    // Verify a single-commander 100-card deck before removing anything.
    if(deckError(box)!=null)return;
    // Seven cards from the actual MTGCard Deck Control's library order.
@@ -200,7 +200,7 @@ public final class CommanderGolems {
    golem.removeTag(ACTION_DONE);
    return;
   }
-  if(golem.hasTag(ACTION_DONE))return;
+  if(golem.entityTags().contains(ACTION_DONE))return;
   golem.addTag(ACTION_DONE); // idempotent across ticks and world saves
   // Untap only the golem's cards, not an opponent's; then draw once.
   for(var card:s.table.cards())if(golem.getUUID().toString().equals(card.owner())&&card.tapped())
