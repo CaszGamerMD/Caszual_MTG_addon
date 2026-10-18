@@ -218,6 +218,16 @@ public final class TabletopScreen extends LegacyScreen {
    button("Target Player",tx,ty,112,()->{send("target_player",targetSource,view,0,0,0);message="Declared player target.";});
    button("Clear Target",tx+117,ty,110,()->{action("target_clear",0);targetSource="";});
    button("Exit Targeting",tx+232,ty,125,()->{targetSource="";menuMode="";rebuildWidgets();});
+   // A human defender must explicitly acknowledge the golem's attack.
+   var attack=data.targets().stream().filter(mark->mark.kind().equals("attack")
+     &&mark.targetSeat().equals(data.seat())).findFirst().orElse(null);
+   if(attack!=null){
+    button("Take Hit",tx+362,ty,100,()->send("ai_damage","",attack.fromSeat(),0,0,0));
+    button("Block Source",tx+467,ty,112,()->{
+     if(targetSource.isBlank())message="Select one of your own untapped creatures as the blocker.";
+     else send("ai_block",targetSource,attack.fromSeat(),0,0,0);
+    });
+   }
   }else if(menuMode.equals("draw")){
    int mx=12,my=66;
    quantity=addRenderableWidget(new EditBox(font,mx+62,my+3,48,18,Component.literal("X")));
