@@ -27,7 +27,7 @@ public final class TabletopLogic {
  private static final Map<UUID,TokenQuery> TOKEN_QUERIES=new ConcurrentHashMap<>();
  private static final Map<UUID,TokenPage> TOKEN_RESULTS=new ConcurrentHashMap<>();
  private static final Set<UUID> REVEALED_HANDS=ConcurrentHashMap.newKeySet();
- private record TokenQuery(String text,int page) {}
+ private record TokenQuery(String text,String oracle,String stats,int page) {}
  private record TokenPage(TokenQuery query,List<TabletopWire.TokenResult> cards,boolean more) {}
  private static final int TOKEN_PAGE_SIZE=8;
  private record ScrySession(BlockPos control,List<ItemStack> cards) {}
@@ -128,11 +128,50 @@ public final class TabletopLogic {
   String message="";
   if(req.action().equals("refresh")){reply(player,req.pos(),"");return;}
   if(c.seat==null){reply(player,req.pos(),"Claim an empty tabletop seat to play.");return;}
-  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove","quick_send","copy_token","scry_cancel","reveal_hand","card_scale").contains(req.action())&&c.hand==null){
+  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove","quick_send","copy_token","scry_cancel","reveal_hand","card_scale","target_card","target_player","target_clear").contains(req.action())&&c.hand==null){
    reply(player,req.pos(),requireLinks(c));return;
   }
   try{
    switch(req.action()){
+    case "target_clear" -> {
+     if(player.level() instanceof net.minecraft.server.level.ServerLevel level)
+      TabletopTargets.clear(level,player.getUUID());
+     message="Targeting cleared.";
+    }
+    case "target_card", "target_player" -> {
+     if(!(player.level() instanceof net.minecraft.server.level.ServerLevel level)){
+      message="Targeting requires a server game.";break;
+     }
+     String[] names=req.ref().split("\\|",-1);
+     String fromId=names[0];
+     if(names.length>2||fromId.length()>TabletopWire.MAX_CARD_ID_LENGTH){
+      message="Invalid targeting reference.";break;
+     }
+     if(!fromId.isEmpty()){
+      Located source=located(c,fromId);
+      if(source==null||!owned(player,source)){
+       message="Only your own battlefield card can declare an action.";break;
+      }
+     }
+     TabletopBlockEntity destination=tile(c,req.target());
+     if(destination==null||destination.seatOwner()==null){
+      message="Choose a claimed seat in this connected table.";break;
+     }
+     String targetId="";
+     if(req.action().equals("target_card")){
+      if(names.length!=2){message="Select a target card.";break;}
+      targetId=names[1];
+      Located target=located(c,targetId);
+      if(target==null||!target.tile().getBlockPos().equals(destination.getBlockPos())){
+       message="That battlefield target is no longer present.";break;
+      }
+     }else if(names.length!=1){
+      message="Invalid player target.";break;
+     }
+     TabletopTargets.mark(level,player.getUUID(),c.seat.getBlockPos(),c.seat.seatName(),
+      fromId,destination.getBlockPos(),targetId,"target");
+     message="Declared target: "+destination.seatName()+(targetId.isEmpty()?"":" (card)")+".";
+    }
     case "card_scale" -> {
      TabletopBlockEntity target=tile(c,req.target());
      if(target==null||!target.ownedBy(player)||!target.getBlockPos().equals(c.seat.getBlockPos())){
@@ -215,16 +254,21 @@ public final class TabletopLogic {
      message=req.amount()==0?"Removed "+key+" counters.":key+" counters: "+req.amount()+".";
     }
     case "token_query" -> {
-     String name=req.ref().trim();
-     if(name.length()>120){message="Token search must be 120 characters or shorter.";break;}
+     String[] parts=req.ref().split("\\n",-1);
+     if(parts.length!=3){message="Invalid token filter data.";break;}
+     String name=parts[0].trim(),oracle=parts[1].trim(),stats=parts[2].trim();
+     if(name.length()>100||oracle.length()>90||stats.length()>16){
+      message="Token search fields are too long.";break;
+     }
+     Catalogue.stats(stats);
      int page=Math.clamp(req.amount(),0,50);
-     TokenQuery current=new TokenQuery(name,page);
+     TokenQuery current=new TokenQuery(name,oracle,stats,page);
      TOKEN_QUERIES.put(player.getUUID(),current);
      TOKEN_RESULTS.remove(player.getUUID());
      message="Searching tokens (online; saved catalogue shown while loading)...";
      // Scryfall catalogue pages contain 40 tokens; the tabletop tray shows
      // eight at a time, so we fetch the correct 40-card batch and slice it.
-     Catalogue.search(1,name,0,page/5).whenComplete((result,error)->
+     Catalogue.search(1,name,0,page/5,oracle,stats).whenComplete((result,error)->
       player.level().getServer().execute(()->{
        if(player.isRemoved()||!current.equals(TOKEN_QUERIES.get(player.getUUID())))return;
        if(error!=null||result==null){
@@ -237,7 +281,7 @@ public final class TabletopLogic {
         var hit=result.cards().get(i);
         if(!Catalogue.isToken(hit.model().typeLine))continue;
         ItemStack token=com.spider.mtgcard.util.CardStackBuilders.buildScryfallStackFromModel(hit.model(),false);
-        if(token.isEmpty())continue;
+        if(token.isEmpty()||!Catalogue.matchesToken(token,oracle,stats))continue;
         tokens.add(new TabletopWire.TokenResult(Banks.key(1,token),token));
         Banks.get(player.level().getServer()).add(token,1,1);
        }
@@ -248,13 +292,14 @@ public final class TabletopLogic {
     }
     case "token_add" -> {
      if(c.seat.tokenTray().size()>=TabletopBlockEntity.MAX_TOKEN_TEMPLATES){message="Token tray full (32 templates).";break;}
-     TokenQuery query=TOKEN_QUERIES.getOrDefault(player.getUUID(),new TokenQuery("",0));
+     TokenQuery query=TOKEN_QUERIES.getOrDefault(player.getUUID(),new TokenQuery("","","",0));
      TokenPage active=TOKEN_RESULTS.get(player.getUUID());
      ItemStack selected=ItemStack.EMPTY;
      if(active!=null&&query.equals(active.query())){
       for(var row:active.cards())if(row.key().equals(req.ref())){selected=row.stack();break;}
      }else{
-      var results=Banks.get(player.level().getServer()).search(1,query.text());
+      var results=Banks.get(player.level().getServer()).search(1,query.text()).stream()
+        .filter(e->Catalogue.matchesToken(e.getValue().card(),query.oracle(),query.stats())).toList();
       int from=query.page()*TOKEN_PAGE_SIZE;
       for(int i=from;i<Math.min(results.size(),from+TOKEN_PAGE_SIZE);i++)
        if(results.get(i).getKey().equals(req.ref())){selected=results.get(i).getValue().card();break;}
@@ -739,7 +784,7 @@ public final class TabletopLogic {
   List<ItemStack> scry=session!=null&&c.deck!=null&&session.control.equals(c.deck.getBlockPos())?session.cards:List.of();
   ScrySession revealSession=REVEALS.get(player.getUUID());
   List<ItemStack> reveal=revealSession!=null&&c.deck!=null&&revealSession.control.equals(c.deck.getBlockPos())?revealSession.cards:List.of();
-  TokenQuery query=TOKEN_QUERIES.getOrDefault(player.getUUID(),new TokenQuery("",0));
+  TokenQuery query=TOKEN_QUERIES.getOrDefault(player.getUUID(),new TokenQuery("","","",0));
   TokenPage loaded=TOKEN_RESULTS.get(player.getUUID());
   List<TabletopWire.TokenResult> tokenResults=new ArrayList<>();
   boolean tokenMore;
@@ -747,7 +792,8 @@ public final class TabletopLogic {
    tokenResults.addAll(loaded.cards());
    tokenMore=loaded.more();
   }else{
-   var matches=Banks.get(player.level().getServer()).search(1,query.text());
+   var matches=Banks.get(player.level().getServer()).search(1,query.text()).stream()
+     .filter(e->Catalogue.matchesToken(e.getValue().card(),query.oracle(),query.stats())).toList();
    int offset=query.page()*TOKEN_PAGE_SIZE;
    for(int i=offset;i<Math.min(matches.size(),offset+TOKEN_PAGE_SIZE);i++)
     tokenResults.add(new TabletopWire.TokenResult(matches.get(i).getKey(),matches.get(i).getValue().card().copy()));
@@ -775,11 +821,15 @@ public final class TabletopLogic {
    if(control==null||!publicSession.control().equals(control.getBlockPos()))continue;
    publicReveals.add(new TabletopWire.PublicReveal(table.getBlockPos(),table.seatName(),publicSession.cards()));
   }
+  List<TabletopWire.TargetMark> targets=player.level() instanceof net.minecraft.server.level.ServerLevel server
+      ?TabletopTargets.visible(server,c.tiles).stream().map(m->new TabletopWire.TargetMark(
+        m.fromSeat(),m.fromName(),m.sourceCard(),m.targetSeat(),m.targetCard(),m.kind())).toList()
+      :List.of();
   ServerPlayNetworking.send(player,new TabletopWire.Reply(
    origin,message,owned,List.copyOf(tiles),List.copyOf(played),
    c.hand==null||c.seat==null?List.of():c.hand.visibleCards(),
    c.deck==null?0:c.deck.getLibraryCount(),List.copyOf(grave),List.copyOf(exile),scry,reveal,commander(player,c),
-   c.seat==null?List.of():c.seat.tokenTray(),List.copyOf(tokenResults),query.page(),tokenMore,REVEALED_HANDS.contains(player.getUUID()),List.copyOf(shownHands),List.copyOf(publicReveals)
+   c.seat==null?List.of():c.seat.tokenTray(),List.copyOf(tokenResults),query.page(),tokenMore,REVEALED_HANDS.contains(player.getUUID()),List.copyOf(shownHands),List.copyOf(publicReveals),targets
   ));
  }
  private TabletopLogic(){}
