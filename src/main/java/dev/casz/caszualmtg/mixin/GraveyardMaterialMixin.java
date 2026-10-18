@@ -41,10 +41,4 @@ public abstract class GraveyardMaterialMixin implements BoxMaterial {
   if(self.getBlockState().is(CaszualMtg.CUSTOM_GRAVEYARD))
    output.putString("CaszualMaterial",caszual$skin);
  }
- @Inject(method="getUpdateTag",at=@At("RETURN"),remap=false)
- private void caszual$tag(HolderLookup.Provider lookup,CallbackInfoReturnable<CompoundTag> ci){
-  BlockEntity self=(BlockEntity)(Object)this;
-  if(self.getBlockState().is(CaszualMtg.CUSTOM_GRAVEYARD))
-   ci.getReturnValue().putString("CaszualMaterial",caszual$skin);
- }
 }
