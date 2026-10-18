@@ -18,7 +18,7 @@ public final class CustomGraveyardEntity extends GraveyardBlockEntity {
  }
  @Override public CompoundTag getUpdateTag(HolderLookup.Provider lookup){
   CompoundTag out=super.getUpdateTag(lookup);
-  out.putString("CaszualMaterial",((BoxMaterial)this).companion$material());
+  out.putString("CaszualMaterial",((BoxMaterial)(Object)this).companion$material());
   return out;
  }
 }
