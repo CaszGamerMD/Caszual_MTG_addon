@@ -46,6 +46,7 @@ public final class MtgBlockEntitySafety {
         repaired += ensure(ModBlockEntities.DECKBOX, CaszualMtg.CUSTOM_BOX, "Caszual custom deckbox");
         repaired += ensure(ModBlockEntities.CARD_STORE, ModBlocks.CARD_STORE, "MTGCard Card Store");
 
+        repaired += ensure(ModBlockEntities.DECK_CONTROL, CaszualMtg.CUSTOM_DECK_CONTROL, "Caszual Deck Control");
         repaired += ensure(ModBlockEntities.DECK_CONTROL, ModBlocks.DECK_CONTROL_STONE, "deck control");
         repaired += ensure(ModBlockEntities.DECK_CONTROL, ModBlocks.DECK_CONTROL_POLISHED_GRANITE, "deck control");
         repaired += ensure(ModBlockEntities.DECK_CONTROL, ModBlocks.DECK_CONTROL_POLISHED_DIORITE, "deck control");
@@ -60,6 +61,7 @@ public final class MtgBlockEntitySafety {
         repaired += ensure(ModBlockEntities.DECK_CONTROL, ModBlocks.DECK_CONTROL_CUT_RED_SANDSTONE, "deck control");
 
         repaired += ensure(ModBlockEntities.GRAVEYARD, ModBlocks.GRAVEYARD, "graveyard");
+        repaired += ensure(ModBlockEntities.GRAVEYARD, CaszualMtg.CUSTOM_GRAVEYARD, "Caszual Graveyard");
         repaired += ensure(ModBlockEntities.DISPLAY_BLOCK, ModBlocks.DISPLAY_BLOCK, "display block");
         repaired += ensure(ModBlockEntities.CARD_DB, ModBlocks.CARD_DB, "Card Database");
 
