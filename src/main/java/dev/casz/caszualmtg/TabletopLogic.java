@@ -128,11 +128,15 @@ public final class TabletopLogic {
   String message="";
   if(req.action().equals("refresh")){reply(player,req.pos(),"");return;}
   if(c.seat==null){reply(player,req.pos(),"Claim an empty tabletop seat to play.");return;}
-  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove","quick_send","copy_token","scry_cancel","reveal_hand","card_scale","target_card","target_player","target_clear").contains(req.action())&&c.hand==null){
+  if(!List.of("move","tap","untap_all","hide","flip","return","grave","exile","commander_home","pass_turn","counter_set","token_query","token_add","token_play","token_store","token_remove","quick_send","copy_token","scry_cancel","reveal_hand","card_scale","target_card","target_player","target_clear","ai_block","ai_damage").contains(req.action())&&c.hand==null){
    reply(player,req.pos(),requireLinks(c));return;
   }
   try{
    switch(req.action()){
+    case "ai_damage", "ai_block" -> {
+     message=CommanderCombat.respond(player,req.target(),
+       req.action().equals("ai_block")?req.ref():"");
+    }
     case "target_clear" -> {
      if(player.level() instanceof net.minecraft.server.level.ServerLevel level)
       TabletopTargets.clear(level,player.getUUID());
