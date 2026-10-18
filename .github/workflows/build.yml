@@ -104,6 +104,25 @@ jobs:
       - name: Validate custom device reskinning and persistent Graveyard lid
         run: python3 -m unittest discover -s tests -p 'test_custom_mtg_device_material_lid.py' -v
 
+      - name: Verify experimental tabletop target and token UI integration
+        run: python3 -m unittest discover -s tests -p 'test_ai_tabletop_targets.py' -v
+
+      - name: Publish experimental Commander Golem JAR
+        if: github.ref == 'refs/heads/experiment/commander-ai-golem'
+        run: |
+          mkdir -p release
+          JAR="$(find build/libs -maxdepth 1 -type f -name 'caszual-mtg-*.jar' ! -name '*-sources.jar' | sort | head -n 1)"
+          test -n "$JAR"
+          cp "$JAR" release/caszual-mtg-commander-golem-experimental.jar
+          sha256sum release/caszual-mtg-commander-golem-experimental.jar > release/caszual-mtg-commander-golem-experimental.jar.sha256
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release/caszual-mtg-commander-golem-experimental.jar release/caszual-mtg-commander-golem-experimental.jar.sha256
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish Commander Golem experiment [skip ci]"
+            git push
+          fi
+
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'
         run: |
