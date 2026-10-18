@@ -2,8 +2,7 @@
   "parent": "minecraft:block/block",
   "textures": {
     "rail": "minecraft:block/dark_oak_planks",
-    "steel": "minecraft:block/polished_deepslate",
-    "hook": "minecraft:block/iron_block"
+    "steel": "minecraft:block/polished_deepslate"
   },
   "elements": [
     {
@@ -104,238 +103,110 @@
     },
     {
       "from": [
-        1.35,
-        9,
-        8
-      ],
-      "to": [
-        2.65,
-        12,
-        13
-      ],
-      "faces": {
-        "north": {
-          "texture": "#hook"
-        },
-        "south": {
-          "texture": "#hook"
-        },
-        "east": {
-          "texture": "#hook"
-        },
-        "west": {
-          "texture": "#hook"
-        },
-        "up": {
-          "texture": "#hook"
-        },
-        "down": {
-          "texture": "#hook"
-        }
-      }
-    },
-    {
-      "from": [
         0.8,
-        8.5,
+        10,
         7
       ],
       "to": [
         3.2,
-        9.5,
-        10
-      ],
-      "faces": {
-        "north": {
-          "texture": "#steel"
-        },
-        "south": {
-          "texture": "#steel"
-        },
-        "east": {
-          "texture": "#steel"
-        },
-        "west": {
-          "texture": "#steel"
-        },
-        "up": {
-          "texture": "#steel"
-        },
-        "down": {
-          "texture": "#steel"
-        }
-      }
-    },
-    {
-      "from": [
-        5.35,
-        9,
-        8
-      ],
-      "to": [
-        6.65,
-        12,
+        11,
         13
       ],
       "faces": {
         "north": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "south": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "east": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "west": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "up": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "down": {
-          "texture": "#hook"
+          "texture": "#steel"
         }
       }
     },
     {
       "from": [
         4.8,
-        8.5,
+        10,
         7
       ],
       "to": [
         7.2,
-        9.5,
-        10
-      ],
-      "faces": {
-        "north": {
-          "texture": "#steel"
-        },
-        "south": {
-          "texture": "#steel"
-        },
-        "east": {
-          "texture": "#steel"
-        },
-        "west": {
-          "texture": "#steel"
-        },
-        "up": {
-          "texture": "#steel"
-        },
-        "down": {
-          "texture": "#steel"
-        }
-      }
-    },
-    {
-      "from": [
-        9.35,
-        9,
-        8
-      ],
-      "to": [
-        10.65,
-        12,
+        11,
         13
       ],
       "faces": {
         "north": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "south": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "east": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "west": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "up": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "down": {
-          "texture": "#hook"
+          "texture": "#steel"
         }
       }
     },
     {
       "from": [
         8.8,
-        8.5,
+        10,
         7
       ],
       "to": [
         11.2,
-        9.5,
-        10
-      ],
-      "faces": {
-        "north": {
-          "texture": "#steel"
-        },
-        "south": {
-          "texture": "#steel"
-        },
-        "east": {
-          "texture": "#steel"
-        },
-        "west": {
-          "texture": "#steel"
-        },
-        "up": {
-          "texture": "#steel"
-        },
-        "down": {
-          "texture": "#steel"
-        }
-      }
-    },
-    {
-      "from": [
-        13.35,
-        9,
-        8
-      ],
-      "to": [
-        14.65,
-        12,
+        11,
         13
       ],
       "faces": {
         "north": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "south": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "east": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "west": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "up": {
-          "texture": "#hook"
+          "texture": "#steel"
         },
         "down": {
-          "texture": "#hook"
+          "texture": "#steel"
         }
       }
     },
     {
       "from": [
         12.8,
-        8.5,
+        10,
         7
       ],
       "to": [
         15.2,
-        9.5,
-        10
+        11,
+        13
       ],
       "faces": {
         "north": {

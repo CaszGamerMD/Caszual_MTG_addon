@@ -3,6 +3,8 @@ name: Build Caszual MTG
 on:
   push:
     branches: [ main, 'fix/**', 'feat/**', 'chore/**' ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -53,6 +55,54 @@ jobs:
 
       - name: Validate autonomous URL import, persistent stages and deckbox handoff
         run: python3 -m unittest discover -s tests -p 'test_autonomous_url_builder.py' -v
+
+      - name: Validate experimental multiplayer tabletop assets and behavior
+        run: python3 -m unittest discover -s tests -p 'test_tabletop.py' -v
+
+      - name: Validate Card Store progress and rack hover tooltips
+        run: python3 -m unittest discover -s tests -p 'test_card_store_rack_polish.py' -v
+
+      - name: Validate tabletop chairs, cushion colors and commander reset
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_chair_reset.py' -v
+
+      - name: Validate dynamic material-chair crafting and textures
+        run: python3 -m unittest discover -s tests -p 'test_chair_material.py' -v
+
+      - name: Validate material-driven tabletop and obsolete chair cleanup
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_wood.py' -v
+
+      - name: Validate chair direction hitbox and tapped-card interactions
+        run: python3 -m unittest discover -s tests -p 'test_chair_hitbox_and_table_tap.py' -v
+
+      - name: Validate exact 24-bit playmat and paper cushion tinting
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_hex_tint.py' -v
+
+      - name: Validate live chair wood and paper cushion refresh
+        run: python3 -m unittest discover -s tests -p 'test_chair_refresh.py' -v
+
+      - name: Validate tabletop token tray, counter actions, and P/T previews
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_token_counters.py' -v
+
+      - name: Validate Shift-right-click safe battlefield quick-send
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_quick_send.py' -v
+
+      - name: Validate ephemeral token copies and reliable token search
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_copy_token_search.py' -v
+
+      - name: Validate battlefield counter cleanup and Scry Cancel
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_counter_exit.py' -v
+
+      - name: Verify precision dragging, confirm hand moves and reveal-hand privacy
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_free_drag_hand_reveal.py' -v
+
+      - name: Validate visible public hands and server-synchronized battlefield zoom
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_reveal_zoom.py' -v
+
+      - name: Verify multiplayer deck reveals and native-compatible custom devices
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_public_reveal_devices.py' -v
+
+      - name: Validate custom device reskinning and persistent Graveyard lid
+        run: python3 -m unittest discover -s tests -p 'test_custom_mtg_device_material_lid.py' -v
 
       - name: Publish runnable jar to repo
         if: github.ref == 'refs/heads/main'

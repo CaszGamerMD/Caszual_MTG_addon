@@ -37,10 +37,75 @@ public final class CaszualMtg implements ModInitializer {
  static BuilderBlock builderBlock(){var key=ResourceKey.create(Registries.BLOCK,id("deck_builder"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new BuilderBlock(BlockBehaviour.Properties.of().setId(key).strength(2.5f)));var itemKey=ResourceKey.create(Registries.ITEM,id("deck_builder"));Registry.register(BuiltInRegistries.ITEM,itemKey,new BlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));return block;}
  public static final net.minecraft.core.component.DataComponentType<String> BOX_MATERIAL=Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,id("box_material"),net.minecraft.core.component.DataComponentType.<String>builder().persistent(com.mojang.serialization.Codec.STRING).networkSynchronized(net.minecraft.network.codec.StreamCodec.of((b,v)->b.writeUtf(v,256),b->b.readUtf(256))).build());
  public static final CustomDeckbox CUSTOM_BOX=customBox();
+ public static final CustomDeckControl CUSTOM_DECK_CONTROL=customDeckControl();
+ public static final CustomGraveyard CUSTOM_GRAVEYARD=customGraveyard();
+ public static final net.minecraft.core.component.DataComponentType<String> TABLE_MATERIAL=Registry.register(
+  BuiltInRegistries.DATA_COMPONENT_TYPE,id("table_material"),
+  net.minecraft.core.component.DataComponentType.<String>builder()
+   .persistent(com.mojang.serialization.Codec.STRING)
+   .networkSynchronized(net.minecraft.network.codec.StreamCodec.of((b,v)->b.writeUtf(v,256),b->b.readUtf(256)))
+   .build());
+ public static final TabletopBlock TABLETOP=tabletopBlock();
+ public static final BlockEntityType<TabletopBlockEntity> TABLETOP_BE=Registry.register(
+  BuiltInRegistries.BLOCK_ENTITY_TYPE,id("tabletop"),
+  FabricBlockEntityTypeBuilder.create(TabletopBlockEntity::new,TABLETOP).build());
+ static TabletopBlock tabletopBlock(){
+  var key=ResourceKey.create(Registries.BLOCK,id("tabletop"));
+  var block=Registry.register(BuiltInRegistries.BLOCK,key,
+   new TabletopBlock(BlockBehaviour.Properties.of().setId(key).strength(2.5f).noOcclusion().sound(net.minecraft.world.level.block.SoundType.WOOD)));
+  var ik=ResourceKey.create(Registries.ITEM,id("tabletop"));
+  Registry.register(BuiltInRegistries.ITEM,ik,new TabletopBlockItem(block,new Item.Properties().setId(ik).useBlockDescriptionPrefix().stacksTo(1)));
+  return block;
+ }
+ public static final net.minecraft.core.component.DataComponentType<String> CHAIR_MATERIAL=Registry.register(
+  BuiltInRegistries.DATA_COMPONENT_TYPE,id("chair_material"),
+  net.minecraft.core.component.DataComponentType.<String>builder()
+   .persistent(com.mojang.serialization.Codec.STRING)
+   .networkSynchronized(net.minecraft.network.codec.StreamCodec.of((b,v)->b.writeUtf(v,256),b->b.readUtf(256)))
+   .build());
+ public static final ChairBlock MATERIAL_CHAIR=materialChair();
+ static ChairBlock materialChair(){
+  var key=ResourceKey.create(Registries.BLOCK,id("material_chair"));
+  ChairBlock block=Registry.register(BuiltInRegistries.BLOCK,key,
+    new ChairBlock(BlockBehaviour.Properties.of().setId(key).strength(2.0f).noOcclusion().sound(net.minecraft.world.level.block.SoundType.WOOD)));
+  var itemKey=ResourceKey.create(Registries.ITEM,id("material_chair"));
+  Registry.register(BuiltInRegistries.ITEM,itemKey,new ChairBlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));
+  return block;
+ }
+ public static final BlockEntityType<ChairBlockEntity> CHAIR_BE=chairEntityType();
+ static BlockEntityType<ChairBlockEntity> chairEntityType(){
+  return Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,id("chair"),
+   FabricBlockEntityTypeBuilder.create(ChairBlockEntity::new,MATERIAL_CHAIR).build());
+ }
+ public static final net.minecraft.world.item.crafting.RecipeSerializer<ChairRecipe> CHAIR_RECIPE=
+  Registry.register(BuiltInRegistries.RECIPE_SERIALIZER,id("chair_material"),ChairRecipe.SERIALIZER);
+ public static final net.minecraft.world.item.crafting.RecipeSerializer<TabletopRecipe> TABLE_RECIPE=
+  Registry.register(BuiltInRegistries.RECIPE_SERIALIZER,id("tabletop_material"),TabletopRecipe.SERIALIZER);
  public static final HandBlock HAND=handBlock();
  public static final BlockEntityType<HandBlockEntity> HAND_BE=Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,id("hand_block"),FabricBlockEntityTypeBuilder.create(HandBlockEntity::new,HAND).build());
  static HandBlock handBlock(){var key=ResourceKey.create(Registries.BLOCK,id("hand_block"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new HandBlock(BlockBehaviour.Properties.of().setId(key).strength(2.0f).sound(net.minecraft.world.level.block.SoundType.WOOD)));var itemKey=ResourceKey.create(Registries.ITEM,id("hand_block"));Registry.register(BuiltInRegistries.ITEM,itemKey,new BlockItem(block,new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));return block;}
   static CustomDeckbox customBox(){var key=ResourceKey.create(Registries.BLOCK,id("custom_deckbox"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new CustomDeckbox(BlockBehaviour.Properties.of().setId(key).strength(2.5f).noOcclusion().sound(net.minecraft.world.level.block.SoundType.WOOD)));var itemKey=ResourceKey.create(Registries.ITEM,id("custom_deckbox"));Registry.register(BuiltInRegistries.ITEM,itemKey,new CustomDeckbox.Item(block,new Item.Properties().setId(itemKey).stacksTo(1).useBlockDescriptionPrefix()));return block;}
+ static CustomDeckControl customDeckControl(){
+  var key=ResourceKey.create(Registries.BLOCK,id("custom_deck_control"));
+  CustomDeckControl block=Registry.register(BuiltInRegistries.BLOCK,key,
+   new CustomDeckControl(BlockBehaviour.Properties.of().setId(key)
+    .strength(2.0f).noOcclusion().isRedstoneConductor((s,w,p)->false)
+    .isSuffocating((s,w,p)->false).lightLevel(s->s.getValue(com.spider.mtgcard.deckcontrol.DeckControlBlock.LIT)?14:0)));
+  var item=ResourceKey.create(Registries.ITEM,id("custom_deck_control"));
+  Registry.register(BuiltInRegistries.ITEM,item,new BlockItem(block,
+   new Item.Properties().setId(item).useBlockDescriptionPrefix()));
+  return block;
+ }
+ static CustomGraveyard customGraveyard(){
+  var key=ResourceKey.create(Registries.BLOCK,id("custom_graveyard"));
+  CustomGraveyard block=Registry.register(BuiltInRegistries.BLOCK,key,
+   new CustomGraveyard(BlockBehaviour.Properties.of().setId(key)
+    .strength(2.5f).noOcclusion().sound(net.minecraft.world.level.block.SoundType.WOOD)));
+  var item=ResourceKey.create(Registries.ITEM,id("custom_graveyard"));
+  Registry.register(BuiltInRegistries.ITEM,item,new BlockItem(block,
+   new Item.Properties().setId(item).useBlockDescriptionPrefix()));
+  return block;
+ }
  public static final DeckboxRackBlock RACK=rackBlock();
  public static final BlockEntityType<DeckboxRackEntity> RACK_BE=Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,id("deckbox_rack"),FabricBlockEntityTypeBuilder.create(DeckboxRackEntity::new,RACK).build());
  static DeckboxRackBlock rackBlock(){var key=ResourceKey.create(Registries.BLOCK,id("deckbox_rack"));var block=Registry.register(BuiltInRegistries.BLOCK,key,new DeckboxRackBlock(BlockBehaviour.Properties.of().setId(key).strength(2.0f).noOcclusion().sound(net.minecraft.world.level.block.SoundType.WOOD)));var ik=ResourceKey.create(Registries.ITEM,id("deckbox_rack"));Registry.register(BuiltInRegistries.ITEM,ik,new BlockItem(block,new Item.Properties().setId(ik).useBlockDescriptionPrefix().stacksTo(1)));return block;}
@@ -69,14 +134,19 @@ public final class CaszualMtg implements ModInitializer {
    Registry.register(BuiltInRegistries.MENU,id("staff_rack"),
      new ExtendedMenuType<>(StaffRackMenu::new,StaffRackMenu.OpenData.CODEC));
  public void onInitialize(){
+  net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_LEVEL_TICK.register(ChairSeats::tick);
   // Do not inspect MTGCard's block-entity fields in our main entrypoint:
   // MTGCard's initializer can run later in the same Fabric initialization pass.
   net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING
       .register(server -> MtgBlockEntitySafety.verifyAtLifecycle("server startup"));
+  PayloadTypeRegistry.clientboundPlay().register(CardStoreStatusWire.Progress.TYPE,CardStoreStatusWire.Progress.CODEC);
+  PayloadTypeRegistry.serverboundPlay().register(TabletopWire.Request.TYPE,TabletopWire.Request.CODEC);
+  PayloadTypeRegistry.clientboundPlay().register(TabletopWire.Reply.TYPE,TabletopWire.Reply.CODEC);
+  ServerPlayNetworking.registerGlobalReceiver(TabletopWire.Request.TYPE,(req,ctx)->TabletopLogic.handle(ctx.player(),req));
   PayloadTypeRegistry.serverboundPlay().register(Wire.Request.TYPE,Wire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(Wire.Reply.TYPE,Wire.Reply.CODEC);PayloadTypeRegistry.serverboundPlay().register(HandWire.Request.TYPE,HandWire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(HandWire.Reply.TYPE,HandWire.Reply.CODEC);PayloadTypeRegistry.clientboundPlay().register(DeckboxRefreshWire.Refresh.TYPE,DeckboxRefreshWire.Refresh.CODEC);
   ServerPlayNetworking.registerGlobalReceiver(Wire.Request.TYPE,(req,ctx)->ServerLogic.handle(ctx.player(),req));ServerPlayNetworking.registerGlobalReceiver(HandWire.Request.TYPE,(req,ctx)->HandLogic.handle(ctx.player(),req));
-  ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);StaffTargets.clearAllForDisconnect(h.player);});
-  CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(HAND);e.accept(RACK);e.accept(STAFF_RACK);});
+  ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);TabletopLogic.close(h.player);StaffTargets.clearAllForDisconnect(h.player);});
+  CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(CUSTOM_DECK_CONTROL);e.accept(CUSTOM_GRAVEYARD);e.accept(HAND);e.accept(RACK);e.accept(STAFF_RACK);e.accept(TABLETOP);e.accept(MATERIAL_CHAIR);});
   UseEntityCallback.EVENT.register((p,l,hand,e,hit)->{
    if(p.getItemInHand(hand).is(TARGETING_STAFF)){
     if(!l.isClientSide()&&p instanceof ServerPlayer sp)StaffTargets.mark(sp,e,StaffTargets.Color.ORANGE);
@@ -108,6 +178,7 @@ public final class CaszualMtg implements ModInitializer {
    }
   });
   UseBlockCallback.EVENT.register((p,l,hand,hit)->{
+   if(p instanceof ServerPlayer sp&&l.getBlockEntity(hit.getBlockPos()) instanceof com.spider.mtgcard.life.LifePointBlockEntity&&HandLogic.completePendingLifeLink(sp,hit.getBlockPos()))return InteractionResult.SUCCESS;
    if(p instanceof ServerPlayer sp&&l.getBlockEntity(hit.getBlockPos()) instanceof DeckControlBlockEntity&&HandLogic.completePendingLink(sp,hit.getBlockPos()))return InteractionResult.SUCCESS;
    if(l.getBlockState(hit.getBlockPos()).is(CUSTOM_BOX)&&p.isShiftKeyDown()&&p.getItemInHand(hand).getItem() instanceof BlockItem)return CUSTOM_BOX.applyMaterial(p.getItemInHand(hand),l,hit.getBlockPos(),p);
    return InteractionResult.PASS;

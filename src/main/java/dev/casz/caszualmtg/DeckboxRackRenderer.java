@@ -49,12 +49,10 @@ public final class DeckboxRackRenderer implements BlockEntityRenderer<DeckboxRac
   for(int i=0;i<state.boxes.length;i++){
    ItemStackRenderState item=state.boxes[i];if(item==null)continue;
    poses.pushPose();
-   // Shelf top is 2px above its base (Y=9 wall, Y=2 floor). FIXED item
-   // models occupy +/-0.5 of their height, scaled to 0.195 blocks = 1.56px
-   // below their origin. Place their bottoms only 0.09px above the shelf.
-   // Keep their existing positions across its 16px width, and center them
-   // over the 6px-deep shelf, not in mid-air in front of it.
-   poses.translate((1.55+i*3.05)/16.0,(state.wall?7.0:0.0)/16.0+3.65/16.0,4.0/16.0);
+   // Lower the baked FIXED deckbox models a further 0.75 model pixels: their
+   // visual bases were still hovering above the ledge in game. Keep each
+   // center aligned with the six-pixel shelf, for both wall and floor mounts.
+   poses.translate((1.55+i*3.05)/16.0,(state.wall?7.0:0.0)/16.0+2.90/16.0,4.0/16.0);
    poses.scale(.195f,.195f,.195f);
    item.submit(poses,out,state.lightCoords,OverlayTexture.NO_OVERLAY,0);
    poses.popPose();

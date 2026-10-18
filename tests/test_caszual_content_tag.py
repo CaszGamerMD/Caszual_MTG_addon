@@ -11,7 +11,8 @@ SOURCE = ROOT / "src/main/java/dev/casz/caszualmtg/CaszualMtg.java"
 EXPECTED = {
     "land_database", "token_database", "community_database",
     "deck_builder", "custom_deckbox", "hand_block",
-    "deckbox_rack", "staff_rack", "counter", "targeting_staff",
+    "deckbox_rack", "staff_rack", "tabletop", "counter", "targeting_staff",
+    "material_chair",
 }
 
 
@@ -31,13 +32,15 @@ class CaszualContentTagTest(unittest.TestCase):
         database_ids = set(re.findall(r'block\("(\w+)",\s*[012]\)', source))
         other_ids = {
             "deck_builder", "hand_block", "custom_deckbox",
-            "deckbox_rack", "staff_rack", "counter", "targeting_staff",
+            "deckbox_rack", "staff_rack", "tabletop", "counter", "targeting_staff",
+            "material_chair",
         }
         self.assertEqual(database_ids, {"land_database", "token_database", "community_database"})
         for item_id in other_ids:
             self.assertIn(f'id("{item_id}")', source)
         tag = json.loads(TAG.read_text(encoding="utf-8"))
-        self.assertEqual(set(tag["values"]), {f"caszual_mtg:{key}" for key in database_ids | other_ids})
+        self.assertNotIn('String name=wood+"_chair";',source)
+        self.assertEqual(set(tag["values"]), {f"caszual_mtg:{key}" for key in EXPECTED})
 
     def test_tag_belongs_to_additions_without_hard_mod_dependency(self):
         self.assertIn("data/caszual_additions/tags/item/", str(TAG))

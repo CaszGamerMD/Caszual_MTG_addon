@@ -1,0 +1,7 @@
+{
+  "parent": "mtgcard:block/deck_control_stone",
+  "textures": {
+    "stone": "minecraft:block/oak_planks",
+    "particle": "minecraft:block/oak_planks"
+  }
+}

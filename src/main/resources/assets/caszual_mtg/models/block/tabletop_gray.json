@@ -1,0 +1,6 @@
+{
+  "parent": "caszual_mtg:block/tabletop",
+  "textures": {
+    "felt": "minecraft:block/gray_wool"
+  }
+}
