@@ -767,13 +767,13 @@ public final class TabletopLogic {
   for(TabletopBlockEntity table:c.tiles){
    UUID owner=table.seatOwner();
    if(owner==null)continue;
-   ScrySession session=REVEALS.get(owner);
-   if(session==null)continue;
+   ScrySession publicSession=REVEALS.get(owner);
+   if(publicSession==null)continue;
    HandBlockEntity ownerHand=linkedHand(player,table,owner);
    if(ownerHand==null)continue;
    DeckControlBlockEntity control=HandLogic.linkedControl(player,ownerHand);
-   if(control==null||!session.control().equals(control.getBlockPos()))continue;
-   publicReveals.add(new TabletopWire.PublicReveal(table.getBlockPos(),table.seatName(),session.cards()));
+   if(control==null||!publicSession.control().equals(control.getBlockPos()))continue;
+   publicReveals.add(new TabletopWire.PublicReveal(table.getBlockPos(),table.seatName(),publicSession.cards()));
   }
   ServerPlayNetworking.send(player,new TabletopWire.Reply(
    origin,message,owned,List.copyOf(tiles),List.copyOf(played),
