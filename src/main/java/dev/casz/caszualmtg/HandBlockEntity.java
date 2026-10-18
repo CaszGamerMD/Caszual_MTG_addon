@@ -31,6 +31,15 @@ public final class HandBlockEntity extends BlockEntity {
 
  public UUID owner(){return owner;}
  public void ensureOwner(Player player){if(owner==null){owner=player.getUUID();viewers.add(owner);viewerNames.put(owner,player.getGameProfile().name());changed();}}
+ /** Only an empty, never-claimed Hand can be reserved by the AI golem.
+  * Other players' private Hands are never appropriated or exposed. */
+ public boolean claimBot(UUID id,String name){
+  if(owner!=null)return owner.equals(id);
+  if(cardCount()!=0)return false;
+  owner=Objects.requireNonNull(id);
+  viewers.add(id);viewerNames.put(id,Objects.requireNonNull(name));changed();
+  return true;
+ }
  public boolean isAuthorized(Player player){return owner!=null&&(owner.equals(player.getUUID())||viewers.contains(player.getUUID()));}
  public boolean canView(Player player){return revealAll||isAuthorized(player);}
  public boolean canManage(Player player){return owner!=null&&owner.equals(player.getUUID());}
