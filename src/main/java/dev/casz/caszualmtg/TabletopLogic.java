@@ -761,11 +761,25 @@ public final class TabletopLogic {
    if(revealed==null)continue;
    shownHands.add(new TabletopWire.ShownHand(t.getBlockPos(),t.seatName(),revealed.visibleCards()));
   }
+  // Only real deck reveal sessions linked to this exact player's seat
+  // become public; scry and other private deck inspection stay private.
+  List<TabletopWire.PublicReveal> publicReveals=new ArrayList<>();
+  for(TabletopBlockEntity table:c.tiles){
+   UUID owner=table.seatOwner();
+   if(owner==null)continue;
+   ScrySession session=REVEALS.get(owner);
+   if(session==null)continue;
+   HandBlockEntity ownerHand=linkedHand(player,table,owner);
+   if(ownerHand==null)continue;
+   DeckControlBlockEntity control=HandLogic.linkedControl(player,ownerHand);
+   if(control==null||!session.control().equals(control.getBlockPos()))continue;
+   publicReveals.add(new TabletopWire.PublicReveal(table.getBlockPos(),table.seatName(),session.cards()));
+  }
   ServerPlayNetworking.send(player,new TabletopWire.Reply(
    origin,message,owned,List.copyOf(tiles),List.copyOf(played),
    c.hand==null||c.seat==null?List.of():c.hand.visibleCards(),
    c.deck==null?0:c.deck.getLibraryCount(),List.copyOf(grave),List.copyOf(exile),scry,reveal,commander(player,c),
-   c.seat==null?List.of():c.seat.tokenTray(),List.copyOf(tokenResults),query.page(),tokenMore,REVEALED_HANDS.contains(player.getUUID()),List.copyOf(shownHands)
+   c.seat==null?List.of():c.seat.tokenTray(),List.copyOf(tokenResults),query.page(),tokenMore,REVEALED_HANDS.contains(player.getUUID()),List.copyOf(shownHands),List.copyOf(publicReveals)
   ));
  }
  private TabletopLogic(){}
