@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IPI",
+    "IRI",
+    " I "
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "P": "minecraft:carved_pumpkin",
+    "R": "minecraft:redstone"
+  },
+  "result": {
+    "id": "caszual_mtg:commander_golem",
+    "count": 1
+  }
+}
