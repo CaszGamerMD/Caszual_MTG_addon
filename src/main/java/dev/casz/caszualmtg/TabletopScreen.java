@@ -271,403 +271,35 @@ public final class TabletopScreen extends LegacyScreen {
    button("Close",px+263,py+111,44,()->{counterOpen=false;rebuildWidgets();});
   }
   if(tokenTrayOpen){
-   int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW();
-   tokenSearch=addRenderableWidget(new EditBox(font,px+pw/2+7,py+25,pw/2-82,19,Component.literal("Token name")));
-   tokenSearch.setMaxLength(100);tokenSearch.setValue(tokenText);
-   button("Search",px+pw-71,py+25,65,()->searchTokens(0));
-   tokenOracle=addRenderableWidget(new EditBox(font,px+pw/2+7,py+49,pw/2-14,19,Component.literal("Oracle text (contains)")));
-   tokenOracle.setMaxLength(90);tokenOracle.setValue(tokenOracleText);
-   tokenPt=addRenderableWidget(new EditBox(font,px+pw/2+7,py+73,88,19,Component.literal("P/T e.g. 1/1")));
-   tokenPt.setMaxLength(16);tokenPt.setValue(tokenPtText);
-   button("◀",px+pw/2+7,py+100,29,()->{tokenResultScroll=0;searchTokens(Math.max(0,data.tokenPage()-1));});
-   button("▶",px+pw/2+41,py+100,29,()->{
-    if(data.tokenMore()){tokenResultScroll=0;searchTokens(Math.min(50,data.tokenPage()+1));}
-    else message="No more token results.";
-   });
-   button("Add selected",px+pw-123,py+100,117,()->{
-    if(tokenResultSelected>=0&&tokenResultSelected<data.tokenResults().size())
-     send("token_add",data.tokenResults().get(tokenResultSelected).key(),data.seat(),0,0,0);
-    else message="Select a token search result.";
-   });
-   int foot=boardY()+boardH()-27;
-   button("Play selected",px+7,foot,98,()->playSelectedToken());
-   button("Remove",px+111,foot,68,()->{if(traySelected>=0)send("token_remove","",data.seat(),0,0,traySelected);});
-   button("▲",px+184,foot,23,()->{trayScroll=Math.max(0,trayScroll-3);});
-   button("▼",px+211,foot,23,()->{trayScroll=Math.min(Math.max(0,data.tray().size()-3),trayScroll+3);});
-  }
-  int by=handTop()+5;
-  button(data.ownHandRevealed()?"HIDE HAND !":"Reveal Hand",169,by,116,()->action("reveal_hand",0));
-  button("Hand",12,by,58,()->switchZone("hand"));
-  button("GY",74,by,35,()->switchZone("grave"));
-  button("Exile",112,by,53,()->switchZone("exile"));
-  if(!data.reveal().isEmpty()){
-   button("Reveal",169,by,58,()->switchZone("reveal"));
-   button("Top → Hand",width-310,by,100,()->action("reveal_to_hand",0));
-   button("Top → Field",width-205,by,100,()->{
-    message="Drag the first revealed card into the battlefield.";});
-   button("Rest → Bottom",width-100,by,90,()->action("reveal_end",0));
-  }else if(!data.scry().isEmpty()){
-   button("Scry",169,by,48,()->switchZone("scry"));
-   button("Resolve",width-185,by,84,this::resolveScry);
-   button("Cancel",width-97,by,84,()->action("scry_cancel",0));
-  }else{
-   if(!pendingHandZone.isBlank()){
-    button("Cancel",width-385,by,78,()->{pendingHandZone="";pendingHandSlot=-1;rebuildWidgets();});
-    button(pendingHandZone.equals("exile")?"CONFIRM EXILE":"CONFIRM GY",width-302,by,145,this::confirmHandMove);
-   }else{
-    button("To Hand",width-385,by,78,()->tableAction("return"));
-    button("To GY",width-302,by,66,()->tableAction("grave"));
-    button("Exile Card",width-232,by,81,()->tableAction("exile"));
-   }
-   button("Cmd Zone",width-146,by,84,()->tableAction("commander_home"));
-   button("◀",width-60,by,23,()->{zoneScroll=Math.max(0,zoneScroll-visibleHandCards());});
-   button("▶",width-34,by,23,()->{zoneScroll+=visibleHandCards();});
-  }
- }
- int tokenPanelW(){return Math.min(485,Math.max(352,width-58));}
- int tokenPanelX(){return (width-tokenPanelW())/2;}
- int tokenVisibleRows(){return Math.max(1,(boardH()-171)/38);}
- boolean inTokenPanel(int x,int y){return tokenTrayOpen&&x>=tokenPanelX()&&x<tokenPanelX()+tokenPanelW()&&y>=boardY()+10&&y<=boardY()+boardH()-2;}
- boolean inCounterPanel(int x,int y){return counterOpen&&x>=Math.max(14,width-330)&&x<width-12&&y>=boardY()+13&&y<boardY()+151;}
- void searchTokens(int page){
-  tokenText=tokenSearch==null?tokenText:tokenSearch.getValue();
-  tokenOracleText=tokenOracle==null?tokenOracleText:tokenOracle.getValue();
-  tokenPtText=tokenPt==null?tokenPtText:tokenPt.getValue();
-  if(!tokenPtText.isBlank())try{Catalogue.stats(tokenPtText);}
-  catch(IllegalArgumentException error){message=error.getMessage();return;}
-  tokenResultSelected=-1;
-  send("token_query",tokenText+"\\n"+tokenOracleText+"\\n"+tokenPtText,data.seat(),0,0,page);
- }
- void playSelectedToken(){
-  if(traySelected<0||traySelected>=data.tray().size()){message="Select a token in your tray first.";return;}
-  send("token_play","",view,500,500,traySelected);
- }
- void counterPreset(String name){if(counterName!=null)counterName.setValue(name);if(counterTotal!=null)counterTotal.setValue(Integer.toString(counterCount(name)));}
- int counterCount(String name){
-  for(var c:data.cards())if(c.id().equals(counterCard))return TabletopCardStats.counters(c.stack()).getOrDefault(name.trim().toLowerCase(Locale.ROOT),0);
-  return 0;
- }
- void changeCounter(int amount){if(counterName==null)return;String name=counterName.getValue().trim().toLowerCase(Locale.ROOT);int total=Math.max(0,Math.min(1000000,counterCount(name)+amount));send("counter_set",counterCard+"|"+name,data.seat(),0,0,total);counterTotal.setValue(Integer.toString(total));}
- void setCounter(boolean remove){
-  if(counterName==null||counterTotal==null)return;
-  String name=counterName.getValue().trim().toLowerCase(Locale.ROOT);
-  int amount=0;
-  if(!remove)try{amount=Integer.parseInt(counterTotal.getValue());}catch(NumberFormatException ex){message="Use a numeric counter total.";return;}
-  if(amount<0||amount>1000000||name.isBlank()||name.length()>40){message="Invalid counter name or total.";return;}
-  send("counter_set",counterCard+"|"+name,data.seat(),0,0,amount);
- }
- void resolveScry(){
-  List<Integer> first=new ArrayList<>(),second=new ArrayList<>();
-  for(int i=0;i<data.scry().size();i++)(scryBottom.contains(i)?second:first).add(i);
-  String top=first.stream().map(String::valueOf).collect(Collectors.joining(","));
-  String bottom=second.stream().map(String::valueOf).collect(Collectors.joining(","));
-  send("scry_commit",top+"|"+bottom,data.seat(),0,0,0);
- }
- void tableAction(String name){
-  if((name.equals("grave")||name.equals("exile"))&&zone.equals("hand")&&selectedZone>=0){
-   if(selectedZone>=data.hand().size()){message="Select a card in hand first.";return;}
-   pendingHandZone=name;pendingHandSlot=selectedZone;rebuildWidgets();
-   message="Confirm moving selected hand card to "+(name.equals("grave")?"graveyard":"exile")+".";
-   return;
-  }
-  if(!selectedCard.isBlank())send(name,selectedCard,data.seat(),0,0,0);
-  else if(name.equals("return")&&(zone.equals("grave")||zone.equals("exile"))&&selectedZone>=0){
-   List<TabletopWire.ZoneCard> list=zone.equals("grave")?data.grave():data.exile();
-   if(selectedZone<list.size())send("zone_to_hand","",data.seat(),0,0,list.get(selectedZone).slot());
-  }
- }
- void confirmHandMove(){
-  if(pendingHandSlot<0||pendingHandSlot>=data.hand().size()||!zone.equals("hand")){
-   message="Hand changed. Select the card again.";pendingHandZone="";pendingHandSlot=-1;rebuildWidgets();return;
-  }
-  ItemStack card=data.hand().get(pendingHandSlot);
-  String id=com.spider.mtgcard.util.TcgCardMeta.read(card).id();
-  if(id.isBlank())id=com.spider.mtgcard.util.TcgCardMeta.read(card).name();
-  send("hand_to_zone",pendingHandZone+"|"+id,data.seat(),0,0,pendingHandSlot);
-  pendingHandZone="";pendingHandSlot=-1;selectedZone=-1;rebuildWidgets();
- }
- boolean own(TabletopWire.Card c){
-  var me=Minecraft.getInstance().player;
-  return me!=null&&c.owner().equals(me.getUUID().toString());
- }
- @Override public boolean mouseClicked(MouseButtonEvent event,boolean twice){
-  int x=(int)event.x(),y=(int)event.y();
-  if(inCounterPanel(x,y))return super.mouseClicked(event,twice);
-  if(revealStripAt(x,y)>=0)return true; // Public deck-reveal cards are read-only.
-  if(shownCardAt(x,y)>=0&&event.button()==0)return true; // Read-only public hand.
-  if(inTokenPanel(x,y)){
-   int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW(),start=py+129;
-   int visible=tokenVisibleRows();
-   if(y>=start&&y<start+visible*38){
-    int row=(y-start)/38;
-    if(x<px+pw/2){
-     int at=trayScroll+row;
-     if(at<data.tray().size()){
-      traySelected=at;
-      if(event.button()==0)drag=new Drag("token","",at,data.tray().get(at),x,y);
-     }
-    }else{
-     int at=tokenResultScroll+row;
-     if(at<data.tokenResults().size())tokenResultSelected=at;
-    }
-    return true;
-   }
-   return super.mouseClicked(event,twice);
-  }
-  if(boardHit(x,y)){
-   TabletopWire.Card c=cardAt(x,y);
-   if(c!=null&&menuMode.equals("target")&&event.button()==0){
-    if(own(c)&&targetSource.isBlank()){
-     targetSource=c.id();message="Source selected. Switch seat tabs and click a target card.";
-    }else if(own(c)&&c.id().equals(targetSource)){
-     targetSource="";message="Source cleared.";
-    }else {
-     send("target_card",targetSource+"|"+c.id(),c.pos(),0,0,0);
-     message="Target declared on "+TcgCardMeta.displayName(c.stack())+".";
-    }
-    return true;
-   }
-   if(c!=null){selectedCard=c.id();selectedZone=-1;
-    if(event.button()==1){
-     boolean shift=GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(),GLFW.GLFW_KEY_LEFT_SHIFT)==GLFW.GLFW_PRESS
-      ||GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(),GLFW.GLFW_KEY_RIGHT_SHIFT)==GLFW.GLFW_PRESS;
-     if(shift){
-      if(own(c))send("quick_send",c.id(),data.seat(),0,0,0);
-      else message="Only your own cards can be quick-sent.";
-     }else if(own(c)&&!c.hidden()){
-      counterCard=c.id();counterOpen=true;tokenTrayOpen=false;rebuildWidgets();
-     }else message="Counters can only be changed on your face-up cards.";
-     return true;
-    }
-    if(own(c)&&event.button()==0)drag=new Drag("board",c.id(),-1,c.stack(),x,y);
-    return true;
-   }
-  }
-  if(!data.commander().isEmpty()&&x>=12&&x<81&&y>=zoneY()&&y<zoneY()+handCardH()){
-   drag=new Drag("commander","",-1,data.commander(),x,y);selectedZone=-1;return true;
-  }
-  int idx=zoneAt(x,y);
-  if(idx>=0){
-   pendingHandZone="";pendingHandSlot=-1;
-   selectedCard="";selectedZone=idx;
-   if(discardMode&&zone.equals("hand")){
-    action("mulligan_discard",idx);discardMode=false;
-   }else if(zone.equals("scry")){
-    if(!scryBottom.add(idx))scryBottom.remove(idx);
-   }else{
-    String source=zone;
-    if(!source.equals("reveal")||idx==0)drag=new Drag(source,"",idx,zoneCards().get(idx),x,y);
-   }
-   return true;
-  }
-  return super.mouseClicked(event,twice);
- }
- @Override public boolean mouseReleased(MouseButtonEvent event){
-  if(drag!=null){
-   Drag held=drag;drag=null;
-   int mx=(int)event.x(),my=(int)event.y();
-   if(boardHit(mx,my)&&view!=null&&!inTokenPanel(mx,my)&&!inCounterPanel(mx,my)){
-    int x=xNormalized(mx),y=yNormalized(my);
-    switch(held.source()){
-     case "board" -> {
-      if(Math.abs(mx-held.startX())>3||Math.abs(my-held.startY())>3){
-       // Preserve the grab point instead of snapping the card under the pointer.
-       TabletopWire.Card origin=data.cards().stream().filter(c->c.id().equals(held.id())).findFirst().orElse(null);
-       if(origin!=null){
-        int dx=(mx-held.startX())*1000/Math.max(1,boardW()-boardCardW()-16);
-        int dy=(my-held.startY())*1000/Math.max(1,boardH()-boardCardH()-16);
-        send("move",held.id(),view,Math.clamp(origin.x()+dx,0,1000),Math.clamp(origin.y()+dy,0,1000),0);
-       }
-      }else send("tap",held.id(),view,0,0,0);
-     }
-     case "hand" -> send("put_hand","",view,x,y,held.index());
-     case "grave" -> {
-      if(held.index()<data.grave().size())send("put_grave","",view,x,y,data.grave().get(held.index()).slot());
-     }
-     case "exile" -> {
-      if(held.index()<data.exile().size())send("put_exile","",view,x,y,data.exile().get(held.index()).slot());
-     }
-     case "commander" -> send("play_commander","",view,x,y,0);
-     case "token" -> send("token_play","",view,x,y,held.index());
-     case "reveal" -> {if(held.index()==0)send("reveal_to_field","",view,x,y,0);}
-    }
-   }
-   return true;
-  }
-  return super.mouseReleased(event);
- }
- @Override public boolean mouseScrolled(double mx,double my,double dx,double dy){
-  TabletopWire.PublicReveal revealed=displayedReveal();
-  if(revealed!=null&&!tokenTrayOpen&&!counterOpen
-     &&my>=revealStripY()-17&&my<revealStripY()+revealStripCardH()
-     &&mx>=boardX()+7&&mx<boardX()+boardW()-7){
-   publicRevealScroll=Math.clamp(publicRevealScroll-(int)Math.signum(dy)*2,0,
-     Math.max(0,revealed.cards().size()-revealStripVisible()));
-   return true;
-  }
-  TabletopWire.ShownHand shown=shownHand();
-  if(shown!=null&&!tokenTrayOpen&&mx>=boardX()+6&&mx<=boardX()+boardW()-6
-    &&my>=shownHandY()-16&&my<shownHandY()+shownCardH()){
-   shownScroll=Math.clamp(shownScroll-(int)Math.signum(dy)*3,0,
-    Math.max(0,shown.cards().size()-shownHandVisible()));
-   return true;
-  }
-  if(inTokenPanel((int)mx,(int)my)){
-   int visible=Math.max(2,(boardH()-119)/15);
-   int delta=(int)Math.signum(dy)*3;
-   if(mx<tokenPanelX()+tokenPanelW()/2)
-    trayScroll=Math.clamp(trayScroll-delta,0,Math.max(0,data.tray().size()-visible));
-   else
-    tokenResultScroll=Math.clamp(tokenResultScroll-delta,0,Math.max(0,data.tokenResults().size()-visible));
-   return true;
-  }
-  if(my>=handTop()){
-   int max=Math.max(0,zoneCards().size()-visibleHandCards());
-   zoneScroll=Math.clamp(zoneScroll-(int)Math.signum(dy)*3,0,max);
-   return true;
-  }
-  if(boardHit((int)mx,(int)my)&&!tokenTrayOpen&&!counterOpen
-    &&view!=null&&view.equals(data.seat())&&dy!=0){
-   send("card_scale","",view,0,0,(int)Math.signum(dy));
-   return true;
-  }
-  return super.mouseScrolled(mx,my,dx,dy);
- }
- @Override public void tick(){
-  super.tick();
-  if(++ticks%25==0)send("refresh","",data.seat(),0,0,0);
- }
- @Override public boolean isPauseScreen(){return false;}
- int darken(int rgb){
-  int r=(rgb>>16&255)*57/100+12,g=(rgb>>8&255)*57/100+12,b=(rgb&255)*57/100+12;
-  return 0xFF000000|(r<<16)|(g<<8)|b;
- }
- void drawArt(GuiGraphics g,ItemStack stack,int x,int y,int w,int h){
-  if(stack==null||stack.isEmpty()){
-   g.fill(x,y,x+w,y+h,0xFF22364E);
-   g.drawCenteredString(font,"MTG",x+w/2,y+h/2-4,0xFFEAD29C);
-  }else CaszualMtgClient.art(g,stack,TcgCardMeta.read(stack).face(),x,y,w,h);
- }
- @Override public void render(GuiGraphics g,int mx,int my,float delta){
-  g.fill(0,0,width,height,0xFF121B28);
-  g.fill(0,0,width,34,0xFF202D3B);
-  TabletopWire.Tile tile=shown();
-  // The active seat is highlighted independently of which battlefield we are viewing.
-  int tabx=12,maxTabs=Math.max(1,(width-95)/137);
-  for(int i=tabScroll;i<Math.min(data.tiles().size(),tabScroll+maxTabs);i++){
-   TabletopWire.Tile t=data.tiles().get(i);
-   int rgb=0xFF000000|(t.color()&0xFFFFFF);
-   if(isHandRevealed(t.pos()))g.fill(tabx-2,5,tabx+134,30,0xFFFF3939);
-   else if(t.pos().equals(view))g.fill(tabx-2,5,tabx+134,30,rgb);
-   else if(t.active())g.fill(tabx-2,5,tabx+134,30,0xFF7A6A38);
-   if(isHandRevealed(t.pos()))g.fill(tabx-2,27,tabx+134,30,0xFFFFA0A0);
-   tabx+=137;
-  }
-  g.fill(boardX()-3,boardY()-3,boardX()+boardW()+3,boardY()+boardH()+3,0xFF7D6548);
-  int bg=tile==null?0xFF2D453B:darken(tile.color());
-  g.fill(boardX(),boardY(),boardX()+boardW(),boardY()+boardH(),bg);
-  if(tile!=null){
-   g.drawString(font,tile.owner().isBlank()?"Empty table":tile.owner()+"'s battlefield"+(tile.active()?"  •  CURRENT TURN":""),boardX()+8,boardY()+7,0xFFE5F3E7);
-   String scaleLabel="CARDS "+tile.cardScale()+"%"+(view.equals(data.seat())?" · Scroll to resize":"");
-   g.drawString(font,scaleLabel,boardX()+boardW()-font.width(scaleLabel)-10,boardY()+7,0xFFE5F3E7);
-  }
-  for(var c:displayed()){
-   int x=cardX(c),y=cardY(c),cw=boardCardW(),ch=boardCardH();
-   boolean chosen=c.id().equals(selectedCard);
-   // Rotate card art and selection border together. The server keeps original
-   // coordinates, so tapped/untapped cards never shift their anchor position.
-   if(c.tapped()){
-    var pose=g.pose();
-    pose.pushMatrix();
-    pose.translate(x+cw/2.0f,y+ch/2.0f);
-    pose.rotate((float)(Math.PI/2.0));
-    pose.translate(-x-cw/2.0f,-y-ch/2.0f);
-   }
-   g.fill(x-2,y-2,x+cw+2,y+ch+2,chosen?0xFFFFD078:c.tapped()?0xFF98BDEB:0xFF19212D);
-   if(c.hidden())drawArt(g,ItemStack.EMPTY,x,y,cw,ch);
-   else drawArt(g,c.stack(),x,y,cw,ch);
-   if(c.tapped())g.pose().popMatrix();
-  }
-  // Overlays are drawn in screen orientation even on sideways (tapped) cards,
-  // keeping P/T and counters readable at their actual visible lower-right edge.
-  for(var card:displayed()){
-   if(card.hidden()||card.stack().isEmpty())continue;
-   int x=cardX(card),y=cardY(card),w=boardCardW(),h=boardCardH();
-   int left=card.tapped()?x+(w-h)/2:x,top=card.tapped()?y+(h-w)/2:y;
-   int bw=card.tapped()?h:w,bh=card.tapped()?w:h;
-   if(card.id().startsWith("copy:")){
-    g.fill(left,top+bh-29,left+Math.min(bw,67),top+bh-17,0xED355A72);
-    g.drawString(font,"TOKEN COPY",left+3,top+bh-27,0xFFE6F6FF);
-   }
-   String pt=TabletopCardStats.powerToughness(card.stack());
-   if(!pt.isEmpty()){
-    int labelW=Math.max(30,font.width(pt)+12),bx=left+bw-labelW,by=top+bh-14;
-    g.fill(bx,by,bx+labelW,by+14,0xF0192636);
-    g.fill(bx,by,bx+labelW,by+1,0xFFE6C079);
-    g.drawCenteredString(font,pt,bx+labelW/2,by+3,0xFFFFFFFF);
-   }
-   int line=0;
-   for(var counter:TabletopCardStats.counters(card.stack()).entrySet()){
-    if(line>=3)break;
-    String label=counter.getKey()+" ×"+counter.getValue();
-    int lw=Math.min(bw-2,Math.max(22,font.width(label)+9)),ly=top+line*13;
-    g.fill(left,ly,left+lw,ly+12,0xF0273650);
-    g.drawString(font,font.plainSubstrByWidth(label,lw-6),left+3,ly+2,0xFFFFE19F);
-    line++;
-   }
-  }
-  // Public Deck Control reveal: the owner and all opponents see the real
-  // revealed card art on the revealing player's battlefield tab.
-  TabletopWire.PublicReveal revealedDeck=displayedReveal();
-  if(revealedDeck!=null&&!tokenTrayOpen&&!counterOpen){
-   int x=revealStripX(),y=revealStripY(),visible=revealStripVisible();
-   publicRevealScroll=Math.clamp(publicRevealScroll,0,
-     Math.max(0,revealedDeck.cards().size()-visible));
-   g.fill(x-6,y-19,boardX()+boardW()-7,y+revealStripCardH()+5,0xE84A3D25);
-   String text="DECK REVEAL · "+revealedDeck.owner()+" · "+revealedDeck.cards().size()+" cards · Scroll / Alt to inspect";
-   g.drawString(font,font.plainSubstrByWidth(text,boardW()-26),x,y-15,0xFFFFE5A5);
-   for(int i=publicRevealScroll;i<revealedDeck.cards().size()&&i<publicRevealScroll+visible;i++){
-    int xx=x+(i-publicRevealScroll)*revealStripStep();
-    g.fill(xx-2,y-2,xx+revealStripCardW()+2,y+revealStripCardH()+2,0xFFE4BC6A);
-    drawArt(g,revealedDeck.cards().get(i),xx,y,revealStripCardW(),revealStripCardH());
-   }
-  }
-  // Revealed opponent cards are read-only, scrollable and ALT-previewable.
-  TabletopWire.ShownHand publicHand=shownHand();
-  if(publicHand!=null&&!tokenTrayOpen){
-   int bx=shownHandX(),by=shownHandY(),visible=shownHandVisible();
-   g.fill(bx-6,by-19,boardX()+boardW()-7,by+shownCardH()+4,0xEE511C25);
-   String label="REVEALED HAND · "+publicHand.owner()+" · "+publicHand.cards().size()+" cards · Scroll / Alt to inspect";
-   g.drawString(font,font.plainSubstrByWidth(label,boardW()-28),bx,by-15,0xFFFFF2EF);
-   shownScroll=Math.clamp(shownScroll,0,Math.max(0,publicHand.cards().size()-visible));
-   for(int i=shownScroll;i<publicHand.cards().size()&&i<shownScroll+visible;i++){
-    int x=bx+(i-shownScroll)*shownCardStride();
-    g.fill(x-2,by-2,x+shownCardW()+2,by+shownCardH()+2,0xFFFF5151);
-    drawArt(g,publicHand.cards().get(i),x,by,shownCardW(),shownCardH());
-   }
-  }
-  if(tokenTrayOpen){
    int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW(),bottom=boardY()+boardH()-2;
    g.fill(px,py,px+pw,bottom,0xF11A2839);
    g.fill(px+4,py+4,px+pw-4,py+22,0xFF334B61);
-   g.drawString(font,"TOKEN TRAY  "+data.tray().size()+"/32",px+10,py+9,0xFFF5DAAA);
-   g.drawString(font,"Search / catalogue (page "+(data.tokenPage()+1)+")",px+pw/2+8,py+9,0xFFCCE3EF);
-   g.drawString(font,"Stored templates · drag to field",px+8,py+53,0xFFB4CADB);
+   g.drawString(font,"TOKEN TRAY "+data.tray().size()+"/32",px+10,py+9,0xFFF5DAAA);
+   g.drawString(font,"Token catalogue · page "+(data.tokenPage()+1),px+pw/2+8,py+9,0xFFCCE3EF);
+   g.drawString(font,"Stored templates",px+8,py+112,0xFFB4CADB);
+   g.drawString(font,"P/T    Oracle",px+pw/2+104,py+87,0xFFB4CADB);
    if(data.tokenResults().isEmpty())
-    g.drawString(font,"No results yet — search by token name",px+pw/2+8,py+83,0xFFB4CADB);
-   int start=py+79,visible=Math.max(2,(boardH()-119)/15);
+    g.drawString(font,"No matching tokens",px+pw/2+8,py+119,0xFFB4CADB);
+   int start=py+129,visible=tokenVisibleRows();
    for(int i=0;i<visible;i++){
-    int at=trayScroll+i,yy=start+i*15;
+    int at=trayScroll+i,yy=start+i*38;
     if(at<data.tray().size()){
-     g.fill(px+5,yy,px+pw/2-4,yy+14,at==traySelected?0xFF557495:0xFF26384C);
-     String name=com.spider.mtgcard.util.TcgCardMeta.displayName(data.tray().get(at));
-     g.drawString(font,font.plainSubstrByWidth(name,pw/2-18),px+9,yy+3,0xFFFFFFFF);
+     ItemStack token=data.tray().get(at);
+     g.fill(px+5,yy,px+pw/2-4,yy+37,at==traySelected?0xFF557495:0xFF26384C);
+     drawArt(g,token,px+7,yy+2,24,34);
+     var meta=TcgCardMeta.read(token);
+     g.drawString(font,font.plainSubstrByWidth(TcgCardMeta.displayName(token),pw/2-48),px+36,yy+5,0xFFFFFFFF);
+     g.drawString(font,meta.power()+"/"+meta.toughness(),px+36,yy+22,0xFFE4C999);
     }
     int found=tokenResultScroll+i;
     if(found<data.tokenResults().size()){
-     g.fill(px+pw/2+4,yy,px+pw-6,yy+14,found==tokenResultSelected?0xFF557495:0xFF26384C);
-     String name=com.spider.mtgcard.util.TcgCardMeta.displayName(data.tokenResults().get(found).stack());
-     g.drawString(font,font.plainSubstrByWidth(name,pw/2-18),px+pw/2+8,yy+3,0xFFFFFFFF);
+     ItemStack token=data.tokenResults().get(found).stack();
+     g.fill(px+pw/2+4,yy,px+pw-6,yy+37,found==tokenResultSelected?0xFF557495:0xFF26384C);
+     drawArt(g,token,px+pw/2+6,yy+2,24,34);
+     var meta=TcgCardMeta.read(token);
+     g.drawString(font,font.plainSubstrByWidth(TcgCardMeta.displayName(token),pw/2-49),px+pw/2+34,yy+4,0xFFFFFFFF);
+     String stats=meta.power().isBlank()?"":meta.power()+"/"+meta.toughness()+" ";
+     g.drawString(font,font.plainSubstrByWidth(stats+meta.oracleText(),pw/2-48),px+pw/2+34,yy+22,0xFFDBD6BC);
     }
    }
   }
@@ -711,6 +343,19 @@ public final class TabletopScreen extends LegacyScreen {
    ||GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(),GLFW.GLFW_KEY_RIGHT_ALT)==GLFW.GLFW_PRESS;
   if(alt){
    ItemStack hovered=ItemStack.EMPTY;
+   if(tokenTrayOpen&&inTokenPanel(mx,my)){
+    int row=(my-boardY()-10-129)/38;
+    if(row>=0&&row<tokenVisibleRows()&&my>=boardY()+10+129){
+     int panelMiddle=tokenPanelX()+tokenPanelW()/2;
+     if(mx<panelMiddle){
+      int at=trayScroll+row;
+      if(at<data.tray().size())hovered=data.tray().get(at);
+     }else{
+      int at=tokenResultScroll+row;
+      if(at<data.tokenResults().size())hovered=data.tokenResults().get(at).stack();
+     }
+    }
+   }
    if(revealedDeck!=null&&!tokenTrayOpen&&!counterOpen){
     int index=revealStripAt(mx,my);
     if(index>=0)hovered=revealedDeck.cards().get(index);
