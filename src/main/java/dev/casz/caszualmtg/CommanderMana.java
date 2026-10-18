@@ -1,0 +1,110 @@
+package dev.casz.caszualmtg;
+
+import java.util.*;
+import java.util.regex.*;
+
+/**
+ * Exact one-mana-source planner for the intentionally small subset of MTG
+ * abilities understood by the Commander Golem. Unsupported symbols/abilities
+ * fail closed instead of producing free mana or skipping costs.
+ */
+public final class CommanderMana {
+ private CommanderMana(){}
+ public record Cost(int generic,int white,int blue,int black,int red,int green,int colorless) {
+  public int total(){return generic+white+blue+black+red+green+colorless;}
+  public Cost taxed(int tax){return new Cost(generic+tax,white,blue,black,red,green,colorless);}
+  public int requirement(int index){return switch(index){
+   case 0->white;case 1->blue;case 2->black;case 3->red;case 4->green;case 5->colorless;
+   default->throw new IllegalArgumentException("Unknown mana index");
+  };}
+ }
+ public record Source(String id,int manaMask){
+  public Source{Objects.requireNonNull(id);if(manaMask<=0||manaMask>63)throw new IllegalArgumentException("Mana mask must be between 1 and 63");}
+ }
+ // 1=W 2=U 4=B 8=R 16=G 32=C. Each source adds EXACTLY one mana.
+ public static Optional<Cost> parse(String raw){
+  if(raw==null)return Optional.empty();
+  String s=raw.trim().toUpperCase(Locale.ROOT);
+  if(s.isBlank())return Optional.of(new Cost(0,0,0,0,0,0,0));
+  Matcher m=Pattern.compile("\\{([^{}]+)}").matcher(s);
+  int[] counts=new int[6];int generic=0,last=0;
+  while(m.find()){
+   if(!s.substring(last,m.start()).isBlank())return Optional.empty();
+   last=m.end();String symbol=m.group(1);
+   int type=switch(symbol){case "W"->0;case "U"->1;case "B"->2;case "R"->3;case "G"->4;case "C"->5;default->-1;};
+   if(type>=0){counts[type]++;continue;}
+   if(!symbol.matches("[0-9]{1,2}"))return Optional.empty(); // X, hybrid, phyrexian, snow etc.
+   generic+=Integer.parseInt(symbol);
+   if(generic>99)return Optional.empty();
+  }
+  if(!s.substring(last).isBlank()||last==0)return Optional.empty();
+  return Optional.of(new Cost(generic,counts[0],counts[1],counts[2],counts[3],counts[4],counts[5]));
+ }
+ /** Recognize basic lands and extremely simple, unconditional tap-for-one abilities. */
+ public static int production(String name,String typeLine,String oracle){
+  String type=Objects.requireNonNullElse(typeLine,"").toLowerCase(Locale.ROOT);
+  if(!type.contains("land"))return 0;
+  String text=Objects.requireNonNullElse(oracle,"").trim().toUpperCase(Locale.ROOT);
+  // Basic types imply intrinsic abilities, even when Oracle has no reminder text.
+  if(text.isBlank()){
+   int mask=0;
+   if(type.contains("plains"))mask|=1;
+   if(type.contains("island"))mask|=2;
+   if(type.contains("swamp"))mask|=4;
+   if(type.contains("mountain"))mask|=8;
+   if(type.contains("forest"))mask|=16;
+   if(type.contains("wastes"))mask|=32;
+   return mask;
+  }
+  // Explicit "{T}: Add {W}." with an optional color choice from a single ability.
+  // Any other text is too complex to treat as unconditional mana production.
+  String[] lines=text.replace("\\r","").split("\\n");
+  if(lines.length!=1)return 0;
+  String line=lines[0].trim();
+  if(!line.startsWith("{T}: ADD "))return 0;
+  String production=line.substring(9).replace(".","").trim();
+  int mask=0;
+  if(production.matches("\\{[WUBRGC]}"))mask=bit(production.charAt(1));
+  else {
+   Matcher choice=Pattern.compile("ONE MANA OF ANY (?:COLOR|TYPE)").matcher(production);
+   if(choice.matches())mask=31; // 'any color' excludes colorless
+  }
+  return mask;
+ }
+ private static int bit(char c){return switch(c){case 'W'->1;case 'U'->2;case 'B'->4;case 'R'->8;case 'G'->16;case 'C'->32;default->0;};}
+ /** Source IDs are unique battlefield card ids. Plan is a deterministic list of ids to tap. */
+ public static Optional<List<String>> pay(Cost cost,List<Source> available){
+  if(cost==null||available==null||cost.total()>available.size())return Optional.empty();
+  if(cost.total()==0)return Optional.of(List.of());
+  boolean[] used=new boolean[available.size()];
+  List<String> chosen=new ArrayList<>();
+  if(!solve(0,cost,available,used,chosen))return Optional.empty();
+  return Optional.of(List.copyOf(chosen));
+ }
+ private static boolean solve(int step,Cost cost,List<Source> sources,boolean[] used,List<String> out){
+  // Most constrained color first minimizes search for multicolor costs.
+  final int[] order={5,0,1,2,3,4};
+  int needed=0;
+  for(int type:order)needed+=cost.requirement(type);
+  if(step>=needed){
+   int generic=cost.generic();
+   for(int i=0;i<sources.size()&&generic>0;i++)if(!used[i]){
+    out.add(sources.get(i).id());generic--;
+   }
+   if(generic==0)return true;
+   while(out.size()>step)out.removeLast();
+   return false;
+  }
+  int rem=step,type=-1;
+  for(int index:order){int n=cost.requirement(index);if(rem<n){type=index;break;}rem-=n;}
+  int bit=1<<type;
+  for(int i=0;i<sources.size();i++){
+   Source source=sources.get(i);
+   if(used[i]||(source.manaMask()&bit)==0)continue;
+   used[i]=true;out.add(source.id());
+   if(solve(step+1,cost,sources,used,out))return true;
+   out.removeLast();used[i]=false;
+  }
+  return false;
+ }
+}
