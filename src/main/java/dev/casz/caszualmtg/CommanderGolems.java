@@ -95,12 +95,14 @@ public final class CommanderGolems {
    double distance=at.distSqr(p);
    if(be instanceof HandBlockEntity h && (golem.getUUID().equals(h.owner()) || h.owner()==null)
       && distance<hd){hand=h;hd=distance;}
-   if(be instanceof DeckControlBlockEntity dc && dc.getLinkedDeckboxPos()!=null
-      && distance<cd){control=dc;cd=distance;}
-   if(be instanceof LifePointBlockEntity lp && distance<ld){life=lp;ld=distance;}
+   if(be instanceof DeckControlBlockEntity dc && dc.hasLinkedDeckbox()
+      && hand!=null && p.distSqr(hand.getBlockPos())<=9 && distance<cd){control=dc;cd=distance;}
+   // Counter must be explicitly named for the bot. Never select a human counter.
+   if(be instanceof LifePointBlockEntity lp &&"Commander Golem".equalsIgnoreCase(lp.getDisplayName())
+      && distance<ld){life=lp;ld=distance;}
   }
   if(hand!=null && bind && hand.owner()==null){
-   if(control==null)return new Setup(table,null,null,life);
+   if(control==null || life==null)return new Setup(table,null,control,life);
    hand.claimBot(golem.getUUID(),"Commander Golem");
    hand.linkedControl(control.getBlockPos());
    if(life!=null)hand.linkedLife(life.getBlockPos());
@@ -122,12 +124,48 @@ public final class CommanderGolems {
    return "Golem waiting for a linked deckbox.";
   if(box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT).isEmpty())
    return "Insert a legal commander in the deckbox Commander slot.";
-  if(s.life==null)return "Golem waiting for a Life Point block within 5 blocks.";
-  if(!s.life.isGameStarted())return "Golem ready. Start a game with the linked Life Point counters.";
+  if(!golem.hasTag(FIRST_HAND)){
+   String reason=deckError(box);
+   if(reason!=null)return reason;
+  }
+  if(s.life==null)return "Rename a nearby Life Point counter to Commander Golem to link it safely.";
+  if(!s.life.isGameStarted())return "Golem ready. Join Commander Golem's Life Point counter to the play group, then start the game.";
   return "Golem "+(s.life.isTurnActive()?"is taking its turn":"is waiting")+" | life "+s.life.getLife()
     +" | hand "+s.hand.cardCount()+" | library "+s.deck.getLibraryCount()+".";
  }
 
+ /** Validate the physical deck and color identity before the first shuffle/draw.
+  * Partner / Background and card-specific deck-size exceptions are not supported yet. */
+ private static String deckError(DeckboxBlockEntity box){
+  ItemStack commander=box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT);
+  if(commander.isEmpty())return "Missing commander in the deckbox Commander slot.";
+  var commanderMeta=TcgCardMeta.read(commander);
+  if(!com.spider.mtgcard.util.CardNbt.isCommanderLegal(commander))
+   return "This deckbox does not contain an eligible Commander.";
+  List<CommanderRules.Card> list=new ArrayList<>();
+  int color=mask(commanderMeta.colorIdentity());
+  CommanderRules.Card leader=new CommanderRules.Card(
+   TcgCardMeta.displayName(commander),commanderMeta.typeLine(),color,true);
+  list.add(leader);
+  for(int i=0;i<DeckboxBlockEntity.MAIN_SLOTS;i++){
+   ItemStack card=box.getStack(i);
+   if(card.isEmpty())return "Commander Golem needs exactly 99 main-deck cards and one commander.";
+   var meta=TcgCardMeta.read(card);
+   if("banned".equalsIgnoreCase(meta.commanderLegality()))
+    return "Commander banned card: "+TcgCardMeta.displayName(card);
+   list.add(new CommanderRules.Card(TcgCardMeta.displayName(card),
+      meta.typeLine(),mask(meta.colorIdentity()),false));
+  }
+  List<String> errors=CommanderRules.validateDeck(list,List.of(leader));
+  return errors.isEmpty()?null:errors.getFirst();
+ }
+ private static int mask(Set<String> colors){
+  int out=0;
+  for(String color:colors)out|=switch(color.toUpperCase(Locale.ROOT)){
+   case "W"->1;case "U"->2;case "B"->4;case "R"->8;case "G"->16;default->0;
+  };
+  return out;
+ }
  /** Tick only near online players, once per second. No chunk loading or background NPC activity. */
  public static void tick(ServerLevel world){
   if(world.getGameTime()%20!=0)return;
@@ -150,6 +188,8 @@ public final class CommanderGolems {
   if(boxPos==null||!(world.getBlockEntity(boxPos) instanceof DeckboxBlockEntity box)
     ||box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT).isEmpty())return;
   if(!golem.hasTag(FIRST_HAND)){
+   // Verify a single-commander 100-card deck before removing anything.
+   if(deckError(box)!=null)return;
    // Seven cards from the actual MTGCard Deck Control's library order.
    if(s.deck.getLibraryCount()<7||s.hand.cardCount()!=0)return;
    for(ItemStack card:s.deck.takeTopCards(7))s.hand.addCard(card);
