@@ -140,7 +140,7 @@ public final class CommanderGolems {
   ItemStack commander=box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT);
   if(commander.isEmpty())return "Missing commander in the deckbox Commander slot.";
   var commanderMeta=TcgCardMeta.read(commander);
-  if(!com.spider.mtgcard.util.CardNbt.isCommanderLegal(commander))
+  if(!com.spider.mtgcard.cards.CardNbt.isCommanderLegal(commander))
    return "This deckbox does not contain an eligible Commander.";
   List<CommanderRules.Card> list=new ArrayList<>();
   int color=mask(commanderMeta.colorIdentity());
