@@ -21,6 +21,20 @@ public final class CustomGraveyard extends GraveyardBlock {
  @Override public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos,BlockState state){
   return new CustomGraveyardEntity(pos,state);
  }
+ /** Open the usual MTGCard inventory with an empty hand. Sneak + empty
+  * hand toggles the lid independently of its menu/viewer count. */
+ @Override public InteractionResult useWithoutItem(BlockState state,Level level,BlockPos pos,Player player,BlockHitResult hit){
+  if(player.isShiftKeyDown()){
+   if(!level.isClientSide()){
+    boolean open=state.getValue(OPEN);
+    level.setBlock(pos,state.setValue(OPEN,!open),net.minecraft.world.level.block.Block.UPDATE_ALL);
+   }
+   return InteractionResult.SUCCESS;
+  }
+  if(!level.isClientSide()&&level.getBlockEntity(pos) instanceof net.minecraft.world.MenuProvider menu)
+   player.openMenu(menu);
+  return InteractionResult.SUCCESS;
+ }
  @Override protected InteractionResult useItemOn(ItemStack stack,BlockState state,Level level,BlockPos pos,Player player,InteractionHand hand,BlockHitResult hit){
   InteractionResult selected=CustomGameDeviceMaterial.apply(stack,level,pos,player);
   return selected!=InteractionResult.PASS?selected:super.useItemOn(stack,state,level,pos,player,hand,hit);
