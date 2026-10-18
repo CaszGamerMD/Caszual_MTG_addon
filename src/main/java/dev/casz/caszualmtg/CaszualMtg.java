@@ -125,6 +125,7 @@ public final class CaszualMtg implements ModInitializer {
  }
  public static final Item COUNTER=Registry.register(BuiltInRegistries.ITEM,id("counter"),new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM,id("counter"))).stacksTo(1)));
  public static final Item TARGETING_STAFF=Registry.register(BuiltInRegistries.ITEM,id("targeting_staff"),new Item(new Item.Properties().setId(ResourceKey.create(Registries.ITEM,id("targeting_staff"))).stacksTo(1)));
+ public static final Item COMMANDER_GOLEM=Registry.register(BuiltInRegistries.ITEM,id("commander_golem"),new CommanderGolemItem(new Item.Properties().setId(ResourceKey.create(Registries.ITEM,id("commander_golem"))).stacksTo(1)));
  static Block block(String name,int kind){var key=ResourceKey.create(Registries.BLOCK,id(name));Block b=Registry.register(BuiltInRegistries.BLOCK,key,new BankBlock(BlockBehaviour.Properties.of().setId(key).strength(2.5f),kind));var ik=ResourceKey.create(Registries.ITEM,id(name));Registry.register(BuiltInRegistries.ITEM,ik,new BlockItem(b,new Item.Properties().setId(ik).useBlockDescriptionPrefix()));return b;}
  public static int kind(Block b){return b==LANDS?0:b==TOKENS?1:b==CARDS?2:b==BUILDER?3:-1;}
  public static final ExtendedMenuType<CommunityMenu,CommunityMenu.OpenData> COMMUNITY_MENU=Registry.register(BuiltInRegistries.MENU,id("community"),new ExtendedMenuType<>(CommunityMenu::new,CommunityMenu.OpenData.CODEC));
@@ -135,6 +136,7 @@ public final class CaszualMtg implements ModInitializer {
      new ExtendedMenuType<>(StaffRackMenu::new,StaffRackMenu.OpenData.CODEC));
  public void onInitialize(){
   net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_LEVEL_TICK.register(ChairSeats::tick);
+   net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_LEVEL_TICK.register(CommanderGolems::tick);
   // Do not inspect MTGCard's block-entity fields in our main entrypoint:
   // MTGCard's initializer can run later in the same Fabric initialization pass.
   net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING
@@ -146,8 +148,14 @@ public final class CaszualMtg implements ModInitializer {
   PayloadTypeRegistry.serverboundPlay().register(Wire.Request.TYPE,Wire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(Wire.Reply.TYPE,Wire.Reply.CODEC);PayloadTypeRegistry.serverboundPlay().register(HandWire.Request.TYPE,HandWire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(HandWire.Reply.TYPE,HandWire.Reply.CODEC);PayloadTypeRegistry.clientboundPlay().register(DeckboxRefreshWire.Refresh.TYPE,DeckboxRefreshWire.Refresh.CODEC);
   ServerPlayNetworking.registerGlobalReceiver(Wire.Request.TYPE,(req,ctx)->ServerLogic.handle(ctx.player(),req));ServerPlayNetworking.registerGlobalReceiver(HandWire.Request.TYPE,(req,ctx)->HandLogic.handle(ctx.player(),req));
   ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);TabletopLogic.close(h.player);StaffTargets.clearAllForDisconnect(h.player);});
-  CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(CUSTOM_DECK_CONTROL);e.accept(CUSTOM_GRAVEYARD);e.accept(HAND);e.accept(RACK);e.accept(STAFF_RACK);e.accept(TABLETOP);e.accept(MATERIAL_CHAIR);});
+  CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(CUSTOM_DECK_CONTROL);e.accept(CUSTOM_GRAVEYARD);e.accept(HAND);e.accept(RACK);e.accept(STAFF_RACK);e.accept(TABLETOP);e.accept(MATERIAL_CHAIR);e.accept(COMMANDER_GOLEM);});
   UseEntityCallback.EVENT.register((p,l,hand,e,hit)->{
+   if(e instanceof net.minecraft.world.entity.animal.IronGolem iron
+       &&iron.getTags().contains(CommanderGolems.TAG)){
+    if(p instanceof ServerPlayer sp &&l instanceof net.minecraft.server.level.ServerLevel level)
+     sp.sendSystemMessage(Component.literal(CommanderGolems.status(level,iron)));
+    return InteractionResult.SUCCESS;
+   }
    if(p.getItemInHand(hand).is(TARGETING_STAFF)){
     if(!l.isClientSide()&&p instanceof ServerPlayer sp)StaffTargets.mark(sp,e,StaffTargets.Color.ORANGE);
     return InteractionResult.SUCCESS;
