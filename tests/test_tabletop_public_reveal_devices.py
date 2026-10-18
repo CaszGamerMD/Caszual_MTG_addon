@@ -56,14 +56,16 @@ class PublicDeckReveals(unittest.TestCase):
 
  def test_materials_and_all_models_have_stable_assets(self):
   mix=json.loads((D/"caszual_mtg.mixins.json").read_text())
-  self.assertIn('DeckControlMaterialMixin',mix['mixins'])
-  self.assertIn('GraveyardMaterialMixin',mix['mixins'])
-  for name in ['DeckControlMaterialMixin.java','GraveyardMaterialMixin.java']:
-   s=source("mixin/"+name)
-   self.assertIn('implements BoxMaterial',s)
-   self.assertIn('input.getStringOr("CaszualMaterial"',s)
-   self.assertIn('output.putString("CaszualMaterial"',s)
-   self.assertIn('getRenderData()',s)
+  self.assertNotIn('DeckControlMaterialMixin',mix['mixins'])
+  self.assertNotIn('GraveyardMaterialMixin',mix['mixins'])
+  for name in ['CustomDeckControlEntity.java','CustomGraveyardEntity.java']:
+   code=source(name)
+   self.assertIn('implements BoxMaterial',code)
+   self.assertIn('in.getStringOr("CaszualMaterial"',code)
+   self.assertIn('out.putString("CaszualMaterial"',code)
+   self.assertIn('getRenderData()',code)
+   self.assertIn('getUpdateTag(HolderLookup.Provider',code)
+   self.assertIn('level.sendBlockUpdated(worldPosition',code)
   models=source("CustomBoxModels.java")
   self.assertIn('new DeviceWorldModel(model)',models)
   self.assertIn('new DeviceItemModel(model)',models)
