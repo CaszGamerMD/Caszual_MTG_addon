@@ -1,0 +1,34 @@
+package dev.casz.caszualmtg;
+
+import com.mojang.serialization.MapCodec;
+import com.spider.mtgcard.deckcontrol.DeckControlBlock;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+
+/** Native MTGCard Deck Control mechanics with Caszual customizable housing. */
+public final class CustomDeckControl extends DeckControlBlock {
+ public static final MapCodec<CustomDeckControl> CODEC=simpleCodec(CustomDeckControl::new);
+ public CustomDeckControl(Properties properties){super(properties);}
+ @Override protected MapCodec<CustomDeckControl> codec(){return CODEC;}
+ @Override public InteractionResult useItemOn(ItemStack stack,BlockState state,Level level,BlockPos pos,Player player,InteractionHand hand,BlockHitResult hit){
+  InteractionResult selected=CustomGameDeviceMaterial.apply(stack,level,pos,player);
+  return selected!=InteractionResult.PASS?selected:super.useItemOn(stack,state,level,pos,player,hand,hit);
+ }
+ @Override public void setPlacedBy(Level level,BlockPos pos,BlockState state,LivingEntity placer,ItemStack stack){
+  super.setPlacedBy(level,pos,state,placer,stack);
+  CustomGameDeviceMaterial.loadFromItem(level,pos,stack);
+ }
+ @Override protected ItemStack getCloneItemStack(LevelReader reader,BlockPos pos,BlockState state,boolean includeData){
+  ItemStack copy=super.getCloneItemStack(reader,pos,state,includeData);
+  if(reader instanceof Level level)return CustomGameDeviceMaterial.cloneWithMaterial(copy,level,pos);
+  return copy;
+ }
+}
