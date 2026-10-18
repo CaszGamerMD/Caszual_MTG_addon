@@ -121,6 +121,26 @@ public final class CommanderGolems {
    life=assigned;
   return new Setup(table,hand,control,life);
  }
+ /** Public intent directed at the AI. This is observation only, not resolution:
+  * the bot must not auto-counter, block, or react until priority is implemented. */
+ private static int incomingTargets(ServerLevel world,IronGolem golem,TabletopBlockEntity root){
+  ArrayDeque<BlockPos> queue=new ArrayDeque<>();
+  Set<BlockPos> seen=new HashSet<>();
+  List<TabletopBlockEntity> tiles=new ArrayList<>();
+  queue.add(root.getBlockPos());seen.add(root.getBlockPos());
+  while(!queue.isEmpty()&&tiles.size()<32){
+   BlockPos pos=queue.removeFirst();
+   if(!world.hasChunkAt(pos)||!(world.getBlockEntity(pos) instanceof TabletopBlockEntity tile))continue;
+   tiles.add(tile);
+   for(Direction direction:Direction.Plane.HORIZONTAL){
+    BlockPos next=pos.relative(direction);
+    if(seen.add(next))queue.add(next);
+   }
+  }
+  return (int)TabletopTargets.visible(world,tiles).stream()
+   .filter(t->!t.actor().equals(golem.getUUID())
+    &&t.targetSeat().equals(root.getBlockPos())).count();
+ }
  public static String status(ServerLevel level,IronGolem golem){
   Setup s=setup(level,golem,true);
   if(s.table==null)return "Golem seat or chair missing; it cannot join the table.";
@@ -137,8 +157,10 @@ public final class CommanderGolems {
   }
   if(s.life==null)return "Rename a nearby Life Point counter to Commander Golem to link it safely.";
   if(!s.life.isGameStarted())return "Golem ready. Join Commander Golem's Life Point counter to the play group, then start the game.";
+  int incoming=incomingTargets(level,golem,s.table);
   return "Golem "+(s.life.isTurnActive()?"is taking its turn":"is waiting")+" | life "+s.life.getLife()
-    +" | hand "+s.hand.cardCount()+" | library "+s.deck.getLibraryCount()+".";
+    +" | hand "+s.hand.cardCount()+" | library "+s.deck.getLibraryCount()
+    +" | public targets aimed at me "+incoming+" (responses not implemented).";
  }
 
  /** Validate the physical deck and color identity before the first shuffle/draw.
