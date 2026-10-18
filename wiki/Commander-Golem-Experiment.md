@@ -26,7 +26,7 @@ Keep a player within 32 blocks while testing. AI decisions run on the server onc
 
 ## Not yet implemented (intentionally disabled)
 
-**This prototype cannot yet play full Commander.** It currently does *not* resolve or cast spells, pay mana, maintain the stack or priority, respond to opponents, attack or block, apply damage, make card-specific choices, process triggers or replacement effects, handle mulligans or command-zone changes, or complete multiplayer turn-based rules enforcement. The rule-model methods for tax and combat damage are not integrated into gameplay. Partner/Background commanders and special deck exceptions are unsupported. Unknown actions are **not** silently allowed.
+**This prototype cannot yet play full Commander.** It currently casts only a safe subset of simple creatures using basic one-mana sources and performs the limited defender-confirmed combat described below; it does *not* handle arbitrary spells, full mana rules, the stack or priority, triggered/replacement effects, advanced combat, partner commanders, complete mulligans, or all multiplayer rule exceptions. Commander tax is used for simple commander creature casts, but commander combat damage remains unsupported by the automated attacker. Partner/Background commanders and special deck exceptions are unsupported. Unknown actions are **not** silently allowed.
 
 The goal for the next stage is a server-authoritative legal-action enumerator and game state machine (priority windows, mana costs, zones, targeting, combat), followed by deterministic AI scoring. Start with a constrained beginner deck and test under survival multiplayer with backups.
 
@@ -42,6 +42,14 @@ Run `./gradlew clean build` with Java 25. The Gradle `check` task includes `veri
 - Targets appear as red card borders / player-seat tabs, blue source highlights and public announcements; cards sharing a battlefield show a dotted target connector. Declarations expire after 20 seconds. All viewers poll the same server-authoritative markers.
 - The golem now announces when it casts supported creature cards, using the same mechanism.
 - **Important:** target indicators currently declare *intent*. They do not automatically validate or resolve spells, blocks, attacks, targets, priority, or the stack.
+
+## Experimental attacking and blocking
+
+The golem can now **declare one supported creature attack** against an online player who occupies another seat on its connected table and has a Life Point block in the same game group. The attack pauses its turn until the defender responds. The attacking card and defending player are highlighted for everyone; pending attacks survive server restarts.
+
+To respond, open **Target ▾** on your table while you are the defender. Choose **Take Hit** to accept unblocked damage. To block, first click an untapped creature you control on your battlefield to select it as the source, then choose **Block Source**. The server checks flying/reach and simultaneous damage for its tiny supported subset, and refuses resolution when a required Graveyard is missing/full rather than deleting physical cards. After a resolution, the golem resumes and passes its turn.
+
+**Experimental constraints:** one attacking non-commander creature and at most one blocking creature; only ordinary numeric P/T and recognized passive keywords (flying, reach, haste, vigilance, defender). Unsupported activated, triggered, replacement, prevention, first-strike, trample, deathtouch, lifelink and other effects are **not** interpreted. There is no functional stack/priority window or general targeting spell engine yet. This is **not** full legal Commander combat and is not suitable for competitive or valuable saved games.
 
 ## Full Commander readiness gate
 
