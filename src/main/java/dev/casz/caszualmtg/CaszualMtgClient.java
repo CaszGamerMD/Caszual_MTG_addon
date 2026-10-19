@@ -65,6 +65,12 @@ public final class CaszualMtgClient implements ClientModInitializer {
   net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.RACK_MENU,DeckboxRackScreen::new);
   net.minecraft.client.gui.screens.MenuScreens.register(CaszualMtg.STAFF_RACK_MENU,StaffRackScreen::new);
   ScreenEvents.AFTER_INIT.register((mc,screen,w,h)->{
+   if(screen instanceof HandScreen hand)
+    ScreenKeyboardEvents.allowKeyPress(screen).register((shown,event)->!hand.handleHotkey(event.key()));
+   else if(screen instanceof TabletopScreen table)
+    ScreenKeyboardEvents.allowKeyPress(screen).register((shown,event)->!table.handleHotkey(event.key()));
+  });
+  ScreenEvents.AFTER_INIT.register((mc,screen,w,h)->{
    if(!(screen instanceof com.spider.mtgcard.client.gui.CardStoreScreen store))return;
    // MTGCard adjusts the virtual menu origin after calculating its panels.
    // Re-anchor the extra deckbox slot to the live purchase button coordinates.
