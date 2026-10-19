@@ -86,6 +86,14 @@ public final class TabletopBlockEntity extends BlockEntity {
   return ClientboundBlockEntityDataPacket.create(this);
  }
  private UUID seatOwner;
+ /** Persisted, exact Hand position: supports 70-block links without scanning. */
+ private BlockPos linkedHand;
+ public BlockPos linkedHand(){return linkedHand==null?null:linkedHand.immutable();}
+ public void linkedHand(BlockPos pos){
+  if(Objects.equals(linkedHand,pos))return;
+  linkedHand=pos==null?null:pos.immutable();
+  changed();
+ }
  /** One persisted AI attack declaration. Human response is required. */
  public record AiAttack(String attackerId,BlockPos defender) {}
  private String aiAttackerId="";
@@ -174,6 +182,7 @@ public final class TabletopBlockEntity extends BlockEntity {
   super.saveAdditional(out);
   if(seatOwner!=null)out.putString("SeatOwner",seatOwner.toString());
   out.putString("SeatName",seatName);
+   if(linkedHand!=null)out.putString("LinkedHand",HandBlockEntity.pos(linkedHand));
   out.putInt("AiCommanderCasts",aiCommanderCasts);
   if(aiAttack()!=null){
    out.putString("AiAttacker",aiAttackerId);
@@ -190,6 +199,7 @@ public final class TabletopBlockEntity extends BlockEntity {
   super.loadAdditional(in);seatOwner=null;
   try{String s=in.getStringOr("SeatOwner","");if(!s.isBlank())seatOwner=UUID.fromString(s);}catch(IllegalArgumentException ignored){}
   seatName=in.getStringOr("SeatName","");
+   linkedHand=HandBlockEntity.parsePos(in.getStringOr("LinkedHand",""));
   aiCommanderCasts=Math.clamp(in.getIntOr("AiCommanderCasts",0),0,100);
   aiAttackerId=in.getStringOr("AiAttacker","");
   aiDefender=HandBlockEntity.parsePos(in.getStringOr("AiDefender",""));
