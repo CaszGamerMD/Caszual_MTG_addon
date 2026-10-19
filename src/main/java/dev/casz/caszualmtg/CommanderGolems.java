@@ -27,7 +27,7 @@ public final class CommanderGolems {
  public static final String TAG="caszual_mtg_commander_golem";
  private static final String FIRST_HAND="caszual_mtg_ai_opening_hand";
  private static final String ACTION_DONE="caszual_mtg_ai_turn_processed";
- private static final int RANGE=5;
+ private static final int RANGE=8;
  private CommanderGolems(){}
 
  public static String place(ServerLevel level,BlockPos chair,ServerPlayer placer){
@@ -125,10 +125,33 @@ public final class CommanderGolems {
    .filter(t->!t.actor().equals(golem.getUUID())
     &&t.targetSeat().equals(root.getBlockPos())).count();
  }
+ /** Actionable diagnostics for hands already linked to this exact seat.
+  * Never modify a player's ownership or silently rebind any Card Hand. */
+ private static String missingHand(ServerLevel world,IronGolem golem,TabletopBlockEntity seat){
+  BlockPos at=seat.getBlockPos();
+  HandBlockEntity wrongPrimary=null,unassigned=null,wrongSeat=null;
+  for(BlockPos p:BlockPos.betweenClosed(at.offset(-RANGE,-RANGE,-RANGE),
+                                      at.offset(RANGE,RANGE,RANGE))){
+   if(!world.hasChunkAt(p)||!(world.getBlockEntity(p) instanceof HandBlockEntity h))continue;
+   if(at.equals(h.linkedTable())||h.legacyTableDiscovery()&&h.linkedTable()==null){
+    if(h.owner()==null)unassigned=h;
+    else if(!golem.getUUID().equals(h.owner()))wrongPrimary=h;
+   }else if(golem.getUUID().equals(h.owner()))wrongSeat=h;
+  }
+  if(unassigned!=null)return "Card Hand at "+unassigned.getBlockPos().toShortString()+
+   " is linked to this table, but Primary is unassigned. Open Links / Primary and select the seated Golem.";
+  if(wrongPrimary!=null)return "Card Hand at "+wrongPrimary.getBlockPos().toShortString()+
+   " is linked, but Primary is "+wrongPrimary.primaryName()+
+   ", not this Golem. Use Links / Primary > Select Golem.";
+  if(wrongSeat!=null)return "This Golem's Card Hand at "+wrongSeat.getBlockPos().toShortString()+
+   " is linked to a different table. Re-link it to this occupied seat.";
+  return "No assigned Card Hand found within 8 blocks of this Golem's table. "+
+    "Link the Hand to this table, then use Links / Primary > Select Golem.";
+ }
  public static String status(ServerLevel level,IronGolem golem){
   Setup s=setup(level,golem,true);
   if(s.table==null)return "Golem seat or chair missing; it cannot join the table.";
-  if(s.hand==null)return "Golem needs a Hand explicitly linked to its table and assigned to this golem.";
+  if(s.hand==null)return missingHand(level,golem,s.table);
   if(s.deck==null)return "Link the Golem Hand to a Deck Control and its deckbox.";
   BlockPos db=s.deck.getLinkedDeckboxPos();
   if(db==null||!(level.getBlockEntity(db) instanceof DeckboxBlockEntity box))
