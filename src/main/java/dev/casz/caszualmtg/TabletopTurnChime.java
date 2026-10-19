@@ -38,7 +38,9 @@ public final class TabletopTurnChime {
    if(!(world.getBlockEntity(watch.life()) instanceof LifePointBlockEntity lp))continue;
    boolean active=CommanderPod.status(world,lp).playable();
    if(active&&!watch.active())
-    player.playNotifySound(SoundEvents.NOTE_BLOCK_CHIME.value(),SoundSource.PLAYERS,.72f,1.28f);
+    player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
+     SoundEvents.NOTE_BLOCK_CHIME,SoundSource.PLAYERS,
+     player.getX(),player.getY(),player.getZ(),.72f,1.28f,world.getRandom().nextLong()));
    WATCHED.put(player.getUUID(),new Watch(watch.life(),active));
   }
  }
