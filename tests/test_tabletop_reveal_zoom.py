@@ -35,7 +35,7 @@ class TableRevealZoomTests(unittest.TestCase):
    self.assertIn(token,tile)
   for token in ('case "card_scale" -> {','target.ownedBy(player)',
                 'target.cardScale(target.cardScale()+req.amount()*5)',
-                't.cardScale()))'):
+                't.cardScale(),count,libraryCount,Map.copyOf(counters)))'):
    self.assertIn(token,logic)
   self.assertIn('boolean active,int cardScale',wire)
   self.assertIn('b.writeVarInt(t.cardScale)',wire)
