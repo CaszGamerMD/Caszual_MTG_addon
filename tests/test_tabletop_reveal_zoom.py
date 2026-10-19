@@ -39,7 +39,7 @@ class TableRevealZoomTests(unittest.TestCase):
    self.assertIn(token,logic)
   self.assertIn('boolean active,int cardScale',wire)
   self.assertIn('b.writeVarInt(t.cardScale)',wire)
-  self.assertIn('b.readBoolean(),b.readBoolean(),b.readVarInt()',wire)
+  self.assertIn('boolean hasLife=b.readBoolean(),active=b.readBoolean();int scale=b.readVarInt()',wire)
   self.assertIn('tile.cardScale()',gui)
   self.assertIn('Math.round(base*scale/100f)',gui)
   self.assertIn('send("card_scale","",view,0,0,(int)Math.signum(dy))',gui)
