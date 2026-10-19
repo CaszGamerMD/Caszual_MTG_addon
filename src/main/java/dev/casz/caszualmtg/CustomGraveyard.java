@@ -19,7 +19,8 @@ public final class CustomGraveyard extends GraveyardBlock {
  public CustomGraveyard(Properties properties){super(properties);}
  @Override protected MapCodec<CustomGraveyard> codec(){return CODEC;}
  @Override public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos,BlockState state){
-  return new CustomGraveyardEntity(pos,state);
+  // Use the same native entity class on both placement and world reload.
+  return new com.spider.mtgcard.graveyard.GraveyardBlockEntity(pos,state);
  }
  /** Open the usual MTGCard inventory with an empty hand. Sneak + empty
   * hand toggles the lid independently of its menu/viewer count. */
@@ -27,7 +28,9 @@ public final class CustomGraveyard extends GraveyardBlock {
   if(player.isShiftKeyDown()){
    if(!level.isClientSide()){
     boolean open=state.getValue(OPEN);
-    level.setBlock(pos,state.setValue(OPEN,!open),net.minecraft.world.level.block.Block.UPDATE_ALL);
+    if(level.getBlockEntity(pos) instanceof GraveyardLid lid)
+     lid.caszual$setLidPinned(!open);
+    else level.setBlock(pos,state.setValue(OPEN,!open),net.minecraft.world.level.block.Block.UPDATE_ALL);
    }
    return InteractionResult.SUCCESS;
   }
