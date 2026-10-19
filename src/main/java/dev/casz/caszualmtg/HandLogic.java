@@ -15,6 +15,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class HandLogic {
  private static final int LINK_RANGE=8;
+ private static boolean inTableRange(BlockPos hand,BlockPos table){
+  return HandLinks.inTableRange(hand,table);
+ }
+ private static void clearTableReverse(ServerPlayer player,HandBlockEntity hand){
+  BlockPos old=hand.linkedTable();
+  if(old==null||!player.level().hasChunkAt(old))return;
+  if(player.level().getBlockEntity(old) instanceof TabletopBlockEntity table
+     &&hand.getBlockPos().equals(table.linkedHand()))table.linkedHand(null);
+ }
+
  private static final SecureRandom RANDOM=new SecureRandom();
  private static final Map<UUID,BlockPos> PENDING_LINKS=new ConcurrentHashMap<>();
  private static final Map<UUID,BlockPos> PENDING_LIFE_LINKS=new ConcurrentHashMap<>();
@@ -120,8 +130,8 @@ public final class HandLogic {
        ||!golem.entityTags().contains(CommanderGolems.TAG)){
      reply(player,hand,"This seat is not occupied by a loaded Commander Golem. Check the linked table.");return;
     }
-    if(!inRange(hand.getBlockPos(),golem.blockPosition())){
-     reply(player,hand,"The Card Hand must be within 8 blocks of its seated Golem.");return;
+    if(!inTableRange(hand.getBlockPos(),at)){
+     reply(player,hand,"The Card Hand must be within 70 blocks of its seated Golem.");return;
     }
     hand.assignPrimary(golem.getUUID(),"Commander Golem");
     clearPending(player.getUUID());
@@ -144,7 +154,7 @@ public final class HandLogic {
    case "cancel_link" -> {clearPending(player.getUUID());reply(player,hand,"Link mode cancelled.");}
    case "unlink_all" -> {
     if(!hand.canManage(player)){reply(player,hand,"Only the manager can unlink.");return;}
-    clearPending(player.getUUID());hand.linkedControl(null);hand.linkedLife(null);hand.linkedTable(null);
+    clearPending(player.getUUID());clearTableReverse(player,hand);hand.linkedControl(null);hand.linkedLife(null);hand.linkedTable(null);
     reply(player,hand,"All three device links cleared.");
    }
    case "primary_player" -> {
@@ -345,12 +355,25 @@ public final class HandLogic {
   if(handPos==null||!(player.level().getBlockEntity(tablePos) instanceof TabletopBlockEntity table))return false;
   HandBlockEntity hand=pendingHand(player,handPos);
   if(hand==null||!hand.canManage(player)){clearPending(id);return true;}
-  if(!inRange(handPos,tablePos)){player.sendSystemMessage(Component.literal("MTG Table must be within 8 blocks."));return true;}
+  if(!inTableRange(handPos,tablePos)){
+   player.sendSystemMessage(Component.literal("MTG Table must be within 70 blocks of the Card Hand."));return true;
+  }
   if(PENDING_ALL.containsKey(id)&&hand.linkedTable()!=null)return false;
   if(table.seatOwner()!=null&&hand.owner()!=null&&!table.seatOwner().equals(hand.owner())){
    player.sendSystemMessage(Component.literal("That table belongs to a different primary player."));return true;
   }
-  hand.linkedTable(tablePos);PENDING_TABLE_LINKS.remove(id);
+  BlockPos assigned=table.linkedHand();
+  if(assigned!=null&&!assigned.equals(handPos)
+     &&player.level().hasChunkAt(assigned)
+     &&player.level().getBlockEntity(assigned) instanceof HandBlockEntity other
+     &&tablePos.equals(other.linkedTable())){
+   player.sendSystemMessage(Component.literal("That table is already linked to another Card Hand."));return true;
+  }
+  // Explicit bidirectional connection, resolved in constant time even at 70 blocks.
+  clearTableReverse(player,hand);
+  hand.linkedTable(tablePos);
+  table.linkedHand(handPos);
+  PENDING_TABLE_LINKS.remove(id);
   player.sendSystemMessage(Component.literal("MTG Table linked: "+shortPos(tablePos)));
   if(PENDING_ALL.containsKey(id))advance(player,hand);
   return true;
@@ -360,8 +383,8 @@ public final class HandLogic {
   if(handPos==null||!golem.entityTags().contains(CommanderGolems.TAG))return false;
   HandBlockEntity hand=pendingHand(player,handPos);
   if(hand==null||!hand.canManage(player)){clearPending(id);return true;}
-  if(player.level()!=golem.level()||!inRange(handPos,golem.blockPosition())){
-   player.sendSystemMessage(Component.literal("Golem must be within 8 blocks of its Hand."));return true;
+  if(player.level()!=golem.level()||!inTableRange(handPos,golem.blockPosition())){
+   player.sendSystemMessage(Component.literal("Golem must be within 70 blocks of its Hand."));return true;
   }
   BlockPos at=hand.linkedTable();
   if(at!=null){
