@@ -35,6 +35,9 @@ jobs:
       - name: Verify Deck Builder / Rack / Card Store integration
         run: python3 -m unittest discover -s tests -p 'test_deck_builder_rack.py' -v
 
+      - name: Validate Deckbox Rack wall mounting and E/W chair collision
+        run: python3 -m unittest discover -s tests -p 'test_wall_mount_chair_bounds.py' -v
+
       - name: Validate four-staff wall rack and floor-reaching model geometry
         run: python3 -m unittest discover -s tests -p 'test_staff_rack.py' -v
 
