@@ -19,7 +19,9 @@ public final class CustomDeckControl extends DeckControlBlock {
  public CustomDeckControl(Properties properties){super(properties);}
  @Override protected MapCodec<CustomDeckControl> codec(){return CODEC;}
  @Override public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos,BlockState state){
-  return new CustomDeckControlEntity(pos,state);
+  // MTGCard's registered factory reloads the native entity, so use it from
+  // placement too; the material mixin supplies the custom persistence.
+  return new com.spider.mtgcard.deckcontrol.DeckControlBlockEntity(pos,state);
  }
  @Override public InteractionResult useItemOn(ItemStack stack,BlockState state,Level level,BlockPos pos,Player player,InteractionHand hand,BlockHitResult hit){
   InteractionResult selected=CustomGameDeviceMaterial.apply(stack,level,pos,player);
