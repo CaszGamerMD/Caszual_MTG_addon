@@ -31,6 +31,7 @@ public final class HandScreen extends LegacyScreen {
     button("Link MTG Table",x+495,y+48,134,()->{send("link_table","");onClose();});
     button("Cancel link mode",x+15,y+83,134,()->send("cancel_link",""));
     button("Clear all links",x+155,y+83,134,()->send("unlink_all",""));
+    button("Connect to nearby Pod",x+295,y+83,192,()->send("join_pod",""));
     primaryInput=addRenderableWidget(new EditBox(font,x+15,y+172,170,20,Component.literal("Primary player username")));
     primaryInput.setMaxLength(32);primaryInput.setHint(Component.literal("Online username"));
     button("Set Primary Player",x+192,y+172,140,()->send("primary_player",primaryInput.getValue()));
