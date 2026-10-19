@@ -16,7 +16,7 @@ public final class HandWire {
   );
   public Type<Request> type(){return TYPE;}
  }
- public record Reply(BlockPos pos,String message,boolean visible,boolean authorized,boolean canManage,boolean revealAll,int count,String linked,List<String> viewers,List<ItemStack> cards,int strictMulligans,int pendingDiscards,boolean hasStaff,String staffLeft,String staffRight,String tableColor,String lifeLink,String tableLink,String primaryName) implements CustomPacketPayload {
+ public record Reply(BlockPos pos,String message,boolean visible,boolean authorized,boolean canManage,boolean revealAll,int count,String linked,List<String> viewers,List<ItemStack> cards,int strictMulligans,int pendingDiscards,boolean hasStaff,String staffLeft,String staffRight,String tableColor,String lifeLink,String tableLink,String primaryName,Map<String,Integer> hotkeys) implements CustomPacketPayload {
   public static final Type<Reply> TYPE=new Type<>(CaszualMtg.id("hand_reply"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Reply> CODEC=StreamCodec.of(
    (b,p)->{
@@ -26,6 +26,7 @@ public final class HandWire {
     b.writeVarInt(p.cards.size());for(ItemStack s:p.cards)ItemStack.OPTIONAL_STREAM_CODEC.encode(b,s);
     b.writeVarInt(p.strictMulligans);b.writeVarInt(p.pendingDiscards);
     b.writeBoolean(p.hasStaff);b.writeUtf(p.staffLeft,7);b.writeUtf(p.staffRight,7);b.writeUtf(p.tableColor,7);b.writeUtf(p.lifeLink,128);b.writeUtf(p.tableLink,128);b.writeUtf(p.primaryName,64);
+     b.writeVarInt(p.hotkeys.size());for(var key:p.hotkeys.entrySet()){b.writeUtf(key.getKey(),32);b.writeVarInt(key.getValue());}
    },
    b->{
     BlockPos pos=b.readBlockPos();String msg=b.readUtf(512);
@@ -41,7 +42,13 @@ public final class HandWire {
     if(!StaffColors.valid(left)||!StaffColors.valid(right))throw new IllegalArgumentException("Invalid staff color packet");
     String tableColor=b.readUtf(7),lifeLink=b.readUtf(128),tableLink=b.readUtf(128),primaryName=b.readUtf(64);
     if(!StaffColors.valid(tableColor))throw new IllegalArgumentException("Invalid table color");
-    return new Reply(pos,msg,visible,authorized,manage,reveal,count,linked,List.copyOf(viewers),List.copyOf(cards),strict,pending,staff,left,right,tableColor,lifeLink,tableLink,primaryName);
+     int bindings=b.readVarInt();if(bindings<0||bindings>HandHotkeys.ACTIONS.size())throw new IllegalArgumentException("Invalid hotkeys");
+     Map<String,Integer> hotkeys=new LinkedHashMap<>();for(int i=0;i<bindings;i++){
+      String action=b.readUtf(32);int key=b.readVarInt();
+      if(!HandHotkeys.validAction(action)||!HandHotkeys.validKey(key))throw new IllegalArgumentException("Invalid keybind");
+      hotkeys.put(action,key);
+     }
+    return new Reply(pos,msg,visible,authorized,manage,reveal,count,linked,List.copyOf(viewers),List.copyOf(cards),strict,pending,staff,left,right,tableColor,lifeLink,tableLink,primaryName,Map.copyOf(hotkeys));
    }
   );
   public Type<Reply> type(){return TYPE;}
