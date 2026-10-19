@@ -19,6 +19,8 @@ public final class HandBlockEntity extends BlockEntity {
  private UUID manager;
  private String primaryName="Unassigned";
  private BlockPos linkedTable;
+ // Legacy worlds had no explicit Table link: preserve those established games.
+ private boolean legacyTableDiscovery;
  private final LinkedHashSet<UUID> viewers=new LinkedHashSet<>();
  private final LinkedHashMap<UUID,String> viewerNames=new LinkedHashMap<>();
  private BlockPos linkedControl;
@@ -50,7 +52,8 @@ public final class HandBlockEntity extends BlockEntity {
   owner=null;primaryName="Unassigned";changed();
  }
  public BlockPos linkedTable(){return linkedTable==null?null:linkedTable.immutable();}
- public void linkedTable(BlockPos pos){linkedTable=pos==null?null:pos.immutable();changed();}
+ public boolean legacyTableDiscovery(){return legacyTableDiscovery;}
+ public void linkedTable(BlockPos pos){linkedTable=pos==null?null:pos.immutable();legacyTableDiscovery=false;changed();}
 
  /** Only an empty, never-claimed Hand can be reserved by the AI golem.
   * Other players' private Hands are never appropriated or exposed. */
@@ -128,6 +131,8 @@ public final class HandBlockEntity extends BlockEntity {
   String managerRaw=in.getStringOr("Manager",ownerRaw);
   try{manager=managerRaw.isBlank()?null:UUID.fromString(managerRaw);}catch(Exception e){manager=owner;}
   primaryName=in.getStringOr("PrimaryName",owner==null?"Unassigned":"Existing player");
+  legacyTableDiscovery=in.getBooleanOr("LegacyTableDiscovery",
+   !ownerRaw.isBlank()&&in.getStringOr("Manager","").isBlank());
   viewers.clear();viewerNames.clear();
   for(Viewer v:in.read("Viewers",Viewer.CODEC.listOf()).orElse(List.of())){try{UUID id=UUID.fromString(v.uuid);viewers.add(id);viewerNames.put(id,v.name);}catch(Exception ignored){}}
   String link=in.getStringOr("LinkedControl","");linkedControl=parsePos(link);linkedLife=parsePos(in.getStringOr("LinkedLife",""));linkedTable=parsePos(in.getStringOr("LinkedTable",""));String shade=in.getStringOr("TableColor","#315348");tableColor=StaffColors.valid(shade)?StaffColors.normalize(shade):"#315348";revealAll=in.getBooleanOr("RevealAll",false);
@@ -145,6 +150,7 @@ public final class HandBlockEntity extends BlockEntity {
   if(owner!=null)out.putString("Owner",owner.toString());
   if(manager!=null)out.putString("Manager",manager.toString());
   out.putString("PrimaryName",primaryName);
+  out.putBoolean("LegacyTableDiscovery",legacyTableDiscovery);
   List<Viewer> vs=new ArrayList<>();viewerNames.forEach((id,name)->vs.add(new Viewer(id.toString(),name)));out.store("Viewers",Viewer.CODEC.listOf(),vs);
   if(linkedControl!=null)out.putString("LinkedControl",pos(linkedControl));
   if(linkedLife!=null)out.putString("LinkedLife",pos(linkedLife));
