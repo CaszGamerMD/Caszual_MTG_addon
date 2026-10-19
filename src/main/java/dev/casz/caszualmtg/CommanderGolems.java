@@ -325,7 +325,8 @@ public final class CommanderGolems {
    if(CommanderPod.status(world,s.life).playable()){
     say(world,golem,"passes the turn.");
     LifePlayGroups.passTurn(world,s.life.getBlockPos());
-    clearTurn(golem);
+    // If MTGCard declined to advance, retain END state: never draw again.
+    if(!CommanderPod.status(world,s.life).active())clearTurn(golem);
    }
    return;
   }
