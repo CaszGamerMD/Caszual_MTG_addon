@@ -5,7 +5,7 @@
     "dark": "minecraft:block/exposed_copper",
     "shadow": "minecraft:block/weathered_copper",
     "gold": "minecraft:block/gold_block",
-    "copper": "minecraft:block/waxed_copper_block",
+    "copper": "minecraft:block/copper_block",
     "eye": "minecraft:block/oxidized_copper",
     "glow": "minecraft:block/emerald_block",
     "leather": "minecraft:block/mangrove_planks",
