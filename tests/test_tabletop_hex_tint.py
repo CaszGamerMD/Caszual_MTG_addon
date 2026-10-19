@@ -18,7 +18,7 @@ class ExactPlaymatColorTest(unittest.TestCase):
   be=source("TabletopBlockEntity.java")
   hand=source("HandLogic.java")
   self.assertIn("StaffColors.rgb(hand.tableColor())",logic)
-  self.assertIn("tile.matRgb(rgb)",logic)
+  self.assertIn("table.matRgb(rgb)",logic)
   self.assertIn("t.matRgb(color)",logic)
   self.assertNotIn("nearestDye",logic)
   for token in ("private int matRgb=0x315348","rgb&0xFFFFFF",
