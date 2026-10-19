@@ -45,7 +45,9 @@ public abstract class DeckControlMaterialMixin implements BoxMaterial {
  /** The parent MTGCard entity supplies the type/factory on *both* placement
   * and world reload; a packet is needed for reskinning remote clients. */
  public @Nullable Packet<ClientGamePacketListener> getUpdatePacket(){
-  return ClientboundBlockEntityDataPacket.create((BlockEntity)(Object)this);
+  BlockEntity self=(BlockEntity)(Object)this;
+  return self.getBlockState().is(CaszualMtg.CUSTOM_DECK_CONTROL)
+   ?ClientboundBlockEntityDataPacket.create(self):null;
  }
 
  @Inject(method="loadAdditional",at=@At("TAIL"),remap=false)
