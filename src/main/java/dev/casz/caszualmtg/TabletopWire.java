@@ -88,14 +88,14 @@ public final class TabletopWire {
    int n=b.readVarInt();if(n<0||n>32)throw new IllegalArgumentException("Table too large");
    List<Tile> tiles=new ArrayList<>();
     for(int i=0;i<n;i++){
-     BlockPos pos=b.readBlockPos();String owner=b.readUtf(64);int color=b.readInt(),life=b.readInt();
+     BlockPos tilePos=b.readBlockPos();String owner=b.readUtf(64);int color=b.readInt(),life=b.readInt();
      boolean hasLife=b.readBoolean(),active=b.readBoolean();int scale=b.readVarInt();
      int handCount=b.readVarInt();if(handCount< -1||handCount>100)throw new IllegalArgumentException("Invalid hand count");
      int libraryCount=b.readVarInt();if(libraryCount< -1||libraryCount>1000)throw new IllegalArgumentException("Invalid library count");
      int counterCount=b.readVarInt();if(counterCount<0||counterCount>32)throw new IllegalArgumentException("Too many life counters");
      Map<String,Integer> counters=new LinkedHashMap<>();
      for(int j=0;j<counterCount;j++)counters.put(b.readUtf(40),b.readInt());
-     tiles.add(new Tile(pos,owner,color,life,hasLife,active,scale,handCount,libraryCount,Map.copyOf(counters)));
+     tiles.add(new Tile(tilePos,owner,color,life,hasLife,active,scale,handCount,libraryCount,Map.copyOf(counters)));
     }
    n=b.readVarInt();if(n<0||n>3072)throw new IllegalArgumentException("Too many played cards");
    List<Card> cards=new ArrayList<>();for(int i=0;i<n;i++)cards.add(new Card(b.readBlockPos(),b.readUtf(MAX_CARD_ID_LENGTH),b.readUtf(40),ItemStack.OPTIONAL_STREAM_CODEC.decode(b),b.readVarInt(),b.readVarInt(),b.readBoolean(),b.readBoolean()));
@@ -144,9 +144,9 @@ public final class TabletopWire {
      List<List<ZoneCard>> zonesPublic=new ArrayList<>();
      for(int z=0;z<2;z++){
       int count=b.readVarInt();if(count<0||count>100)throw new IllegalArgumentException("Too many public zone cards");
-      List<ZoneCard> cards=new ArrayList<>();
-      for(int j=0;j<count;j++)cards.add(new ZoneCard(b.readVarInt(),ItemStack.OPTIONAL_STREAM_CODEC.decode(b)));
-      zonesPublic.add(List.copyOf(cards));
+      List<ZoneCard> publicCards=new ArrayList<>();
+      for(int j=0;j<count;j++)publicCards.add(new ZoneCard(b.readVarInt(),ItemStack.OPTIONAL_STREAM_CODEC.decode(b)));
+      zonesPublic.add(List.copyOf(publicCards));
      }
      publicZones.add(new PublicZone(seatPos,zonesPublic.get(0),zonesPublic.get(1)));
     }
