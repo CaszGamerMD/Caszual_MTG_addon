@@ -13,6 +13,7 @@ import java.util.*;
 /**
  * One client-rendered, static multi-cube Brass Squire item model per AI seat.
  * Underlying iron golem remains the server-side interaction and game identity.
+ * The model is centered so its boots meet the chair's eight-pixel-high seat.
  * An existing custom-model display is reused after chunk/server reloads.
  */
 public final class CommanderGolemVisuals {
@@ -34,7 +35,7 @@ public final class CommanderGolemVisuals {
    display.setItemStack(new ItemStack(CaszualMtg.COMMANDER_GOLEM));
    display.setItemTransform(ItemDisplayContext.FIXED);
    display.setNoGravity(true);
-   display.setPos(golem.getX(),golem.getY()+.14,golem.getZ());
+   display.setPos(golem.getX(),golem.getY()+.50,golem.getZ());
    display.setYRot(golem.getYRot());
    world.addFreshEntity(display);
   }else{
@@ -42,7 +43,7 @@ public final class CommanderGolemVisuals {
    for(int i=1;i<nearby.size();i++)nearby.get(i).discard();
    if(!display.getItemStack().is(CaszualMtg.COMMANDER_GOLEM))
     display.setItemStack(new ItemStack(CaszualMtg.COMMANDER_GOLEM));
-   display.setPos(golem.getX(),golem.getY()+.14,golem.getZ());
+   display.setPos(golem.getX(),golem.getY()+.50,golem.getZ());
    display.setYRot(golem.getYRot());
   }
  }
