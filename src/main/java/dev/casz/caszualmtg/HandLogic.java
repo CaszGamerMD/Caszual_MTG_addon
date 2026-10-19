@@ -179,6 +179,15 @@ public final class HandLogic {
     if(hand.pendingStrictDiscards()>0){reply(player,hand,"Finish the required mulligan discards by selecting cards first.");return;}
     reply(player,hand,discardRandom(player,hand));
    }
+   case "hotkey_set" -> {
+    if(!hand.isAuthorized(player)){reply(player,hand,"You are not a permitted Card Hand user.");return;}
+    String[] parts=req.text().split(",",-1);if(parts.length!=2){reply(player,hand,"Invalid hotkey setting.");return;}
+    try{
+     int key=Integer.parseInt(parts[1].trim());
+     if(!hand.hotkey(player.getUUID(),parts[0],key)){reply(player,hand,"Invalid hotkey action or key.");return;}
+     reply(player,hand,key<0?"Hotkey cleared.":"Table hotkey saved.");
+    }catch(NumberFormatException exception){reply(player,hand,"Invalid hotkey code.");}
+   }
    case "deposit_inventory" -> depositInventory(player,hand);
    case "staff_colors" -> updateStaffColors(player,hand,req.text());
    case "take_selected" -> takeSelected(player,hand,req.text());
@@ -448,7 +457,7 @@ public final class HandLogic {
    hand.getBlockPos(),message,visible,authorized,hand.canManage(player),hand.revealAll(),hand.cardCount(),linked,
    hand.canManage(player)?hand.viewerNames():java.util.List.of(),visible?hand.visibleCards():java.util.List.of(),
    hand.strictMulligans(),hand.pendingStrictDiscards(),staffCount(player)>0,hand.staffLeft(),hand.staffRight(),hand.tableColor(),hand.linkedLife()==null?"Not linked":shortPos(hand.linkedLife()),
-    hand.linkedTable()==null?"Not linked":shortPos(hand.linkedTable()),hand.primaryName()
+    hand.linkedTable()==null?"Not linked":shortPos(hand.linkedTable()),hand.primaryName(),hand.hotkeys(player.getUUID())
   ));
  }
  static String shortPos(BlockPos p){return p.getX()+", "+p.getY()+", "+p.getZ();}
