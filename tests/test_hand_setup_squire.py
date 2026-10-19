@@ -31,7 +31,7 @@ class CardHandSetup(unittest.TestCase):
                        "primary_golem","unlink_all","cancel_link","primary_clear"]:
             self.assertIn(action,logic)
         for label in ["Link Deck Control","Link Life Point","Link MTG Table",
-                      "Set Primary Player","Select Golem"]:
+                      "Set Primary Player","Assign Seated Golem"]:
             self.assertIn(label,hand_screen)
         for validator in ["hand.canManage(player)","inRange(handPos,tablePos)",
                           "inRange(handPos,lifePos)","inRange(handPos,controlPos)",
