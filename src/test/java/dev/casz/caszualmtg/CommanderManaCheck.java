@@ -20,6 +20,23 @@ public final class CommanderManaCheck {
   ok(CommanderMana.production("Risky","Land","{T}, Pay 1 life: Add {B}.")==0,"extra costs unsupported");
   ok(CommanderMana.production("Ancient Tomb","Land","{T}: Add {C}{C}.")==0,"two-mana source unsupported");
   ok(CommanderMana.production("Tap Land","Land","Enters tapped.\n{T}: Add {U}.")==0,"ETB text must not be assumed");
+
+  var slow=CommanderMana.land("Land","This land enters tapped.\n{T}: Add {G}.").orElseThrow();
+  ok(slow.entersTapped()&&slow.mask()==16,"recognized tapland should enter tapped and produce G");
+  var oldSlow=CommanderMana.land("Land","This land enters the battlefield tapped.\n{T}: Add {U}.").orElseThrow();
+  ok(oldSlow.entersTapped()&&oldSlow.mask()==2,"legacy ETB tapped wording");
+  ok(CommanderMana.land("Land","{T}: Add {R} or {G}.").orElseThrow().mask()==24,
+    "simple two-color choice taps for exactly one mana");
+  ok(CommanderMana.land("Land","{T}: Add one mana of any type.").orElseThrow().mask()==63,
+    "any type includes colorless");
+  ok(CommanderMana.land("Land","This land enters tapped.\n{T}: Add one mana of any color.").orElseThrow().entersTapped(),
+    "five-color tapland must be tapped on entry");
+  ok(CommanderMana.land("Land","When this land enters, draw a card.\n{T}: Add {G}.").isEmpty(),
+    "ETB triggers cannot be ignored");
+  ok(CommanderMana.land("Land","{T}, Pay 1 life: Add {G}.").isEmpty(),
+    "extra mana activation costs unsupported");
+  ok(CommanderMana.land("Land","This land enters tapped unless you control a Forest.\n{T}: Add {G}.").isEmpty(),
+    "conditional ETB requirements are unsupported");
   var sources=List.of(new CommanderMana.Source("any",3),
     new CommanderMana.Source("white",1),new CommanderMana.Source("blue",2),
     new CommanderMana.Source("none",32),new CommanderMana.Source("green",16));
