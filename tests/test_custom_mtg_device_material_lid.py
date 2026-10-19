@@ -24,7 +24,7 @@ class CustomMtgDevices(unittest.TestCase):
                  'putString("CaszualMaterial",caszual$skin)',
                  'getStringOr("CaszualMaterial",BoxMaterial.DEFAULT)',
                  "getRenderData(){return caszual$skin;}",
-                 "ClientboundBlockEntityDataPacket.create((BlockEntity)(Object)this)",
+                 "ClientboundBlockEntityDataPacket.create(self)",
                  "getDisplayName"):
     self.assertIn(token,code,name+" "+token)
   helper=java("CustomGameDeviceMaterial.java")
