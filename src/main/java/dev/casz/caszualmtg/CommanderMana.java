@@ -47,12 +47,12 @@ public final class CommanderMana {
   String type=Objects.requireNonNullElse(typeLine,"").toLowerCase(Locale.ROOT);
   if(!type.contains("land")||type.contains("creature")||type.contains("battle"))
    return Optional.empty();
-  String text=Objects.requireNonNullElse(oracle,"").trim().toUpperCase(Locale.ROOT).replace("\\r","");
+  String text=Objects.requireNonNullElse(oracle,"").trim().toUpperCase(Locale.ROOT).replace("\r","");
   boolean tapped=false;
-  if(text.startsWith("THIS LAND ENTERS TAPPED.\\n")){
-   tapped=true;text=text.substring("THIS LAND ENTERS TAPPED.\\n".length()).trim();
-  }else if(text.startsWith("THIS LAND ENTERS THE BATTLEFIELD TAPPED.\\n")){
-   tapped=true;text=text.substring("THIS LAND ENTERS THE BATTLEFIELD TAPPED.\\n".length()).trim();
+  if(text.startsWith("THIS LAND ENTERS TAPPED.\n")){
+   tapped=true;text=text.substring("THIS LAND ENTERS TAPPED.\n".length()).trim();
+  }else if(text.startsWith("THIS LAND ENTERS THE BATTLEFIELD TAPPED.\n")){
+   tapped=true;text=text.substring("THIS LAND ENTERS THE BATTLEFIELD TAPPED.\n".length()).trim();
   }
   // Any further conditional ability, ETB trigger or extra cost fails closed.
   if(text.isBlank()){
