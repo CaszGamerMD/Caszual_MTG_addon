@@ -66,17 +66,7 @@ public final class TabletopLogic {
   return linkedHand(player,seat,player.getUUID());
  }
  private static HandBlockEntity linkedHand(ServerPlayer player,TabletopBlockEntity seat,UUID owner){
-  if(seat==null)return null;
-  BlockPos at=seat.getBlockPos();HandBlockEntity best=null;double distance=Double.MAX_VALUE;
-  for(BlockPos p:BlockPos.betweenClosed(at.offset(-LINK_RANGE,-LINK_RANGE,-LINK_RANGE),at.offset(LINK_RANGE,LINK_RANGE,LINK_RANGE))){
-   if(!player.level().hasChunkAt(p))continue;
-   if(player.level().getBlockEntity(p) instanceof HandBlockEntity h
-      &&owner.equals(h.owner())&&(at.equals(h.linkedTable())||h.legacyTableDiscovery()&&h.linkedTable()==null)){
-    double d=at.distSqr(p);
-    if(d<distance){best=h;distance=d;}
-   }
-  }
-  return best;
+  return HandLinks.linked(player.serverLevel(),seat,owner);
  }
  private static LifePointBlockEntity life(ServerPlayer player,HandBlockEntity hand){
   if(hand==null||hand.linkedLife()==null||!player.level().hasChunkAt(hand.linkedLife()))return null;
@@ -118,7 +108,7 @@ public final class TabletopLogic {
   return card!=null&&p.getUUID().toString().equals(card.card.owner());
  }
  private static String requireLinks(Context c){
-  if(c.hand==null)return "Place your Card Hand within 8 blocks of your seat and link it to a Deck Control.";
+  if(c.hand==null)return "Place your Card Hand within 70 blocks of your seat and link it to this table and a Deck Control.";
   if(c.deck==null)return "Your Card Hand's linked Deck Control is missing.";
   return "";
  }
@@ -745,14 +735,27 @@ public final class TabletopLogic {
 
  public static void refreshColor(ServerPlayer player,HandBlockEntity hand){
   if(hand==null||hand.owner()==null)return;
-  BlockPos at=hand.getBlockPos();
   int rgb=StaffColors.rgb(hand.tableColor());
+  BlockPos linked=hand.linkedTable();
+  if(linked!=null){
+   // Exact link may be 70 blocks away. Do not scan 141 cubed positions.
+   if(player.level().hasChunkAt(linked)
+      &&player.level().getBlockEntity(linked) instanceof TabletopBlockEntity table
+      &&hand.owner().equals(table.seatOwner())
+      &&hand.getBlockPos().equals(table.linkedHand())){
+    table.matRgb(rgb);
+    ChairBlock.refreshNextToTable(player.level(),linked);
+   }
+   return;
+  }
+  // Existing un-upgraded tables retain their previous nearby search.
+  BlockPos at=hand.getBlockPos();
   for(BlockPos pos:BlockPos.betweenClosed(at.offset(-LINK_RANGE,-LINK_RANGE,-LINK_RANGE),
                                         at.offset(LINK_RANGE,LINK_RANGE,LINK_RANGE))){
    if(!player.level().hasChunkAt(pos))continue;
-   if(!(player.level().getBlockEntity(pos) instanceof TabletopBlockEntity tile))continue;
-   if(!hand.owner().equals(tile.seatOwner()))continue;
-   tile.matRgb(rgb);
+   if(!(player.level().getBlockEntity(pos) instanceof TabletopBlockEntity table))continue;
+   if(!hand.owner().equals(table.seatOwner()))continue;
+   table.matRgb(rgb);
    ChairBlock.refreshNextToTable(player.level(),pos);
   }
  }
