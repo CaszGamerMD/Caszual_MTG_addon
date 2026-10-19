@@ -12,7 +12,7 @@ JAVA=ROOT/"src/main/java/dev/casz/caszualmtg"
 class BrassSquireModel(unittest.TestCase):
     def test_dedicated_png_is_valid_and_has_all_atlas_slots(self):
         data=(ART/"textures/item/brass_squire.png").read_bytes()
-        self.assertTrue(data.startswith(b"\\x89PNG\\r\\n\\x1a\\n"))
+        self.assertTrue(data.startswith(b"\x89PNG\r\n\x1a\n"))
         offset=8
         info=None
         compressed=[]
