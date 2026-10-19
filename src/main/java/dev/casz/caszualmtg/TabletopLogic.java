@@ -533,6 +533,10 @@ public final class TabletopLogic {
      ItemStack rest=stack.copy();rest.shrink(1);c.grave.setStack(slot,rest);
      message="Moved card to hand.";
     }
+    case "hand_absorb_inventory" -> {
+     if(c.hand==null){message=requireLinks(c);break;}
+     message=HandLogic.depositIntoHand(player,c.hand);
+    }
     case "draw" -> {
      if(c.deck==null){message=requireLinks(c);break;}
      int count=Math.clamp(req.amount(),1,99),room=HandBlockEntity.SIZE-c.hand.cardCount();
@@ -906,7 +910,7 @@ public final class TabletopLogic {
    origin,message,owned,List.copyOf(tiles),List.copyOf(played),
    c.hand==null||c.seat==null?List.of():c.hand.visibleCards(),
    c.deck==null?0:c.deck.getLibraryCount(),List.copyOf(grave),List.copyOf(exile),scry,reveal,commander(player,c),
-   c.seat==null?List.of():c.seat.tokenTray(),List.copyOf(tokenResults),query.page(),tokenMore,REVEALED_HANDS.contains(player.getUUID()),List.copyOf(shownHands),List.copyOf(publicReveals),List.copyOf(publicZones),targets
+   c.seat==null?List.of():c.seat.tokenTray(),List.copyOf(tokenResults),query.page(),tokenMore,REVEALED_HANDS.contains(player.getUUID()),List.copyOf(shownHands),List.copyOf(publicReveals),List.copyOf(publicZones),targets,c.hand==null?Map.of():c.hand.hotkeys(player.getUUID())
   ));
  }
  private TabletopLogic(){}
