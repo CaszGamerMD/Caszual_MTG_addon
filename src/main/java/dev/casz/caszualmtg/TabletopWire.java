@@ -19,7 +19,9 @@ public final class TabletopWire {
    b->new Request(b.readBlockPos(),b.readUtf(24),b.readUtf(256),b.readBlockPos(),b.readInt(),b.readInt(),b.readVarInt()));
   public Type<Request> type(){return TYPE;}
  }
- public record Tile(BlockPos pos,String owner,int color,int life,boolean hasLife,boolean active,int cardScale) {}
+ /** Public seat metadata only: never exposes a private Hand's card contents. */
+ public record Tile(BlockPos pos,String owner,int color,int life,boolean hasLife,
+                    boolean active,int cardScale,int handCount,Map<String,Integer> counters) {}
  public record Card(BlockPos pos,String id,String owner,ItemStack stack,int x,int y,boolean tapped,boolean hidden) {}
  public record ZoneCard(int slot,ItemStack stack) {}
  public record TokenResult(String key,ItemStack stack) {}
@@ -30,7 +32,11 @@ public final class TabletopWire {
   public static final Type<Reply> TYPE=new Type<>(CaszualMtg.id("tabletop_reply"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Reply> CODEC=StreamCodec.of((b,p)->{
    b.writeBlockPos(p.pos);b.writeUtf(p.message,512);b.writeBlockPos(p.seat);
-   b.writeVarInt(p.tiles.size());for(Tile t:p.tiles){b.writeBlockPos(t.pos);b.writeUtf(t.owner,64);b.writeInt(t.color);b.writeInt(t.life);b.writeBoolean(t.hasLife);b.writeBoolean(t.active);b.writeVarInt(t.cardScale);}
+   b.writeVarInt(p.tiles.size());for(Tile t:p.tiles){b.writeBlockPos(t.pos);b.writeUtf(t.owner,64);b.writeInt(t.color);b.writeInt(t.life);b.writeBoolean(t.hasLife);b.writeBoolean(t.active);b.writeVarInt(t.cardScale);
+     b.writeVarInt(t.handCount);
+     b.writeVarInt(t.counters.size());
+     for(var counter:t.counters.entrySet()){b.writeUtf(counter.getKey(),40);b.writeInt(counter.getValue());}
+    }
    b.writeVarInt(p.cards.size());for(Card c:p.cards){
     b.writeBlockPos(c.pos);b.writeUtf(c.id,MAX_CARD_ID_LENGTH);b.writeUtf(c.owner,40);
     ItemStack.OPTIONAL_STREAM_CODEC.encode(b,c.stack);
@@ -70,7 +76,16 @@ public final class TabletopWire {
   },b->{
    BlockPos pos=b.readBlockPos();String message=b.readUtf(512);BlockPos seat=b.readBlockPos();
    int n=b.readVarInt();if(n<0||n>32)throw new IllegalArgumentException("Table too large");
-   List<Tile> tiles=new ArrayList<>();for(int i=0;i<n;i++)tiles.add(new Tile(b.readBlockPos(),b.readUtf(64),b.readInt(),b.readInt(),b.readBoolean(),b.readBoolean(),b.readVarInt()));
+   List<Tile> tiles=new ArrayList<>();
+    for(int i=0;i<n;i++){
+     BlockPos pos=b.readBlockPos();String owner=b.readUtf(64);int color=b.readInt(),life=b.readInt();
+     boolean hasLife=b.readBoolean(),active=b.readBoolean();int scale=b.readVarInt();
+     int handCount=b.readVarInt();if(handCount< -1||handCount>100)throw new IllegalArgumentException("Invalid hand count");
+     int counterCount=b.readVarInt();if(counterCount<0||counterCount>32)throw new IllegalArgumentException("Too many life counters");
+     Map<String,Integer> counters=new LinkedHashMap<>();
+     for(int j=0;j<counterCount;j++)counters.put(b.readUtf(40),b.readInt());
+     tiles.add(new Tile(pos,owner,color,life,hasLife,active,scale,handCount,Map.copyOf(counters)));
+    }
    n=b.readVarInt();if(n<0||n>3072)throw new IllegalArgumentException("Too many played cards");
    List<Card> cards=new ArrayList<>();for(int i=0;i<n;i++)cards.add(new Card(b.readBlockPos(),b.readUtf(MAX_CARD_ID_LENGTH),b.readUtf(40),ItemStack.OPTIONAL_STREAM_CODEC.decode(b),b.readVarInt(),b.readVarInt(),b.readBoolean(),b.readBoolean()));
    n=b.readVarInt();if(n<0||n>100)throw new IllegalArgumentException("Too many hand cards");
