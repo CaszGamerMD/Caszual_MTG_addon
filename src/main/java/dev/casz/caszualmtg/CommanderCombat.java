@@ -42,7 +42,8 @@ public final class CommanderCombat {
   HandBlockEntity result=null;double distance=Double.MAX_VALUE;
   for(BlockPos pos:BlockPos.betweenClosed(seat.getBlockPos().offset(-8,-4,-8),seat.getBlockPos().offset(8,4,8))){
    if(!level.hasChunkAt(pos))continue;
-   if(level.getBlockEntity(pos) instanceof HandBlockEntity h&&seat.seatOwner().equals(h.owner())){
+   if(level.getBlockEntity(pos) instanceof HandBlockEntity h&&seat.seatOwner().equals(h.owner())
+      &&seat.getBlockPos().equals(h.linkedTable())){
     double d=pos.distSqr(seat.getBlockPos());
     if(d<distance){result=h;distance=d;}
    }
