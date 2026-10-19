@@ -44,24 +44,36 @@ public final class CommanderBattleActions {
  }
  private static boolean usableLand(ItemStack card){
   var meta=TcgCardMeta.read(card);
-  if(!meta.typeLine().toLowerCase(Locale.ROOT).contains("land")||
-     meta.typeLine().toLowerCase(Locale.ROOT).contains("creature"))return false;
-  // The first prototype can only enter lands without replacement/triggered
-  // abilities. Complex land-specific costs are not bypassed.
-  return CommanderMana.production(meta.name(),meta.typeLine(),meta.oracleText())>0;
+  return CommanderMana.land(meta.typeLine(),meta.oracleText()).isPresent();
  }
+ /** Pick an untapped land that improves the golem's available colors. */
  public static boolean playLand(IronGolem bot,TabletopBlockEntity table,HandBlockEntity hand){
   if(table.cards().size()>=TabletopBlockEntity.MAX_CARDS)return false;
   List<ItemStack> cards=hand.visibleCards();
-  for(int index=0;index<cards.size();index++){
-   if(!usableLand(cards.get(index)))continue;
-   ItemStack moved=hand.removeVisibleIndex(index);
-   if(moved.isEmpty())return false;
-   if(table.add(new TabletopBlockEntity.PlayedCard(UUID.randomUUID().toString(),
-     bot.getUUID().toString(),moved,200+(table.cards().size()%6)*110,800,false,false)))
-    return true;
-   hand.addCard(moved);return false;
+  int have=0;
+  for(var source:owned(bot,table)){
+   var meta=TcgCardMeta.read(source.stack());
+   have|=CommanderMana.production(meta.name(),meta.typeLine(),meta.oracleText());
   }
+  int best=-1,score=Integer.MIN_VALUE;
+  CommanderMana.Land planned=null;
+  for(int i=0;i<cards.size();i++){
+   var meta=TcgCardMeta.read(cards.get(i));
+   var land=CommanderMana.land(meta.typeLine(),meta.oracleText());
+   if(land.isEmpty())continue;
+   CommanderMana.Land candidate=land.get();
+   int value=Integer.bitCount(candidate.mask()&~have)*100+
+     (candidate.entersTapped()?0:20)+Integer.bitCount(candidate.mask());
+   if(value>score){score=value;best=i;planned=candidate;}
+  }
+  if(best<0||planned==null)return false;
+  ItemStack card=hand.removeVisibleIndex(best);
+  if(card.isEmpty())return false;
+  var placed=new TabletopBlockEntity.PlayedCard(UUID.randomUUID().toString(),
+    bot.getUUID().toString(),card,200+(table.cards().size()%6)*110,800,
+    planned.entersTapped(),false);
+  if(table.add(placed))return true;
+  hand.addCard(card);
   return false;
  }
  public static List<CommanderMana.Source> mana(IronGolem bot,TabletopBlockEntity table){
