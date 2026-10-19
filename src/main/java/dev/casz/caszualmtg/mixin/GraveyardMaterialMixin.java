@@ -4,6 +4,7 @@ import dev.casz.caszualmtg.*;
 import com.spider.mtgcard.graveyard.GraveyardBlockEntity;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -18,6 +19,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * MTGCard's GRAVEYARD block entity type always reloads its native class, not a
@@ -41,6 +43,12 @@ public abstract class GraveyardMaterialMixin implements BoxMaterial,GraveyardLid
   }
  }
  public Object getRenderData(){return caszual$skin;}
+ @Inject(method="getDisplayName",at=@At("HEAD"),cancellable=true)
+ private void caszual$title(CallbackInfoReturnable<Component> cir){
+  BlockEntity self=(BlockEntity)(Object)this;
+  if(self.getBlockState().is(CaszualMtg.CUSTOM_GRAVEYARD))
+   cir.setReturnValue(Component.translatable("block.caszual_mtg.custom_graveyard"));
+ }
 
  @Override public boolean caszual$isLidPinned(){return caszual$lidPinned;}
  @Override public void caszual$setLidPinned(boolean open){
