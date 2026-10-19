@@ -40,12 +40,21 @@ public final class CommanderMana {
   if(!s.substring(last).isBlank()||last==0)return Optional.empty();
   return Optional.of(new Cost(generic,counts[0],counts[1],counts[2],counts[3],counts[4],counts[5]));
  }
- /** Recognize basic lands and extremely simple, unconditional tap-for-one abilities. */
- public static int production(String name,String typeLine,String oracle){
+ /** Only deterministic, unconditional one-mana land abilities can be automated.
+  * Recognize the common ETB-tapped basic duals without ignoring their drawback. */
+ public record Land(int mask,boolean entersTapped){}
+ public static Optional<Land> land(String typeLine,String oracle){
   String type=Objects.requireNonNullElse(typeLine,"").toLowerCase(Locale.ROOT);
-  if(!type.contains("land"))return 0;
-  String text=Objects.requireNonNullElse(oracle,"").trim().toUpperCase(Locale.ROOT);
-  // Basic types imply intrinsic abilities, even when Oracle has no reminder text.
+  if(!type.contains("land")||type.contains("creature")||type.contains("battle"))
+   return Optional.empty();
+  String text=Objects.requireNonNullElse(oracle,"").trim().toUpperCase(Locale.ROOT).replace("\\r","");
+  boolean tapped=false;
+  if(text.startsWith("THIS LAND ENTERS TAPPED.\\n")){
+   tapped=true;text=text.substring("THIS LAND ENTERS TAPPED.\\n".length()).trim();
+  }else if(text.startsWith("THIS LAND ENTERS THE BATTLEFIELD TAPPED.\\n")){
+   tapped=true;text=text.substring("THIS LAND ENTERS THE BATTLEFIELD TAPPED.\\n".length()).trim();
+  }
+  // Any further conditional ability, ETB trigger or extra cost fails closed.
   if(text.isBlank()){
    int mask=0;
    if(type.contains("plains"))mask|=1;
@@ -54,22 +63,22 @@ public final class CommanderMana {
    if(type.contains("mountain"))mask|=8;
    if(type.contains("forest"))mask|=16;
    if(type.contains("wastes"))mask|=32;
-   return mask;
+   return mask==0?Optional.empty():Optional.of(new Land(mask,tapped));
   }
-  // Explicit "{T}: Add {W}." with an optional color choice from a single ability.
-  // Any other text is too complex to treat as unconditional mana production.
-  String[] lines=text.replace("\\r","").split("\\n");
-  if(lines.length!=1)return 0;
-  String line=lines[0].trim();
-  if(!line.startsWith("{T}: ADD "))return 0;
-  String production=line.substring(9).replace(".","").trim();
+  if(!text.startsWith("{T}: ADD "))return Optional.empty();
+  String add=text.substring("{T}: ADD ".length()).replace(".","").trim();
   int mask=0;
-  if(production.matches("\\{[WUBRGC]}"))mask=bit(production.charAt(1));
-  else {
-   Matcher choice=Pattern.compile("ONE MANA OF ANY (?:COLOR|TYPE)").matcher(production);
-   if(choice.matches())mask=31; // 'any color' excludes colorless
+  if(add.matches("\\{[WUBRGC]}"))mask=bit(add.charAt(1));
+  else if(add.equals("ONE MANA OF ANY COLOR"))mask=31;
+  else if(add.equals("ONE MANA OF ANY TYPE"))mask=63;
+  else if(add.matches("\\{[WUBRGC]} OR \\{[WUBRGC]}")){
+   mask=bit(add.charAt(1))|bit(add.charAt(8));
   }
-  return mask;
+  return mask==0?Optional.empty():Optional.of(new Land(mask,tapped));
+ }
+ /** Recognize basic lands and extremely simple, unconditional tap-for-one abilities. */
+ public static int production(String name,String typeLine,String oracle){
+  return land(typeLine,oracle).map(Land::mask).orElse(0);
  }
  private static int bit(char c){return switch(c){case 'W'->1;case 'U'->2;case 'B'->4;case 'R'->8;case 'G'->16;case 'C'->32;default->0;};}
  /** Source IDs are unique battlefield card ids. Plan is a deterministic list of ids to tap. */
