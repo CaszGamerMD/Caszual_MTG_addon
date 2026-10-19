@@ -110,6 +110,9 @@ jobs:
       - name: Verify explicitly linked Card Hand and Brass Squire model
         run: python3 -m unittest discover -s tests -p 'test_hand_setup_squire.py' -v
 
+      - name: Verify MTGCard pod, turn ownership and Golem drawing
+        run: python3 -m unittest discover -s tests -p 'test_commander_pod.py' -v
+
       - name: Publish experimental Commander Golem JAR
         if: github.ref == 'refs/heads/experiment/commander-ai-golem'
         run: |
