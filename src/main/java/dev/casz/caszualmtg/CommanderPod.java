@@ -33,7 +33,8 @@ public final class CommanderPod {
   boolean dead=g.dead.contains(pos)||life.getLife()<=0;
   // MTGCard decides whether this counter belongs to the active turn.
   // During the initial turn-order roulette, active is not final.
-  boolean active=g.started&&!g.rolling&&g.activeIndex>=0
+  boolean active=g.started&&!g.rolling&&g.activeIndex>=0&&g.activeIndex<g.order.size()
+    &&g.order.get(g.activeIndex).equals(pos)
     &&life.isGameStarted()&&life.isTurnActive()&&!dead;
   return new Status(id,g.name,g.started,g.rolling,active,dead,g.order.size(),"");
  }
