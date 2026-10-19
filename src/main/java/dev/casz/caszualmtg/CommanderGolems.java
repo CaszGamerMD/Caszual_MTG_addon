@@ -92,7 +92,7 @@ public final class CommanderGolems {
   for(BlockPos p:BlockPos.betweenClosed(at.offset(-RANGE,-2,-RANGE),at.offset(RANGE,2,RANGE))){
    if(!world.hasChunkAt(p))continue;
    if(world.getBlockEntity(p) instanceof HandBlockEntity h
-      &&golem.getUUID().equals(h.owner())&&at.equals(h.linkedTable())){
+      &&golem.getUUID().equals(h.owner())&&(at.equals(h.linkedTable())||h.legacyTableDiscovery()&&h.linkedTable()==null)){
     double d=at.distSqr(p);if(d<nearest){hand=h;nearest=d;}
    }
   }
