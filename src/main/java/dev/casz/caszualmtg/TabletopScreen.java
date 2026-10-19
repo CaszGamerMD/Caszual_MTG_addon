@@ -73,6 +73,17 @@ public final class TabletopScreen extends LegacyScreen {
    ClientPlayNetworking.send(new TabletopWire.Request(data.pos(),action,ref,target,x,y,amount));
  }
  void action(String name,int amount){send(name,"",data.seat(),0,0,amount);}
+ boolean handleHotkey(int key){
+  if(getFocused() instanceof EditBox||data.seat()==null)return false;
+  for(String action:HandHotkeys.ACTIONS){
+   if(data.hotkeys().getOrDefault(action,-1)!=key)continue;
+   if(action.equals("pass_turn"))awaitingTurnPass=true;
+   action(action,action.equals("draw")||action.equals("mill")?1:0);
+   return true;
+  }
+  return false;
+ }
+
  void button(String label,int x,int y,int w,Runnable callback){
   if(w>18)addRenderableWidget(Button.builder(Component.literal(label),b->callback.run()).bounds(x,y,w,20).build());
  }
@@ -443,6 +454,12 @@ public final class TabletopScreen extends LegacyScreen {
  }
  @Override public boolean mouseClicked(MouseButtonEvent event,boolean twice){
   int x=(int)event.x(),y=(int)event.y();
+  // Hand tab right-click: put eligible loose inventory cards into the linked
+  // Card Hand. Server validates ownership and consumes physical card stacks.
+  if(event.button()==1&&x>=12&&x<70&&y>=handTop()+5&&y<handTop()+25){
+   send("hand_absorb_inventory","",data.seat(),0,0,0);
+   return true;
+  }
   if(event.button()==1&&y>=5&&y<30){
    int index=tabScroll+(x-12)/137;
    if(x>=12&&(x-12)%137<132&&index>=0&&index<data.tiles().size()){
