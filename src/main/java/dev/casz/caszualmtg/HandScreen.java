@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
 public final class HandScreen extends LegacyScreen {
- HandWire.Reply data;EditBox playerName,staffLeft,staffRight,tableColor;int x,y,w,h,scroll,selected=-1,ticks;final java.util.LinkedHashSet<Integer> chosen=new java.util.LinkedHashSet<>();String message="";boolean mulliganMenu;
+ HandWire.Reply data;EditBox playerName,staffLeft,staffRight,tableColor,primaryInput;int x,y,w,h,scroll,selected=-1,ticks;final java.util.LinkedHashSet<Integer> chosen=new java.util.LinkedHashSet<>();String message="";boolean mulliganMenu,linkMenu;
  HandScreen(HandWire.Reply data){super(Component.literal("Card Hand"));this.data=data;}
  void update(HandWire.Reply reply){
   boolean controlsChanged=data.authorized()!=reply.authorized()||data.canManage()!=reply.canManage()||data.revealAll()!=reply.revealAll()||data.pendingDiscards()!=reply.pendingDiscards()||data.hasStaff()!=reply.hasStaff();
@@ -23,11 +23,28 @@ public final class HandScreen extends LegacyScreen {
  @Override protected void init(){
   if(MtgGuiScaleHelper.applyAutoFitGuiScale(this,3,640,430))return;
   w=Math.max(1,width-16);h=Math.max(1,height-16);x=(width-w)/2;y=(height-h)/2;clearWidgets();
+  if(linkMenu){
+   if(data.canManage()){
+    button("Link all · first of each",x+15,y+48,200,()->{send("link_all","");onClose();});
+    button("Link Deck Control",x+220,y+48,137,()->{send("link","");onClose();});
+    button("Link Life Point",x+362,y+48,128,()->{send("link_life","");onClose();});
+    button("Link MTG Table",x+495,y+48,134,()->{send("link_table","");onClose();});
+    button("Cancel link mode",x+15,y+83,134,()->send("cancel_link",""));
+    button("Clear all links",x+155,y+83,134,()->send("unlink_all",""));
+    primaryInput=addRenderableWidget(new EditBox(font,x+15,y+172,170,20,Component.literal("Primary player username")));
+    primaryInput.setMaxLength(32);primaryInput.setHint(Component.literal("Online username"));
+    button("Set Primary Player",x+192,y+172,140,()->send("primary_player",primaryInput.getValue()));
+    button("Select Golem · click it",x+338,y+172,178,()->{send("primary_golem","");onClose();});
+    button("Clear Primary",x+522,y+172,120,()->send("primary_clear",""));
+   }
+   button("Back to Hand",x+15,y+h-34,145,()->{linkMenu=false;rebuildWidgets();});
+   button("Done",x+w-85,y+h-34,72,this::onClose);
+   return;
+  }
   button("Refresh",x+12,y+32,72,()->send("refresh",""));
   if(data.authorized())button(data.revealAll()?"Hide from all":"Reveal to all",x+90,y+32,112,()->send("reveal",""));
   if(data.canManage()){
-   button("Link Deck Control",x+208,y+32,124,()->{send("link","");onClose();});
-   button("Link Life Point",x+338,y+32,110,()->{send("link_life","");onClose();});
+   button("Links / Primary",x+208,y+32,155,()->{linkMenu=true;rebuildWidgets();});
    tableColor=addRenderableWidget(new EditBox(font,x+454,y+32,83,20,Component.literal("Table color")));
    tableColor.setMaxLength(7);tableColor.setValue(data.tableColor());
    button("Set table color",x+542,y+32,105,()->{
@@ -87,7 +104,7 @@ public final class HandScreen extends LegacyScreen {
   scroll=Math.clamp(scroll-(int)Math.signum(dy),0,Math.max(0,rows-visibleRows));return true;
  }
  @Override public boolean mouseClicked(MouseButtonEvent e,boolean twice){
-  if(data.visible()){
+  if(data.visible()&&!linkMenu){
    int gx=x+12,gy=y+gridTop(),cw=78,ch=112,cols=gridCols(),rows=gridRows();int relX=(int)e.x()-gx,relY=(int)e.y()-gy;
    if(relX>=0&&relY>=0&&relX<cols*cw&&relY<rows*ch){
     int col=relX/cw,row=relY/ch,at=(scroll+row)*cols+col;if(at>=0&&at<data.cards().size()){selected=at;if(!chosen.add(at))chosen.remove(at);return true;}
@@ -97,9 +114,20 @@ public final class HandScreen extends LegacyScreen {
  }
  @Override public void render(GuiGraphics g,int mx,int my,float delta){
   g.fill(0,0,width,height,0xC0080E18);g.fill(x,y,x+w,y+h,0xFF152032);g.drawString(font,title,x+12,y+12,0xFFFFFFFF);
+  if(linkMenu){
+   g.drawString(font,"CARD HAND SETUP · First clicked device is linked",x+15,y+20,0xFFB3DFFF);
+   g.drawString(font,"Deck Control: "+data.linked(),x+15,y+122,0xFFE7EBF1);
+   g.drawString(font,"Life Point: "+data.lifeLink(),x+15,y+137,0xFFE7EBF1);
+   g.drawString(font,"MTG Table: "+data.tableLink(),x+15,y+152,0xFFE7EBF1);
+   g.drawString(font,"Primary: "+data.primaryName()+" · Manager retains setup access",x+15,y+205,0xFFFFD37E);
+   g.drawString(font,"Choose a mode, close this menu, then right-click the world device.",x+15,y+229,0xFF9CADC6);
+   g.drawString(font,"Link all selects the first Deck Control, Life Point and MTG Table in any order.",x+15,y+246,0xFF9CADC6);
+   if(!message.isBlank())g.drawString(font,font.plainSubstrByWidth(message,w-110),x+15,y+h-50,0xFFFFDA8A);
+   super.render(g,mx,my,delta);return;
+  }
   String privacy=data.revealAll()?"REVEALED TO ALL":data.visible()?"PRIVATE · YOU CAN VIEW":"PRIVATE · HIDDEN";
   g.drawString(font,privacy+" · "+data.count()+"/"+HandBlockEntity.SIZE+" cards · "+chosen.size()+" selected · Deck Control: "+data.linked(),x+12,y+112,data.revealAll()?0xFFFFD37E:0xFFB3DFFF);
-  if(data.canManage())g.drawString(font,"Life: "+data.lifeLink()+" · Viewers: "+(data.viewers().isEmpty()?"none":String.join(", ",data.viewers())),x+12,y+124,0xFF9CADC6);
+  if(data.canManage())g.drawString(font,"Life: "+data.lifeLink()+" · Table: "+data.tableLink()+" · Primary: "+data.primaryName()+" · Viewers: "+(data.viewers().isEmpty()?"none":String.join(", ",data.viewers())),x+12,y+124,0xFF9CADC6);
   if(data.pendingDiscards()>0)g.drawString(font,"Strict mulligan: discard "+data.pendingDiscards()+" selected card"+(data.pendingDiscards()==1?"":"s")+" to finish.",x+370,y+88,0xFFFFD37E);
   else if(mulliganMenu)g.drawString(font,"Friendly is free · Strict attempts: "+data.strictMulligans()+" · Cancel finishes mulligans.",x+320,y+88,0xFFB3DFFF);
   else g.drawString(font,"Click cards to toggle multi-select · Right-click podium to add.",x+370,y+88,0xFF9CADC6);
