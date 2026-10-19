@@ -58,7 +58,8 @@ public final class CommanderGolems {
   if(!table.claim(golem.getUUID(),"Commander Golem")){
    golem.discard();return "That table seat is not available.";
   }
-  return "Commander Golem seated. Place an unused Card Hand, linked Deck Control, deckbox and Life Point near its table; use the golem to check status.";
+  CommanderGolemVisuals.ensure(level,golem);
+  return "Brass Squire Commander Golem seated. Link a Card Hand to its table, Deck Control and Life Point, then select this golem as primary.";
  }
 
  private static TabletopBlockEntity adjacentTable(ServerLevel level,BlockPos chair){
@@ -184,9 +185,11 @@ public final class CommanderGolems {
   if(world.getGameTime()%20!=0)return;
   Set<UUID> visited=new HashSet<>();
   for(ServerPlayer player:world.players()){
+   CommanderGolemVisuals.prune(world,player);
    for(IronGolem golem:world.getEntitiesOfClass(IronGolem.class,
        player.getBoundingBox().inflate(32),g->g.entityTags().contains(TAG))){
     if(!visited.add(golem.getUUID()))continue;
+    CommanderGolemVisuals.ensure(world,golem);
     run(world,golem);
    }
   }
