@@ -35,6 +35,12 @@ public final class HandLogic {
    case "all"->PENDING_ALL.put(id,pos.immutable());
   }
  }
+ /** Setup completes at the clicked device, so the player may be farther than
+  * GUI-open range from the Hand while still legitimately within link range. */
+ private static HandBlockEntity pendingHand(ServerPlayer player,BlockPos pos){
+  return player.level().hasChunkAt(pos)
+   &&player.level().getBlockEntity(pos) instanceof HandBlockEntity hand ?hand:null;
+ }
  private static boolean inRange(BlockPos hand,BlockPos target){
   return Math.abs(target.getX()-hand.getX())<=LINK_RANGE
     &&Math.abs(target.getY()-hand.getY())<=LINK_RANGE
@@ -263,7 +269,7 @@ public final class HandLogic {
   UUID id=player.getUUID();
   BlockPos handPos=PENDING_LINKS.getOrDefault(id,PENDING_ALL.get(id));
   if(handPos==null||!(player.level().getBlockEntity(controlPos) instanceof DeckControlBlockEntity control))return false;
-  HandBlockEntity hand=get(player,handPos);
+  HandBlockEntity hand=pendingHand(player,handPos);
   if(hand==null||!hand.canManage(player)){clearPending(id);return true;}
   if(!inRange(handPos,controlPos)){player.sendSystemMessage(Component.literal("Deck Control must be within 8 blocks."));return true;}
   if(PENDING_ALL.containsKey(id)&&hand.linkedControl()!=null)return false;
@@ -278,7 +284,7 @@ public final class HandLogic {
   UUID id=player.getUUID();
   BlockPos handPos=PENDING_LIFE_LINKS.getOrDefault(id,PENDING_ALL.get(id));
   if(handPos==null||!(player.level().getBlockEntity(lifePos) instanceof com.spider.mtgcard.life.LifePointBlockEntity))return false;
-  HandBlockEntity hand=get(player,handPos);
+  HandBlockEntity hand=pendingHand(player,handPos);
   if(hand==null||!hand.canManage(player)){clearPending(id);return true;}
   if(!inRange(handPos,lifePos)){player.sendSystemMessage(Component.literal("Life Point must be within 8 blocks."));return true;}
   if(PENDING_ALL.containsKey(id)&&hand.linkedLife()!=null)return false;
@@ -291,7 +297,7 @@ public final class HandLogic {
   UUID id=player.getUUID();
   BlockPos handPos=PENDING_TABLE_LINKS.getOrDefault(id,PENDING_ALL.get(id));
   if(handPos==null||!(player.level().getBlockEntity(tablePos) instanceof TabletopBlockEntity table))return false;
-  HandBlockEntity hand=get(player,handPos);
+  HandBlockEntity hand=pendingHand(player,handPos);
   if(hand==null||!hand.canManage(player)){clearPending(id);return true;}
   if(!inRange(handPos,tablePos)){player.sendSystemMessage(Component.literal("MTG Table must be within 8 blocks."));return true;}
   if(PENDING_ALL.containsKey(id)&&hand.linkedTable()!=null)return false;
@@ -306,7 +312,7 @@ public final class HandLogic {
  public static boolean completePendingGolem(ServerPlayer player,net.minecraft.world.entity.animal.golem.IronGolem golem){
   UUID id=player.getUUID();BlockPos handPos=PENDING_GOLEM_LINKS.get(id);
   if(handPos==null||!golem.entityTags().contains(CommanderGolems.TAG))return false;
-  HandBlockEntity hand=get(player,handPos);
+  HandBlockEntity hand=pendingHand(player,handPos);
   if(hand==null||!hand.canManage(player)){clearPending(id);return true;}
   if(player.level()!=golem.level()||!inRange(handPos,golem.blockPosition())){
    player.sendSystemMessage(Component.literal("Golem must be within 8 blocks of its Hand."));return true;
