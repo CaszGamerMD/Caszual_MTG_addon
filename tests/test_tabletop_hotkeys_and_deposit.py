@@ -38,7 +38,7 @@ class HandHotkeysAndDeposit(unittest.TestCase):
   self.assertIn('HandHotkeys.ACTIONS',ui)
   self.assertIn('data.hotkeys()',ui)
   self.assertIn('getFocused() instanceof EditBox',ui)
-  self.assertIn('action("draw"',read("TabletopLogic.java"))
+  self.assertIn('case "draw" -> {',server)
   self.assertIn('Map.copyOf(hotkeys)',wire)
   self.assertIn('c.hand.hotkeys(player.getUUID())',server)
   self.assertIn('boolean handleHotkey(int key)',hand)
