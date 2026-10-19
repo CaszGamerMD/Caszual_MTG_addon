@@ -46,6 +46,34 @@ class PodIntegration(unittest.TestCase):
   self.assertIn("if(!pod.started()||pod.rolling()||!pod.active())",bot)
   self.assertIn("CommanderPod.status(world,s.life).playable()",bot)
 
+ def test_observable_persisted_turn_stages(self):
+  bot=read("CommanderGolems.java")
+  for stage in ["STAGE_LAND","STAGE_CAST","STAGE_COMBAT","STAGE_END"]:
+   self.assertIn('private static final String '+stage,bot)
+  self.assertIn("progress(golem,STAGE_LAND,STAGE_CAST)",bot)
+  self.assertIn("progress(golem,STAGE_CAST,STAGE_COMBAT)",bot)
+  self.assertIn("progress(golem,STAGE_COMBAT,STAGE_END)",bot)
+  self.assertIn('say(world,golem,"draws a card (',bot)
+  self.assertIn("CommanderBattleActions.playLand(golem,s.table,s.hand)",bot)
+  self.assertIn("CommanderBattleActions.castHand(golem,s.table,s.hand)",bot)
+  self.assertIn("CommanderBattleActions.castCommander(golem,s.table,box)",bot)
+  self.assertIn("CommanderCombat.declare(world,golem,s.table,s.life)",bot)
+  self.assertIn("CommanderBattleActions.cleanup(world,s.hand,s.deck)",bot)
+  self.assertIn("if(!CommanderPod.status(world,s.life).active())clearTurn(golem)",bot)
+  self.assertIn("if(!pod.started()||pod.rolling()||!pod.active())",bot)
+  self.assertIn("golem.addTag(STAGE_LAND)",bot)
+  self.assertIn("golem.removeTag(STAGE_LAND)",bot)
+
+ def test_land_selection_respects_tapped_and_color_requirements(self):
+  actions=read("CommanderBattleActions.java")
+  mana=read("CommanderMana.java")
+  self.assertIn("CommanderMana.land(meta.typeLine(),meta.oracleText())",actions)
+  self.assertIn("planned.entersTapped(),false",actions)
+  self.assertIn("candidate.mask()&~have",actions)
+  self.assertIn("boolean entersTapped",mana)
+  self.assertIn("THIS LAND ENTERS TAPPED.",mana)
+  self.assertIn("one mana of any color".upper(),mana)
+
  def test_continues_after_commander_leaves_deckbox(self):
   bot=read("CommanderGolems.java")
   self.assertIn('if(!golem.entityTags().contains(FIRST_HAND)',bot)
