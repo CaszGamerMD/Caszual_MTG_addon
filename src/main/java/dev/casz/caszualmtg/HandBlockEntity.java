@@ -16,6 +16,20 @@ public final class HandBlockEntity extends BlockEntity {
  public static final int SIZE=100;
  private final List<ItemStack> cards=new ArrayList<>(Collections.nCopies(SIZE,ItemStack.EMPTY));
  private UUID owner;
+ private final Map<UUID,Map<String,Integer>> hotkeys=new LinkedHashMap<>();
+ public Map<String,Integer> hotkeys(UUID id){
+  return id==null?Map.of():Map.copyOf(hotkeys.getOrDefault(id,Map.of()));
+ }
+ public boolean hotkey(UUID id,String action,int key){
+  if(id==null||!HandHotkeys.validAction(action)||key!=-1&&!HandHotkeys.validKey(key))return false;
+  Map<String,Integer> binds=new LinkedHashMap<>(hotkeys.getOrDefault(id,Map.of()));
+  if(key<0)binds.remove(action);
+  else{
+   binds.entrySet().removeIf(e->e.getValue()==key);
+   binds.put(action,key);
+  }
+  hotkeys.put(id,Map.copyOf(binds));changed();return true;
+ }
  private UUID manager;
  private String primaryName="Unassigned";
  private BlockPos linkedTable;
@@ -135,6 +149,14 @@ public final class HandBlockEntity extends BlockEntity {
    !ownerRaw.isBlank()&&in.getStringOr("Manager","").isBlank());
   viewers.clear();viewerNames.clear();
   for(Viewer v:in.read("Viewers",Viewer.CODEC.listOf()).orElse(List.of())){try{UUID id=UUID.fromString(v.uuid);viewers.add(id);viewerNames.put(id,v.name);}catch(Exception ignored){}}
+  hotkeys.clear();
+  for(Bind binding:in.read("HotkeyBindings",Bind.CODEC.listOf()).orElse(List.of())){
+   try{
+    UUID user=UUID.fromString(binding.player);
+    if(HandHotkeys.validAction(binding.action)&&HandHotkeys.validKey(binding.key))
+     hotkeys.computeIfAbsent(user,id->new LinkedHashMap<>()).put(binding.action,binding.key);
+   }catch(Exception ignored){}
+  }
   String link=in.getStringOr("LinkedControl","");linkedControl=parsePos(link);linkedLife=parsePos(in.getStringOr("LinkedLife",""));linkedTable=parsePos(in.getStringOr("LinkedTable",""));String shade=in.getStringOr("TableColor","#315348");tableColor=StaffColors.valid(shade)?StaffColors.normalize(shade):"#315348";revealAll=in.getBooleanOr("RevealAll",false);
   strictMulligans=Math.max(0,in.getIntOr("StrictMulligans",0));
   pendingStrictDiscards=Math.max(0,in.getIntOr("PendingStrictDiscards",0));
@@ -161,11 +183,23 @@ public final class HandBlockEntity extends BlockEntity {
   out.putInt("PendingStrictDiscards",pendingStrictDiscards);
   out.putString("StaffLeftRGB",staffLeft);
   out.putString("StaffRightRGB",staffRight);
+  List<Bind> savedKeys=new ArrayList<>();
+  hotkeys.forEach((user,bindings)->bindings.forEach((action,key)->{
+   if(HandHotkeys.validAction(action)&&HandHotkeys.validKey(key)&&savedKeys.size()<640)
+    savedKeys.add(new Bind(user.toString(),action,key));
+  }));
+  out.store("HotkeyBindings",Bind.CODEC.listOf(),savedKeys);
  }
 
  static String pos(BlockPos p){return p.getX()+","+p.getY()+","+p.getZ();}
  static BlockPos parsePos(String s){try{String[] p=s.split(",");if(p.length==3)return new BlockPos(Integer.parseInt(p[0]),Integer.parseInt(p[1]),Integer.parseInt(p[2]));}catch(Exception ignored){}return null;}
  private record SlotStack(int slot,ItemStack stack){static final Codec<SlotStack> CODEC=RecordCodecBuilder.create(i->i.group(Codec.INT.fieldOf("Slot").forGetter(SlotStack::slot),ItemStack.CODEC.fieldOf("Stack").forGetter(SlotStack::stack)).apply(i,SlotStack::new));}
+ private record Bind(String player,String action,int key){
+  static final Codec<Bind> CODEC=RecordCodecBuilder.create(i->i.group(
+   Codec.STRING.fieldOf("Player").forGetter(Bind::player),
+   Codec.STRING.fieldOf("Action").forGetter(Bind::action),
+   Codec.INT.fieldOf("Key").forGetter(Bind::key)).apply(i,Bind::new));
+ }
  private record Viewer(String uuid,String name){static final Codec<Viewer> CODEC=RecordCodecBuilder.create(i->i.group(Codec.STRING.fieldOf("Uuid").forGetter(Viewer::uuid),Codec.STRING.fieldOf("Name").forGetter(Viewer::name)).apply(i,Viewer::new));}
 
  // Intentionally DO NOT implement Minecraft Container (or expose its accessors).
