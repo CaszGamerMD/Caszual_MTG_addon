@@ -16,6 +16,20 @@ Existing, previously saved Hands retain their administrative owner and legacy ta
 
 **Visual model:** the copper/brass 3D body is a custom item model carried by a synchronized, non-interactive ItemDisplay. On reload, it is restored if missing, and detached old displays are cleaned up. The original iron golem remains the server-side NPC for player clicks, rather than replacing it with another kind of mob.
 
+## Pod connection, turn order and card draws
+
+The Commander Golem participates through **MTGCard's real Life Point pod**, not an independent timer. Its Card Hand must have explicit links to **the Golem's MTG Table seat, a Deck Control with an adjacent deckbox, and the Golem's own Life Point counter**, and the Hand's primary identity must be that particular golem.
+
+1. Set up the human players' Life Point counters in a single MTGCard pod (play group).
+2. Set up the Golem's Card Hand in **Links / Primary**, assign **Select Golem**, and link **MTG Table**, **Life Point**, and **Deck Control**. Keep its deckbox adjacent to its Deck Control, with 99 main-deck cards plus one legal commander.
+3. Choose **Connect to nearby Pod** in the Hand setup screen (or right-click the Golem). If there is exactly one pod belonging to another seat on the connected table, and that pod has not started, the golem's linked Life Point will be added to its turn order. If multiple pods or a started pod exist, use MTGCard's Life Point pod menu to select the correct one manually.
+4. Before game start, the Golem shuffles its real Deck Control library and draws seven cards into its own Card Hand **once**. Start the MTGCard pod normally. The Golem waits for the starting-player selection animation to finish, then acts only when **its actual pod Life Point** occupies the active turn index.
+5. At the start of each Golem turn, the server untaps its battlefield cards and takes exactly one library card into its Hand. It tries a land drop, simple supported creature spells paid with its own untapped mana lands, and a commander creature when legal in the narrow experimental rules subset. It passes using MTGCard's normal pod progression or pauses for a human combat response. An empty deckbox commander slot after casting no longer stops later turns or draws.
+
+**Troubleshooting:** Right-click the Golem to see pod name, member count, turn state, life, cards in Hand, and library size. If no pod is detected, use **Connect to nearby Pod** before starting the game. A saved Card Hand that still points to an unrelated player or table will not be hijacked by the Golem. Verify the Deck Control is linked to a physical deckbox and that the Golem's starting deck is a supported 100-card Commander deck.
+
+**Limitations:** The golem is still an experimental simple-card pilot; it cannot play arbitrary Commander cards, respond through the full stack/priority system, or use all Magic mechanics. Real in-game complete-pod testing remains outstanding.
+
 ## Current first-pass automation
 
 - Persistent, scaled-down, stationary iron golem; real adjacent tabletop seat and dedicated Card Hand/deckbox.
