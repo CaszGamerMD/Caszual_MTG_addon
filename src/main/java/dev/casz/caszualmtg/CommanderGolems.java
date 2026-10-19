@@ -142,7 +142,11 @@ public final class CommanderGolems {
   }
   if(s.life==null)return "Link the Golem Hand to its dedicated Life Point counter.";
   CommanderPod.Status pod=CommanderPod.status(level,s.life);
-  if(!pod.member())return "Golem Life Point is not connected to a pod. "+pod.problem();
+  if(!pod.member()){
+   String attempt=CommanderPod.joinNearbyPod(level,s.table,s.life);
+   pod=CommanderPod.status(level,s.life);
+   if(!pod.member())return "Golem Life Point is not connected to a pod. "+attempt;
+  }
   if(!pod.started())return "Golem joined pod '"+pod.name()+"'. Opening hand: "+
     (golem.entityTags().contains(FIRST_HAND)?"ready":"waiting")+"; start the pod when players are ready.";
   if(pod.rolling())return "Pod '"+pod.name()+"' is choosing the first turn. Golem is waiting.";
