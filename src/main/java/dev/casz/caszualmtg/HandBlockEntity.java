@@ -16,6 +16,9 @@ public final class HandBlockEntity extends BlockEntity {
  public static final int SIZE=100;
  private final List<ItemStack> cards=new ArrayList<>(Collections.nCopies(SIZE,ItemStack.EMPTY));
  private UUID owner;
+ private UUID manager;
+ private String primaryName="Unassigned";
+ private BlockPos linkedTable;
  private final LinkedHashSet<UUID> viewers=new LinkedHashSet<>();
  private final LinkedHashMap<UUID,String> viewerNames=new LinkedHashMap<>();
  private BlockPos linkedControl;
@@ -30,19 +33,36 @@ public final class HandBlockEntity extends BlockEntity {
  public HandBlockEntity(BlockPos pos,BlockState state){super(CaszualMtg.HAND_BE,pos,state);}
 
  public UUID owner(){return owner;}
- public void ensureOwner(Player player){if(owner==null){owner=player.getUUID();viewers.add(owner);viewerNames.put(owner,player.getGameProfile().name());changed();}}
+ /** Placement claims management only. The gameplay primary stays unassigned until explicitly selected. */
+ public void ensureOwner(Player player){
+  if(manager==null){manager=player.getUUID();viewers.add(manager);viewerNames.put(manager,player.getGameProfile().name());changed();}
+ }
+ public UUID manager(){return manager;}
+ public String primaryName(){return primaryName;}
+ public boolean hasPrimary(){return owner!=null;}
+ public void assignPrimary(UUID id,String name){
+  if(owner!=null&&!owner.equals(manager)&&!owner.equals(id)){viewers.remove(owner);viewerNames.remove(owner);}
+  owner=Objects.requireNonNull(id);primaryName=Objects.requireNonNull(name);
+  viewers.add(id);viewerNames.put(id,name);changed();
+ }
+ public void clearPrimary(){
+  if(owner!=null&&!owner.equals(manager)){viewers.remove(owner);viewerNames.remove(owner);}
+  owner=null;primaryName="Unassigned";changed();
+ }
+ public BlockPos linkedTable(){return linkedTable==null?null:linkedTable.immutable();}
+ public void linkedTable(BlockPos pos){linkedTable=pos==null?null:pos.immutable();changed();}
+
  /** Only an empty, never-claimed Hand can be reserved by the AI golem.
   * Other players' private Hands are never appropriated or exposed. */
  public boolean claimBot(UUID id,String name){
   if(owner!=null)return owner.equals(id);
   if(cardCount()!=0)return false;
-  owner=Objects.requireNonNull(id);
-  viewers.add(id);viewerNames.put(id,Objects.requireNonNull(name));changed();
+  assignPrimary(id,name);
   return true;
  }
- public boolean isAuthorized(Player player){return owner!=null&&(owner.equals(player.getUUID())||viewers.contains(player.getUUID()));}
+ public boolean isAuthorized(Player player){return (manager!=null&&manager.equals(player.getUUID()))||owner!=null&&owner.equals(player.getUUID())||viewers.contains(player.getUUID());}
  public boolean canView(Player player){return revealAll||isAuthorized(player);}
- public boolean canManage(Player player){return owner!=null&&owner.equals(player.getUUID());}
+ public boolean canManage(Player player){return manager!=null&&manager.equals(player.getUUID());}
  public boolean revealAll(){return revealAll;}
  public void revealAll(boolean value){revealAll=value;changed();}
  public BlockPos linkedLife(){return linkedLife==null?null:linkedLife.immutable();}
@@ -53,7 +73,7 @@ public final class HandBlockEntity extends BlockEntity {
  public void linkedControl(BlockPos pos){linkedControl=pos==null?null:pos.immutable();changed();}
  public List<String> viewerNames(){return List.copyOf(viewerNames.values());}
  public void addViewer(UUID id,String name){viewers.add(id);viewerNames.put(id,name);changed();}
- public boolean removeViewer(String name){UUID found=null;for(var e:viewerNames.entrySet())if(e.getValue().equalsIgnoreCase(name)&&!e.getKey().equals(owner)){found=e.getKey();break;}if(found==null)return false;viewers.remove(found);viewerNames.remove(found);changed();return true;}
+ public boolean removeViewer(String name){UUID found=null;for(var e:viewerNames.entrySet())if(e.getValue().equalsIgnoreCase(name)&&!e.getKey().equals(owner)&&!e.getKey().equals(manager)){found=e.getKey();break;}if(found==null)return false;viewers.remove(found);viewerNames.remove(found);changed();return true;}
  public String staffLeft(){return staffLeft;}
  public String staffRight(){return staffRight;}
  public void staffColors(String left,String right){
@@ -104,9 +124,13 @@ public final class HandBlockEntity extends BlockEntity {
   for(SlotStack s:in.read("Cards",SlotStack.CODEC.listOf()).orElse(List.of()))if(s.slot>=0&&s.slot<SIZE)cards.set(s.slot,s.stack);
   String ownerRaw=in.getStringOr("Owner","");
   try{owner=ownerRaw.isBlank()?null:UUID.fromString(ownerRaw);}catch(Exception e){owner=null;}
+  // Old saves used Owner for both administrative and gameplay ownership.
+  String managerRaw=in.getStringOr("Manager",ownerRaw);
+  try{manager=managerRaw.isBlank()?null:UUID.fromString(managerRaw);}catch(Exception e){manager=owner;}
+  primaryName=in.getStringOr("PrimaryName",owner==null?"Unassigned":"Existing player");
   viewers.clear();viewerNames.clear();
   for(Viewer v:in.read("Viewers",Viewer.CODEC.listOf()).orElse(List.of())){try{UUID id=UUID.fromString(v.uuid);viewers.add(id);viewerNames.put(id,v.name);}catch(Exception ignored){}}
-  String link=in.getStringOr("LinkedControl","");linkedControl=parsePos(link);linkedLife=parsePos(in.getStringOr("LinkedLife",""));String shade=in.getStringOr("TableColor","#315348");tableColor=StaffColors.valid(shade)?StaffColors.normalize(shade):"#315348";revealAll=in.getBooleanOr("RevealAll",false);
+  String link=in.getStringOr("LinkedControl","");linkedControl=parsePos(link);linkedLife=parsePos(in.getStringOr("LinkedLife",""));linkedTable=parsePos(in.getStringOr("LinkedTable",""));String shade=in.getStringOr("TableColor","#315348");tableColor=StaffColors.valid(shade)?StaffColors.normalize(shade):"#315348";revealAll=in.getBooleanOr("RevealAll",false);
   strictMulligans=Math.max(0,in.getIntOr("StrictMulligans",0));
   pendingStrictDiscards=Math.max(0,in.getIntOr("PendingStrictDiscards",0));
   String left=in.getStringOr("StaffLeftRGB",StaffColors.LEFT_DEFAULT);
@@ -119,9 +143,12 @@ public final class HandBlockEntity extends BlockEntity {
   List<SlotStack> saved=new ArrayList<>();for(int i=0;i<SIZE;i++)if(!cards.get(i).isEmpty())saved.add(new SlotStack(i,cards.get(i)));
   out.store("Cards",SlotStack.CODEC.listOf(),saved);
   if(owner!=null)out.putString("Owner",owner.toString());
+  if(manager!=null)out.putString("Manager",manager.toString());
+  out.putString("PrimaryName",primaryName);
   List<Viewer> vs=new ArrayList<>();viewerNames.forEach((id,name)->vs.add(new Viewer(id.toString(),name)));out.store("Viewers",Viewer.CODEC.listOf(),vs);
   if(linkedControl!=null)out.putString("LinkedControl",pos(linkedControl));
   if(linkedLife!=null)out.putString("LinkedLife",pos(linkedLife));
+  if(linkedTable!=null)out.putString("LinkedTable",pos(linkedTable));
   out.putString("TableColor",tableColor);
   out.putBoolean("RevealAll",revealAll);
   out.putInt("StrictMulligans",strictMulligans);
