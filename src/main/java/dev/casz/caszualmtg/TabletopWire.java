@@ -21,19 +21,21 @@ public final class TabletopWire {
  }
  /** Public seat metadata only: never exposes a private Hand's card contents. */
  public record Tile(BlockPos pos,String owner,int color,int life,boolean hasLife,
-                    boolean active,int cardScale,int handCount,Map<String,Integer> counters) {}
+                    boolean active,int cardScale,int handCount,int libraryCount,Map<String,Integer> counters) {}
  public record Card(BlockPos pos,String id,String owner,ItemStack stack,int x,int y,boolean tapped,boolean hidden) {}
  public record ZoneCard(int slot,ItemStack stack) {}
  public record TokenResult(String key,ItemStack stack) {}
  public record ShownHand(BlockPos seat,String owner,List<ItemStack> cards) {}
  public record PublicReveal(BlockPos seat,String owner,List<ItemStack> cards) {}
+ /** Public graveyard/exile contents: never includes a player's private deck or hand. */
+ public record PublicZone(BlockPos seat,List<ZoneCard> grave,List<ZoneCard> exile) {}
  public record TargetMark(BlockPos fromSeat,String fromName,String sourceCard,BlockPos targetSeat,String targetCard,String kind) {}
- public record Reply(BlockPos pos,String message,BlockPos seat,List<Tile> tiles,List<Card> cards,List<ItemStack> hand,int libraryCount,List<ZoneCard> grave,List<ZoneCard> exile,List<ItemStack> scry,List<ItemStack> reveal,ItemStack commander,List<ItemStack> tray,List<TokenResult> tokenResults,int tokenPage,boolean tokenMore,boolean ownHandRevealed,List<ShownHand> shownHands,List<PublicReveal> publicReveals,List<TargetMark> targets) implements CustomPacketPayload {
+ public record Reply(BlockPos pos,String message,BlockPos seat,List<Tile> tiles,List<Card> cards,List<ItemStack> hand,int libraryCount,List<ZoneCard> grave,List<ZoneCard> exile,List<ItemStack> scry,List<ItemStack> reveal,ItemStack commander,List<ItemStack> tray,List<TokenResult> tokenResults,int tokenPage,boolean tokenMore,boolean ownHandRevealed,List<ShownHand> shownHands,List<PublicReveal> publicReveals,List<PublicZone> publicZones,List<TargetMark> targets) implements CustomPacketPayload {
   public static final Type<Reply> TYPE=new Type<>(CaszualMtg.id("tabletop_reply"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Reply> CODEC=StreamCodec.of((b,p)->{
    b.writeBlockPos(p.pos);b.writeUtf(p.message,512);b.writeBlockPos(p.seat);
    b.writeVarInt(p.tiles.size());for(Tile t:p.tiles){b.writeBlockPos(t.pos);b.writeUtf(t.owner,64);b.writeInt(t.color);b.writeInt(t.life);b.writeBoolean(t.hasLife);b.writeBoolean(t.active);b.writeVarInt(t.cardScale);
-     b.writeVarInt(t.handCount);
+     b.writeVarInt(t.handCount);b.writeVarInt(t.libraryCount);
      b.writeVarInt(t.counters.size());
      for(var counter:t.counters.entrySet()){b.writeUtf(counter.getKey(),40);b.writeInt(counter.getValue());}
     }
@@ -66,7 +68,15 @@ public final class TabletopWire {
     b.writeVarInt(reveal.cards.size());
     for(ItemStack card:reveal.cards)ItemStack.OPTIONAL_STREAM_CODEC.encode(b,card);
    }
-   b.writeVarInt(p.targets.size());
+   b.writeVarInt(p.publicZones.size());
+    for(PublicZone z:p.publicZones){
+     b.writeBlockPos(z.seat);
+     for(List<ZoneCard> cards:List.of(z.grave,z.exile)){
+      b.writeVarInt(cards.size());
+      for(ZoneCard card:cards){b.writeVarInt(card.slot);ItemStack.OPTIONAL_STREAM_CODEC.encode(b,card.stack);}
+     }
+    }
+    b.writeVarInt(p.targets.size());
    for(TargetMark target:p.targets){
     b.writeBlockPos(target.fromSeat);b.writeUtf(target.fromName,64);
     b.writeUtf(target.sourceCard,MAX_CARD_ID_LENGTH);
@@ -81,10 +91,11 @@ public final class TabletopWire {
      BlockPos pos=b.readBlockPos();String owner=b.readUtf(64);int color=b.readInt(),life=b.readInt();
      boolean hasLife=b.readBoolean(),active=b.readBoolean();int scale=b.readVarInt();
      int handCount=b.readVarInt();if(handCount< -1||handCount>100)throw new IllegalArgumentException("Invalid hand count");
+     int libraryCount=b.readVarInt();if(libraryCount< -1||libraryCount>1000)throw new IllegalArgumentException("Invalid library count");
      int counterCount=b.readVarInt();if(counterCount<0||counterCount>32)throw new IllegalArgumentException("Too many life counters");
      Map<String,Integer> counters=new LinkedHashMap<>();
      for(int j=0;j<counterCount;j++)counters.put(b.readUtf(40),b.readInt());
-     tiles.add(new Tile(pos,owner,color,life,hasLife,active,scale,handCount,Map.copyOf(counters)));
+     tiles.add(new Tile(pos,owner,color,life,hasLife,active,scale,handCount,libraryCount,Map.copyOf(counters)));
     }
    n=b.readVarInt();if(n<0||n>3072)throw new IllegalArgumentException("Too many played cards");
    List<Card> cards=new ArrayList<>();for(int i=0;i<n;i++)cards.add(new Card(b.readBlockPos(),b.readUtf(MAX_CARD_ID_LENGTH),b.readUtf(40),ItemStack.OPTIONAL_STREAM_CODEC.decode(b),b.readVarInt(),b.readVarInt(),b.readBoolean(),b.readBoolean()));
@@ -126,11 +137,24 @@ public final class TabletopWire {
     for(int j=0;j<count;j++)revealed.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(b));
     publicReveals.add(new PublicReveal(revealSeat,owner,List.copyOf(revealed)));
    }
-   n=b.readVarInt();if(n<0||n>64)throw new IllegalArgumentException("Too many target markers");
+   n=b.readVarInt();if(n<0||n>32)throw new IllegalArgumentException("Too many public zones");
+    List<PublicZone> publicZones=new ArrayList<>();
+    for(int i=0;i<n;i++){
+     BlockPos seatPos=b.readBlockPos();
+     List<List<ZoneCard>> zonesPublic=new ArrayList<>();
+     for(int z=0;z<2;z++){
+      int count=b.readVarInt();if(count<0||count>100)throw new IllegalArgumentException("Too many public zone cards");
+      List<ZoneCard> cards=new ArrayList<>();
+      for(int j=0;j<count;j++)cards.add(new ZoneCard(b.readVarInt(),ItemStack.OPTIONAL_STREAM_CODEC.decode(b)));
+      zonesPublic.add(List.copyOf(cards));
+     }
+     publicZones.add(new PublicZone(seatPos,zonesPublic.get(0),zonesPublic.get(1)));
+    }
+    n=b.readVarInt();if(n<0||n>64)throw new IllegalArgumentException("Too many target markers");
    List<TargetMark> targets=new ArrayList<>();
    for(int i=0;i<n;i++)targets.add(new TargetMark(b.readBlockPos(),b.readUtf(64),
       b.readUtf(MAX_CARD_ID_LENGTH),b.readBlockPos(),b.readUtf(MAX_CARD_ID_LENGTH),b.readUtf(16)));
-   return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),List.copyOf(reveal),commander,List.copyOf(tray),List.copyOf(tokenResults),tokenPage,tokenMore,ownHandRevealed,List.copyOf(shownHands),List.copyOf(publicReveals),List.copyOf(targets));
+   return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),List.copyOf(reveal),commander,List.copyOf(tray),List.copyOf(tokenResults),tokenPage,tokenMore,ownHandRevealed,List.copyOf(shownHands),List.copyOf(publicReveals),List.copyOf(publicZones),List.copyOf(targets));
   });
   public Type<Reply> type(){return TYPE;}
  }
