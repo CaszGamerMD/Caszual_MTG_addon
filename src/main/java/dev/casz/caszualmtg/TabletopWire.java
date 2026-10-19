@@ -30,7 +30,7 @@ public final class TabletopWire {
  /** Public graveyard/exile contents: never includes a player's private deck or hand. */
  public record PublicZone(BlockPos seat,List<ZoneCard> grave,List<ZoneCard> exile) {}
  public record TargetMark(BlockPos fromSeat,String fromName,String sourceCard,BlockPos targetSeat,String targetCard,String kind) {}
- public record Reply(BlockPos pos,String message,BlockPos seat,List<Tile> tiles,List<Card> cards,List<ItemStack> hand,int libraryCount,List<ZoneCard> grave,List<ZoneCard> exile,List<ItemStack> scry,List<ItemStack> reveal,ItemStack commander,List<ItemStack> tray,List<TokenResult> tokenResults,int tokenPage,boolean tokenMore,boolean ownHandRevealed,List<ShownHand> shownHands,List<PublicReveal> publicReveals,List<PublicZone> publicZones,List<TargetMark> targets) implements CustomPacketPayload {
+ public record Reply(BlockPos pos,String message,BlockPos seat,List<Tile> tiles,List<Card> cards,List<ItemStack> hand,int libraryCount,List<ZoneCard> grave,List<ZoneCard> exile,List<ItemStack> scry,List<ItemStack> reveal,ItemStack commander,List<ItemStack> tray,List<TokenResult> tokenResults,int tokenPage,boolean tokenMore,boolean ownHandRevealed,List<ShownHand> shownHands,List<PublicReveal> publicReveals,List<PublicZone> publicZones,List<TargetMark> targets,Map<String,Integer> hotkeys) implements CustomPacketPayload {
   public static final Type<Reply> TYPE=new Type<>(CaszualMtg.id("tabletop_reply"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Reply> CODEC=StreamCodec.of((b,p)->{
    b.writeBlockPos(p.pos);b.writeUtf(p.message,512);b.writeBlockPos(p.seat);
@@ -83,6 +83,8 @@ public final class TabletopWire {
     b.writeBlockPos(target.targetSeat);b.writeUtf(target.targetCard,MAX_CARD_ID_LENGTH);
     b.writeUtf(target.kind,16);
    }
+   b.writeVarInt(p.hotkeys.size());
+   for(var key:p.hotkeys.entrySet()){b.writeUtf(key.getKey(),32);b.writeVarInt(key.getValue());}
   },b->{
    BlockPos pos=b.readBlockPos();String message=b.readUtf(512);BlockPos seat=b.readBlockPos();
    int n=b.readVarInt();if(n<0||n>32)throw new IllegalArgumentException("Table too large");
@@ -154,7 +156,14 @@ public final class TabletopWire {
    List<TargetMark> targets=new ArrayList<>();
    for(int i=0;i<n;i++)targets.add(new TargetMark(b.readBlockPos(),b.readUtf(64),
       b.readUtf(MAX_CARD_ID_LENGTH),b.readBlockPos(),b.readUtf(MAX_CARD_ID_LENGTH),b.readUtf(16)));
-   return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),List.copyOf(reveal),commander,List.copyOf(tray),List.copyOf(tokenResults),tokenPage,tokenMore,ownHandRevealed,List.copyOf(shownHands),List.copyOf(publicReveals),List.copyOf(publicZones),List.copyOf(targets));
+   int bindCount=b.readVarInt();if(bindCount<0||bindCount>HandHotkeys.ACTIONS.size())throw new IllegalArgumentException("Too many hotkeys");
+   Map<String,Integer> hotkeys=new LinkedHashMap<>();
+   for(int i=0;i<bindCount;i++){
+    String action=b.readUtf(32);int key=b.readVarInt();
+    if(!HandHotkeys.validAction(action)||!HandHotkeys.validKey(key))throw new IllegalArgumentException("Invalid hotkey binding");
+    hotkeys.put(action,key);
+   }
+   return new Reply(pos,message,seat,List.copyOf(tiles),List.copyOf(cards),List.copyOf(hand),library,List.copyOf(zones.get(0)),List.copyOf(zones.get(1)),List.copyOf(scry),List.copyOf(reveal),commander,List.copyOf(tray),List.copyOf(tokenResults),tokenPage,tokenMore,ownHandRevealed,List.copyOf(shownHands),List.copyOf(publicReveals),List.copyOf(publicZones),List.copyOf(targets),Map.copyOf(hotkeys));
   });
   public Type<Reply> type(){return TYPE;}
  }
