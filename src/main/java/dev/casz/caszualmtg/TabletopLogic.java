@@ -816,13 +816,15 @@ public final class TabletopLogic {
    t.matRgb(color);
    ChairBlock.refreshNextToTable(player.level(),t.getBlockPos());
    int count=other==null?-1:other.cardCount();
+    DeckControlBlockEntity seatDeck=other==null?null:HandLogic.linkedControl(player,other);
+    int libraryCount=seatDeck==null?-1:seatDeck.getLibraryCount();
     Map<String,Integer> counters=new LinkedHashMap<>();
     if(lp!=null)lp.getCounters().entrySet().stream()
       .filter(e->e.getKey()!=null&&e.getKey().length()<=40)
       .limit(32).forEach(e->counters.put(e.getKey(),e.getValue()));
     tiles.add(new TabletopWire.Tile(t.getBlockPos(),t.seatName(),color,
      lp==null?0:lp.getLife(),lp!=null,lp!=null&&lp.isTurnActive(),
-     t.cardScale(),count,Map.copyOf(counters)));
+     t.cardScale(),count,libraryCount,Map.copyOf(counters)));
    for(var card:t.cards()){
     // Face-down card identities must never leave the server for opponents.
     ItemStack shown=card.faceDown()&&!uuid.equals(card.owner())?ItemStack.EMPTY:card.stack().copy();
@@ -855,6 +857,25 @@ public final class TabletopLogic {
     tokenResults.add(new TabletopWire.TokenResult(matches.get(i).getKey(),matches.get(i).getValue().card().copy()));
    tokenMore=matches.size()>offset+TOKEN_PAGE_SIZE;
   }
+  // Graveyard and exile are public MTG zones, unlike libraries and Hands.
+  List<TabletopWire.PublicZone> publicZones=new ArrayList<>();
+  for(TabletopBlockEntity seat:c.tiles){
+   if(seat.seatOwner()==null)continue;
+   HandBlockEntity linked=linkedHand(player,seat,seat.seatOwner());
+   if(linked==null)continue;
+   DeckControlBlockEntity ctl=HandLogic.linkedControl(player,linked);
+   GraveyardBlockEntity gy=CommanderBattleActions.graveyard((ServerLevel)player.level(),ctl);
+   if(gy==null)continue;
+   List<TabletopWire.ZoneCard> publicGrave=new ArrayList<>(),publicExile=new ArrayList<>();
+   for(int i=0;i<200;i++){
+    ItemStack stack=gy.getStack(i);
+    if(!stack.isEmpty()){
+     (i<100?publicGrave:publicExile).add(new TabletopWire.ZoneCard(i,stack.copy()));
+    }
+   }
+   publicZones.add(new TabletopWire.PublicZone(seat.getBlockPos(),
+     List.copyOf(publicGrave),List.copyOf(publicExile)));
+  }
   List<TabletopWire.ShownHand> shownHands=new ArrayList<>();
   for(TabletopBlockEntity t:c.tiles){
    UUID handOwner=t.seatOwner();
@@ -885,7 +906,7 @@ public final class TabletopLogic {
    origin,message,owned,List.copyOf(tiles),List.copyOf(played),
    c.hand==null||c.seat==null?List.of():c.hand.visibleCards(),
    c.deck==null?0:c.deck.getLibraryCount(),List.copyOf(grave),List.copyOf(exile),scry,reveal,commander(player,c),
-   c.seat==null?List.of():c.seat.tokenTray(),List.copyOf(tokenResults),query.page(),tokenMore,REVEALED_HANDS.contains(player.getUUID()),List.copyOf(shownHands),List.copyOf(publicReveals),targets
+   c.seat==null?List.of():c.seat.tokenTray(),List.copyOf(tokenResults),query.page(),tokenMore,REVEALED_HANDS.contains(player.getUUID()),List.copyOf(shownHands),List.copyOf(publicReveals),List.copyOf(publicZones),targets
   ));
  }
  private TabletopLogic(){}
