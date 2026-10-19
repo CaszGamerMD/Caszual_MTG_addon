@@ -14,5 +14,9 @@
   "block.caszual_mtg.tabletop": "MTG Tabletop",
   "item.caszual_mtg.tabletop": "MTG Tabletop",
   "block.caszual_mtg.material_chair": "Custom Wood Chair",
-  "item.caszual_mtg.commander_golem": "Commander Golem (Experimental)"
+  "item.caszual_mtg.commander_golem": "Commander Golem (Experimental)",
+  "block.caszual_mtg.custom_deck_control": "Custom Deck Control",
+  "item.caszual_mtg.custom_deck_control": "Custom Deck Control",
+  "block.caszual_mtg.custom_graveyard": "Custom Graveyard",
+  "item.caszual_mtg.custom_graveyard": "Custom Graveyard"
 }
