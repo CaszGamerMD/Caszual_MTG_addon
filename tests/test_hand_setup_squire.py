@@ -57,9 +57,11 @@ class CardHandSetup(unittest.TestCase):
         item=json.loads((ASSETS/"models/item/commander_golem.json").read_text(encoding="utf-8"))
         self.assertGreaterEqual(len(item["elements"]),30)
         self.assertIn("fixed",item["display"])
-        self.assertIn("minecraft:block/copper_block",item["textures"].values())
-        self.assertIn("minecraft:block/emerald_block",item["textures"].values())
-        self.assertIn("minecraft:block/iron_block",item["textures"].values())
+        # Dedicated palette texture; no more ugly overlapping vanilla block patterns.
+        self.assertEqual({"caszual_mtg:item/brass_squire"},set(item["textures"].values()))
+        self.assertTrue((ASSETS/"textures/item/brass_squire.png").is_file())
+        self.assertGreaterEqual(len(item["elements"]),120)
+        self.assertTrue(any(p.get("rotation",{}).get("axis")=="z" for p in item["elements"]))
         for part in item["elements"]:
             self.assertEqual(3,len(part["from"]))
             self.assertEqual(3,len(part["to"]))
