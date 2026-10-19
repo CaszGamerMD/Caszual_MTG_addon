@@ -95,6 +95,19 @@ public final class HandLogic {
       "Click the first Deck Control, Life Point and MTG Table, in any order.":
       "Link mode armed. Right-click the chosen "+mode+".");
    }
+   case "join_pod" -> {
+    if(!hand.canManage(player)){reply(player,hand,"Only the Card Hand manager can connect a pod.");return;}
+    if(hand.owner()==null||hand.linkedTable()==null||hand.linkedLife()==null){
+     reply(player,hand,"Select the Golem primary and link its Table and Life Point first.");return;
+    }
+    if(!(player.level() instanceof net.minecraft.server.level.ServerLevel world)
+       ||!(world.getBlockEntity(hand.linkedTable()) instanceof TabletopBlockEntity seat)
+       ||!hand.owner().equals(seat.seatOwner())
+       ||!(world.getBlockEntity(hand.linkedLife()) instanceof com.spider.mtgcard.life.LifePointBlockEntity lp)){
+     reply(player,hand,"The selected primary, table and Life Point must belong to the same seat.");return;
+    }
+    reply(player,hand,CommanderPod.joinNearbyPod(world,seat,lp));
+   }
    case "cancel_link" -> {clearPending(player.getUUID());reply(player,hand,"Link mode cancelled.");}
    case "unlink_all" -> {
     if(!hand.canManage(player)){reply(player,hand,"Only the manager can unlink.");return;}
