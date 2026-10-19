@@ -80,10 +80,19 @@ public abstract class GraveyardMaterialMixin implements BoxMaterial,GraveyardLid
  /** The native Graveyard BE inherits getUpdateTag/getUpdatePacket from
   * BlockEntity: add explicit payload support for model render data. */
  public CompoundTag getUpdateTag(HolderLookup.Provider lookup){
-  return ((BlockEntity)(Object)this).saveWithoutMetadata(lookup);
+  BlockEntity self=(BlockEntity)(Object)this;
+  CompoundTag tag=new CompoundTag();
+  if(self.getBlockState().is(CaszualMtg.CUSTOM_GRAVEYARD)){
+   // Visual-only packet. Never broadcast 200 hidden card stacks in a BE update.
+   tag.putString("CaszualMaterial",caszual$skin);
+   tag.putBoolean("CaszualLidPinned",caszual$lidPinned);
+  }
+  return tag;
  }
  public @Nullable Packet<ClientGamePacketListener> getUpdatePacket(){
-  return ClientboundBlockEntityDataPacket.create((BlockEntity)(Object)this);
+  BlockEntity self=(BlockEntity)(Object)this;
+  return self.getBlockState().is(CaszualMtg.CUSTOM_GRAVEYARD)
+   ?ClientboundBlockEntityDataPacket.create(self):null;
  }
 
  @Inject(method="onViewerOpen",at=@At("TAIL"))
