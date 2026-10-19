@@ -53,6 +53,22 @@ class CardHandSetup(unittest.TestCase):
         self.assertIn("at.equals(h.linkedTable())",bot)
         self.assertIn("hand.linkedControl()",bot)
 
+    def test_seated_golem_hand_links_match_setup_range(self):
+        bot=read("CommanderGolems.java")
+        logic=read("HandLogic.java")
+        screen=read("HandScreen.java")
+        self.assertIn("private static final int RANGE=8;",bot)
+        self.assertIn("private static final int LINK_RANGE=8;",logic)
+        self.assertIn("at.offset(-RANGE,-RANGE,-RANGE)",bot)
+        self.assertIn("at.offset(RANGE,RANGE,RANGE)",bot)
+        self.assertIn("case \"primary_golem\" -> {",logic)
+        self.assertIn("world.getEntity(occupant)",logic)
+        self.assertIn("golem.entityTags().contains(CommanderGolems.TAG)",logic)
+        self.assertIn("hand.assignPrimary(golem.getUUID(),\"Commander Golem\")",logic)
+        self.assertIn('button("Assign Seated Golem"',screen)
+        self.assertIn("wrongPrimary.primaryName()",bot)
+        self.assertIn("Primary is unassigned",bot)
+
     def test_voxel_model_and_world_proxy(self):
         item=json.loads((ASSETS/"models/item/commander_golem.json").read_text(encoding="utf-8"))
         self.assertGreaterEqual(len(item["elements"]),30)
