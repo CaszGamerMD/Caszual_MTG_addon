@@ -4,6 +4,10 @@ import dev.casz.caszualmtg.*;
 import com.spider.mtgcard.deckcontrol.DeckControlBlockEntity;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -31,6 +35,12 @@ public abstract class DeckControlMaterialMixin implements BoxMaterial {
   }
  }
  public Object getRenderData(){return caszual$skin;}
+ /** The parent MTGCard entity supplies the type/factory on *both* placement
+  * and world reload; a packet is needed for reskinning remote clients. */
+ public @Nullable Packet<ClientGamePacketListener> getUpdatePacket(){
+  return ClientboundBlockEntityDataPacket.create((BlockEntity)(Object)this);
+ }
+
  @Inject(method="loadAdditional",at=@At("TAIL"),remap=false)
  private void caszual$load(ValueInput input,CallbackInfo ci){
   caszual$skin=BoxMaterial.safe(input.getStringOr("CaszualMaterial",BoxMaterial.DEFAULT));
