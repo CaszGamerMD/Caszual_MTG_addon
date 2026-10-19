@@ -95,13 +95,13 @@ public abstract class GraveyardMaterialMixin implements BoxMaterial,GraveyardLid
    ?ClientboundBlockEntityDataPacket.create(self):null;
  }
 
- @Inject(method="onViewerOpen",at=@At("TAIL"))
+ @Inject(method="onViewerOpen",at=@At("TAIL"),remap=false)
  private void caszual$onOpen(CallbackInfo ci){
   BlockEntity self=(BlockEntity)(Object)this;
   if(self.getBlockState().is(CaszualMtg.CUSTOM_GRAVEYARD))
    caszual$setLidPinned(true);
  }
- @Inject(method="onViewerClose",at=@At("TAIL"))
+ @Inject(method="onViewerClose",at=@At("TAIL"),remap=false)
  private void caszual$onClose(CallbackInfo ci){
   BlockEntity self=(BlockEntity)(Object)this;
   if(self.getBlockState().is(CaszualMtg.CUSTOM_GRAVEYARD)&&caszual$lidPinned)
