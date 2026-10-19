@@ -10,7 +10,10 @@
     "MenuSlotInvoker",
     "CardStoreBoxMixin",
     "CardStoreBoxSlotMixin",
-    "CommanderTopDeckboxMixin"
+    "CommanderTopDeckboxMixin",
+    "DeckControlMaterialMixin",
+    "GraveyardMaterialMixin",
+    "GraveyardScreenHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
