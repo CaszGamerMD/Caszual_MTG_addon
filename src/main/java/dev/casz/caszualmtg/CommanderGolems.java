@@ -284,3 +284,4 @@ public final class CommanderGolems {
      &&CommanderPod.status(world,s.life).playable())
    LifePlayGroups.passTurn(world,s.life.getBlockPos());
  }
+}
