@@ -8,10 +8,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
 public final class HandScreen extends LegacyScreen {
- HandWire.Reply data;EditBox playerName,staffLeft,staffRight,tableColor,primaryInput;int x,y,w,h,scroll,selected=-1,ticks;final java.util.LinkedHashSet<Integer> chosen=new java.util.LinkedHashSet<>();String message="";boolean mulliganMenu,linkMenu;
+ HandWire.Reply data;EditBox playerName,staffLeft,staffRight,tableColor,primaryInput;int x,y,w,h,scroll,selected=-1,ticks;final java.util.LinkedHashSet<Integer> chosen=new java.util.LinkedHashSet<>();String message="";boolean mulliganMenu,linkMenu,hotkeyMenu;String awaitingKey="";
  HandScreen(HandWire.Reply data){super(Component.literal("Card Hand"));this.data=data;}
  void update(HandWire.Reply reply){
-  boolean controlsChanged=data.authorized()!=reply.authorized()||data.canManage()!=reply.canManage()||data.revealAll()!=reply.revealAll()||data.pendingDiscards()!=reply.pendingDiscards()||data.hasStaff()!=reply.hasStaff();
+  boolean controlsChanged=data.authorized()!=reply.authorized()||data.canManage()!=reply.canManage()||data.revealAll()!=reply.revealAll()||data.pendingDiscards()!=reply.pendingDiscards()||data.hasStaff()!=reply.hasStaff()||!data.hotkeys().equals(reply.hotkeys());
   data=reply;if(!reply.message().isBlank()){message=reply.message();chosen.clear();selected=-1;}chosen.removeIf(i->i>=reply.cards().size());if(selected>=reply.cards().size())selected=-1;
   if(reply.pendingDiscards()>0)mulliganMenu=false;
   if(reply.message().equals("Table color saved.")&&tableColor!=null)tableColor.setValue(reply.tableColor());
@@ -23,6 +23,22 @@ public final class HandScreen extends LegacyScreen {
  @Override protected void init(){
   if(MtgGuiScaleHelper.applyAutoFitGuiScale(this,3,640,430))return;
   w=Math.max(1,width-16);h=Math.max(1,height-16);x=(width-w)/2;y=(height-h)/2;clearWidgets();
+  if(hotkeyMenu){
+   if(data.authorized()){
+    int row=0;
+    for(String action:HandHotkeys.ACTIONS){
+     final String chosen=action;
+     int key=data.hotkeys().getOrDefault(action,-1);
+     int yy=y+78+(row++)*48;
+     button(label(chosen)+" : "+keyLabel(key),x+16,yy,288,()->{
+      awaitingKey=chosen;message="Press a key, or Escape to clear this binding.";
+     });
+     button("Clear",x+312,yy,75,()->send("hotkey_set",chosen+",-1"));
+    }
+   }
+   button("Back",x+15,y+h-34,114,()->{hotkeyMenu=false;awaitingKey="";rebuildWidgets();});
+   return;
+  }
   if(linkMenu){
    if(data.canManage()){
     button("Link all · first of each",x+15,y+48,200,()->{send("link_all","");onClose();});
@@ -57,6 +73,7 @@ public final class HandScreen extends LegacyScreen {
    button("Remove viewer",x+260,y+58,102,()->send("remove_viewer",playerName.getValue()));
   }
   if(data.authorized()){
+   button("Table Hotkeys",x+12,y+112,150,()->{hotkeyMenu=true;rebuildWidgets();});
    button("Deposit inventory cards",x+370,y+58,176,()->send("deposit_inventory",""));
    if(data.pendingDiscards()==0){button("Select all",x+370,y+84,88,()->{chosen.clear();for(int i=0;i<data.cards().size();i++)chosen.add(i);});button("Clear",x+464,y+84,72,chosen::clear);}
    if(data.pendingDiscards()>0){
@@ -90,6 +107,32 @@ public final class HandScreen extends LegacyScreen {
  void button(String label,int bx,int by,int bw,Runnable run){addRenderableWidget(Button.builder(Component.literal(label),b->run.run()).bounds(bx,by,bw,20).build());}
  void sendSelected(String action){if(selected<0||selected>=data.cards().size()){message="Select a card first.";return;}send(action,Integer.toString(selected));}
  void sendManySelected(){if(chosen.isEmpty()){message="Select one or more cards first.";return;}send("take_selected",chosen.stream().sorted().map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));}
+ static String label(String action){
+  return switch(action){
+   case "draw"->"Draw 1";
+   case "untap_all"->"Untap All";
+   case "pass_turn"->"Pass Turn";
+   case "shuffle"->"Shuffle Deck";
+   case "mill"->"Mill 1";
+   default->action;
+  };
+ }
+ static String keyLabel(int key){
+  if(key<0)return "Not set";
+  String display=org.lwjgl.glfw.GLFW.glfwGetKeyName(key,0);
+  if(display!=null&&!display.isBlank())return display.toUpperCase(java.util.Locale.ROOT);
+  if(key>=org.lwjgl.glfw.GLFW.GLFW_KEY_F1&&key<=org.lwjgl.glfw.GLFW.GLFW_KEY_F25)
+   return "F"+(key-org.lwjgl.glfw.GLFW.GLFW_KEY_F1+1);
+  return "Key "+key;
+ }
+ boolean handleHotkey(int key){
+  if(!hotkeyMenu||awaitingKey.isEmpty())return false;
+  if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE){
+   send("hotkey_set",awaitingKey+",-1");awaitingKey="";return true;
+  }
+  if(!HandHotkeys.validKey(key)){message="That key is reserved. Choose a letter or function key.";return true;}
+  send("hotkey_set",awaitingKey+","+key);awaitingKey="";return true;
+ }
  void send(String action,String text){ClientPlayNetworking.send(new HandWire.Request(data.pos(),action,text));message="Working…";}
  @Override public void tick(){super.tick();if(++ticks%20==0)ClientPlayNetworking.send(new HandWire.Request(data.pos(),"refresh",""));}
  static void colorSwatch(GuiGraphics g,String value,int bx,int by){
@@ -105,7 +148,7 @@ public final class HandScreen extends LegacyScreen {
   scroll=Math.clamp(scroll-(int)Math.signum(dy),0,Math.max(0,rows-visibleRows));return true;
  }
  @Override public boolean mouseClicked(MouseButtonEvent e,boolean twice){
-  if(data.visible()&&!linkMenu){
+  if(data.visible()&&!linkMenu&&!hotkeyMenu){
    int gx=x+12,gy=y+gridTop(),cw=78,ch=112,cols=gridCols(),rows=gridRows();int relX=(int)e.x()-gx,relY=(int)e.y()-gy;
    if(relX>=0&&relY>=0&&relX<cols*cw&&relY<rows*ch){
     int col=relX/cw,row=relY/ch,at=(scroll+row)*cols+col;if(at>=0&&at<data.cards().size()){selected=at;if(!chosen.add(at))chosen.remove(at);return true;}
@@ -115,6 +158,15 @@ public final class HandScreen extends LegacyScreen {
  }
  @Override public void render(GuiGraphics g,int mx,int my,float delta){
   g.fill(0,0,width,height,0xC0080E18);g.fill(x,y,x+w,y+h,0xFF152032);g.drawString(font,title,x+12,y+12,0xFFFFFFFF);
+  if(hotkeyMenu){
+   g.drawString(font,"TABLE HOTKEYS · Yours only · Saved in this Card Hand",x+15,y+18,0xFFB3DFFF);
+   g.drawString(font,"Click an action, then press the key to bind. Escape clears it.",x+15,y+37,0xFFE0E8F0);
+   g.drawString(font,"Bindings work while this linked table's screen is open.",x+15,y+52,0xFFADC3D5);
+   if(!awaitingKey.isBlank())
+    g.drawString(font,"PRESS KEY FOR "+label(awaitingKey).toUpperCase(java.util.Locale.ROOT),x+405,y+90,0xFFFFD18E);
+   if(!message.isBlank())g.drawString(font,font.plainSubstrByWidth(message,w-35),x+15,y+h-55,0xFFFFDDA0);
+   super.render(g,mx,my,delta);return;
+  }
   if(linkMenu){
    g.drawString(font,"CARD HAND SETUP · First clicked device is linked",x+15,y+20,0xFFB3DFFF);
    g.drawString(font,"Deck Control: "+data.linked(),x+15,y+122,0xFFE7EBF1);
