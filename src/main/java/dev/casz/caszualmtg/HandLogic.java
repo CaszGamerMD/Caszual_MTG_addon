@@ -81,11 +81,11 @@ public final class HandLogic {
     if(!StaffColors.valid(req.text())){reply(player,hand,"Enter #RRGGBB.");return;}
     hand.tableColor(req.text());TabletopLogic.refreshColor(player,hand);reply(player,hand,"Table color saved.");
    }
-   case "link_life", "link", "link_table", "link_all", "primary_golem" -> {
+   case "link_life", "link", "link_table", "link_all" -> {
     if(!hand.canManage(player)){reply(player,hand,"Only the Hand manager may configure it.");return;}
     String mode=switch(req.action()){
      case "link_life"->"life";case "link"->"deck";case "link_table"->"table";
-     case "link_all"->"all";default->"golem";
+     case "link_all"->"all";default->"deck";
     };
     if(mode.equals("all")&&hand.linkedControl()!=null&&hand.linkedLife()!=null&&hand.linkedTable()!=null){
      reply(player,hand,"All three devices are linked. Clear all links before choosing new ones.");return;
@@ -94,6 +94,39 @@ public final class HandLogic {
     reply(player,hand,mode.equals("all")?
       "Click the first Deck Control, Life Point and MTG Table, in any order.":
       "Link mode armed. Right-click the chosen "+mode+".");
+   }
+   case "primary_golem" -> {
+    if(!hand.canManage(player)){
+     reply(player,hand,"Only the Card Hand manager can select a Golem.");return;
+    }
+    BlockPos at=hand.linkedTable();
+    if(at==null){
+     // Legacy setup still supports world-click selection, but prefer resolving
+     // the seated Golem directly from the Hand's saved table position.
+     arm(player,hand.getBlockPos(),"golem");
+     reply(player,hand,"Link the Golem's MTG Table first, or right-click the seated Golem to select it.");return;
+    }
+    if(!(player.level() instanceof net.minecraft.server.level.ServerLevel world)
+       ||!world.hasChunkAt(at)
+       ||!(world.getBlockEntity(at) instanceof TabletopBlockEntity table)){
+     reply(player,hand,"The linked MTG Table is missing or its chunk is unloaded.");return;
+    }
+    UUID occupant=table.seatOwner();
+    if(occupant==null){
+     reply(player,hand,"The linked table seat is empty. Place your Commander Golem on its chair first.");return;
+    }
+    var entity=world.getEntity(occupant);
+    if(!(entity instanceof net.minecraft.world.entity.animal.golem.IronGolem golem)
+       ||!golem.entityTags().contains(CommanderGolems.TAG)){
+     reply(player,hand,"This seat is not occupied by a loaded Commander Golem. Check the linked table.");return;
+    }
+    if(!inRange(hand.getBlockPos(),golem.blockPosition())){
+     reply(player,hand,"The Card Hand must be within 8 blocks of its seated Golem.");return;
+    }
+    hand.assignPrimary(golem.getUUID(),"Commander Golem");
+    clearPending(player.getUUID());
+    reply(player,hand,"Primary set to the seated Commander Golem. Card Hand is now assigned to "+
+      "the linked table at "+shortPos(at)+".");
    }
    case "join_pod" -> {
     if(!hand.canManage(player)){reply(player,hand,"Only the Card Hand manager can connect a pod.");return;}
