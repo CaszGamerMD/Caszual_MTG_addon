@@ -18,6 +18,38 @@ public final class HandLogic {
  private static final SecureRandom RANDOM=new SecureRandom();
  private static final Map<UUID,BlockPos> PENDING_LINKS=new ConcurrentHashMap<>();
  private static final Map<UUID,BlockPos> PENDING_LIFE_LINKS=new ConcurrentHashMap<>();
+ private static final Map<UUID,BlockPos> PENDING_TABLE_LINKS=new ConcurrentHashMap<>();
+ private static final Map<UUID,BlockPos> PENDING_GOLEM_LINKS=new ConcurrentHashMap<>();
+ private static final Map<UUID,BlockPos> PENDING_ALL=new ConcurrentHashMap<>();
+ private static void clearPending(UUID id){
+  PENDING_LINKS.remove(id);PENDING_LIFE_LINKS.remove(id);PENDING_TABLE_LINKS.remove(id);
+  PENDING_GOLEM_LINKS.remove(id);PENDING_ALL.remove(id);
+ }
+ private static void arm(ServerPlayer player,BlockPos pos,String kind){
+  UUID id=player.getUUID();clearPending(id);
+  switch(kind){
+   case "deck"->PENDING_LINKS.put(id,pos.immutable());
+   case "life"->PENDING_LIFE_LINKS.put(id,pos.immutable());
+   case "table"->PENDING_TABLE_LINKS.put(id,pos.immutable());
+   case "golem"->PENDING_GOLEM_LINKS.put(id,pos.immutable());
+   case "all"->PENDING_ALL.put(id,pos.immutable());
+  }
+ }
+ private static boolean inRange(BlockPos hand,BlockPos target){
+  return Math.abs(target.getX()-hand.getX())<=LINK_RANGE
+    &&Math.abs(target.getY()-hand.getY())<=LINK_RANGE
+    &&Math.abs(target.getZ()-hand.getZ())<=LINK_RANGE;
+ }
+ private static void advance(ServerPlayer player,HandBlockEntity hand){
+  if(hand.linkedControl()!=null&&hand.linkedLife()!=null&&hand.linkedTable()!=null){
+   PENDING_ALL.remove(player.getUUID());
+   player.sendSystemMessage(Component.literal("Card Hand linked to Deck Control, Life Point and MTG Table."));
+  }else player.sendSystemMessage(Component.literal("Still linking. Missing: "+
+   (hand.linkedControl()==null?"Deck Control ":"")+
+   (hand.linkedLife()==null?"Life Point ":"")+
+   (hand.linkedTable()==null?"MTG Table":"")));
+ }
+
 
  public static void open(ServerPlayer player,BlockPos pos){
   HandBlockEntity hand=get(player,pos);if(hand==null)return;hand.ensureOwner(player);reply(player,hand,"Hand ready.");
@@ -43,12 +75,38 @@ public final class HandLogic {
     if(!StaffColors.valid(req.text())){reply(player,hand,"Enter #RRGGBB.");return;}
     hand.tableColor(req.text());TabletopLogic.refreshColor(player,hand);reply(player,hand,"Table color saved.");
    }
-   case "link_life" -> {
-    if(!hand.canManage(player)){reply(player,hand,"Only the owner can link a Life Point.");return;}
-    PENDING_LIFE_LINKS.put(player.getUUID(),hand.getBlockPos().immutable());
-    reply(player,hand,"Right-click your MTGCard Life Point block to link.");
+   case "link_life", "link", "link_table", "link_all", "primary_golem" -> {
+    if(!hand.canManage(player)){reply(player,hand,"Only the Hand manager may configure it.");return;}
+    String mode=switch(req.action()){
+     case "link_life"->"life";case "link"->"deck";case "link_table"->"table";
+     case "link_all"->"all";default->"golem";
+    };
+    arm(player,hand.getBlockPos(),mode);
+    reply(player,hand,mode.equals("all")?
+      "Click the first Deck Control, Life Point and MTG Table, in any order.":
+      "Link mode armed. Right-click the chosen "+mode+".");
    }
-   case "link" -> {if(!hand.canManage(player)){reply(player,hand,"Only the hand owner can change its Deck Control link.");return;}PENDING_LINKS.put(player.getUUID(),hand.getBlockPos().immutable());reply(player,hand,"Link mode armed. Right-click the Deck Control you want to use.");}
+   case "cancel_link" -> {clearPending(player.getUUID());reply(player,hand,"Link mode cancelled.");}
+   case "unlink_all" -> {
+    if(!hand.canManage(player)){reply(player,hand,"Only the manager can unlink.");return;}
+    clearPending(player.getUUID());hand.linkedControl(null);hand.linkedLife(null);hand.linkedTable(null);
+    reply(player,hand,"All three device links cleared.");
+   }
+   case "primary_player" -> {
+    if(!hand.canManage(player)){reply(player,hand,"Only the manager can set the primary.");return;}
+    ServerPlayer selected=player.level().getServer().getPlayerList().getPlayerByName(req.text().trim());
+    if(selected==null){reply(player,hand,"Enter the exact username of a player currently online.");return;}
+    if(hand.linkedTable()!=null&&player.level().getBlockEntity(hand.linkedTable()) instanceof TabletopBlockEntity table
+      &&table.seatOwner()!=null&&!table.seatOwner().equals(selected.getUUID())){
+     reply(player,hand,"That player's UUID does not own the linked table seat.");return;
+    }
+    hand.assignPrimary(selected.getUUID(),selected.getGameProfile().name());
+    reply(player,hand,"Primary player: "+selected.getGameProfile().name()+".");
+   }
+   case "primary_clear" -> {
+    if(!hand.canManage(player)){reply(player,hand,"Only the manager can clear the primary.");return;}
+    hand.clearPrimary();reply(player,hand,"Primary player unassigned.");
+   }
    case "add_viewer" -> addViewer(player,hand,req.text());
    case "remove_viewer" -> {if(!hand.canManage(player)){reply(player,hand,"Only the hand owner can remove viewers.");return;}if(hand.removeViewer(req.text().trim()))reply(player,hand,"Viewer removed.");else reply(player,hand,"That viewer is not on this hand.");}
    case "discard_random" -> {
@@ -199,40 +257,69 @@ public final class HandLogic {
  }
 
  public static boolean completePendingLink(ServerPlayer player,BlockPos controlPos){
-  BlockPos handPos=PENDING_LINKS.remove(player.getUUID());
-  if(handPos==null)return false;
-  if(!(player.level().getBlockEntity(handPos) instanceof HandBlockEntity hand)){player.sendSystemMessage(Component.literal("That Card Hand is no longer available."));return true;}
-  if(!hand.canManage(player)){player.sendSystemMessage(Component.literal("Only the Card Hand owner can change its Deck Control link."));return true;}
-  if(!(player.level().getBlockEntity(controlPos) instanceof DeckControlBlockEntity control)){return false;}
-  long dx=controlPos.getX()-handPos.getX(),dy=controlPos.getY()-handPos.getY(),dz=controlPos.getZ()-handPos.getZ();
-  if(Math.abs(dx)>LINK_RANGE||Math.abs(dy)>LINK_RANGE||Math.abs(dz)>LINK_RANGE){
-   player.sendSystemMessage(Component.literal("That Deck Control is too far from the Card Hand (max "+LINK_RANGE+" blocks per axis)."));
-   return true;
-  }
-  HandBlockEntity existing=findLinked(control);
-  if(existing!=null&&existing!=hand){player.sendSystemMessage(Component.literal("That Deck Control is already linked to another Card Hand."));return true;}
-  hand.linkedControl(controlPos);
-  player.sendSystemMessage(Component.literal("Card Hand linked to Deck Control at "+shortPos(controlPos)+"."));
+  UUID id=player.getUUID();
+  BlockPos handPos=PENDING_LINKS.getOrDefault(id,PENDING_ALL.get(id));
+  if(handPos==null||!(player.level().getBlockEntity(controlPos) instanceof DeckControlBlockEntity control))return false;
+  HandBlockEntity hand=get(player,handPos);
+  if(hand==null||!hand.canManage(player)){clearPending(id);return true;}
+  if(!inRange(handPos,controlPos)){player.sendSystemMessage(Component.literal("Deck Control must be within 8 blocks."));return true;}
+  if(PENDING_ALL.containsKey(id)&&hand.linkedControl()!=null)return true;
+  HandBlockEntity used=findLinked(control);
+  if(used!=null&&used!=hand){player.sendSystemMessage(Component.literal("That Deck Control is linked to another Hand."));return true;}
+  hand.linkedControl(controlPos);PENDING_LINKS.remove(id);
+  player.sendSystemMessage(Component.literal("Deck Control linked: "+shortPos(controlPos)));
+  if(PENDING_ALL.containsKey(id))advance(player,hand);
   return true;
  }
- public static void clearPendingLink(ServerPlayer player){PENDING_LINKS.remove(player.getUUID());PENDING_LIFE_LINKS.remove(player.getUUID());}
  public static boolean completePendingLifeLink(ServerPlayer player,BlockPos lifePos){
-  BlockPos handPos=PENDING_LIFE_LINKS.get(player.getUUID());if(handPos==null)return false;
-  if(!(player.level().getBlockEntity(lifePos) instanceof com.spider.mtgcard.life.LifePointBlockEntity))return false;
-  PENDING_LIFE_LINKS.remove(player.getUUID());
-  if(!(player.level().getBlockEntity(handPos) instanceof HandBlockEntity hand)||!hand.canManage(player)){
-   player.sendSystemMessage(Component.literal("That Card Hand is missing or not yours."));return true;
-  }
-  if(Math.abs(lifePos.getX()-handPos.getX())>LINK_RANGE
-   ||Math.abs(lifePos.getY()-handPos.getY())>LINK_RANGE
-   ||Math.abs(lifePos.getZ()-handPos.getZ())>LINK_RANGE){
-   player.sendSystemMessage(Component.literal("Life Point must be within 8 blocks of the Card Hand."));return true;
-  }
-  hand.linkedLife(lifePos);
-  player.sendSystemMessage(Component.literal("Card Hand linked to Life Point at "+shortPos(lifePos)+"."));
+  UUID id=player.getUUID();
+  BlockPos handPos=PENDING_LIFE_LINKS.getOrDefault(id,PENDING_ALL.get(id));
+  if(handPos==null||!(player.level().getBlockEntity(lifePos) instanceof com.spider.mtgcard.life.LifePointBlockEntity))return false;
+  HandBlockEntity hand=get(player,handPos);
+  if(hand==null||!hand.canManage(player)){clearPending(id);return true;}
+  if(!inRange(handPos,lifePos)){player.sendSystemMessage(Component.literal("Life Point must be within 8 blocks."));return true;}
+  if(PENDING_ALL.containsKey(id)&&hand.linkedLife()!=null)return true;
+  hand.linkedLife(lifePos);PENDING_LIFE_LINKS.remove(id);
+  player.sendSystemMessage(Component.literal("Life Point linked: "+shortPos(lifePos)));
+  if(PENDING_ALL.containsKey(id))advance(player,hand);
   return true;
  }
-
+ public static boolean completePendingTableLink(ServerPlayer player,BlockPos tablePos){
+  UUID id=player.getUUID();
+  BlockPos handPos=PENDING_TABLE_LINKS.getOrDefault(id,PENDING_ALL.get(id));
+  if(handPos==null||!(player.level().getBlockEntity(tablePos) instanceof TabletopBlockEntity table))return false;
+  HandBlockEntity hand=get(player,handPos);
+  if(hand==null||!hand.canManage(player)){clearPending(id);return true;}
+  if(!inRange(handPos,tablePos)){player.sendSystemMessage(Component.literal("MTG Table must be within 8 blocks."));return true;}
+  if(PENDING_ALL.containsKey(id)&&hand.linkedTable()!=null)return true;
+  if(table.seatOwner()!=null&&hand.owner()!=null&&!table.seatOwner().equals(hand.owner())){
+   player.sendSystemMessage(Component.literal("That table belongs to a different primary player."));return true;
+  }
+  hand.linkedTable(tablePos);PENDING_TABLE_LINKS.remove(id);
+  player.sendSystemMessage(Component.literal("MTG Table linked: "+shortPos(tablePos)));
+  if(PENDING_ALL.containsKey(id))advance(player,hand);
+  return true;
+ }
+ public static boolean completePendingGolem(ServerPlayer player,net.minecraft.world.entity.animal.golem.IronGolem golem){
+  UUID id=player.getUUID();BlockPos handPos=PENDING_GOLEM_LINKS.get(id);
+  if(handPos==null||!golem.entityTags().contains(CommanderGolems.TAG))return false;
+  HandBlockEntity hand=get(player,handPos);
+  if(hand==null||!hand.canManage(player)){clearPending(id);return true;}
+  if(player.level()!=golem.level()||!inRange(handPos,golem.blockPosition())){
+   player.sendSystemMessage(Component.literal("Golem must be within 8 blocks of its Hand."));return true;
+  }
+  BlockPos at=hand.linkedTable();
+  if(at!=null){
+   if(!(player.level().getBlockEntity(at) instanceof TabletopBlockEntity table)
+      ||!golem.getUUID().equals(table.seatOwner())){
+    player.sendSystemMessage(Component.literal("Golem must own the Hand's linked table seat."));return true;
+   }
+  }
+  hand.assignPrimary(golem.getUUID(),"Commander Golem");clearPending(id);
+  player.sendSystemMessage(Component.literal("Card Hand primary player: Commander Golem."));
+  return true;
+ }
+ public static void clearPendingLink(ServerPlayer player){clearPending(player.getUUID());}
 
  public static HandBlockEntity findLinked(DeckControlBlockEntity control){
   if(control==null||control.getLevel()==null)return null;BlockPos at=control.getBlockPos();
@@ -282,7 +369,8 @@ public final class HandLogic {
   ServerPlayNetworking.send(player,new HandWire.Reply(
    hand.getBlockPos(),message,visible,authorized,hand.canManage(player),hand.revealAll(),hand.cardCount(),linked,
    hand.canManage(player)?hand.viewerNames():java.util.List.of(),visible?hand.visibleCards():java.util.List.of(),
-   hand.strictMulligans(),hand.pendingStrictDiscards(),staffCount(player)>0,hand.staffLeft(),hand.staffRight(),hand.tableColor(),hand.linkedLife()==null?"Not linked":shortPos(hand.linkedLife())
+   hand.strictMulligans(),hand.pendingStrictDiscards(),staffCount(player)>0,hand.staffLeft(),hand.staffRight(),hand.tableColor(),hand.linkedLife()==null?"Not linked":shortPos(hand.linkedLife()),
+    hand.linkedTable()==null?"Not linked":shortPos(hand.linkedTable()),hand.primaryName()
   ));
  }
  static String shortPos(BlockPos p){return p.getX()+", "+p.getY()+", "+p.getZ();}
