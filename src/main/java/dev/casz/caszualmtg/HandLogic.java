@@ -200,7 +200,10 @@ public final class HandLogic {
 
  /** Transfer only actual TCG cards; creative inventory transfers still consume inputs. */
  static void depositInventory(ServerPlayer player,HandBlockEntity hand){
-  if(!hand.isAuthorized(player)){reply(player,hand,"Only selected players can deposit into this hand.");return;}
+  reply(player,hand,depositIntoHand(player,hand));
+ }
+ static String depositIntoHand(ServerPlayer player,HandBlockEntity hand){
+  if(!hand.isAuthorized(player))return "Only selected players can deposit into this hand.";
   int moved=0;
   for(int slot=0;slot<36&&hand.cardCount()<HandBlockEntity.SIZE;slot++){
    ItemStack stack=player.getInventory().getItem(slot);
@@ -212,7 +215,7 @@ public final class HandLogic {
    }
   }
   if(moved>0){player.getInventory().setChanged();player.inventoryMenu.broadcastChanges();}
-  reply(player,hand,moved>0?"Deposited "+moved+" inventory card"+(moved==1?"":"s")+" into the hand.":"No eligible cards or no space left in the hand.");
+  return moved>0?"Deposited "+moved+" inventory card"+(moved==1?"":"s")+" into the hand.":"No eligible cards or no space left in the hand.";
  }
 
  /**
