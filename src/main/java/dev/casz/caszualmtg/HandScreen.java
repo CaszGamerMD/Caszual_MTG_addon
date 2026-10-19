@@ -35,7 +35,7 @@ public final class HandScreen extends LegacyScreen {
     primaryInput=addRenderableWidget(new EditBox(font,x+15,y+172,170,20,Component.literal("Primary player username")));
     primaryInput.setMaxLength(32);primaryInput.setHint(Component.literal("Online username"));
     button("Set Primary Player",x+192,y+172,140,()->send("primary_player",primaryInput.getValue()));
-    button("Select Golem · click it",x+338,y+172,178,()->{send("primary_golem","");onClose();});
+    button("Assign Seated Golem",x+338,y+172,178,()->send("primary_golem",""));
     button("Clear Primary",x+522,y+172,120,()->send("primary_clear",""));
    }
    button("Back to Hand",x+15,y+h-34,145,()->{linkMenu=false;rebuildWidgets();});
