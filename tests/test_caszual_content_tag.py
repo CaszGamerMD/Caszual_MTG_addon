@@ -10,7 +10,7 @@ SOURCE = ROOT / "src/main/java/dev/casz/caszualmtg/CaszualMtg.java"
 
 EXPECTED = {
     "land_database", "token_database", "community_database",
-    "deck_builder", "custom_deckbox", "hand_block",
+    "deck_builder", "custom_deckbox", "custom_deck_control", "custom_graveyard", "hand_block",
     "deckbox_rack", "staff_rack", "tabletop", "counter", "targeting_staff",
     "material_chair", "commander_golem",
 }
@@ -31,7 +31,7 @@ class CaszualContentTagTest(unittest.TestCase):
         # Three database blocks are made through block(name, kind).
         database_ids = set(re.findall(r'block\("(\w+)",\s*[012]\)', source))
         other_ids = {
-            "deck_builder", "hand_block", "custom_deckbox",
+            "deck_builder", "hand_block", "custom_deckbox", "custom_deck_control", "custom_graveyard",
             "deckbox_rack", "staff_rack", "tabletop", "counter", "targeting_staff",
             "material_chair", "commander_golem",
         }
