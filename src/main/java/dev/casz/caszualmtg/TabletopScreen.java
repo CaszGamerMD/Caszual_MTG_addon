@@ -27,10 +27,11 @@ public final class TabletopScreen extends LegacyScreen {
  EditBox quantity;
  boolean resetConfirm=false;
  boolean discardMode=false;
- boolean tokenTrayOpen=false,counterOpen=false;
+ boolean tokenTrayOpen=false,counterOpen=false,lifePanelOpen=false,awaitingTurnPass=false;
+ BlockPos lifePanelSeat;
  String counterCard="",tokenText="",tokenOracleText="",tokenPtText="",targetSource="";
  int traySelected=-1,tokenResultSelected=-1,trayScroll=0,tokenResultScroll=0,shownScroll=0,publicRevealScroll=0;
- EditBox counterName,counterTotal,tokenSearch,tokenOracle,tokenPt;
+ EditBox counterName,counterTotal,tokenSearch,tokenOracle,tokenPt,lifeAmount,lifeCounterName,lifeCounterAmount;
  int zoneScroll=0,tabScroll=0,ticks=0;
  String selectedCard="";
  String pendingHandZone="";
@@ -59,6 +60,11 @@ public final class TabletopScreen extends LegacyScreen {
   else if(zone.equals("scry")||zone.equals("reveal")){zone="hand";scryBottom.clear();}
   if(!selectedCard.isBlank()&&reply.cards().stream().noneMatch(c->c.id().equals(selectedCard)))selectedCard="";
   if(pendingHandSlot>=reply.hand().size()){pendingHandZone="";pendingHandSlot=-1;rebuildWidgets();}
+  if(awaitingTurnPass&&!reply.message().isBlank()){
+   awaitingTurnPass=false;
+   if(reply.message().startsWith("Turn passed"))
+    reply.tiles().stream().filter(TabletopWire.Tile::active).findFirst().ifPresent(t->selectView(t.pos()));
+  }
   if(changed)rebuildWidgets();
   if(counterOpen&&data.cards().stream().noneMatch(c->c.id().equals(counterCard))){counterOpen=false;rebuildWidgets();}
  }
@@ -122,10 +128,16 @@ public final class TabletopScreen extends LegacyScreen {
  List<TabletopWire.Card> displayed(){
   return data.cards().stream().filter(c->c.pos().equals(view)).toList();
  }
+ boolean viewingOtherZone(){return view!=null&&!view.equals(data.seat())&&(zone.equals("grave")||zone.equals("exile"));}
+ TabletopWire.PublicZone publicZone(){return data.publicZones().stream().filter(z->z.seat().equals(view)).findFirst().orElse(null);}
  List<ItemStack> zoneCards(){
   return switch(zone){
-   case "grave" -> data.grave().stream().map(TabletopWire.ZoneCard::stack).toList();
-   case "exile" -> data.exile().stream().map(TabletopWire.ZoneCard::stack).toList();
+   case "grave" -> (viewingOtherZone()?
+      publicZone()==null?List.<TabletopWire.ZoneCard>of():publicZone().grave():data.grave())
+      .stream().map(TabletopWire.ZoneCard::stack).toList();
+   case "exile" -> (viewingOtherZone()?
+      publicZone()==null?List.<TabletopWire.ZoneCard>of():publicZone().exile():data.exile())
+      .stream().map(TabletopWire.ZoneCard::stack).toList();
    case "scry" -> data.scry();
    case "reveal" -> data.reveal();
    default -> data.hand();
@@ -178,7 +190,16 @@ public final class TabletopScreen extends LegacyScreen {
   int index=zoneScroll+at;
   return index>=0&&index<zoneCards().size()?index:-1;
  }
- void selectView(BlockPos target){view=target;selectedCard="";drag=null;shownScroll=0;publicRevealScroll=0;rebuildWidgets();}
+ void selectView(BlockPos target){view=target;selectedCard="";selectedZone=-1;drag=null;shownScroll=0;zoneScroll=0;publicRevealScroll=0;rebuildWidgets();}
+ void openLifePanel(BlockPos at){lifePanelSeat=at;lifePanelOpen=true;counterOpen=false;tokenTrayOpen=false;rebuildWidgets();}
+ int lifeInput(EditBox box,int fallback){
+  try{return Math.clamp(Integer.parseInt(box.getValue().trim()),-1000000,1000000);}
+  catch(Exception e){message="Enter a valid number.";return fallback;}
+ }
+ void modifyLife(String type,int amount){if(lifePanelSeat!=null)send(type,"",lifePanelSeat,0,0,amount);}
+ void modifyLifeCounter(String type,int amount){
+  if(lifePanelSeat!=null&&lifeCounterName!=null)send(type,lifeCounterName.getValue().trim(),lifePanelSeat,0,0,amount);
+ }
  int wanted(){try{return Math.clamp(Integer.parseInt(quantity.getValue().trim()),1,99);}catch(Exception e){message="Enter a number from 1 to 99.";return -1;}}
  void amountAction(String action){int n=wanted();if(n<0)return;send(action,"",data.seat(),0,0,n);}
  void openMenu(String name){menuMode=menuMode.equals(name)?"":name;resetConfirm=false;rebuildWidgets();}
@@ -205,7 +226,7 @@ public final class TabletopScreen extends LegacyScreen {
   int ux=12,uy=38;
   button("Draw ▾",ux,uy,70,()->openMenu("draw"));ux+=75;
   button("Deck ▾",ux,uy,70,()->openMenu("deck"));ux+=75;
-  button("Pass Turn",ux,uy,84,()->action("pass_turn",0));ux+=89;
+  button("Pass Turn",ux,uy,84,()->{awaitingTurnPass=true;action("pass_turn",0);});ux+=89;
   button("Flip",ux,uy,50,()->tableAction("flip"));ux+=55;
   button("Untap All",ux,uy,82,()->action("untap_all",0));ux+=87;
   button("Target ▾",ux,uy,70,()->{tokenTrayOpen=false;counterOpen=false;menuMode="target";rebuildWidgets();});ux+=75;
@@ -256,6 +277,23 @@ public final class TabletopScreen extends LegacyScreen {
     if(resetConfirm){resetConfirm=false;action("reset",0);}
     else{resetConfirm=true;rebuildWidgets();}
    });
+  }
+  if(lifePanelOpen){
+   int px=Math.max(12,width-352),py=boardY()+12;
+   lifeAmount=addRenderableWidget(new EditBox(font,px+12,py+36,90,20,Component.literal("Life")));
+   lifeAmount.setValue("1");lifeAmount.setMaxLength(9);
+   button("Life +",px+108,py+36,70,()->modifyLife("life_adjust",Math.abs(lifeInput(lifeAmount,0))));
+   button("Life -",px+181,py+36,70,()->modifyLife("life_adjust",-Math.abs(lifeInput(lifeAmount,0))));
+   button("Set Life",px+255,py+36,83,()->modifyLife("life_set",lifeInput(lifeAmount,0)));
+   lifeCounterName=addRenderableWidget(new EditBox(font,px+12,py+100,164,20,Component.literal("Counter")));
+   lifeCounterName.setMaxLength(40);lifeCounterName.setValue("poison");
+   lifeCounterAmount=addRenderableWidget(new EditBox(font,px+182,py+100,62,20,Component.literal("Amount")));
+   lifeCounterAmount.setMaxLength(9);lifeCounterAmount.setValue("1");
+   button("+",px+12,py+128,42,()->modifyLifeCounter("life_counter_adjust",Math.abs(lifeInput(lifeCounterAmount,0))));
+   button("-",px+59,py+128,42,()->modifyLifeCounter("life_counter_adjust",-Math.abs(lifeInput(lifeCounterAmount,0))));
+   button("Set",px+107,py+128,61,()->modifyLifeCounter("life_counter_set",lifeInput(lifeCounterAmount,-1)));
+   button("Remove",px+174,py+128,85,()->modifyLifeCounter("life_counter_remove",0));
+   button("Close",px+264,py+128,74,()->{lifePanelOpen=false;rebuildWidgets();});
   }
   if(counterOpen){
    int px=Math.max(14,width-330),py=boardY()+13;
@@ -339,6 +377,8 @@ public final class TabletopScreen extends LegacyScreen {
  int tokenPanelX(){return (width-tokenPanelW())/2;}
  int tokenVisibleRows(){return Math.max(1,(boardH()-171)/38);}
  boolean inTokenPanel(int x,int y){return tokenTrayOpen&&x>=tokenPanelX()&&x<tokenPanelX()+tokenPanelW()&&y>=boardY()+10&&y<=boardY()+boardH()-2;}
+ boolean inLifePanel(int x,int y){return lifePanelOpen&&x>=Math.max(12,width-352)&&x<width-8
+   &&y>=boardY()+12&&y<boardY()+190;}
  boolean inCounterPanel(int x,int y){return counterOpen&&x>=Math.max(14,width-330)&&x<width-12&&y>=boardY()+13&&y<boardY()+151;}
  void searchTokens(int page){
   tokenText=tokenSearch==null?tokenText:tokenSearch.getValue();
