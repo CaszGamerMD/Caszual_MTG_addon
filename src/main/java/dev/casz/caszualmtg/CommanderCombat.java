@@ -38,17 +38,7 @@ public final class CommanderCombat {
   return List.copyOf(out);
  }
  static HandBlockEntity hand(ServerLevel level,TabletopBlockEntity seat){
-  if(seat==null||seat.seatOwner()==null)return null;
-  HandBlockEntity result=null;double distance=Double.MAX_VALUE;
-  for(BlockPos pos:BlockPos.betweenClosed(seat.getBlockPos().offset(-8,-4,-8),seat.getBlockPos().offset(8,4,8))){
-   if(!level.hasChunkAt(pos))continue;
-   if(level.getBlockEntity(pos) instanceof HandBlockEntity h&&seat.seatOwner().equals(h.owner())
-      &&(seat.getBlockPos().equals(h.linkedTable())||h.legacyTableDiscovery()&&h.linkedTable()==null)){
-    double d=pos.distSqr(seat.getBlockPos());
-    if(d<distance){result=h;distance=d;}
-   }
-  }
-  return result;
+  return seat==null?null:HandLinks.linked(level,seat,seat.seatOwner());
  }
  static DeckControlBlockEntity control(ServerLevel world,HandBlockEntity hand){
   BlockPos pos=hand==null?null:hand.linkedControl();
