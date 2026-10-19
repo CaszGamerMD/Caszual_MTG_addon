@@ -10,35 +10,44 @@ ASSETS=ROOT/"src/main/resources/assets/caszual_mtg"
 def java(name):return (JAVA/name).read_text()
 
 class CustomMtgDevices(unittest.TestCase):
- def test_material_persistence_and_multiplayer_updates_are_isolated(self):
-  for name in ("CustomDeckControlEntity.java","CustomGraveyardEntity.java"):
-   code=java(name)
-   for token in ("implements BoxMaterial", "BoxMaterial.safe(value)",
-                 "private String caszualMaterial=BoxMaterial.DEFAULT",
-                 "getRenderData(){return caszualMaterial;}",
-                 'out.putString("CaszualMaterial",caszualMaterial)',
-                 'in.getStringOr("CaszualMaterial",BoxMaterial.DEFAULT)',
-                 'result.putString("CaszualMaterial",caszualMaterial)',
-                 "ClientboundBlockEntityDataPacket.create(this)",
-                 "level.sendBlockUpdated(worldPosition,state,state,Block.UPDATE_ALL)"):
-    self.assertIn(token,code,name+" "+token)
+ def test_native_block_entities_survive_reload_with_materials(self):
+  control=java("CustomDeckControl.java")
+  grave=java("CustomGraveyard.java")
+  self.assertIn("new com.spider.mtgcard.deckcontrol.DeckControlBlockEntity(pos,state)",control)
+  self.assertIn("new com.spider.mtgcard.graveyard.GraveyardBlockEntity(pos,state)",grave)
   mix=json.loads((ROOT/"src/main/resources/caszual_mtg.mixins.json").read_text())
-  self.assertNotIn("DeckControlMaterialMixin",mix["mixins"])
-  self.assertNotIn("GraveyardMaterialMixin",mix["mixins"])
+  for name in ("DeckControlMaterialMixin","GraveyardMaterialMixin","GraveyardScreenHandlerMixin"):
+   self.assertIn(name,mix["mixins"])
+  for name in ("mixin/DeckControlMaterialMixin.java","mixin/GraveyardMaterialMixin.java"):
+   code=java(name)
+   for token in ("implements BoxMaterial","BoxMaterial.safe(value)",
+                 'putString("CaszualMaterial",caszual$skin)',
+                 'getStringOr("CaszualMaterial",BoxMaterial.DEFAULT)',
+                 "getRenderData(){return caszual$skin;}",
+                 "ClientboundBlockEntityDataPacket.create((BlockEntity)(Object)this)",
+                 "getDisplayName"):
+    self.assertIn(token,code,name+" "+token)
   helper=java("CustomGameDeviceMaterial.java")
   self.assertIn("instanceof BoxMaterial material",helper)
   self.assertIn("material.companion$material(next)",helper)
   self.assertIn("if(!player.getAbilities().instabuild)held.shrink(1)",helper)
 
+ def test_native_graveyard_menu_accepts_caszual_block(self):
+  handler=java("mixin/GraveyardScreenHandlerMixin.java")
+  self.assertIn("getBlockState(pos).is(CaszualMtg.CUSTOM_GRAVEYARD)",handler)
+  self.assertIn("cir.setReturnValue(",handler)
+  self.assertIn("instanceof GraveyardBlockEntity",handler)
+
  def test_graveyard_lid_stays_open_and_can_be_closed_manually(self):
-  ent=java("CustomGraveyardEntity.java")
+  mixin=java("mixin/GraveyardMaterialMixin.java")
   block=java("CustomGraveyard.java")
-  self.assertIn("public void onViewerClose()",ent)
-  self.assertIn("super.onViewerClose()",ent)
-  self.assertIn("state.setValue(CustomGraveyard.OPEN,true)",ent)
-  self.assertIn("level.setBlock(worldPosition,",ent)
+  for token in ("caszual$lidPinned", "caszual$setLidPinned(true)",
+                "caszual$setLidPinned(boolean open)",
+                'output.putBoolean("CaszualLidPinned",caszual$lidPinned)',
+                "onViewerOpen","onViewerClose"):
+   self.assertIn(token,mixin)
   self.assertIn("player.isShiftKeyDown()",block)
-  self.assertIn("state.setValue(OPEN,!open)",block)
+  self.assertIn("lid.caszual$setLidPinned(!open)",block)
   self.assertIn("player.openMenu(menu)",block)
 
  def test_graveyard_has_real_reskinnable_3d_surfaces_not_just_two_faces(self):
