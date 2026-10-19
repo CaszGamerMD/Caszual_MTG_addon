@@ -6,6 +6,8 @@
     "caszual_mtg:community_database",
     "caszual_mtg:deck_builder",
     "caszual_mtg:custom_deckbox",
+    "caszual_mtg:custom_graveyard",
+    "caszual_mtg:custom_deck_control",
     "caszual_mtg:hand_block",
     "caszual_mtg:deckbox_rack",
     "caszual_mtg:staff_rack",
