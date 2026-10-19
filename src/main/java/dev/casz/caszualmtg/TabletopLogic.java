@@ -357,6 +357,46 @@ public final class TabletopLogic {
      found.tile.remove(found.card.id());
      message="Token returned to tray.";
     }
+    case "life_adjust", "life_set", "life_counter_adjust", "life_counter_set", "life_counter_remove" -> {
+     TabletopBlockEntity target=tile(c,req.target());
+     if(c.seat==null||target==null||!c.seat.ownedBy(player)){
+      message="You must own a seat at this table to edit life totals.";break;
+     }
+     LifePointBlockEntity ownLife=life(player,c.hand);
+     HandBlockEntity targetHand=target.seatOwner()==null?null:linkedHand(player,target,target.seatOwner());
+     LifePointBlockEntity targetLife=life(player,targetHand);
+     if(targetLife==null){message="That seat has no linked Life Point tracker.";break;}
+     if(!c.seat.getBlockPos().equals(target.getBlockPos())){
+      if(!(player.level() instanceof ServerLevel world)||ownLife==null){
+       message="Both players need linked Life Point trackers.";break;
+      }
+      UUID ownPod=LifePlayGroups.findGroupId(world,ownLife.getBlockPos());
+      UUID targetPod=LifePlayGroups.findGroupId(world,targetLife.getBlockPos());
+      if(ownPod==null||!ownPod.equals(targetPod)){
+       message="Only participants in the same pod may change another player's totals.";break;
+      }
+     }
+     int value=req.amount();
+     if(value< -1000000||value>1000000){message="Use values between -1000000 and 1000000.";break;}
+     if(req.action().equals("life_adjust")){
+      targetLife.addLife(value);message=target.seatName()+" life: "+targetLife.getLife();
+     }else if(req.action().equals("life_set")){
+      targetLife.setLife(value);message=target.seatName()+" life set to "+value;
+     }else{
+      String key=req.ref().trim().toLowerCase(Locale.ROOT);
+      if(!key.matches("[a-z0-9_ /+-]{1,40}")){message="Invalid counter name.";break;}
+      int current=targetLife.getCounters().getOrDefault(key,0);
+      if(req.action().equals("life_counter_remove")){
+       targetLife.removeCounter(key);message="Removed "+key+" counter from "+target.seatName();
+      }else{
+       int updated=req.action().equals("life_counter_adjust")
+           ?(int)Math.clamp((long)current+value,0L,1000000L):value;
+       if(updated<0){message="Counter totals cannot be negative.";break;}
+       targetLife.setCounter(key,updated);
+       message=target.seatName()+" "+key+": "+updated;
+      }
+     }
+    }
     case "pass_turn" -> {
      LifePointBlockEntity lp=life(player,c.hand);
      if(lp==null){message="Link your MTGCard Life Point block in your Card Hand first.";break;}
@@ -764,6 +804,8 @@ public final class TabletopLogic {
   if(c.tiles.isEmpty())return;
   BlockPos owned=c.seat==null?origin:c.seat.getBlockPos();
   String uuid=player.getUUID().toString();
+  if(c.hand!=null&&c.seat!=null&&player.getUUID().equals(c.hand.owner()))
+   TabletopTurnChime.watch(player,c.hand);
   List<TabletopWire.Tile> tiles=new ArrayList<>();
   List<TabletopWire.Card> played=new ArrayList<>();
   for(var t:c.tiles){
@@ -773,7 +815,14 @@ public final class TabletopLogic {
    // Exact 24-bit seat color; legacy FELT blockstate is no longer used to tint.
    t.matRgb(color);
    ChairBlock.refreshNextToTable(player.level(),t.getBlockPos());
-   tiles.add(new TabletopWire.Tile(t.getBlockPos(),t.seatName(),color,lp==null?0:lp.getLife(),lp!=null,lp!=null&&lp.isTurnActive(),t.cardScale()));
+   int count=other==null?-1:other.cardCount();
+    Map<String,Integer> counters=new LinkedHashMap<>();
+    if(lp!=null)lp.getCounters().entrySet().stream()
+      .filter(e->e.getKey()!=null&&e.getKey().length()<=40)
+      .limit(32).forEach(e->counters.put(e.getKey(),e.getValue()));
+    tiles.add(new TabletopWire.Tile(t.getBlockPos(),t.seatName(),color,
+     lp==null?0:lp.getLife(),lp!=null,lp!=null&&lp.isTurnActive(),
+     t.cardScale(),count,Map.copyOf(counters)));
    for(var card:t.cards()){
     // Face-down card identities must never leave the server for opponents.
     ItemStack shown=card.faceDown()&&!uuid.equals(card.owner())?ItemStack.EMPTY:card.stack().copy();
