@@ -107,6 +107,9 @@ jobs:
       - name: Verify experimental tabletop target and token UI integration
         run: python3 -m unittest discover -s tests -p 'test_ai_tabletop_targets.py' -v
 
+      - name: Verify explicitly linked Card Hand and Brass Squire model
+        run: python3 -m unittest discover -s tests -p 'test_hand_setup_squire.py' -v
+
       - name: Publish experimental Commander Golem JAR
         if: github.ref == 'refs/heads/experiment/commander-ai-golem'
         run: |
