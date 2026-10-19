@@ -33,7 +33,7 @@ class CardHandSetup(unittest.TestCase):
         for label in ["Link Deck Control","Link Life Point","Link MTG Table",
                       "Set Primary Player","Assign Seated Golem"]:
             self.assertIn(label,hand_screen)
-        for validator in ["hand.canManage(player)","inRange(handPos,tablePos)",
+        for validator in ["hand.canManage(player)","inTableRange(handPos,tablePos)",
                           "inRange(handPos,lifePos)","inRange(handPos,controlPos)",
                           "golem.entityTags().contains(CommanderGolems.TAG)"]:
             self.assertIn(validator,logic)
@@ -49,18 +49,18 @@ class CardHandSetup(unittest.TestCase):
         self.assertNotIn("hand.claimBot(",bot)
         self.assertNotIn("hand.linkedControl(control.getBlockPos())",bot)
         self.assertNotIn("hand.linkedLife(life.getBlockPos())",bot)
-        self.assertIn("golem.getUUID().equals(h.owner())",bot)
-        self.assertIn("at.equals(h.linkedTable())",bot)
+        self.assertIn("HandLinks.linked(world,table,golem.getUUID())",bot)
+        self.assertIn("at.equals(exact.linkedTable())",bot)
         self.assertIn("hand.linkedControl()",bot)
 
     def test_seated_golem_hand_links_match_setup_range(self):
         bot=read("CommanderGolems.java")
         logic=read("HandLogic.java")
         screen=read("HandScreen.java")
-        self.assertIn("private static final int RANGE=8;",bot)
+        self.assertIn("public static final int TABLE_RANGE=70;",read("HandLinks.java"))
         self.assertIn("private static final int LINK_RANGE=8;",logic)
-        self.assertIn("at.offset(-RANGE,-RANGE,-RANGE)",bot)
-        self.assertIn("at.offset(RANGE,RANGE,RANGE)",bot)
+        self.assertIn("HandLinks.linked(world,table,golem.getUUID())",bot)
+        self.assertIn("BlockPos precise=seat.linkedHand()",bot)
         self.assertIn("case \"primary_golem\" -> {",logic)
         self.assertIn("world.getEntity(occupant)",logic)
         self.assertIn("golem.entityTags().contains(CommanderGolems.TAG)",logic)
