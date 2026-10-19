@@ -84,41 +84,24 @@ public final class CommanderGolems {
   TabletopBlockEntity table=adjacentTable(world,chair);
   if(table==null||!golem.getUUID().equals(table.seatOwner()))
    return new Setup(null,null,null,null);
+  // The manager chooses all four bindings; the AI never steals nearby
+  // unassigned Hands, counters, Deck Controls or somebody else's table.
+  HandBlockEntity hand=null;double nearest=Double.MAX_VALUE;
   BlockPos at=table.getBlockPos();
-  HandBlockEntity hand=null;
-  DeckControlBlockEntity control=null;
-  LifePointBlockEntity life=null;
-  double hd=Double.MAX_VALUE,cd=Double.MAX_VALUE,ld=Double.MAX_VALUE;
   for(BlockPos p:BlockPos.betweenClosed(at.offset(-RANGE,-2,-RANGE),at.offset(RANGE,2,RANGE))){
    if(!world.hasChunkAt(p))continue;
-   var be=world.getBlockEntity(p);
-   double distance=at.distSqr(p);
-   if(be instanceof HandBlockEntity h && (golem.getUUID().equals(h.owner()) || h.owner()==null)
-      && distance<hd){hand=h;hd=distance;}
-    // Counter must be explicitly named for the bot. Never select a human counter.
-   if(be instanceof LifePointBlockEntity lp &&"Commander Golem".equalsIgnoreCase(lp.getDisplayName())
-      && distance<ld){life=lp;ld=distance;}
-  }
-  // Find a Deck Control only after choosing the hand; block iteration order
-  // must never determine whether a valid setup is recognized.
-  if(hand!=null)for(BlockPos p:BlockPos.betweenClosed(hand.getBlockPos().offset(-3,-2,-3),hand.getBlockPos().offset(3,2,3))){
-   if(!world.hasChunkAt(p))continue;
-   if(world.getBlockEntity(p) instanceof DeckControlBlockEntity dc && dc.hasLinkedDeckbox()){
-    double distance=hand.getBlockPos().distSqr(p);
-    if(distance<cd){control=dc;cd=distance;}
+   if(world.getBlockEntity(p) instanceof HandBlockEntity h
+      &&golem.getUUID().equals(h.owner())&&at.equals(h.linkedTable())){
+    double d=at.distSqr(p);if(d<nearest){hand=h;nearest=d;}
    }
   }
-  if(hand!=null && bind && hand.owner()==null && control!=null && life!=null){
-   if(hand.claimBot(golem.getUUID(),"Commander Golem")){
-    hand.linkedControl(control.getBlockPos());
-    hand.linkedLife(life.getBlockPos());
-   }
+  DeckControlBlockEntity control=null;
+  LifePointBlockEntity life=null;
+  if(hand!=null){
+   BlockPos deckPos=hand.linkedControl(),lifePos=hand.linkedLife();
+   if(deckPos!=null&&world.hasChunkAt(deckPos)&&world.getBlockEntity(deckPos) instanceof DeckControlBlockEntity dc)control=dc;
+   if(lifePos!=null&&world.hasChunkAt(lifePos)&&world.getBlockEntity(lifePos) instanceof LifePointBlockEntity lp)life=lp;
   }
-  if(hand!=null&&!golem.getUUID().equals(hand.owner()))hand=null;
-  if(hand!=null&&hand.linkedControl()!=null && world.getBlockEntity(hand.linkedControl()) instanceof DeckControlBlockEntity assigned)
-   control=assigned;
-  if(hand!=null&&hand.linkedLife()!=null && world.getBlockEntity(hand.linkedLife()) instanceof LifePointBlockEntity assigned)
-   life=assigned;
   return new Setup(table,hand,control,life);
  }
  /** Public intent directed at the AI. This is observation only, not resolution:
@@ -144,8 +127,8 @@ public final class CommanderGolems {
  public static String status(ServerLevel level,IronGolem golem){
   Setup s=setup(level,golem,true);
   if(s.table==null)return "Golem seat or chair missing; it cannot join the table.";
-  if(s.hand==null)return "Golem waiting for an unclaimed Card Hand within 5 blocks.";
-  if(s.deck==null)return "Golem waiting for a Deck Control linked to a placed deckbox.";
+  if(s.hand==null)return "Golem needs a Hand explicitly linked to its table and assigned to this golem.";
+  if(s.deck==null)return "Link the Golem Hand to a Deck Control and its deckbox.";
   BlockPos db=s.deck.getLinkedDeckboxPos();
   if(db==null||!(level.getBlockEntity(db) instanceof DeckboxBlockEntity box))
    return "Golem waiting for a linked deckbox.";
@@ -155,7 +138,7 @@ public final class CommanderGolems {
    String reason=deckError(box);
    if(reason!=null)return reason;
   }
-  if(s.life==null)return "Rename a nearby Life Point counter to Commander Golem to link it safely.";
+  if(s.life==null)return "Link the Golem Hand to its dedicated Life Point counter.";
   if(!s.life.isGameStarted())return "Golem ready. Join Commander Golem's Life Point counter to the play group, then start the game.";
   if(s.table.aiAttack()!=null)return "Commander Golem is waiting for the defender to choose a block or take damage.";
   int incoming=incomingTargets(level,golem,s.table);
