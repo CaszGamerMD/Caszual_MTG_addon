@@ -43,9 +43,14 @@ public final class DeckboxRackBlock extends BaseEntityBlock {
  @Override public RenderShape getRenderShape(BlockState state){return RenderShape.MODEL;}
  @Override public @Nullable BlockEntity newBlockEntity(BlockPos pos,BlockState state){return new DeckboxRackEntity(pos,state);}
  @Override public BlockState getStateForPlacement(BlockPlaceContext ctx){
-  BlockState state=defaultBlockState();
   Direction side=ctx.getClickedFace();
-  return state.setValue(WALL,side.getAxis().isHorizontal()).setValue(FACING,side.getAxis().isHorizontal()?side:ctx.getHorizontalDirection().getOpposite());
+  // When attached to a wall, the thin six-pixel ledge must be against the
+  // SUPPORT block that was clicked, rather than sticking out on the far side
+  // of its own block. Local shelf placement, BE rendering and collision all
+  // follow FACING; do not swap the collision shapes independently.
+  boolean wall=side.getAxis().isHorizontal();
+  Direction facing=wall?side.getOpposite():ctx.getHorizontalDirection().getOpposite();
+  return defaultBlockState().setValue(WALL,wall).setValue(FACING,facing);
  }
  @Override protected VoxelShape getShape(BlockState state,BlockGetter world,BlockPos pos,CollisionContext ctx){
   int bottom=state.getValue(WALL)?7:0,top=bottom+2;
