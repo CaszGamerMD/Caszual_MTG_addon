@@ -319,17 +319,6 @@ public final class TabletopScreen extends LegacyScreen {
     button("Return to tray",px+152,py+111,106,()->{send("token_store",counterCard,data.seat(),0,0,0);counterOpen=false;rebuildWidgets();});
    button("Close",px+263,py+111,44,()->{counterOpen=false;rebuildWidgets();});
   }
-  if(lifePanelOpen){
-   int px=Math.max(12,width-352),py=boardY()+12;
-   g.fill(px,py,px+344,py+183,0xF017293A);
-   TabletopWire.Tile selected=data.tiles().stream()
-    .filter(t->t.pos().equals(lifePanelSeat)).findFirst().orElse(null);
-   g.drawString(font,(selected==null?"Life Point":selected.owner())+" · LIFE / COUNTERS",px+11,py+10,0xFFFFDDA3);
-   if(selected!=null){
-    g.drawString(font,"Current life: "+selected.life(),px+11,py+25,0xFFF1F5F8);
-    g.drawString(font,font.plainSubstrByWidth(selected.counters().toString(),324),px+11,py+77,0xFFAACFDF);
-   }
-  }
   if(tokenTrayOpen){
    int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW();
    tokenSearch=addRenderableWidget(new EditBox(font,px+pw/2+7,py+25,pw/2-82,19,Component.literal("Token name")));
@@ -757,6 +746,17 @@ public final class TabletopScreen extends LegacyScreen {
     drawArt(g,publicHand.cards().get(i),x,by,shownCardW(),shownCardH());
    }
   }
+  if(lifePanelOpen){
+   int px=Math.max(12,width-352),py=boardY()+12;
+   g.fill(px,py,px+344,py+183,0xF017293A);
+   TabletopWire.Tile selected=data.tiles().stream()
+    .filter(t->t.pos().equals(lifePanelSeat)).findFirst().orElse(null);
+   g.drawString(font,(selected==null?"Life Point":selected.owner())+" · LIFE / COUNTERS",px+11,py+10,0xFFFFDDA3);
+   if(selected!=null){
+    g.drawString(font,"Current life: "+selected.life(),px+11,py+25,0xFFF1F5F8);
+    g.drawString(font,font.plainSubstrByWidth(selected.counters().toString(),324),px+11,py+77,0xFFAACFDF);
+   }
+  }
   if(tokenTrayOpen){
    int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW(),bottom=boardY()+boardH()-2;
    g.fill(px,py,px+pw,bottom,0xF11A2839);
@@ -822,7 +822,8 @@ public final class TabletopScreen extends LegacyScreen {
    drawArt(g,cards.get(i),x,y,handCardW(),handCardH());
    if(zone.equals("scry"))g.drawString(font,scryBottom.contains(i)?"BOTTOM":"TOP",x+4,y+handCardH()-10,0xFFFFE79E);
   }
-  g.drawString(font,"Library "+data.libraryCount()+"  |  Hand "+data.hand().size()+"  |  "+zone.toUpperCase(Locale.ROOT),174,handTop()+12,0xFFD3E0EA);
+   String zoneLabel=viewingOtherZone()?"PUBLIC "+zone.toUpperCase(Locale.ROOT)+" · "+(shown()==null?"":shown().owner()):zone.toUpperCase(Locale.ROOT);
+   g.drawString(font,"Library "+data.libraryCount()+"  |  Hand "+data.hand().size()+"  |  "+zoneLabel,174,handTop()+12,0xFFD3E0EA);
   if(!message.isBlank())g.drawString(font,font.plainSubstrByWidth(message,boardW()-16),boardX()+8,boardY()+boardH()-13,0xFFFFD789);
   super.render(g,mx,my,delta);
   // Alt enlarges the hovered card to a legible preview without revealing opponents' hidden cards.
