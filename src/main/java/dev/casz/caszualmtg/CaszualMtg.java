@@ -137,6 +137,7 @@ public final class CaszualMtg implements ModInitializer {
  public void onInitialize(){
   net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_LEVEL_TICK.register(ChairSeats::tick);
    net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_LEVEL_TICK.register(CommanderGolems::tick);
+   net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_LEVEL_TICK.register(TabletopTurnChime::tick);
   // Do not inspect MTGCard's block-entity fields in our main entrypoint:
   // MTGCard's initializer can run later in the same Fabric initialization pass.
   net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING
@@ -147,7 +148,7 @@ public final class CaszualMtg implements ModInitializer {
   ServerPlayNetworking.registerGlobalReceiver(TabletopWire.Request.TYPE,(req,ctx)->TabletopLogic.handle(ctx.player(),req));
   PayloadTypeRegistry.serverboundPlay().register(Wire.Request.TYPE,Wire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(Wire.Reply.TYPE,Wire.Reply.CODEC);PayloadTypeRegistry.serverboundPlay().register(HandWire.Request.TYPE,HandWire.Request.CODEC);PayloadTypeRegistry.clientboundPlay().register(HandWire.Reply.TYPE,HandWire.Reply.CODEC);PayloadTypeRegistry.clientboundPlay().register(DeckboxRefreshWire.Refresh.TYPE,DeckboxRefreshWire.Refresh.CODEC);
   ServerPlayNetworking.registerGlobalReceiver(Wire.Request.TYPE,(req,ctx)->ServerLogic.handle(ctx.player(),req));ServerPlayNetworking.registerGlobalReceiver(HandWire.Request.TYPE,(req,ctx)->HandLogic.handle(ctx.player(),req));
-  ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);TabletopLogic.close(h.player);StaffTargets.clearAllForDisconnect(h.player);});
+  ServerPlayConnectionEvents.DISCONNECT.register((h,s)->{ServerLogic.close(h.player);HandLogic.clearPendingLink(h.player);TabletopLogic.close(h.player);TabletopTurnChime.clear(h.player);StaffTargets.clearAllForDisconnect(h.player);});
   CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(e->{e.accept(LANDS);e.accept(TOKENS);e.accept(CARDS);e.accept(BUILDER);e.accept(COUNTER);e.accept(TARGETING_STAFF);e.accept(CUSTOM_BOX);e.accept(CUSTOM_DECK_CONTROL);e.accept(CUSTOM_GRAVEYARD);e.accept(HAND);e.accept(RACK);e.accept(STAFF_RACK);e.accept(TABLETOP);e.accept(MATERIAL_CHAIR);e.accept(COMMANDER_GOLEM);});
   UseEntityCallback.EVENT.register((p,l,hand,e,hit)->{
    if(e instanceof net.minecraft.world.entity.animal.golem.IronGolem iron
