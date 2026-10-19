@@ -66,7 +66,7 @@ public final class TabletopLogic {
   return linkedHand(player,seat,player.getUUID());
  }
  private static HandBlockEntity linkedHand(ServerPlayer player,TabletopBlockEntity seat,UUID owner){
-  return HandLinks.linked(player.serverLevel(),seat,owner);
+  return HandLinks.linked((ServerLevel)player.level(),seat,owner);
  }
  private static LifePointBlockEntity life(ServerPlayer player,HandBlockEntity hand){
   if(hand==null||hand.linkedLife()==null||!player.level().hasChunkAt(hand.linkedLife()))return null;
