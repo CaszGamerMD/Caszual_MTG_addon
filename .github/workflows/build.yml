@@ -35,6 +35,9 @@ jobs:
       - name: Verify Deck Builder / Rack / Card Store integration
         run: python3 -m unittest discover -s tests -p 'test_deck_builder_rack.py' -v
 
+      - name: Verify 70-block Card Hand and Table reciprocal links
+        run: python3 -m unittest discover -s tests -p 'test_remote_hand_table_link.py' -v
+
       - name: Validate Deckbox Rack wall mounting and E/W chair collision
         run: python3 -m unittest discover -s tests -p 'test_wall_mount_chair_bounds.py' -v
 
