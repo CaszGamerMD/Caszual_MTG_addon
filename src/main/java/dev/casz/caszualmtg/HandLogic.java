@@ -81,6 +81,9 @@ public final class HandLogic {
      case "link_life"->"life";case "link"->"deck";case "link_table"->"table";
      case "link_all"->"all";default->"golem";
     };
+    if(mode.equals("all")&&hand.linkedControl()!=null&&hand.linkedLife()!=null&&hand.linkedTable()!=null){
+     reply(player,hand,"All three devices are linked. Clear all links before choosing new ones.");return;
+    }
     arm(player,hand.getBlockPos(),mode);
     reply(player,hand,mode.equals("all")?
       "Click the first Deck Control, Life Point and MTG Table, in any order.":
@@ -263,7 +266,7 @@ public final class HandLogic {
   HandBlockEntity hand=get(player,handPos);
   if(hand==null||!hand.canManage(player)){clearPending(id);return true;}
   if(!inRange(handPos,controlPos)){player.sendSystemMessage(Component.literal("Deck Control must be within 8 blocks."));return true;}
-  if(PENDING_ALL.containsKey(id)&&hand.linkedControl()!=null)return true;
+  if(PENDING_ALL.containsKey(id)&&hand.linkedControl()!=null)return false;
   HandBlockEntity used=findLinked(control);
   if(used!=null&&used!=hand){player.sendSystemMessage(Component.literal("That Deck Control is linked to another Hand."));return true;}
   hand.linkedControl(controlPos);PENDING_LINKS.remove(id);
@@ -278,7 +281,7 @@ public final class HandLogic {
   HandBlockEntity hand=get(player,handPos);
   if(hand==null||!hand.canManage(player)){clearPending(id);return true;}
   if(!inRange(handPos,lifePos)){player.sendSystemMessage(Component.literal("Life Point must be within 8 blocks."));return true;}
-  if(PENDING_ALL.containsKey(id)&&hand.linkedLife()!=null)return true;
+  if(PENDING_ALL.containsKey(id)&&hand.linkedLife()!=null)return false;
   hand.linkedLife(lifePos);PENDING_LIFE_LINKS.remove(id);
   player.sendSystemMessage(Component.literal("Life Point linked: "+shortPos(lifePos)));
   if(PENDING_ALL.containsKey(id))advance(player,hand);
@@ -291,7 +294,7 @@ public final class HandLogic {
   HandBlockEntity hand=get(player,handPos);
   if(hand==null||!hand.canManage(player)){clearPending(id);return true;}
   if(!inRange(handPos,tablePos)){player.sendSystemMessage(Component.literal("MTG Table must be within 8 blocks."));return true;}
-  if(PENDING_ALL.containsKey(id)&&hand.linkedTable()!=null)return true;
+  if(PENDING_ALL.containsKey(id)&&hand.linkedTable()!=null)return false;
   if(table.seatOwner()!=null&&hand.owner()!=null&&!table.seatOwner().equals(hand.owner())){
    player.sendSystemMessage(Component.literal("That table belongs to a different primary player."));return true;
   }
