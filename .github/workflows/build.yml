@@ -122,6 +122,9 @@ jobs:
       - name: Verify public tabletop zones, turn notification and life editing
         run: python3 -m unittest discover -s tests -p 'test_tabletop_public_player_status.py' -v
 
+      - name: Validate per-player Card Hand hotkeys and tabletop inventory deposits
+        run: python3 -m unittest discover -s tests -p 'test_tabletop_hotkeys_and_deposit.py' -v
+
       - name: Publish experimental Commander Golem JAR
         if: github.ref == 'refs/heads/experiment/commander-ai-golem'
         run: |
