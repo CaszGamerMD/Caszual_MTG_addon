@@ -116,15 +116,7 @@ public final class CommanderGolems {
    return new Setup(null,null,null,null);
   // The manager chooses all four bindings; the AI never steals nearby
   // unassigned Hands, counters, Deck Controls or somebody else's table.
-  HandBlockEntity hand=null;double nearest=Double.MAX_VALUE;
-  BlockPos at=table.getBlockPos();
-  for(BlockPos p:BlockPos.betweenClosed(at.offset(-RANGE,-2,-RANGE),at.offset(RANGE,2,RANGE))){
-   if(!world.hasChunkAt(p))continue;
-   if(world.getBlockEntity(p) instanceof HandBlockEntity h
-      &&golem.getUUID().equals(h.owner())&&(at.equals(h.linkedTable())||h.legacyTableDiscovery()&&h.linkedTable()==null)){
-    double d=at.distSqr(p);if(d<nearest){hand=h;nearest=d;}
-   }
-  }
+  HandBlockEntity hand=HandLinks.linked(world,table,golem.getUUID());
   DeckControlBlockEntity control=null;
   LifePointBlockEntity life=null;
   if(hand!=null){
@@ -158,6 +150,21 @@ public final class CommanderGolems {
   * Never modify a player's ownership or silently rebind any Card Hand. */
  private static String missingHand(ServerLevel world,IronGolem golem,TabletopBlockEntity seat){
   BlockPos at=seat.getBlockPos();
+  BlockPos precise=seat.linkedHand();
+  if(precise!=null){
+   if(!HandLinks.inTableRange(precise,at))
+    return "Linked Card Hand is more than 70 blocks from the Golem's table.";
+   if(!world.hasChunkAt(precise))
+    return "Linked Card Hand is 70 blocks or less away, but its chunk is not loaded.";
+   if(world.getBlockEntity(precise) instanceof HandBlockEntity exact){
+    if(exact.owner()==null)return "Linked Card Hand's primary is unassigned. Use Links / Primary > Assign Seated Golem.";
+    if(!golem.getUUID().equals(exact.owner()))
+     return "Linked Card Hand's primary is "+exact.primaryName()+", not this Golem.";
+    if(!at.equals(exact.linkedTable()))
+     return "Table and Card Hand links do not agree. Relink this table from the Card Hand.";
+   }
+   return "The saved Card Hand position no longer contains a valid linked Hand. Relink it.";
+  }
   HandBlockEntity wrongPrimary=null,unassigned=null,wrongSeat=null;
   for(BlockPos p:BlockPos.betweenClosed(at.offset(-RANGE,-RANGE,-RANGE),
                                       at.offset(RANGE,RANGE,RANGE))){
@@ -174,7 +181,7 @@ public final class CommanderGolems {
    ", not this Golem. Use Links / Primary > Select Golem.";
   if(wrongSeat!=null)return "This Golem's Card Hand at "+wrongSeat.getBlockPos().toShortString()+
    " is linked to a different table. Re-link it to this occupied seat.";
-  return "No assigned Card Hand found within 8 blocks of this Golem's table. "+
+  return "No assigned Card Hand found within 70 blocks of this Golem's table. "+
     "Link the Hand to this table, then use Links / Primary > Select Golem.";
  }
  public static String status(ServerLevel level,IronGolem golem){
