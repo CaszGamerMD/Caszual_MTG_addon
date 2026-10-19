@@ -319,6 +319,17 @@ public final class TabletopScreen extends LegacyScreen {
     button("Return to tray",px+152,py+111,106,()->{send("token_store",counterCard,data.seat(),0,0,0);counterOpen=false;rebuildWidgets();});
    button("Close",px+263,py+111,44,()->{counterOpen=false;rebuildWidgets();});
   }
+  if(lifePanelOpen){
+   int px=Math.max(12,width-352),py=boardY()+12;
+   g.fill(px,py,px+344,py+183,0xF017293A);
+   TabletopWire.Tile selected=data.tiles().stream()
+    .filter(t->t.pos().equals(lifePanelSeat)).findFirst().orElse(null);
+   g.drawString(font,(selected==null?"Life Point":selected.owner())+" · LIFE / COUNTERS",px+11,py+10,0xFFFFDDA3);
+   if(selected!=null){
+    g.drawString(font,"Current life: "+selected.life(),px+11,py+25,0xFFF1F5F8);
+    g.drawString(font,font.plainSubstrByWidth(selected.counters().toString(),324),px+11,py+77,0xFFAACFDF);
+   }
+  }
   if(tokenTrayOpen){
    int px=tokenPanelX(),py=boardY()+10,pw=tokenPanelW();
    tokenSearch=addRenderableWidget(new EditBox(font,px+pw/2+7,py+25,pw/2-82,19,Component.literal("Token name")));
@@ -443,7 +454,16 @@ public final class TabletopScreen extends LegacyScreen {
  }
  @Override public boolean mouseClicked(MouseButtonEvent event,boolean twice){
   int x=(int)event.x(),y=(int)event.y();
-  if(inCounterPanel(x,y))return super.mouseClicked(event,twice);
+  if(event.button()==1&&y>=5&&y<30){
+   int index=tabScroll+(x-12)/137;
+   if(x>=12&&(x-12)%137<132&&index>=0&&index<data.tiles().size()){
+    TabletopWire.Tile clicked=data.tiles().get(index);
+    if(clicked.hasLife())openLifePanel(clicked.pos());
+    else message="That player has no linked Life Point tracker.";
+    return true;
+   }
+  }
+  if(inLifePanel(x,y)||inCounterPanel(x,y))return super.mouseClicked(event,twice);
   if(revealStripAt(x,y)>=0)return true; // Public deck-reveal cards are read-only.
   if(shownCardAt(x,y)>=0&&event.button()==0)return true; // Read-only public hand.
   if(inTokenPanel(x,y)){
@@ -465,6 +485,7 @@ public final class TabletopScreen extends LegacyScreen {
    }
    return super.mouseClicked(event,twice);
   }
+  if(lifePanelOpen&&boardHit(x,y))return true;
   if(boardHit(x,y)){
    TabletopWire.Card c=cardAt(x,y);
    if(c!=null&&menuMode.equals("target")&&event.button()==0){
@@ -501,6 +522,7 @@ public final class TabletopScreen extends LegacyScreen {
   if(idx>=0){
    pendingHandZone="";pendingHandSlot=-1;
    selectedCard="";selectedZone=idx;
+   if(viewingOtherZone())return true;
    if(discardMode&&zone.equals("hand")){
     action("mulligan_discard",idx);discardMode=false;
    }else if(zone.equals("scry")){
@@ -577,7 +599,7 @@ public final class TabletopScreen extends LegacyScreen {
    zoneScroll=Math.clamp(zoneScroll-(int)Math.signum(dy)*3,0,max);
    return true;
   }
-  if(boardHit((int)mx,(int)my)&&!tokenTrayOpen&&!counterOpen
+  if(boardHit((int)mx,(int)my)&&!tokenTrayOpen&&!counterOpen&&!lifePanelOpen
     &&view!=null&&view.equals(data.seat())&&dy!=0){
    send("card_scale","",view,0,0,(int)Math.signum(dy));
    return true;
@@ -623,6 +645,12 @@ public final class TabletopScreen extends LegacyScreen {
    g.drawString(font,tile.owner().isBlank()?"Empty table":tile.owner()+"'s battlefield"+(tile.active()?"  •  CURRENT TURN":""),boardX()+8,boardY()+7,0xFFE5F3E7);
    String scaleLabel="CARDS "+tile.cardScale()+"%"+(view.equals(data.seat())?" · Scroll to resize":"");
    g.drawString(font,scaleLabel,boardX()+boardW()-font.width(scaleLabel)-10,boardY()+7,0xFFE5F3E7);
+   String deckCount="DECK "+(tile.libraryCount()<0?"?":tile.libraryCount());
+   g.drawString(font,deckCount,boardX()+boardW()-font.width(deckCount)-11,boardY()+20,0xFFD1E1F2);
+   String handCount="HAND "+(tile.handCount()<0?"?":tile.handCount());
+   int hx=boardX()+boardW()-font.width(handCount)-13,hy=boardY()+boardH()-23;
+   g.fill(hx-5,hy-3,boardX()+boardW()-7,hy+13,0xD5142533);
+   g.drawString(font,handCount,hx,hy,0xFFFAE3A1);
   }
   for(var c:displayed()){
    int x=cardX(c),y=cardY(c),cw=boardCardW(),ch=boardCardH();
