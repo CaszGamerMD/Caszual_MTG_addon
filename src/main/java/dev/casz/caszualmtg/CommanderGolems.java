@@ -27,6 +27,35 @@ public final class CommanderGolems {
  public static final String TAG="caszual_mtg_commander_golem";
  private static final String FIRST_HAND="caszual_mtg_ai_opening_hand";
  private static final String ACTION_DONE="caszual_mtg_ai_turn_processed";
+ /** Persistent scoreboard tags; one server tick per visible turn stage. */
+ private static final String STAGE_LAND="caszual_mtg_ai_stage_land";
+ private static final String STAGE_CAST="caszual_mtg_ai_stage_cast";
+ private static final String STAGE_COMBAT="caszual_mtg_ai_stage_combat";
+ private static final String STAGE_END="caszual_mtg_ai_stage_end";
+ private static void clearTurn(IronGolem golem){
+  golem.removeTag(ACTION_DONE);
+  golem.removeTag(STAGE_LAND);
+  golem.removeTag(STAGE_CAST);
+  golem.removeTag(STAGE_COMBAT);
+  golem.removeTag(STAGE_END);
+ }
+ private static void progress(IronGolem golem,String oldStage,String nextStage){
+  if(oldStage!=null)golem.removeTag(oldStage);
+  if(nextStage!=null)golem.addTag(nextStage);
+ }
+ /** Deliberately do not reveal cards still in the private Card Hand. */
+ private static void say(ServerLevel world,IronGolem golem,String message){
+  Component notice=Component.literal("[Commander Golem] "+message);
+  for(ServerPlayer viewer:world.players())
+   if(viewer.distanceToSqr(golem)<=32*32)viewer.sendSystemMessage(notice);
+ }
+ private static String phase(IronGolem golem){
+  if(golem.entityTags().contains(STAGE_LAND))return "playing a land";
+  if(golem.entityTags().contains(STAGE_CAST))return "casting creatures";
+  if(golem.entityTags().contains(STAGE_COMBAT))return "declaring combat";
+  if(golem.entityTags().contains(STAGE_END)||golem.entityTags().contains(ACTION_DONE))return "cleaning up";
+  return "drawing";
+ }
  private static final int RANGE=8;
  private CommanderGolems(){}
 
@@ -178,7 +207,8 @@ public final class CommanderGolems {
   return "Pod: "+pod.name()+" ("+pod.memberCount()+" players) | "+
     (pod.active()?"Golem's turn":"Waiting for its turn")+" | life "+s.life.getLife()
     +" | hand "+s.hand.cardCount()+" | library "+s.deck.getLibraryCount()
-    +" | public targets aimed at me "+incoming+" (responses not implemented).";
+    +" | "+(pod.active()?phase(golem):"inactive")+" | public targets aimed at me "+incoming+
+    " (responses not implemented).";
  }
 
  /** Validate the physical deck and color identity before the first shuffle/draw.
@@ -270,45 +300,88 @@ public final class CommanderGolems {
    s.table.rememberCommander(box.getStack(DeckboxBlockEntity.SECOND_SIDE_SLOT));
   }
   if(!pod.started()||pod.rolling()||!pod.active()){
-   golem.removeTag(ACTION_DONE);
+   clearTurn(golem);
    return;
   }
-  // A commander may already be on the battlefield. An empty commander slot
-  // is NOT a reason to stop drawing/playing/pass-turn after casting it.
-  if(golem.entityTags().contains(ACTION_DONE)){
-   var combat=s.table.aiAttack();
-   if(combat!=null){
-    if(world.getGameTime()%100==0)TabletopTargets.mark(world,golem.getUUID(),
-     s.table.getBlockPos(),s.table.seatName(),combat.attackerId(),combat.defender(),"","attack");
+  // Preserve old-build ACTION_DONE as a safe cleanup-only state rather than
+  // replaying a draw when upgrading an active saved game.
+  if(golem.entityTags().contains(STAGE_END)||
+     golem.entityTags().contains(ACTION_DONE)&&
+     !golem.entityTags().contains(STAGE_LAND)&&
+     !golem.entityTags().contains(STAGE_CAST)&&
+     !golem.entityTags().contains(STAGE_COMBAT)){
+   if(s.table.aiAttack()!=null){
+    if(world.getGameTime()%100==0){
+     var attack=s.table.aiAttack();
+     TabletopTargets.mark(world,golem.getUUID(),s.table.getBlockPos(),
+      s.table.seatName(),attack.attackerId(),attack.defender(),"","attack");
+    }
     return;
    }
-   if(CommanderBattleActions.cleanup(world,s.hand,s.deck)
-      &&CommanderPod.status(world,s.life).playable())
+   if(!CommanderBattleActions.cleanup(world,s.hand,s.deck)){
+    // Never lose physical cards when there is no adjacent Graveyard space.
+    return;
+   }
+   if(CommanderPod.status(world,s.life).playable()){
+    say(world,golem,"passes the turn.");
     LifePlayGroups.passTurn(world,s.life.getBlockPos());
+    clearTurn(golem);
+   }
    return;
   }
-  // Only one draw and land play per real turn. Persist this marker before
-  // making any inventory mutations to avoid double-draw on a tick/restart.
+
+  if(golem.entityTags().contains(STAGE_COMBAT)){
+   progress(golem,STAGE_COMBAT,STAGE_END);
+   if(CommanderCombat.declare(world,golem,s.table,s.life)){
+    say(world,golem,"declares an attack; waiting for the defender to block or take damage.");
+    return;
+   }
+   return;
+  }
+
+  if(golem.entityTags().contains(STAGE_CAST)){
+   progress(golem,STAGE_CAST,STAGE_COMBAT);
+   int creatures=CommanderBattleActions.castHand(golem,s.table,s.hand);
+   boolean commander=CommanderBattleActions.castCommander(golem,s.table,box);
+   creatures+=CommanderBattleActions.castHand(golem,s.table,s.hand);
+   if(creatures>0)say(world,golem,"casts "+creatures+" creature"+(creatures==1?"":"s")+".");
+   if(commander)say(world,golem,"casts its commander.");
+   if(creatures==0&&!commander)say(world,golem,"has no supported creature spell it can pay for.");
+   return;
+  }
+
+  if(golem.entityTags().contains(STAGE_LAND)){
+   progress(golem,STAGE_LAND,STAGE_CAST);
+   int previous=s.table.cards().size();
+   boolean placed=CommanderBattleActions.playLand(golem,s.table,s.hand);
+   if(placed&&s.table.cards().size()>previous)
+    say(world,golem,"plays "+TcgCardMeta.displayName(s.table.cards().getLast().stack())+".");
+   return;
+  }
+
+  // Start of a *new* real pod turn: mark next stage BEFORE drawing, so a
+  // chunk unload/restart never plays or draws the same turn twice.
   golem.addTag(ACTION_DONE);
+  golem.addTag(STAGE_LAND);
   CommanderBattleActions.untapAndMarkReady(golem,s.table);
   if(s.deck.getLibraryCount()==0){
+   say(world,golem,"cannot draw from an empty library and loses.");
    LifePlayGroups.setDead(world,s.life.getBlockPos(),true);
+   clearTurn(golem);
    return;
   }
   if(!drawIntoHand(s.deck,s.hand,1)){
-   // Full hands should be handled, not silently consume a card or
-   // throw the pod's turn away. Cleanup will discard to seven.
-   if(s.hand.cardCount()<HandBlockEntity.SIZE){golem.removeTag(ACTION_DONE);return;}
-   if(!CommanderBattleActions.cleanup(world,s.hand,s.deck)){golem.removeTag(ACTION_DONE);return;}
-   if(!drawIntoHand(s.deck,s.hand,1)){golem.removeTag(ACTION_DONE);return;}
+   if(s.hand.cardCount()==HandBlockEntity.SIZE
+     &&CommanderBattleActions.cleanup(world,s.hand,s.deck)
+     &&drawIntoHand(s.deck,s.hand,1)){
+    say(world,golem,"discards down to hand size, then draws one card.");
+    return;
+   }
+   // A missing/full physical Graveyard blocks the draw safely. No duplicate
+   // cards are created or removed; retry next tick if the blocker clears.
+   clearTurn(golem);
+   return;
   }
-  CommanderBattleActions.playLand(golem,s.table,s.hand);
-  CommanderBattleActions.castHand(golem,s.table,s.hand);
-  CommanderBattleActions.castCommander(golem,s.table,box);
-  CommanderBattleActions.castHand(golem,s.table,s.hand);
-  if(CommanderCombat.declare(world,golem,s.table,s.life))return;
-  if(CommanderBattleActions.cleanup(world,s.hand,s.deck)
-     &&CommanderPod.status(world,s.life).playable())
-   LifePlayGroups.passTurn(world,s.life.getBlockPos());
+  say(world,golem,"draws a card ("+s.hand.cardCount()+" in hand).");
  }
 }
