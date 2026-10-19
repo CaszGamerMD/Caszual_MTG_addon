@@ -16,7 +16,7 @@ public final class HandWire {
   );
   public Type<Request> type(){return TYPE;}
  }
- public record Reply(BlockPos pos,String message,boolean visible,boolean authorized,boolean canManage,boolean revealAll,int count,String linked,List<String> viewers,List<ItemStack> cards,int strictMulligans,int pendingDiscards,boolean hasStaff,String staffLeft,String staffRight,String tableColor,String lifeLink) implements CustomPacketPayload {
+ public record Reply(BlockPos pos,String message,boolean visible,boolean authorized,boolean canManage,boolean revealAll,int count,String linked,List<String> viewers,List<ItemStack> cards,int strictMulligans,int pendingDiscards,boolean hasStaff,String staffLeft,String staffRight,String tableColor,String lifeLink,String tableLink,String primaryName) implements CustomPacketPayload {
   public static final Type<Reply> TYPE=new Type<>(CaszualMtg.id("hand_reply"));
   public static final StreamCodec<RegistryFriendlyByteBuf,Reply> CODEC=StreamCodec.of(
    (b,p)->{
@@ -25,7 +25,7 @@ public final class HandWire {
     b.writeVarInt(p.viewers.size());for(String s:p.viewers)b.writeUtf(s,64);
     b.writeVarInt(p.cards.size());for(ItemStack s:p.cards)ItemStack.OPTIONAL_STREAM_CODEC.encode(b,s);
     b.writeVarInt(p.strictMulligans);b.writeVarInt(p.pendingDiscards);
-    b.writeBoolean(p.hasStaff);b.writeUtf(p.staffLeft,7);b.writeUtf(p.staffRight,7);b.writeUtf(p.tableColor,7);b.writeUtf(p.lifeLink,128);
+    b.writeBoolean(p.hasStaff);b.writeUtf(p.staffLeft,7);b.writeUtf(p.staffRight,7);b.writeUtf(p.tableColor,7);b.writeUtf(p.lifeLink,128);b.writeUtf(p.tableLink,128);b.writeUtf(p.primaryName,64);
    },
    b->{
     BlockPos pos=b.readBlockPos();String msg=b.readUtf(512);
@@ -39,9 +39,9 @@ public final class HandWire {
     if(strict<0||strict>100||pending<0||pending>HandBlockEntity.SIZE)throw new IllegalArgumentException("Invalid hand mulligan state");
     boolean staff=b.readBoolean();String left=b.readUtf(7),right=b.readUtf(7);
     if(!StaffColors.valid(left)||!StaffColors.valid(right))throw new IllegalArgumentException("Invalid staff color packet");
-    String tableColor=b.readUtf(7),lifeLink=b.readUtf(128);
+    String tableColor=b.readUtf(7),lifeLink=b.readUtf(128),tableLink=b.readUtf(128),primaryName=b.readUtf(64);
     if(!StaffColors.valid(tableColor))throw new IllegalArgumentException("Invalid table color");
-    return new Reply(pos,msg,visible,authorized,manage,reveal,count,linked,List.copyOf(viewers),List.copyOf(cards),strict,pending,staff,left,right,tableColor,lifeLink);
+    return new Reply(pos,msg,visible,authorized,manage,reveal,count,linked,List.copyOf(viewers),List.copyOf(cards),strict,pending,staff,left,right,tableColor,lifeLink,tableLink,primaryName);
    }
   );
   public Type<Reply> type(){return TYPE;}
