@@ -52,12 +52,15 @@ public class ChairBlock extends BaseEntityBlock {
 
  private static VoxelShape rotateClockwise(VoxelShape source){
   VoxelShape rotated=Shapes.empty();
-  // Rotation by +90 degrees around the block center:
-  // (x,z) -> (z, 1-x). All AABBs use block coordinates 0..1.
+  // Minecraft blockstate model 'y':90 rotates the south/back edge
+  // towards WEST, not east. The earlier AABB transform rotated the
+  // opposite way, so EAST and WEST chairs had mirrored collision.
+  // Map (x,z) -> (1-z,x) and preserve all Y coordinates.
+  // NORTH and SOUTH remain unchanged; E/W now match the baked model.
   for(var box:source.toAabbs()){
    rotated=Shapes.or(rotated,Block.box(
-    box.minZ*16,box.minY*16,(1-box.maxX)*16,
-    box.maxZ*16,box.maxY*16,(1-box.minX)*16
+    (1-box.maxZ)*16,box.minY*16,box.minX*16,
+    (1-box.minZ)*16,box.maxY*16,box.maxX*16
    ));
   }
   return rotated.optimize();
