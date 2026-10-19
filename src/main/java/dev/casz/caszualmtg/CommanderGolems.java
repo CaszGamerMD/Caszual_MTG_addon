@@ -271,9 +271,9 @@ public final class CommanderGolems {
   if(!drawIntoHand(s.deck,s.hand,1)){
    // Full hands should be handled, not silently consume a card or
    // throw the pod's turn away. Cleanup will discard to seven.
-   if(s.hand.cardCount()<HandBlockEntity.SIZE)return;
-   if(!CommanderBattleActions.cleanup(world,s.hand,s.deck))return;
-   if(!drawIntoHand(s.deck,s.hand,1))return;
+   if(s.hand.cardCount()<HandBlockEntity.SIZE){golem.removeTag(ACTION_DONE);return;}
+   if(!CommanderBattleActions.cleanup(world,s.hand,s.deck)){golem.removeTag(ACTION_DONE);return;}
+   if(!drawIntoHand(s.deck,s.hand,1)){golem.removeTag(ACTION_DONE);return;}
   }
   CommanderBattleActions.playLand(golem,s.table,s.hand);
   CommanderBattleActions.castHand(golem,s.table,s.hand);
