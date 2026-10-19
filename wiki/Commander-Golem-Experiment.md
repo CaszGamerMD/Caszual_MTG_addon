@@ -2,22 +2,24 @@
 
 This page documents a **work-in-progress Commander opponent** on the `experiment/commander-ai-golem` branch. It **does not yet implement the complete Magic Comprehensive Rules**; do not use it as a rules referee or with valued physical inventories.
 
-## Setup
+## Setup — explicitly linked Card Hand
 
-1. Place a **Caszual MTG Tabletop** with an **unclaimed seat tile** immediately adjacent to a **Caszual MTG chair**.
-2. Craft the **Commander Golem** (iron ingots, carved pumpkin, redstone), or take it from the functional creative tab. Use it on the chair to spawn the seated iron golem.
-3. Place a **new, empty, unclaimed Card Hand** within five blocks of the table.
-4. Place a **Deck Control** within three blocks of that Hand. Place or link a dedicated MTGCard deckbox to that control. **Do not use a human player's Deck Control/deckbox.**
-5. Load exactly **99 main-deck cards** and **one eligible commander** in the deckbox's MTGCard Commander slot (slot 100). No partner pairing yet.
-6. Place a dedicated MTGCard **Life Point** counter within five blocks of the table and name its display **Commander Golem**. Add that life counter to the same turn/play group as the human players, and start the game with 40 life.
-7. Right-click the golem with an empty hand to see its status. The golem can reserve its own unclaimed Hand, link its Deck Control, and link the named Life Point when all resources are available.
+1. Place a **Caszual MTG Tabletop** with an unclaimed seat immediately beside a **Caszual MTG chair**.
+2. Place a **Commander Golem** item on the chair. It now appears as a small, original **Brass Squire–inspired copper-and-green-eyed voxel robot**, with an oversized domed head and sword. The underlying golem is invisible but retains its normal interaction hitbox and seat ownership.
+3. Place an empty **Card Hand** close to the table. **New Hands start unlinked, with no primary gameplay player.** The person placing it is its manager, not automatically its primary.
+4. Right-click the Hand and select **Links / Primary**, then **Link all — first of each**. Close the UI and right-click the first Deck Control, Life Point and MTG Table you want linked, in **any order**, all within eight blocks of the Hand. The first of each device type is saved and later clicks of that type work normally. This mode closes after all three links are set. Individual link buttons, Clear all links, and Cancel link mode are also available.
+5. Reopen **Links / Primary**. Click **Select Golem — click it**, close the screen, and right-click the seated Golem. This explicitly sets the Hand's primary identity to the Golem UUID. For a human Hand instead, type an **online player's exact username** and select **Set Primary Player**. The original manager can still adjust links and sharing even if the golem/player is primary.
+6. Put a physical deckbox next to the dedicated Deck Control; load 99 main-deck cards and an eligible commander in its Commander slot. Place the linked Life Point in the same MTGCard play group as the humans and start at 40 life.
+7. Right-click the Golem to view its status. Check the Hand's three links and selected primary if it is still waiting.
 
-Keep a player within 32 blocks while testing. AI decisions run on the server once a second around online players and do not force-load chunks.
+Existing, previously saved Hands retain their administrative owner and legacy tabletop discovery until you explicitly relink them; newly placed Hands do not auto-discover or auto-claim nearby devices. No Hand may be silently stolen by the golem. Keep a player within 32 blocks for AI testing; no chunks are force-loaded.
+
+**Visual model:** the copper/brass 3D body is a custom item model carried by a synchronized, non-interactive ItemDisplay. On reload, it is restored if missing, and detached old displays are cleaned up. The original iron golem remains the server-side NPC for player clicks, rather than replacing it with another kind of mob.
 
 ## Current first-pass automation
 
 - Persistent, scaled-down, stationary iron golem; real adjacent tabletop seat and dedicated Card Hand/deckbox.
-- Refuses to use existing claimed player Hands or already-claimed table seats.
+- Refuses to use player Hands or table seats not explicitly linked and assigned to its own golem identity.
 - Basic 100-card Commander deck size, singleton, and five-color identity checks; one commander; banned-card rejection when a card provides that legality metadata.
 - Draws an opening seven into its own Hand, without publicly revealing the cards.
 - Watches its designated Life Point's active turn, untaps its own tabletop cards, draws one, plays at most one land from hand, then passes turn.
