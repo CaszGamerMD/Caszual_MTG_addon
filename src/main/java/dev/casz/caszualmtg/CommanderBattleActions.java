@@ -44,7 +44,7 @@ public final class CommanderBattleActions {
  }
  private static boolean usableLand(ItemStack card){
   var meta=TcgCardMeta.read(card);
-  return CommanderMana.land(meta.typeLine(),meta.oracleText()).isPresent();
+  return CommanderMana.land(meta.name(),meta.typeLine(),meta.oracleText()).isPresent();
  }
  /** Pick an untapped land that improves the golem's available colors. */
  public static boolean playLand(IronGolem bot,TabletopBlockEntity table,HandBlockEntity hand){
@@ -59,7 +59,7 @@ public final class CommanderBattleActions {
   CommanderMana.Land planned=null;
   for(int i=0;i<cards.size();i++){
    var meta=TcgCardMeta.read(cards.get(i));
-   var land=CommanderMana.land(meta.typeLine(),meta.oracleText());
+   var land=CommanderMana.land(meta.name(),meta.typeLine(),meta.oracleText());
    if(land.isEmpty())continue;
    CommanderMana.Land candidate=land.get();
    int value=Integer.bitCount(candidate.mask()&~have)*100+
@@ -125,6 +125,40 @@ public final class CommanderBattleActions {
   }
   return cast;
  }
+ /** Resolve only whole-text, untargeted effects; all cards remain physical.
+  * This prototype has no priority stack, so these actions are announced as
+  * automatic resolutions, not as a complete MTG rules engine.
+  */
+ public static int castSimpleSpells(ServerLevel world,IronGolem bot,TabletopBlockEntity table,
+        HandBlockEntity hand,DeckControlBlockEntity deck,com.spider.mtgcard.life.LifePointBlockEntity life){
+  var grave=graveyard(world,deck);if(grave==null)return 0;
+  int count=0;
+  for(int action=0;action<20;action++){
+   int destination=-1;for(int slot=0;slot<100;slot++)if(grave.getStack(slot).isEmpty()){destination=slot;break;}
+   if(destination<0)break;
+   var cards=hand.visibleCards();int selected=-1;CommanderSimpleSpells.Effect effect=null;List<String> paid=List.of();
+   for(int i=0;i<cards.size();i++){
+    var meta=TcgCardMeta.read(cards.get(i));var parsed=CommanderSimpleSpells.parse(meta.typeLine(),meta.oracleText());
+    var cost=CommanderMana.parse(meta.manaCost());if(parsed.isEmpty()||cost.isEmpty())continue;
+    var candidate=parsed.get();
+    if(candidate.draw()>deck.getLibraryCount()||hand.cardCount()-1+candidate.draw()>HandBlockEntity.SIZE)continue;
+    var payment=CommanderMana.pay(cost.get(),mana(bot,table));if(payment.isEmpty())continue;
+    selected=i;effect=candidate;paid=payment.get();break;
+   }
+   if(selected<0)break;
+   ItemStack spell=hand.removeVisibleIndex(selected);if(spell.isEmpty())break;
+   // Preflight above guarantees room. Payment is committed exactly once.
+   tapPaid(table,paid);
+   if(effect.draw()>0){
+    var drawn=deck.takeTopCards(effect.draw());
+    for(ItemStack card:drawn)if(!hand.addCard(card))throw new IllegalStateException("Preflighted draw slot lost");
+   }
+   if(effect.life()>0)life.addLife(effect.life());
+   grave.setStack(destination,spell);
+   count++;
+  }
+  return count;
+ }
  /** Commander spell is cast with an additional {2} per previous command-zone
   * cast. Reject any commander abilities not supported by the tiny interpreter. */
  public static boolean castCommander(IronGolem bot,TabletopBlockEntity table,DeckboxBlockEntity box){
@@ -187,3 +221,4 @@ public final class CommanderBattleActions {
   return true;
  }
 }
+

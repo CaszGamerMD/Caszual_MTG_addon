@@ -23,12 +23,13 @@ public final class CommanderSimpleCards {
   }catch(NumberFormatException e){return Optional.empty();}
   if(p<0||t<1||p>1000||t>1000)return Optional.empty();
   Set<String> keywords=new HashSet<>();
-  String text=Objects.requireNonNullElse(oracle,"").strip();
+  String text=CommanderOracle.rules(oracle);
   if(!text.isBlank()){
    // Only completely-understood, passive keywords. No ETB triggers,
    // activated abilities, modifiers, reminder text, or conditional choices.
    for(String raw:text.split("[,\\n]")){
-    String line=raw.strip().toLowerCase(Locale.ROOT);
+    String line=raw.strip().toLowerCase(Locale.ROOT).replaceAll("\\.$","").strip();
+    if(line.isBlank())continue;
     if(!PASSIVE.contains(line))return Optional.empty();
     keywords.add(line);
    }
@@ -52,3 +53,4 @@ public final class CommanderSimpleCards {
     attacker.power()>=blocker.toughness(),!attacker.has("vigilance"));
  }
 }
+

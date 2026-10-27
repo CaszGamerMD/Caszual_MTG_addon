@@ -349,12 +349,14 @@ public final class CommanderGolems {
 
   if(golem.entityTags().contains(STAGE_CAST)){
    progress(golem,STAGE_CAST,STAGE_COMBAT);
+   int spells=CommanderBattleActions.castSimpleSpells(world,golem,s.table,s.hand,s.deck,s.life);
    int creatures=CommanderBattleActions.castHand(golem,s.table,s.hand);
    boolean commander=CommanderBattleActions.castCommander(golem,s.table,box);
    creatures+=CommanderBattleActions.castHand(golem,s.table,s.hand);
    if(creatures>0)say(world,golem,"casts "+creatures+" creature"+(creatures==1?"":"s")+".");
    if(commander)say(world,golem,"casts its commander.");
-   if(creatures==0&&!commander)say(world,golem,"has no supported creature spell it can pay for.");
+   if(spells>0)say(world,golem,"resolves "+spells+" supported draw/lifegain spell"+(spells==1?"":"s")+".");
+   if(creatures==0&&!commander&&spells==0)say(world,golem,"has no supported spell it can pay for; unsupported abilities remain in hand.");
    return;
   }
 
@@ -393,3 +395,4 @@ public final class CommanderGolems {
   say(world,golem,"draws a card ("+s.hand.cardCount()+" in hand).");
  }
 }
+

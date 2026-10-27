@@ -83,3 +83,12 @@ An integration spike should first prove one deterministic **headless** two-playe
 4. Match observable resolutions against a trusted rules engine/reference; zero unexplained illegal transitions before shipping as a real opponent.
 
 **Installation safety:** keep this experimental JAR and worlds separate from your normal multiplayer setup. Avoid valuable saved decks until a full integration/game-restart test passes.
+
+
+## Turn/card support update (0.12.1)
+
+The AI now recognizes balanced parenthetical reminder text without discarding actual ability clauses. Basic-land reminders and named unconditional enters-tapped lands are understood. Missing mana costs are rejected; only explicit zero costs are treated as free.
+
+During its main phase the golem can also pay for whole-text, untargeted draw (one through seven cards) and simple lifegain instants/sorceries. Physical spell cards move to the adjacent Graveyard; mana sources tap, drawn cards enter the private Hand, and lifegain updates the linked Life Point. A missing/full Graveyard or insufficient hand/library space prevents the action. Unsupported additional clauses, targets, variable costs and drawbacks are never ignored. Draw spells can supply creatures for the same main phase.
+
+This remains an automatic-resolution prototype, with no priority/response stack. It does not understand arbitrary Oracle text, triggers, replacement effects, activated abilities or all Commander rules. Parser checks are not a real multiplayer game acceptance test.

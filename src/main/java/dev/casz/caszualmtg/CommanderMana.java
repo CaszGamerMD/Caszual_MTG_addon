@@ -25,7 +25,7 @@ public final class CommanderMana {
  public static Optional<Cost> parse(String raw){
   if(raw==null)return Optional.empty();
   String s=raw.trim().toUpperCase(Locale.ROOT);
-  if(s.isBlank())return Optional.of(new Cost(0,0,0,0,0,0,0));
+  if(s.isBlank())return Optional.empty(); // An absent mana cost is not {0}.
   Matcher m=Pattern.compile("\\{([^{}]+)}").matcher(s);
   int[] counts=new int[6];int generic=0,last=0;
   while(m.find()){
@@ -43,11 +43,15 @@ public final class CommanderMana {
  /** Only deterministic, unconditional one-mana land abilities can be automated.
   * Recognize the common ETB-tapped basic duals without ignoring their drawback. */
  public record Land(int mask,boolean entersTapped){}
- public static Optional<Land> land(String typeLine,String oracle){
+ public static Optional<Land> land(String typeLine,String oracle){return land("",typeLine,oracle);}
+ public static Optional<Land> land(String name,String typeLine,String oracle){
   String type=Objects.requireNonNullElse(typeLine,"").toLowerCase(Locale.ROOT);
   if(!type.contains("land")||type.contains("creature")||type.contains("battle"))
    return Optional.empty();
-  String text=Objects.requireNonNullElse(oracle,"").trim().toUpperCase(Locale.ROOT).replace("\r","");
+  String text=CommanderOracle.rules(oracle).trim().toUpperCase(Locale.ROOT).replace("\r","");
+  String self=Objects.requireNonNullElse(name,"").toUpperCase(Locale.ROOT);
+  if(!self.isBlank()&&text.startsWith(self+" ENTERS"))
+   text="THIS LAND"+text.substring(self.length());
   boolean tapped=false;
   if(text.startsWith("THIS LAND ENTERS TAPPED.\n")){
    tapped=true;text=text.substring("THIS LAND ENTERS TAPPED.\n".length()).trim();
@@ -78,7 +82,7 @@ public final class CommanderMana {
  }
  /** Recognize basic lands and extremely simple, unconditional tap-for-one abilities. */
  public static int production(String name,String typeLine,String oracle){
-  return land(typeLine,oracle).map(Land::mask).orElse(0);
+  return land(name,typeLine,oracle).map(Land::mask).orElse(0);
  }
  private static int bit(char c){return switch(c){case 'W'->1;case 'U'->2;case 'B'->4;case 'R'->8;case 'G'->16;case 'C'->32;default->0;};}
  /** Source IDs are unique battlefield card ids. Plan is a deterministic list of ids to tap. */
@@ -117,3 +121,4 @@ public final class CommanderMana {
   return false;
  }
 }
+

@@ -3,6 +3,13 @@ package dev.casz.caszualmtg;
 public final class CommanderSimpleCardsCheck {
  private static void check(boolean value,String reason){if(!value)throw new AssertionError(reason);}
  public static void main(String[] args){
+  check(CommanderSimpleCards.creature("Creature — Bird","Flying (This creature can't be blocked except by creatures with flying or reach.)","2","2").isPresent(),"reminder text does not hide supported keyword");
+  check(CommanderSimpleCards.creature("Creature — Bird","Flying (Reminder.)\nWhen this creature enters, draw a card.","2","2").isEmpty(),"actual ETB clause cannot be stripped");
+  check(CommanderSimpleSpells.parse("Sorcery","Draw two cards.").orElseThrow().draw()==2,"draw two");
+  check(CommanderSimpleSpells.parse("Instant","You gain 3 life.").orElseThrow().life()==3,"gain life");
+  check(CommanderSimpleSpells.parse("Sorcery","Draw two cards. You lose 2 life.").isEmpty(),"do not ignore drawback");
+  check(CommanderSimpleSpells.parse("Sorcery","Target player draws two cards.").isEmpty(),"targeting not inferred");
+  check(CommanderSimpleSpells.parse("Sorcery","Draw X cards.").isEmpty(),"variable draw not guessed");
   var bear=CommanderSimpleCards.creature("Creature — Bear","","2","2").orElseThrow();
   var eagle=CommanderSimpleCards.creature("Creature — Bird","Flying, vigilance","2","3").orElseThrow();
   var spider=CommanderSimpleCards.creature("Creature — Spider","Reach","1","4").orElseThrow();
@@ -38,3 +45,4 @@ public final class CommanderSimpleCardsCheck {
   System.out.println("Simple creature and combat checks passed.");
  }
 }
+

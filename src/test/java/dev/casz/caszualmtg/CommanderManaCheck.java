@@ -7,7 +7,7 @@ public final class CommanderManaCheck {
  public static void main(String[] args){
   var c=CommanderMana.parse("{2}{W}{U}").orElseThrow();
   ok(c.total()==4&&c.generic()==2&&c.white()==1&&c.blue()==1,"parse colored cost");
-  ok(CommanderMana.parse("").isPresent(),"zero mana cost");
+  ok(CommanderMana.parse("").isEmpty(),"absent mana cost is not a free spell");
   ok(CommanderMana.parse("{X}{G}").isEmpty(),"X cannot be guessed");
   ok(CommanderMana.parse("{W/U}").isEmpty(),"hybrid is unsupported");
   ok(CommanderMana.parse("{2}{G/P}").isEmpty(),"Phyrexian must be rejected");
@@ -21,6 +21,9 @@ public final class CommanderManaCheck {
   ok(CommanderMana.production("Ancient Tomb","Land","{T}: Add {C}{C}.")==0,"two-mana source unsupported");
   ok(CommanderMana.production("Tap Land","Land","Enters tapped.\n{T}: Add {U}.")==0,"ETB text must not be assumed");
 
+  ok(CommanderMana.land("Island","Basic Land — Island","({T}: Add {U}.)").orElseThrow().mask()==2,"basic reminder text");
+  ok(CommanderMana.land("Mystic Gate","Land","Mystic Gate enters tapped.\n{T}: Add {U}.").orElseThrow().entersTapped(),"named tapland");
+  ok(CommanderMana.land("Mystic Gate","Land","Mystic Gate enters tapped unless you control an Island.\n{T}: Add {U}.").isEmpty(),"conditional taplands remain unsupported");
   var slow=CommanderMana.land("Land","This land enters tapped.\n{T}: Add {G}.").orElseThrow();
   ok(slow.entersTapped()&&slow.mask()==16,"recognized tapland should enter tapped and produce G");
   var oldSlow=CommanderMana.land("Land","This land enters the battlefield tapped.\n{T}: Add {U}.").orElseThrow();
@@ -55,3 +58,4 @@ public final class CommanderManaCheck {
   System.out.println("Commander mana check passed.");
  }
 }
+
