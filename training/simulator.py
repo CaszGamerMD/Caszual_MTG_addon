@@ -5,9 +5,11 @@ This is NOT a complete Commander rules engine or a Minecraft entity test.
 """
 from __future__ import annotations
 import argparse
+from card_events import Game as EventGame, Permanent as EventPermanent, Definition as EventDefinition, parse_card as parse_event_card
 import base64
 from dataclasses import dataclass, field, replace
 import hashlib
+import itertools
 import json
 import math
 from pathlib import Path
@@ -163,6 +165,9 @@ class Card:
     land_rule: str = ""
     land_subtypes: tuple[str, ...] = ()
     basic_land: bool = False
+    event_definition: EventDefinition | None = None
+    token_count: int = 0
+    is_token: bool = False
 
 
 
@@ -182,6 +187,9 @@ class Permanent:
     card: Card
     tapped: bool = False
     fresh: bool = True
+    saddled: bool = False
+    animated: bool = False
+    counters: int = 0
 
 
 @dataclass
@@ -192,6 +200,10 @@ class Player:
     graveyard: list[Card] = field(default_factory=list)
     life: int = 40
     failed_draw: bool = False
+    command_zone: Card | None = None
+    commander_id: str = ""
+    commander_casts: int = 0
+    commander_damage: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -201,6 +213,7 @@ class Candidate:
     card_id: str = ""
     features: tuple[float, ...] = ()
     label: str = ""
+    tap_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -266,7 +279,7 @@ class Simulator:
     def __init__(self, rules: RulesBridge, seed: int, starter: int = 0,
                  policies: tuple[Policy, Policy] = (Policy(), Policy()), max_turns: int = 100,
                  decks: tuple[list[Card], list[Card]] | None = None, starting_life: int = 40,
-                 diagnostic: bool = False):
+                 diagnostic: bool = False, commanders: tuple[Card, Card] | None = None):
         if starter not in (0, 1) or max_turns < 1 or starting_life < 1:
             raise ValueError("Invalid simulation options")
         self.rules, self.seed, self.starter = rules, seed, starter
@@ -277,10 +290,13 @@ class Simulator:
         for seat, cards in enumerate(decks or (demo_deck(0), demo_deck(1))):
             cards = list(cards)
             random.Random(seed * 2 + seat).shuffle(cards)
-            self.players.append(Player(cards, life=starting_life))
-        if len({c.id for p in self.players for c in p.library}) != sum(len(p.library) for p in self.players):
+            commander = commanders[seat] if commanders else None
+            self.players.append(Player(cards, life=starting_life, command_zone=commander,
+                                       commander_id=commander.id if commander else ""))
+        all_cards = [c for p in self.players for c in p.library] + [p.command_zone for p in self.players if p.command_zone]
+        if len({c.id for c in all_cards}) != len(all_cards):
             raise ValueError("Card identities must be unique")
-        self.total_cards = tuple(len(p.library) for p in self.players)
+        self.total_cards = tuple(len(p.library) + int(p.command_zone is not None) for p in self.players)
         self.turn, self.active, self.phase = 0, starter, "setup"
         self.events: list[dict] = []
         self.decisions: list[dict] = []  # post-match data; never supplied to either player
@@ -291,11 +307,16 @@ class Simulator:
         self.pending: str | None = None
         self.land_played = False
         self.main_return = ""
+        self.token_sequence = 0
         self.log("setup", "Two independent agents use frozen policies; sandbox rules apply.")
         for player in self.players:
             for card in player.library:
                 if card.kind == "unsupported" and self.diagnostic:
                     continue  # Retained in the real library/hand but never treated as playable.
+                if self.diagnostic and card.event_definition and card.event_definition.supported:
+                    continue
+                if self.diagnostic and card.kind == "token_spell" and 1 <= card.token_count <= 4:
+                    continue
                 if card.kind not in ("land", "creature", "spell"):
                     self.pause("Unsupported sandbox card kind: " + card.kind, card)
                     return
@@ -323,22 +344,96 @@ class Simulator:
             for _ in range(7):
                 self.draw(seat)
 
+    def display_permanent(self, item: Permanent) -> dict:
+        effective = self.effective_card(item)
+        c = effective or item.card
+        return {"id": c.id, "name": c.name, "kind": c.kind, "power": c.power,
+                "toughness": c.toughness, "traits": c.traits, "tapped": item.tapped,
+                "fresh": item.fresh, "saddled": item.saddled, "counters": item.counters}
+
     def state(self) -> dict:
         return {"active": self.active, "turn": self.turn, "phase": self.phase,
                 "players": [{"seat": i, "life": p.life, "handCount": len(p.hand),
                              "libraryCount": len(p.library),
-                             "battlefield": [{"id": x.card.id, "name": x.card.name,
-                                              "kind": x.card.kind, "power": x.card.power,
-                                              "toughness": x.card.toughness, "traits": x.card.traits,
-                                              "tapped": x.tapped, "fresh": x.fresh} for x in p.battlefield],
+                             "battlefield": [self.display_permanent(x) for x in p.battlefield],
+                             "commanderInZone": p.command_zone is not None,
+                             "commanderDamage": dict(p.commander_damage),
                              "graveyard": [{"id": c.id, "name": c.name} for c in p.graveyard]}
                             for i, p in enumerate(self.players)]}
 
     def invariant(self):
         for i, p in enumerate(self.players):
             cards = p.library + p.hand + p.graveyard + [x.card for x in p.battlefield]
-            if len(cards) != self.total_cards[i] or len({c.id for c in cards}) != len(cards):
+            if p.command_zone: cards.append(p.command_zone)
+            if sum(not c.is_token for c in cards) != self.total_cards[i] or len({c.id for c in cards}) != len(cards):
                 raise RuntimeError("Card conservation failed")
+
+    def event_game(self, phase: str) -> EventGame:
+        """Adapt public battlefield state to the shared type-aware event kernel."""
+        game = EventGame(turn_player=self.active, phase=phase)
+        for seat, player in enumerate(self.players):
+            for item in player.battlefield:
+                card = item.card
+                if card.kind == "land": continue
+                definition = card.event_definition
+                if definition is None:
+                    if card.kind != "creature": continue
+                    keywords = frozenset(k for k in card.traits.split(";")[-1].split(",") if k)
+                    definition = EventDefinition(card.name, frozenset({"Creature"}), frozenset(),
+                                                 False, card.power, card.toughness, keywords)
+                game.battlefield[card.id] = EventPermanent(card.id, definition, seat, item.tapped,
+                    item.fresh, item.saddled, item.animated, counters=item.counters, token=item.card.is_token)
+        return game
+
+    def sync_events(self, game: EventGame):
+        for player in self.players:
+            for item in player.battlefield:
+                state = game.battlefield.get(item.card.id)
+                if state:
+                    item.tapped, item.fresh = state.tapped, state.fresh
+                    item.saddled, item.animated, item.counters = state.saddled, state.animated, state.counters
+
+    def effective_card(self, item: Permanent) -> Card | None:
+        game = self.event_game("combat")
+        state = game.battlefield.get(item.card.id)
+        if not state or not game.creature(state): return None
+        power, toughness = game.stats(state)
+        keywords = set(state.definition.abilities)
+        for ability in ("haste", "indestructible"):
+            if game.has(state, ability): keywords.add(ability)
+        return replace(item.card, kind="creature", power=power, toughness=toughness,
+                       traits=f"{power};{toughness};"+",".join(sorted(keywords)))
+
+    def enter_creature(self, card: Card, player: Player):
+        game = self.event_game("main")
+        definition = card.event_definition
+        if definition is None:
+            definition = EventDefinition(card.name, frozenset({"Creature"}), frozenset(), False,
+                card.power, card.toughness, frozenset(k for k in card.traits.split(";")[-1].split(",") if k))
+        game._next_token = self.token_sequence
+        known = set(game.battlefield)
+        game.enter(EventPermanent(card.id, definition, self.active))
+        player.battlefield.append(Permanent(card))
+        for token_id in game.battlefield.keys()-known-{card.id}:
+            token_state = game.battlefield[token_id]
+            if not token_state.token: raise RuntimeError("Unknown event-created permanent")
+            d = token_state.definition
+            token = Card(token_id,d.name,"creature",traits=f"{d.power};{d.toughness};"+
+                ",".join(sorted(d.abilities)),power=d.power,toughness=d.toughness,
+                event_definition=d,is_token=True)
+            player.battlefield.append(Permanent(token))
+        self.token_sequence = game._next_token
+        self.sync_events(game)
+        return [event for event in game.events if event["kind"] == "trigger"]
+
+    def send_to_destination(self, player: Player, item: Permanent):
+        player.battlefield.remove(item)
+        if item.card.is_token:
+            return  # Tokens cease to exist after leaving the battlefield.
+        if item.card.id == player.commander_id:
+            player.command_zone = item.card  # This prototype chooses the command-zone option.
+        else:
+            player.graveyard.append(item.card)
 
     def log(self, kind: str, message: str, **details):
         self.invariant()
@@ -365,23 +460,55 @@ class Simulator:
         self.log("draw", f"Player {seat + 1} draws one card.", actor=seat)
 
     def outcome(self):
-        dead = [p.life <= 0 or p.failed_draw for p in self.players]
+        dead = [p.life <= 0 or p.failed_draw or any(value >= 21 for value in p.commander_damage.values())
+                for p in self.players]
         if any(dead):
             self.finished = True
             self.winner = None if all(dead) else (1 if dead[0] else 0)
             self.result = "draw" if self.winner is None else "win"
-            reasons = [["zero life" if p.life <= 0 else None, "failed draw" if p.failed_draw else None] for p in self.players]
+            reasons = [["zero life" if p.life <= 0 else None, "failed draw" if p.failed_draw else None,
+                        "21 commander damage" if any(v >= 21 for v in p.commander_damage.values()) else None]
+                       for p in self.players]
             self.log("result", "Draw." if self.winner is None else f"Player {self.winner + 1} wins.",
                      lossReasons=[[r for r in row if r] for row in reasons])
 
-    def payment(self, card: Card) -> dict:
-        return self.rules.query("pay", card.mana_cost, *[
+    def payment(self, card: Card, tax: int = 0) -> dict:
+        cost = card.mana_cost + (("{2}" * tax) if tax else "")
+        return self.rules.query("pay", cost, *[
             x.card.id + ":" + str(x.card.mask) for x in self.players[self.active].battlefield
             if x.card.kind == "land" and not x.tapped])
 
     def damage(self, a: Card, b: Card | None) -> dict:
         return self.rules.query("combat", a.traits, b.traits if b else "",
                                 self.players[self.active].life, self.players[1 - self.active].life)
+
+    def activation_choices(self, seat: int, kinds: set[str]) -> list[Candidate]:
+        """Offer a minimally costly legal crew/saddle activation without hiding card effects."""
+        player = self.players[seat]
+        result = []
+        for permanent in player.battlefield:
+            definition = permanent.card.event_definition
+            if definition is None: continue
+            for kind, threshold, already in (("crew",definition.crew,permanent.animated),
+                                               ("saddle",definition.saddle,permanent.saddled)):
+                if kind not in kinds or threshold is None or already: continue
+                helpers = []
+                for other in player.battlefield:
+                    effective = self.effective_card(other)
+                    if other.card.id != permanent.card.id and not other.tapped and effective:
+                        helpers.append((other.card.id, effective.power))
+                options = []
+                for n in range(1, min(len(helpers), 4)+1):
+                    for group in itertools.combinations(helpers,n):
+                        power = sum(entry[1] for entry in group)
+                        if power >= threshold: options.append((n,power,tuple(entry[0] for entry in group)))
+                    if options: break
+                if not options: continue
+                ids = min(options)[2]
+                # Low base value: activate when useful; a defender may then choose to block.
+                result.append(Candidate(f"{kind}:{permanent.card.id}",kind,permanent.card.id,
+                    features(power=.2, **{"pass":.1}),kind.title()+" "+permanent.card.name,ids))
+        return result
 
     def legal(self, seat: int) -> tuple[Candidate, ...]:
         p = self.players[seat]
@@ -392,46 +519,69 @@ class Simulator:
                     if c.kind == "land":
                         actions.append(Candidate(c.id, "land", c.id, features(power=1), "Play " + c.name))
         elif self.phase in ("main", "second_main"):
+            if self.diagnostic: actions.extend(self.activation_choices(seat, {"crew","saddle"}))
+            if (self.diagnostic and p.command_zone and p.command_zone.kind == "creature"
+                    and self.payment(p.command_zone, p.commander_casts)["paid"]):
+                c = p.command_zone
+                actions.append(Candidate(c.id, "cast_commander", c.id,
+                    features(power=c.power, toughness=c.toughness, haste=int(c.name == "Zurgo Helmsmasher"),
+                             cost=len(self.payment(c, p.commander_casts).get("sources", []))),
+                    "Cast commander " + c.name))
             for c in p.hand:
-                if c.kind in ("creature", "spell") and self.payment(c)["paid"]:
+                if c.kind in ("creature", "vehicle", "spell", "token_spell") and self.payment(c)["paid"]:
                     if c.draw and len(p.library) < c.draw:
                         continue  # never choose a known self-decking draw spell
                     keywords = c.traits.split(";")[-1].split(",") if c.traits else []
                     actions.append(Candidate(c.id, "cast", c.id,
-                        features(power=c.power, toughness=c.toughness,
+                        features(power=c.power+c.token_count, toughness=c.toughness,
                                  evasion=int(any(k in keywords for k in ("flying", "shadow", "horsemanship", "skulk"))),
                                  haste=int("haste" in keywords), life=c.life, draw=c.draw,
                                  cost=len(self.payment(c).get("sources", []))), "Cast " + c.name))
         elif self.phase == "attack":
             for x in p.battlefield:
-                c = x.card
-                if c.kind != "creature" or x.tapped: continue
+                c = self.effective_card(x)
+                if c is None or x.tapped: continue
                 keywords = c.traits.split(";")[-1].split(",")
                 if "defender" in keywords or x.fresh and "haste" not in keywords: continue
                 responses = [self.damage(c, None)]
                 for b in self.players[1-seat].battlefield:
-                    if b.card.kind == "creature" and not b.tapped:
-                        d = self.damage(c, b.card)
+                    blocker = self.effective_card(b)
+                    if blocker and not b.tapped:
+                        d = self.damage(c, blocker)
                         if d["legal"]: responses.append(d)
                 minimum = min(max(0, d["damage"]-d["gainB"]) for d in responses)
-                lethal = all(self.players[1-seat].life + d["gainB"] - d["damage"] <= 0 for d in responses)
+                enemy = self.players[1-seat]
+                commander_total = enemy.commander_damage.get(c.id, 0)
+                lethal = all(enemy.life + d["gainB"] - d["damage"] <= 0
+                             or c.id == p.commander_id and commander_total + d["damage"] >= 21
+                             for d in responses)
                 actions.append(Candidate(c.id, "attack", c.id,
                     features(power=c.power / 10, damage=minimum, lethal=int(lethal),
                              survive=int(not any(d["attackerDies"] for d in responses))),
                     "Attack with " + c.name))
         elif self.phase == "block":
-            a = next(x.card for x in self.players[self.active].battlefield if x.card.id == self.pending)
+            if self.diagnostic: actions.extend(self.activation_choices(seat, {"crew"}))
+            attacker = next(x for x in self.players[self.active].battlefield if x.card.id == self.pending)
+            a = self.effective_card(attacker)
+            if a is None: raise RuntimeError("Attacker is no longer a creature")
             responses = [(None, self.damage(a, None))]
             for b in p.battlefield:
-                if b.card.kind == "creature" and not b.tapped:
-                    d = self.damage(a, b.card)
-                    if d["legal"]: responses.append((b.card, d))
+                blocker = self.effective_card(b)
+                if blocker and not b.tapped:
+                    d = self.damage(a, blocker)
+                    if d["legal"]: responses.append((blocker, d))
             for c, d in responses:
-                lethal = p.life + d["gainB"] - d["damage"] <= 0
+                lethal = (p.life + d["gainB"] - d["damage"] <= 0 or
+                          a.id == self.players[self.active].commander_id and
+                          p.commander_damage.get(a.id, 0) + d["damage"] >= 21)
                 actions.append(Candidate(c.id if c else "take", "block", c.id if c else "",
                     features(lethal=-int(lethal), damage=d["gainB"]-d["damage"],
                              power=(a.power if d["attackerDies"] else 0) - (c.power if c and d["blockerDies"] else 0),
                              survive=int(not d["blockerDies"])), "Block with " + c.name if c else "Take damage"))
+        if self.phase == "attack":
+            required = [a for a in actions if any(x.card.id == a.card_id and x.card.name == "Zurgo Helmsmasher"
+                                                   for x in p.battlefield)]
+            if required: return tuple(required)
         if self.phase != "block":
             actions.append(Candidate("pass", "pass", features=features(**{"pass": 1}), label="Pass"))
         return tuple(actions)
@@ -481,8 +631,14 @@ class Simulator:
             if choice.kind == "pass":
                 self.phase = {"land": "main", "main": "attack", "second_main": "cleanup"}[self.phase]
                 self.log("pass", choice.label)
+            elif choice.kind in ("crew","saddle"):
+                game = self.event_game("main")
+                getattr(game, choice.kind)(choice.card_id, list(choice.tap_ids), self.active)
+                self.sync_events(game)
+                self.log(choice.kind, choice.label, target=choice.card_id, tapped=list(choice.tap_ids))
             else:
-                card = next(c for c in p.hand if c.id == choice.card_id)
+                card = p.command_zone if choice.kind == "cast_commander" else next(c for c in p.hand if c.id == choice.card_id)
+                if card is None: raise RuntimeError("Commander is no longer in command zone")
                 if choice.kind == "land":
                     p.hand.remove(card)
                     lands = [x.card for x in p.battlefield if x.card.kind == "land"]
@@ -491,17 +647,37 @@ class Simulator:
                     self.phase = "main"
                     self.log("land", f"Player {self.active + 1} plays {card.name}.", card=card.name)
                 else:
-                    payment = self.payment(card)
+                    payment = self.payment(card, p.commander_casts if choice.kind == "cast_commander" else 0)
                     if not payment["paid"]: raise RuntimeError("Mana changed before action")
                     for x in p.battlefield:
                         if x.card.id in payment["sources"]: x.tapped = True
-                    p.hand.remove(card)
-                    if card.kind == "creature":
-                        p.battlefield.append(Permanent(card))
+                    if choice.kind == "cast_commander":
+                        p.command_zone = None
+                        p.commander_casts += 1
+                    else:
+                        p.hand.remove(card)
+                    triggers = []
+                    if card.kind in ("creature", "vehicle"):
+                        triggers = self.enter_creature(card, p)
                     else:
                         p.graveyard.append(card)
                     self.log("cast", f"Player {self.active + 1} casts {card.name}.",
-                             card=card.name, manaSources=payment["sources"])
+                             card=card.name, manaSources=payment["sources"],
+                             commander=choice.kind == "cast_commander")
+                    for event in triggers:
+                        self.log("trigger", (f"{event['source']} makes {card.name} {event['effect']}."
+                                 if event.get("target") else f"{card.name}: {event['effect']}."),
+                                 **{k:v for k,v in event.items() if k != "kind"})
+                    if card.kind == "token_spell":
+                        for _ in range(card.token_count):
+                            self.token_sequence += 1
+                            definition = EventDefinition("Goblin",frozenset({"Creature"}),frozenset({"Goblin"}),
+                                                         False,1,1,frozenset())
+                            token = Card(f"token-{self.token_sequence}","Goblin","creature",
+                                         traits="1;1;",power=1,toughness=1,
+                                         event_definition=definition,is_token=True)
+                            self.enter_creature(token,p)
+                            self.log("token", "Creates a 1/1 red Goblin creature token.", card="Goblin", token=token.id)
                     if card.kind == "spell":
                         for _ in range(card.draw): self.draw(self.active)
                         p.life += card.life
@@ -515,24 +691,45 @@ class Simulator:
             else:
                 self.pending = choice.card_id
                 x = next(x for x in p.battlefield if x.card.id == self.pending)
-                if "vigilance" not in x.card.traits.split(";")[-1].split(","): x.tapped = True
+                game = self.event_game("combat")
+                game.attack(x.card.id, 1-self.active)
+                self.sync_events(game)
                 self.phase = "block"
                 self.log("attack", f"Player {self.active + 1} attacks with {x.card.name}.",
                          attacker=x.card.id)
+                for event in game.events:
+                    if event["kind"] == "trigger":
+                        self.log("trigger", f"{x.card.name}: {event['effect']}.",
+                                 **{k:v for k,v in event.items() if k != "kind"})
         elif self.phase == "block":
             defender = self.players[1-self.active]
             choice = self.decide(1-self.active)
+            if choice.kind == "crew":
+                game = self.event_game("combat")
+                game.crew(choice.card_id, list(choice.tap_ids), 1-self.active)
+                self.sync_events(game)
+                self.log("crew", choice.label, actor=1-self.active, target=choice.card_id, tapped=list(choice.tap_ids))
+                return True
             a = next(x for x in p.battlefield if x.card.id == self.pending)
             b = next((x for x in defender.battlefield if x.card.id == choice.card_id), None)
-            d = self.damage(a.card, b.card if b else None)
+            effective_attacker = self.effective_card(a)
+            effective_blocker = self.effective_card(b) if b else None
+            if effective_attacker is None: raise RuntimeError("Attacker is no longer a creature")
+            d = self.damage(effective_attacker, effective_blocker)
             self.log("block", choice.label, actor=1-self.active,
                      blocker=b.card.id if b else None)
             p.life += d["gainA"]
             defender.life += d["gainB"] - d["damage"]
+            if a.card.id == p.commander_id and d["damage"] > 0:
+                defender.commander_damage[a.card.id] = defender.commander_damage.get(a.card.id, 0) + d["damage"]
             if d["attackerDies"]:
-                p.battlefield.remove(a);p.graveyard.append(a.card)
+                self.send_to_destination(p, a)
             if b and d["blockerDies"]:
-                defender.battlefield.remove(b);defender.graveyard.append(b.card)
+                self.send_to_destination(defender, b)
+                if a.card.name == "Zurgo Helmsmasher" and not d["attackerDies"]:
+                    a.counters += 1
+                    self.log("trigger", "Zurgo gains a +1/+1 counter when the damaged creature dies.",
+                             card=a.card.name, counters=a.counters)
             self.log("combat", "Combat damage resolves.", **d)
             self.pending = None
             self.outcome()
@@ -543,6 +740,9 @@ class Simulator:
                 c = p.hand.pop()
                 p.graveyard.append(c)
                 self.log("discard", f"Player {self.active+1} discards {c.name}.", card=c.name)
+            game = self.event_game("cleanup")
+            game.cleanup()
+            self.sync_events(game)
             self.phase = "end"
             self.log("end", f"Player {self.active+1} ends the turn.")
         else:
@@ -591,6 +791,37 @@ def diagnostic_land(definition: dict, identity: set[str]) -> dict | None:
     return None
 
 
+def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
+                           uid: str, identity: set[str]) -> Card:
+    parsed = audit_card(rules, definition)
+    event_definition = parse_event_card(definition)
+    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Goblin Instigator")
+               or "Vehicle" in definition.get("subTypes", []))
+    cost = definition.get("manaCost") or ""
+    if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
+            and re.fullmatch(r"(?:\{(?:[WUBRGC]|[0-9]{1,2})\})+", cost)):
+        keywords = sorted(event_definition.abilities)
+        parsed = {"kind":"vehicle" if "Vehicle" in event_definition.subtypes else "creature",
+                  "power":event_definition.power,"toughness":event_definition.toughness,
+                  "traits":f"{event_definition.power};{event_definition.toughness};"+",".join(keywords),
+                  "event":event_definition}
+    if parsed["kind"] == "unsupported":
+        text = definition.get("oracleText", "")
+        token_match = re.fullmatch(r"Create (two|three|four) 1/1 red Goblin creature tokens\.", text)
+        if definition.get("types") == ["Sorcery"] and token_match and re.fullmatch(r"(?:\{(?:[WUBRGC]|[0-9]{1,2})\})+", cost):
+            parsed = {"kind":"token_spell", "token_count":{"two":2,"three":3,"four":4}[token_match[1]]}
+        else:
+            parsed = diagnostic_land(definition, identity) or parsed
+    return Card(id=uid, name=definition["name"], kind=parsed["kind"],
+        mana_cost=cost, traits=parsed.get("traits", ""), power=parsed.get("power", 0),
+        toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
+        enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),
+        life=parsed.get("life", 0), land_rule=parsed.get("land_rule", ""),
+        land_subtypes=tuple(definition.get("subTypes", [])),
+        basic_land="Basic" in definition.get("superTypes", []), event_definition=parsed.get("event"),
+        token_count=parsed.get("token_count",0))
+
+
 def import_diagnostic_deck(rules: RulesBridge, deck: dict, seat: int) -> list[Card]:
     """Keep all 99 actual main-deck cards. Unsupported cards remain unplayable, never blanked."""
     if sum(c["quantity"] for c in deck["commanders"]) != 1 or sum(c["quantity"] for c in deck["mainboard"]) != 99:
@@ -598,19 +829,8 @@ def import_diagnostic_deck(rules: RulesBridge, deck: dict, seat: int) -> list[Ca
     result = []
     identity = set(deck["commanders"][0].get("colorIdentity", []))
     for definition in deck["mainboard"]:
-        parsed = audit_card(rules, definition)
-        if parsed["kind"] == "unsupported":
-            parsed = diagnostic_land(definition, identity) or parsed
         for _ in range(definition["quantity"]):
-            uid = f"{seat}-card-{len(result):03d}"
-            result.append(Card(id=uid, name=definition["name"], kind=parsed["kind"],
-                mana_cost=definition.get("manaCost") or "", traits=parsed.get("traits", ""),
-                power=parsed.get("power", 0), toughness=parsed.get("toughness", 0),
-                mask=parsed.get("mask", 0), enters_tapped=parsed.get("tapped", False),
-                draw=parsed.get("draw", 0), life=parsed.get("life", 0),
-                land_rule=parsed.get("land_rule", ""),
-                land_subtypes=tuple(definition.get("subTypes", [])),
-                basic_land="Basic" in definition.get("superTypes", [])))
+            result.append(import_diagnostic_card(rules, definition, seat, f"{seat}-card-{len(result):03d}", identity))
     return result
 
 
@@ -619,15 +839,31 @@ def diagnose(rules: RulesBridge, decks: list[dict], seed: int, turns_per_player:
     if len(decks) != 2 or turns_per_player < 1:
         raise ValueError("Two decks and a positive turn count are required")
     cards = tuple(import_diagnostic_deck(rules, deck, seat) for seat, deck in enumerate(decks))
-    sim = Simulator(rules, seed, max_turns=turns_per_player * 2, decks=cards, diagnostic=True)
+    commanders = tuple(import_diagnostic_card(rules, deck["commanders"][0], seat, f"{seat}-commander",
+        set(deck["commanders"][0].get("colorIdentity", []))) for seat, deck in enumerate(decks))
+    sim = Simulator(rules, seed, max_turns=turns_per_player * 2, decks=cards,
+                    commanders=commanders, diagnostic=True)
     result = sim.run()
     turns = [sum(e["kind"] == "end" and e["actor"] == seat for e in result["events"])
              for seat in (0, 1)]
     started = [sum(e["kind"] == "untap" and e["actor"] == seat for e in result["events"])
                for seat in (0, 1)]
     audit = audit_decks(rules, decks)
+    partially_supported = {c.name for deck_cards in cards for c in deck_cards
+                           if c.event_definition is not None or c.kind == "token_spell" or c.land_rule}
+    partially_supported.update(c.name for c in commanders if c.event_definition is not None)
+    for seat, deck in enumerate(decks):
+        imported = {card.name:card for card in cards[seat]}
+        for definition in deck["mainboard"]:
+            if (audit_card(rules, definition)["kind"] == "unsupported"
+                    and imported[definition["name"]].kind != "unsupported"):
+                partially_supported.add(definition["name"])
+    for q in audit["questions"]:
+        if q.get("card") in partially_supported:
+            q["diagnosticSupport"] = True
+            q["supportNote"] = "Supported in the limited diagnostic; full timing, combat and live game integration remain open."
     result.update(mode="real-deck-diagnostic", learningEligible=False, productionEligible=False,
-                  notice="Diagnostic only: real main decks, but unsupported cards cannot be played, commanders are not cast, and the rules are incomplete. Results are not a valid Commander game.",
+                  notice="Diagnostic only: real decks and supported commanders are used; unsupported cards cannot be played and the rules are incomplete. Results are not a valid Commander game.",
                   deckNames=[d["name"] for d in decks],
                   commanders=[d["commanders"][0]["name"] for d in decks],
                   turnsCompleted=turns, turnsStarted=started,
@@ -741,9 +977,11 @@ def pack_replay(report: dict) -> dict:
         state = e["state"]
         players = []
         for p in state["players"]:
-            field = [[reference(c),int(c["tapped"]),int(c["fresh"])] for c in p["battlefield"]]
+            field = [[reference(c),int(c["tapped"]),int(c["fresh"]),c["power"],c["toughness"],c["traits"],
+                      c.get("saddled",False),c.get("counters",0)] for c in p["battlefield"]]
             grave = [reference(c) for c in p["graveyard"]]
-            players.append([p["life"],p["handCount"],p["libraryCount"],field,grave])
+            players.append([p["life"],p["handCount"],p["libraryCount"],field,grave,
+                            p.get("commanderInZone",False),p.get("commanderDamage",{})])
         events.append([e["index"],e["turn"],e["phase"],e["actor"],e["kind"],e["message"],
                        e["details"],[state["active"],state["turn"],state["phase"],players]])
     return {**packed,"packedReplay":1,"cardCatalog":catalog,"compactEvents":events}

@@ -53,10 +53,11 @@ function render(){
   $("message").textContent=e.message;
   $("players").replaceChildren(...state.players.map(p=>{
    const panel=node("section",undefined,"panel");panel.append(node("h2","Player "+(p.seat+1)+(data.deckNames?" · "+data.deckNames[p.seat]:"")+(state.active===p.seat?" · Active":"")));
-   if(data.commanders)panel.append(node("small","Commander: "+data.commanders[p.seat]+" · unsupported in this diagnostic"));
-   const stats=node("div",undefined,"stats");stats.append(node("span",p.life+" life","life"),node("span","Hand: "+p.handCount),node("span","Library: "+p.libraryCount));panel.append(stats);
+   if(data.commanders)panel.append(node("small","Commander: "+data.commanders[p.seat]+(p.commanderInZone?" · Command zone":" · In play or another zone")));
+   const stats=node("div",undefined,"stats");stats.append(node("span",p.life+" life","life"),node("span","Hand: "+p.handCount),node("span","Library: "+p.libraryCount));
+   const damage=Object.values(p.commanderDamage||{});if(damage.length)stats.append(node("span","Commander damage: "+damage.join(", ")));panel.append(stats);
    const cards=node("div",undefined,"cards");
-   for(const c of p.battlefield){const el=node("div",c.name,"card "+c.kind+(c.tapped?" tapped":""));el.append(node("small",c.kind==="creature"?c.power+" / "+c.toughness+(c.fresh?" · New":""):"Land"),node("small",c.tapped?"Tapped":"Untapped"));cards.append(el)}
+   for(const c of p.battlefield){const el=node("div",c.name,"card "+c.kind+(c.tapped?" tapped":""));el.append(node("small",c.kind==="creature"?c.power+" / "+c.toughness+(c.fresh?" · New":"")+(c.saddled?" · Saddled":"")+(c.counters?" · +"+c.counters+" counters":""):"Land"),node("small",c.tapped?"Tapped":"Untapped"));cards.append(el)}
    if(!p.battlefield.length)cards.append(node("p","Empty battlefield"));panel.append(cards);
    const grave=node("details");grave.append(node("summary","Graveyard ("+p.graveyard.length+")"),node("p",p.graveyard.map(c=>c.name).join(", ")||"Empty"));panel.append(grave);return panel;
   }));
@@ -77,6 +78,7 @@ function renderQuestions(){
  for(const q of data.questions||[]){
   const el=node("article",undefined,"question");el.append(node("h2",q.card||q.reason),node("p",q.question));
   if(q.deck)el.append(node("small","Deck: "+q.deck+(q.alsoInDecks?.length?" / "+q.alsoInDecks.join(" / "):"")));
+  if(q.diagnosticSupport)el.append(node("small",q.supportNote));
   if(q.oracleText){const details=node("details");details.append(node("summary","Card rules text"),node("pre",q.oracleText));el.append(details)}
   const answer=node("textarea");answer.placeholder="Human review notes / proposed ruling";answer.value=q.answer||"";answer.setAttribute("aria-label","Answer for "+(q.card||q.reason));answer.oninput=()=>q.answer=answer.value;
   el.append(answer,node("small","Open · Blocking · Needs implementation and tests"));$("questionList").append(el);
@@ -88,7 +90,7 @@ function unpack(value){
  const catalog=value.cardCatalog;
  value.events=value.compactEvents.map(e=>({index:e[0],turn:e[1],phase:e[2],actor:e[3],kind:e[4],message:e[5],details:e[6],
  state:{active:e[7][0],turn:e[7][1],phase:e[7][2],players:e[7][3].map((p,seat)=>({seat,life:p[0],handCount:p[1],libraryCount:p[2],
- battlefield:p[3].map(c=>({...catalog[c[0]],tapped:!!c[1],fresh:!!c[2]})),graveyard:p[4].map(c=>({id:catalog[c].id,name:catalog[c].name}))}))}}));
+ battlefield:p[3].map(c=>({...catalog[c[0]],tapped:!!c[1],fresh:!!c[2],power:c.length>3?c[3]:catalog[c[0]].power,toughness:c.length>4?c[4]:catalog[c[0]].toughness,traits:c.length>5?c[5]:catalog[c[0]].traits,saddled:!!c[6],counters:c[7]||0})),graveyard:p[4].map(c=>({id:catalog[c].id,name:catalog[c].name})),commanderInZone:!!p[5],commanderDamage:p[6]||{}}))}}));
  return value;
 }
 function load(value){stop();if(!value||value.schemaVersion!==1||!["turn-replay","rules-review"].includes(value.kind))throw Error("Unsupported review file");

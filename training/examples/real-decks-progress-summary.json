@@ -1,0 +1,56 @@
+{
+  "seed": 42,
+  "notice": "Diagnostic only: real decks and supported commanders are used; unsupported cards cannot be played and the rules are incomplete. Results are not a valid Commander game.",
+  "result": "diagnostic_window_complete",
+  "commanders": [
+    "Kolodin, Triumph Caster",
+    "Zurgo Helmsmasher"
+  ],
+  "turnsCompleted": [
+    10,
+    10
+  ],
+  "learningEligible": false,
+  "unsupportedInHand": [
+    [
+      "The Eternity Elevator",
+      "Hanweir Militia Captain // Westvale Cult Leader",
+      "Basilisk Collar",
+      "Andúril, Flame of the West",
+      "Roadside Assistance",
+      "Krenko, Tin Street Kingpin",
+      "Ferocity of the Wilds"
+    ],
+    [
+      "Rally the Ranks",
+      "Caterwauling Boggart",
+      "Goblin Sledder",
+      "Ethereal Absolution"
+    ]
+  ],
+  "unsupportedDiscarded": [
+    [
+      "Needleverge Pathway // Pillarverge Pathway"
+    ],
+    []
+  ],
+  "players": [
+    {
+      "life": 24,
+      "lands": 8,
+      "spellsCast": 4,
+      "attacks": 0,
+      "commanderDamage": {
+        "1-commander": 14
+      }
+    },
+    {
+      "life": 40,
+      "lands": 10,
+      "spellsCast": 2,
+      "attacks": 8,
+      "commanderDamage": {}
+    }
+  ],
+  "flaggedRules": 133
+}

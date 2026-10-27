@@ -88,11 +88,11 @@ Generated HTML embeds only the public replay and uses lossless packing to reduce
 
 ## Real-deck diagnostic: ten turns per player
 
-Run `python3 training/simulator.py diagnose --seed 42 --turns-per-player 10` to shuffle and draw from all 99 actual main-deck cards for both saved lists. The commander identities are recorded separately. This diagnostic deliberately keeps unsupported cards in the physical library and hand as unplayable objects; it does not substitute a vanilla effect or manufacture legal decisions. The two-player starting player skips the first turn's draw. This is an incomplete diagnostic, not a Commander game or eligible training data.
+Run `python3 training/simulator.py diagnose --seed 42 --turns-per-player 10` to shuffle and draw from all 99 actual main-deck cards for both saved lists. Commanders begin in their respective command zones; Kolodin and Zurgo can now be cast in this limited diagnostic. This diagnostic deliberately keeps unsupported cards in the physical library and hand as unplayable objects; it does not substitute a vanilla effect or manufacture legal decisions. The two-player starting player skips the first turn's draw. This is an incomplete diagnostic, not a Commander game or eligible training data.
 
 A narrow diagnostic-only land extension recognizes Command Tower using the actual commander's color identity, checklands by basic land subtype, the two-other-lands entry condition, and the two-basic-lands condition on Smoldering Marsh. These do not imply support in the live Minecraft golem. The full audit questions remain open for the live game and full backend.
 
-Seed 42 completed ten turns for each player. Kolodin: 8 lands, 0 spells, 0 attacks, 40 life. Zurgo: 10 lands, 0 spells, 0 attacks, 40 life. Both commanders and the cards needed for actual play remain unsupported. One unsupported card was discarded during cleanup; this is a sandbox decision and should not be treated as a trained Magic strategy.
+The original seed-42 baseline completed ten turns for each player with both at 40 life and no spells cast because their commanders were then unsupported. One unsupported card was discarded during cleanup; this is a sandbox decision and should not be treated as a trained Magic strategy.
 
 The replay is saved in `examples/real-decks-10-turns.html`, including the public event log, two deck names and commanders, plus all blocking review questions. The complete JSON output includes the cards remaining in each hand for **post-run human inspection**. Neither agent receives its opponent's private hand or this post-run report. The diagnostic never changes the retained training checkpoint.
 
@@ -107,4 +107,18 @@ The replay is saved in `examples/real-decks-10-turns.html`, including the public
 
 Regression tests use actual card metadata from the supplied deck and reject unsupported additional rules instead of ignoring them. A small event trace is saved as `examples/kolodin-anduril-events.json`.
 
-The prototype resolves events immediately; it does not yet implement the stack, response windows, full attack/block choices or combat damage for multiple attacking creatures. It is **not connected to the full match simulator or Minecraft golem**, and the cards remain in the diagnostic review queue until that integration is complete. These focused tests are not a completed game.
+Kolodin, Zurgo, supported Mounts/Vehicles, crew/saddle and Goblin Instigator now feed the limited real-deck diagnostic. Andúril remains isolated until multiple attackers and its token combat are integrated. The prototype resolves events immediately; it does not yet implement the stack, response windows, full attack/block choices or combat damage for multiple attacking creatures. It is **not connected to the Minecraft golem**; cards remain in the full-game review queue until those gaps are resolved.
+
+
+## Latest ten-turn real-deck diagnostic
+
+Both commanders can be cast from the command zone, including accumulating commander tax and the selected return-to-command-zone option. The diagnostic tracks combat damage from each commander toward the 21-point loss condition. Zurgo's haste, forced attack, indestructible on its controller's turn and the combat death-counter case are modeled. Kolodin's subtype entry triggers and haste and supported crew/saddle feed the turn runner. Goblin Instigator and exact whole-text Goblin-token sorceries (including Dragon Fodder) create actual 1/1 red Goblin token objects; tokens cease to exist after leaving the battlefield.
+
+Seed 42, ten turns each: Kolodin's player ended at 24 life, with 14 damage from Zurgo; Zurgo's player remained at 40. Zurgo cast Dragon Fodder, made two Goblins and attacked with them, then cast Zurgo. Kolodin was cast four times and blocked Zurgo repeatedly; the total casting cost rose from two mana to four, six and eight due to commander tax. Zurgo gained four +1/+1 counters. [Replay](examples/real-decks-progress.html), [summary](examples/real-decks-progress-summary.json).
+
+This is still an incomplete diagnostic: it resolves triggers automatically, has at most one attacker and blocker, cannot cast Andúril yet, and leaves unfamiliar cards unplayable and flagged. In particular, 133 full-game audit questions remain open, with partial diagnostic support marked explicitly. Both policies act independently; this result is not a valid Commander match and cannot update the shared training checkpoint. It is not connected to live Minecraft entities.
+
+Rules references: https://magic.wizards.com/en/rules and https://magic.wizards.com/en/formats/commander
+
+
+If the same partial diagnostic continues, Zurgo wins on its eleventh turn with 25 commander damage while Kolodin's player has 13 life. This outcome depends on unsupported cards remaining unplayable and the simplified combat model; it is not a prediction of a real game or evidence of learning.

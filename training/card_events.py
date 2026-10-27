@@ -37,6 +37,11 @@ Whenever a Vehicle you control enters, it becomes an artifact creature until end
 ANDURIL = """Equipped creature gets +3/+1.
 Whenever equipped creature attacks, create two tapped 1/1 white Spirit creature tokens with flying. If that creature is legendary, instead create two of those tokens that are tapped and attacking.
 Equip {2}"""
+ZURGO = """Haste
+Zurgo attacks each combat if able.
+During your turn, Zurgo has indestructible.
+Whenever a creature dealt damage by Zurgo this turn dies, put a +1/+1 counter on Zurgo."""
+INSTIGATOR = "When this creature enters, create a 1/1 red Goblin creature token."
 MUSTANG = """Whenever this creature attacks while saddled, untap it and put a +1/+1 counter on it.
 Saddle 1"""
 SIMPLE_ABILITIES = {"flying", "first strike", "double strike", "lifelink", "vigilance",
@@ -76,10 +81,18 @@ def parse_card(card: dict) -> Definition:
         valid = text == KOLODIN and "Creature" in types
         return Definition(**base, abilities=frozenset(), supported=valid,
                           reason="" if valid else "Kolodin metadata/rules mismatch")
+    if name == "Zurgo Helmsmasher":
+        valid = text == ZURGO and "Creature" in types
+        return Definition(**base, abilities=frozenset({"haste"}), supported=valid,
+                          reason="" if valid else "Zurgo metadata/rules mismatch")
     if name == "Andúril, Flame of the West":
         valid = text == ANDURIL and "Artifact" in types and "Equipment" in subtypes
         return Definition(**base, abilities=frozenset(), supported=valid,
                           reason="" if valid else "Andúril metadata/rules mismatch")
+    if name == "Goblin Instigator":
+        valid = text == INSTIGATOR and "Creature" in types
+        return Definition(**base, abilities=frozenset(), supported=valid,
+                          reason="" if valid else "Goblin Instigator metadata/rules mismatch")
     if name == "Brightfield Mustang":
         valid = text == MUSTANG and "Creature" in types and "Mount" in subtypes
         return Definition(**base, abilities=frozenset(), saddle=1, supported=valid,
@@ -144,6 +157,8 @@ class Game:
 
     def has(self, p: Permanent, ability: str) -> bool:
         if ability in p.definition.abilities: return True
+        if ability == "indestructible" and p.definition.name == "Zurgo Helmsmasher" and p.controller == self.turn_player:
+            return True
         if ability == "haste" and ({"Mount","Vehicle"} & p.definition.subtypes):
             return any(x.controller == p.controller and x.definition.name == "Kolodin, Triumph Caster"
                        for x in self.battlefield.values())
@@ -160,6 +175,13 @@ class Game:
         self.emit("enters", id=permanent.id, name=permanent.definition.name,
                   controller=permanent.controller, types=sorted(permanent.definition.types),
                   subtypes=sorted(permanent.definition.subtypes))
+        if permanent.definition.name == "Goblin Instigator":
+            self._next_token += 1
+            token_id = f"goblin-token-{self._next_token}"
+            goblin = Definition("Goblin", frozenset({"Creature"}), frozenset({"Goblin"}),
+                                False, 1, 1, frozenset())
+            self.enter(Permanent(token_id,goblin,permanent.controller,token=True))
+            self.emit("trigger", source=permanent.id, effect="create a 1/1 red Goblin token", token=token_id)
         # These are triggered abilities, modeled as immediate resolutions in this
         # focused prototype. The full engine must provide stack/priority.
         watched = any(x.id != permanent.id and x.controller == permanent.controller

@@ -211,12 +211,130 @@ class SimulatorChecks(unittest.TestCase):
         self.assertFalse(report["learningEligible"])
         self.assertFalse(report["productionEligible"])
         self.assertEqual(len(report["questions"]),133)
-        self.assertEqual([p["life"] for p in report["events"][-1]["state"]["players"]],[40,40])
+        self.assertTrue(next(q for q in report["questions"] if q.get("card")=="Kolodin, Triumph Caster")["diagnosticSupport"])
+        self.assertEqual([p["life"] for p in report["events"][-1]["state"]["players"]],[24,40])
+        self.assertEqual(report["events"][-1]["state"]["players"][0]["commanderDamage"],{"1-commander":14})
+        self.assertEqual(len([e for e in report["events"] if e["kind"]=="token"]),2)
+        self.assertTrue(any(e["kind"]=="cast" and e["details"]["card"]=="Dragon Fodder" for e in report["events"]))
+        commander_casts=[e for e in report["events"] if e["kind"]=="cast" and e["details"].get("commander")]
+        self.assertEqual([len(e["details"]["manaSources"]) for e in commander_casts if e["actor"]==0],[2,4,6,8])
+        self.assertEqual(len([e for e in report["events"] if e["kind"]=="attack" and e["details"].get("attacker")=="1-commander"]),6)
+        zurgo=next(c for c in report["events"][-1]["state"]["players"][1]["battlefield"] if c["name"]=="Zurgo Helmsmasher")
+        self.assertEqual((zurgo["power"],zurgo["toughness"],zurgo["counters"]),(11,6,4))
         self.assertEqual([p["libraryCount"] for p in report["events"][-1]["state"]["players"]],[83,82])
         self.assertTrue(any(e["kind"]=="draw_skipped" and e["actor"]==0 for e in report["events"]))
         played = [e["details"].get("card") for e in report["events"] if e["kind"] in ("land","cast")]
         self.assertIn("Command Tower", played)
         self.assertIn("Smoldering Marsh", played)
+
+    def test_extended_real_deck_diagnostic_stops_on_commander_damage(self):
+        decks=[json.loads(p.read_text()) for p in sorted((HERE/"decks").glob("*.json"))]
+        report=s.diagnose(self.rules,decks,42,12)
+        self.assertEqual(report["winner"],1)
+        self.assertEqual(report["turnsStarted"],[11,11])
+        self.assertEqual(report["events"][-1]["state"]["players"][0]["life"],13)
+        self.assertEqual(report["events"][-1]["state"]["players"][0]["commanderDamage"],{"1-commander":25})
+        self.assertIn("21 commander damage",report["events"][-1]["details"]["lossReasons"][0])
+        self.assertFalse(report["learningEligible"])
+
+    def test_zurgo_must_attack_and_indestructibility_depends_on_turn(self):
+        deck=json.loads((HERE/"decks/5254666-garbo-gobbos.json").read_text())
+        c=s.import_diagnostic_card(self.rules,deck["commanders"][0],0,"zurgo",{"White","Red","Black"})
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+[c],s.demo_deck(1)),diagnostic=True)
+        player=sim.players[0]
+        (player.hand if c in player.hand else player.library).remove(c)
+        player.battlefield.append(s.Permanent(c,fresh=False))
+        sim.phase="attack"
+        actions=sim.legal(0)
+        self.assertEqual([(a.kind,a.card_id) for a in actions],[("attack","zurgo")])
+        self.assertIn("indestructible",sim.effective_card(player.battlefield[-1]).traits)
+        sim.active=1
+        self.assertNotIn("indestructible",sim.effective_card(player.battlefield[-1]).traits)
+        sim.invariant()
+
+    def test_crew_activation_is_offered_and_taps_legal_helper(self):
+        deck=json.loads((HERE/"decks/14850373-budget-deck.json").read_text())
+        definition=next(c for c in deck["mainboard"] if c["name"]=="Thundering Chariot")
+        vehicle=s.import_diagnostic_card(self.rules,definition,0,"vehicle",{"White","Red"})
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+[vehicle],s.demo_deck(1)),diagnostic=True)
+        player=sim.players[0]
+        (player.hand if vehicle in player.hand else player.library).remove(vehicle)
+        player.battlefield.append(s.Permanent(vehicle))
+        helper=next(c for c in player.hand+player.library if c.kind=="creature")
+        (player.hand if helper in player.hand else player.library).remove(helper)
+        player.battlefield.append(s.Permanent(helper,fresh=True))
+        sim.phase="main"
+        action=next(a for a in sim.legal(0) if a.kind=="crew")
+        game=sim.event_game("main");game.crew(action.card_id,list(action.tap_ids),0);sim.sync_events(game)
+        self.assertTrue(next(x for x in player.battlefield if x.card.id==helper.id).tapped)
+        self.assertTrue(next(x for x in player.battlefield if x.card.id=="vehicle").animated)
+        sim.invariant()
+
+    def test_commander_damage_can_lose_above_zero_life(self):
+        sim=s.Simulator(self.rules,42)
+        sim.players[0].life=40
+        sim.players[0].commander_damage={"source-a":20,"source-b":20}
+        sim.outcome()
+        self.assertFalse(sim.finished)
+        sim.players[0].commander_damage["source-a"]=21
+        sim.outcome()
+        self.assertEqual(sim.winner,1)
+        self.assertIn("21 commander damage",sim.events[-1]["details"]["lossReasons"][0])
+
+    def test_real_kolodin_mount_and_vehicle_events_feed_simulator(self):
+        deck=json.loads((HERE/"decks/14850373-budget-deck.json").read_text())
+        by_name={x["name"]:x for x in deck["commanders"]+deck["mainboard"]}
+        identity=set(deck["commanders"][0]["colorIdentity"])
+        extra=[s.import_diagnostic_card(self.rules,by_name[name],0,f"extra-{i}",identity)
+               for i,name in enumerate(("Kolodin, Triumph Caster","Brightfield Mustang","Thundering Chariot"))]
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+extra,s.demo_deck(1)),diagnostic=True)
+        player=sim.players[0]
+        for card in extra:
+            source=player.hand if card in player.hand else player.library
+            source.remove(card)
+            sim.enter_creature(card,player)
+        mount=next(x for x in player.battlefield if x.card.name=="Brightfield Mustang")
+        vehicle=next(x for x in player.battlefield if x.card.name=="Thundering Chariot")
+        self.assertTrue(mount.saddled)
+        self.assertTrue(vehicle.animated)
+        self.assertIn("haste",sim.effective_card(mount).traits)
+        self.assertEqual(sim.effective_card(vehicle).kind,"creature")
+        sim.phase="attack"
+        self.assertTrue(any(x.card_id==mount.card.id for x in sim.legal(0)))
+        game=sim.event_game("combat");game.attack(mount.card.id,1);sim.sync_events(game)
+        self.assertEqual(mount.counters,1)
+        self.assertFalse(mount.tapped)
+        sim.phase="cleanup";sim.step()
+        self.assertFalse(mount.saddled)
+        self.assertFalse(vehicle.animated)
+        self.assertEqual(mount.counters,1)
+        sim.invariant()
+
+    def test_instigator_entry_creates_real_goblin_and_tokens_cease_on_death(self):
+        deck=json.loads((HERE/"decks/14850373-budget-deck.json").read_text())
+        definition=next(c for c in deck["mainboard"] if c["name"]=="Goblin Instigator")
+        card=s.import_diagnostic_card(self.rules,definition,0,"instigator",{"White","Red"})
+        self.assertEqual(card.kind,"creature")
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+[card],s.demo_deck(1)),diagnostic=True)
+        player=sim.players[0]
+        (player.hand if card in player.hand else player.library).remove(card)
+        triggers=sim.enter_creature(card,player)
+        tokens=[x for x in player.battlefield if x.card.is_token]
+        self.assertEqual(len(tokens),1)
+        self.assertEqual(tokens[0].card.name,"Goblin")
+        self.assertEqual(tokens[0].card.event_definition.subtypes,frozenset({"Goblin"}))
+        self.assertTrue(any("Goblin" in e["effect"] for e in triggers))
+        sim.send_to_destination(player,tokens[0])
+        self.assertFalse(any(c.is_token for c in player.graveyard))
+        sim.invariant()
+
+    def test_token_spell_with_extra_text_remains_unsupported(self):
+        deck=json.loads((HERE/"decks/5254666-garbo-gobbos.json").read_text())
+        definition=next(c for c in deck["mainboard"] if c["name"]=="Dragon Fodder")
+        card=s.import_diagnostic_card(self.rules,definition,1,"a",{"Black","Red","White"})
+        self.assertEqual((card.kind,card.token_count),("token_spell",2))
+        changed=dict(definition,oracleText=definition["oracleText"]+" You lose 1 life.")
+        self.assertEqual(s.import_diagnostic_card(self.rules,changed,1,"b",{"Red"}).kind,"unsupported")
 
     def test_diagnostic_lands_respect_color_identity_and_entry_conditions(self):
         tower={"oracleText":"{T}: Add one mana of any color in your commander's color identity."}
