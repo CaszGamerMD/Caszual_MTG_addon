@@ -105,7 +105,7 @@ public final class CommanderMana {
     out.add(sources.get(i).id());generic--;
    }
    if(generic==0)return true;
-   while(out.size()>step)out.removeLast();
+   while(out.size()>step)out.remove(out.size()-1);
    return false;
   }
   int rem=step,type=-1;
@@ -116,7 +116,7 @@ public final class CommanderMana {
    if(used[i]||(source.manaMask()&bit)==0)continue;
    used[i]=true;out.add(source.id());
    if(solve(step+1,cost,sources,used,out))return true;
-   out.removeLast();used[i]=false;
+   out.remove(out.size()-1);used[i]=false;
   }
   return false;
  }

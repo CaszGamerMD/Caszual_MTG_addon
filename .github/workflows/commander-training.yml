@@ -1,0 +1,38 @@
+name: Commander training sandbox
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths: ['training/**', 'src/main/java/dev/casz/caszualmtg/Commander*.java', '.github/workflows/commander-training.yml']
+  pull_request:
+    paths: ['training/**', 'src/main/java/dev/casz/caszualmtg/Commander*.java', '.github/workflows/commander-training.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify rules, privacy, reproducibility and checkpoint retention
+        run: python -m unittest discover -s training/tests -v
+      - name: Audit both supplied decks and flag blocking questions
+        run: python training/simulator.py audit
+      - name: Generate public turn replay
+        run: python training/simulator.py simulate --demo --seed 42
+      - name: Exercise three generations and sixteen evaluation games per generation
+        run: python training/simulator.py train --demo --generations 3 --evaluation-seeds 8
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: commander-training-review
+          path: |
+            training/reports/
+            training/runs/demo/
+          retention-days: 14

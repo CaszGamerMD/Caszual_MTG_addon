@@ -129,3 +129,11 @@ The pure rules model also checks zero life, ten poison, a failed required draw, 
 Alternate-card wins such as Thassa's Oracle, Laboratory Maniac and Approach of the Second Sun, poison-producing cards, infinite combos, replacement/prevention effects and triggered wins are still unsupported, rather than guessed from card names. Tactical lethal is conditional on the limited supported battlefield, one attacker/one blocker, and no response stack; it is not a promise against arbitrary Magic cards. Automated logic/build checks do not replace a real in-game match test.
 
 Rules references: https://magic.wizards.com/en/formats/commander and https://magic.wizards.com/en/rules
+
+## Turn simulator and shared learning sandbox: 0.12.6
+
+The standalone training tools under training/ now execute deterministic matches between independent agents using frozen shared policy snapshots, pool post-match action-feature feedback, evaluate mutations against the retained champion, and atomically save generation/checkpoint state. A turn log records public actions and snapshots without revealing private draws. A self-contained HTML viewer supports event/turn navigation, playback, filtering, public battlefield review, and blocking rules questions with downloadable human answer notes.
+
+Unsupported card effects and runtime stages generate blocking questions instead of being approximated; blocked or truncated matches are excluded from learning. The Kolodin and Zurgo deck audit currently has 133 blocking questions and does not run those decks. The initial three sandbox generations and 48 evaluation games found no improvement, so the baseline policy was retained.
+
+This first runner is an explicitly synthetic one-attacker/one-blocker classroom model, not full Commander, and policies are not yet connected to live Minecraft golems. See training/README.md for commands, retained data, review examples, current limits, and the full-engine integration requirement.

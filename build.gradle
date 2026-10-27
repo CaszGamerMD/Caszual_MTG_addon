@@ -77,3 +77,11 @@ tasks.register('verifyCommanderSimpleCards', JavaExec) {
     mainClass = 'dev.casz.caszualmtg.CommanderSimpleCardsCheck'
 }
 tasks.named('check') { dependsOn verifyCommanderMana, verifyCommanderSimpleCards }
+
+
+// Standalone trainer reuses the production parsers/combat through a local Java worker.
+tasks.register('verifyCommanderSimulator', Exec) {
+    workingDir projectDir
+    commandLine 'python3', '-m', 'unittest', 'discover', '-s', 'training/tests', '-v'
+}
+tasks.named('check') { dependsOn verifyCommanderSimulator }

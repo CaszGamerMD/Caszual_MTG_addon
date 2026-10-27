@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Commander Golem • Turn Review</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#10151d;color:#edf2f8}
+*{box-sizing:border-box}body{margin:0 auto;max-width:1250px;padding:20px}h1{font-size:1.65rem;margin:0 0 8px}
+h2{font-size:1.1rem}p{line-height:1.5;color:#b8c6d8}header{display:flex;gap:18px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+button,.upload{border:1px solid #44556c;border-radius:9px;padding:10px 15px;background:#243449;color:#fff;cursor:pointer;font:inherit}
+button:disabled{opacity:.4;cursor:default}.upload input{display:none}.badge{display:inline-block;padding:5px 10px;border-radius:15px;background:#34412d;color:#c5f4a1;font-size:.8rem}
+.notice{border-left:3px solid #e6b657;padding:10px 14px;background:#29251d;color:#f1d9aa;border-radius:5px;margin:18px 0}
+nav,.controls{display:flex;gap:8px;flex-wrap:wrap;margin:15px 0}button.selected{background:#315e84;border-color:#80b8e0}
+.panel{background:#192331;border:1px solid #304257;border-radius:12px;padding:18px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.stats{display:flex;gap:14px;flex-wrap:wrap}.life{font-size:2rem;color:#c5f4a1;font-weight:700}
+.cards{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}.card{padding:10px;border:1px solid #59697f;border-radius:8px;background:#263b4c;min-width:120px;font-size:.85rem}
+.card.land{background:#284234}.card.tapped{opacity:.65;transform:rotate(5deg)}small{display:block;color:#bac7d8;margin-top:4px}
+input[type=range]{width:100%;accent-color:#c5f4a1}input[type=search],textarea{width:100%;font:inherit;color:#fff;background:#101923;border:1px solid #45576e;border-radius:7px;padding:10px}
+textarea{min-height:75px;resize:vertical}#log{max-height:420px;overflow:auto}.event{padding:10px;border-bottom:1px solid #314257;cursor:pointer}.event.active{background:#2f4b62;border-radius:6px}
+.meta{color:#a8bdd5;font-size:.8rem}.question{border-left:3px solid #e6b657;margin:12px 0;padding:14px;background:#202c3b;border-radius:8px}
+pre{white-space:pre-wrap;font-family:inherit;color:#c2cfdf}details{margin:12px 0}#empty{text-align:center;padding:55px 20px}
+footer{font-size:.8rem;color:#91a3ba;margin:24px 0}[hidden]{display:none!important}
+@media(max-width:650px){body{padding:12px}.grid{grid-template-columns:1fr}.panel{padding:13px}.card{min-width:100px}.controls button{padding:10px}}
+</style>
+<header><div><h1>Commander Golem</h1><span class="badge">Turn & rules review</span></div><label class="upload">Open replay / questions<input id="file" type="file" accept=".json,application/json"></label></header>
+<div id="notice" class="notice">Open a replay or deck review JSON file. No internet connection is needed.</div>
+<nav><button id="turnTab" class="selected">Turn simulator</button><button id="questionTab">Questions <span id="count">0</span></button></nav>
+<div id="empty" class="panel"><h2>Review every turn</h2><p>Step through decisions, combat and life totals, or answer flagged rules questions.</p></div>
+<main id="turns" hidden>
+<section class="panel"><div id="heading"></div><div class="controls"><button id="prev">← Previous</button><button id="play">Play</button><button id="next">Next →</button><button id="nextTurn">Next turn</button></div><input id="slider" aria-label="Replay event" type="range" min="0" max="0" value="0"><p id="message"></p></section>
+<div id="players" class="grid"></div>
+<section class="panel"><h2>Play log</h2><input id="search" type="search" placeholder="Filter log by card, action or phase…" aria-label="Filter play log"><div id="log"></div></section>
+</main>
+<section id="questions" hidden class="panel"><h2>Questions for human review</h2><p>A blocking question pauses the match. Written answers are review notes; the rule must be implemented and tested before it can be used for learning.</p><button id="saveAnswers">Download review answers</button><div id="questionList"></div></section>
+<footer>Public review: draw events show counts, not private card identities. Sandbox replays are labeled separately from full matches.</footer>
+<script>
+"use strict";
+let data=/*EMBEDDED_REPLAY*/null, position=0, timer=null, activeTab="turns";
+const $=id=>document.getElementById(id);
+function node(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n}
+function stop(){if(timer)clearInterval(timer);timer=null;$("play").textContent="Play"}
+function selectTab(tab){activeTab=tab;$("turns").hidden=tab!=="turns"||!data?.events?.length;$("questions").hidden=tab!=="questions"||!data;
+ $("turnTab").classList.toggle("selected",tab==="turns");$("questionTab").classList.toggle("selected",tab==="questions")}
+function render(){
+ if(!data)return;
+ $("empty").hidden=true;const events=data.events||[],questions=data.questions||[];
+ $("count").textContent=questions.length;
+ $("notice").textContent=data.notice||(data.kind==="rules-review"?"Deck review paused: "+questions.length+" blocking questions. No match results were used for learning.":"Review log");
+ if(data.kind==="turn-replay")$("notice").textContent+=" Result: "+data.result+(data.winner===null?"":" · Player "+(data.winner+1));
+ $("slider").max=Math.max(0,events.length-1);$("slider").value=position;
+ $("prev").disabled=position===0;$("next").disabled=position>=events.length-1;
+ if(events.length){
+  const e=events[position],state=e.state;
+  $("heading").textContent="Turn "+e.turn+" · "+e.phase+" · Event "+(position+1)+" / "+events.length;
+  $("message").textContent=e.message;
+  $("players").replaceChildren(...state.players.map(p=>{
+   const panel=node("section",undefined,"panel");panel.append(node("h2","Player "+(p.seat+1)+(state.active===p.seat?" · Active":"")));
+   const stats=node("div",undefined,"stats");stats.append(node("span",p.life+" life","life"),node("span","Hand: "+p.handCount),node("span","Library: "+p.libraryCount));panel.append(stats);
+   const cards=node("div",undefined,"cards");
+   for(const c of p.battlefield){const el=node("div",c.name,"card "+c.kind+(c.tapped?" tapped":""));el.append(node("small",c.kind==="creature"?c.power+" / "+c.toughness+(c.fresh?" · New":""):"Land"),node("small",c.tapped?"Tapped":"Untapped"));cards.append(el)}
+   if(!p.battlefield.length)cards.append(node("p","Empty battlefield"));panel.append(cards);
+   const grave=node("details");grave.append(node("summary","Graveyard ("+p.graveyard.length+")"),node("p",p.graveyard.map(c=>c.name).join(", ")||"Empty"));panel.append(grave);return panel;
+  }));
+ }
+ renderLog();selectTab(activeTab);
+}
+function renderLog(){
+ const filter=$("search").value.toLowerCase();$("log").replaceChildren();
+ for(const [i,e] of (data?.events||[]).entries()){
+  if(!(e.message+" "+e.phase+" "+e.kind).toLowerCase().includes(filter))continue;
+  const el=node("div",undefined,"event"+(i===position?" active":""));
+  el.append(node("div","Turn "+e.turn+" · "+e.phase+" · Player "+(e.actor+1),"meta"),node("div",e.message));
+  el.onclick=()=>{stop();position=i;render()};$("log").append(el);
+ }
+}
+function renderQuestions(){
+ $("questionList").replaceChildren();
+ for(const q of data.questions||[]){
+  const el=node("article",undefined,"question");el.append(node("h2",q.card||q.reason),node("p",q.question));
+  if(q.deck)el.append(node("small","Deck: "+q.deck+(q.alsoInDecks?.length?" / "+q.alsoInDecks.join(" / "):"")));
+  if(q.oracleText){const details=node("details");details.append(node("summary","Card rules text"),node("pre",q.oracleText));el.append(details)}
+  const answer=node("textarea");answer.placeholder="Human review notes / proposed ruling";answer.value=q.answer||"";answer.setAttribute("aria-label","Answer for "+(q.card||q.reason));answer.oninput=()=>q.answer=answer.value;
+  el.append(answer,node("small","Open · Blocking · Needs implementation and tests"));$("questionList").append(el);
+ }
+ if(!(data.questions||[]).length)$("questionList").append(node("p","No open rules questions in this replay."));
+}
+function unpack(value){
+ if(value.packedReplay!==1)return value;
+ const catalog=value.cardCatalog;
+ value.events=value.compactEvents.map(e=>({index:e[0],turn:e[1],phase:e[2],actor:e[3],kind:e[4],message:e[5],details:e[6],
+ state:{active:e[7][0],turn:e[7][1],phase:e[7][2],players:e[7][3].map((p,seat)=>({seat,life:p[0],handCount:p[1],libraryCount:p[2],
+ battlefield:p[3].map(c=>({...catalog[c[0]],tapped:!!c[1],fresh:!!c[2]})),graveyard:p[4].map(c=>({id:catalog[c].id,name:catalog[c].name}))}))}}));
+ return value;
+}
+function load(value){stop();if(!value||value.schemaVersion!==1||!["turn-replay","rules-review"].includes(value.kind))throw Error("Unsupported review file");
+ data=unpack(value);position=0;activeTab=value.events?.length?"turns":"questions";renderQuestions();render()}
+$("file").onchange=async e=>{try{load(JSON.parse(await e.target.files[0].text()))}catch(err){$("notice").textContent="Could not open file: "+err.message}};
+$("prev").onclick=()=>{stop();position=Math.max(0,position-1);render()};
+$("next").onclick=()=>{position=Math.min((data.events||[]).length-1,position+1);render()};
+$("nextTurn").onclick=()=>{stop();const events=data.events||[];const turn=events[position]?.turn;const i=events.findIndex((e,i)=>i>position&&e.turn>turn);if(i>=0){position=i;render()}};
+$("slider").oninput=e=>{stop();position=Number(e.target.value);render()};
+$("play").onclick=()=>{if(timer){stop();return}if(!data?.events?.length)return;$("play").textContent="Pause";timer=setInterval(()=>{if(position>=data.events.length-1){stop();return}position++;render()},800)};
+$("turnTab").onclick=()=>selectTab("turns");$("questionTab").onclick=()=>{stop();selectTab("questions")};
+$("search").oninput=renderLog;
+$("saveAnswers").onclick=()=>{if(!data)return;const blob=new Blob([JSON.stringify({schemaVersion:1,kind:"rules-review",status:"pending-review",questions:data.questions||[]},null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=node("a");a.href=url;a.download="golem-review-answers.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+if(data)load(data);
+</script></html>
