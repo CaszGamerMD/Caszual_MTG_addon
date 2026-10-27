@@ -1,0 +1,79 @@
+# Budget Deck
+
+Source: https://archidekt.com/decks/14850373/budget_deck
+
+## Commander
+
+1 Kolodin, Triumph Caster
+
+## Main deck
+
+1 Andúril, Flame of the West
+1 Arcbound Mouser
+1 Archetype of Courage
+1 Baird, Argivian Recruiter
+1 Basilisk Collar
+1 Batterbone
+1 Bitterthorn, Nissa's Animus
+1 Bovine Intervention
+1 Brave the Sands
+1 Bridled Bighorn
+1 Brightfield Glider
+1 Brightfield Mustang
+1 Brute Suit
+1 Bulwark Ox
+1 Captain's Claws
+1 Charismatic Conqueror
+1 Clifftop Retreat
+1 Cloudspire Captain
+1 Cloudspire Coordinator
+1 Command Tower
+1 Dawnsire, Sunstar Dreadnought
+1 Dolmen Gate
+1 Dragonmaster Outcast
+1 Dynamite Diver
+1 Elenda's Hierophant
+1 Ferocity of the Wilds
+1 Flowering of the White Tree
+1 Fortune, Loyal Steed
+1 Gilded Ghoda
+1 Glorious Anthem
+1 Gloryheath Lynx
+1 Goblin Instigator
+1 Goblin War Drums
+1 Griffin Aerie
+1 Guidelight Matrix
+1 Haazda Marshal
+1 Hanweir Militia Captain // Westvale Cult Leader
+1 Honor of the Pure
+1 Hopeful Eidolon
+1 Interface Ace
+1 Krenko, Tin Street Kingpin
+1 Legion's Landing // Adanto, the First Fort
+1 Lifelink
+1 Lumen-Class Frigate
+13 Mountain
+1 Murder Investigation
+1 Needleverge Pathway // Pillarverge Pathway
+1 Ocelot Pride
+1 Path to Exile
+19 Plains
+1 Plateau
+1 Quilled Charger
+1 Radiant Summit
+1 Recon Craft Theta
+1 Roadside Assistance
+1 Securitron Squadron
+1 Shadowspear
+1 Skyknight Vanguard
+1 Sol Ring
+1 Speaker of the Heavens
+1 Sundown Pass
+1 Sword of Hearth and Home
+1 Sword of the Animist
+1 The Eternity Elevator
+1 Throne of the God-Pharaoh
+1 Thundering Chariot
+1 True Conviction
+1 Untethered Express
+1 Valor's Flagship

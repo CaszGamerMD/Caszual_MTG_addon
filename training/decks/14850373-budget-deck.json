@@ -1,0 +1,1750 @@
+{
+  "schemaVersion": 1,
+  "sourceUrl": "https://archidekt.com/decks/14850373/budget_deck",
+  "sourceDeckId": 14850373,
+  "name": "Budget Deck",
+  "sourceUpdatedAt": "2025-07-28T12:09:41.489107Z",
+  "retrievedAt": "2026-10-27T07:51:19.871578+00:00",
+  "format": "commander",
+  "commanders": [
+    {
+      "name": "Kolodin, Triumph Caster",
+      "quantity": 1,
+      "oracleId": "45682055-d02a-450c-a41d-aa67162ff015",
+      "manaCost": "{R}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Human",
+        "Pilot"
+      ],
+      "colors": [
+        "White",
+        "Red"
+      ],
+      "colorIdentity": [
+        "White",
+        "Red"
+      ],
+      "oracleText": "Mounts and Vehicles you control have haste.\nWhenever a Mount you control enters, it becomes saddled until end of turn.\nWhenever a Vehicle you control enters, it becomes an artifact creature until end of turn.",
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    }
+  ],
+  "mainboard": [
+    {
+      "name": "Andúril, Flame of the West",
+      "quantity": 1,
+      "oracleId": "e6521404-8474-4727-b2d0-537d15d8a63f",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +3/+1.\nWhenever equipped creature attacks, create two tapped 1/1 white Spirit creature tokens with flying. If that creature is legendary, instead create two of those tokens that are tapped and attacking.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Arcbound Mouser",
+      "quantity": 1,
+      "oracleId": "5e59199c-facc-46b4-9681-988de0cfaba2",
+      "manaCost": "{W}",
+      "types": [
+        "Creature",
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Cat"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Lifelink\nModular 1 (This creature enters with a +1/+1 counter on it. When it dies, you may put its +1/+1 counters on target artifact creature.)",
+      "power": "0",
+      "toughness": "0",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Archetype of Courage",
+      "quantity": 1,
+      "oracleId": "79b48704-480d-4905-b87a-40b127894670",
+      "manaCost": "{1}{W}{W}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Soldier"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Creatures you control have first strike.\nCreatures your opponents control lose first strike and can't have or gain first strike.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Baird, Argivian Recruiter",
+      "quantity": 1,
+      "oracleId": "1d078108-f88c-4a32-a28f-bae5182b2f53",
+      "manaCost": "{R}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Human",
+        "Soldier"
+      ],
+      "colors": [
+        "White",
+        "Red"
+      ],
+      "colorIdentity": [
+        "White",
+        "Red"
+      ],
+      "oracleText": "At the beginning of your end step, if you control a creature with power greater than its base power, create a 1/1 white Soldier creature token.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Basilisk Collar",
+      "quantity": 1,
+      "oracleId": "f5f4dd28-f4ae-4d39-b9b8-6ebfd63c93fe",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature has deathtouch and lifelink. (Any amount of damage it deals to a creature is enough to destroy it. Damage dealt by this creature also causes you to gain that much life.)\nEquip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Batterbone",
+      "quantity": 1,
+      "oracleId": "389d459d-446a-4b84-82b2-a30fe6ced11f",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Living weapon (When this Equipment enters, create a 0/0 black Phyrexian Germ creature token, then attach this to it.)\nEquipped creature gets +1/+1 and has vigilance and lifelink.\nEquip {5}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Bitterthorn, Nissa's Animus",
+      "quantity": 1,
+      "oracleId": "5a57fba3-01e3-4852-8c45-7c910502bd03",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Living weapon (When this Equipment enters, create a 0/0 black Phyrexian Germ creature token, then attach this to it.)\nEquipped creature gets +1/+1.\nWhenever equipped creature attacks, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nEquip {3}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Bovine Intervention",
+      "quantity": 1,
+      "oracleId": "7402d98f-6d58-4ff2-a0db-9eec4417a75f",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Destroy target artifact or creature. Its controller creates a 2/2 white Ox creature token.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Brave the Sands",
+      "quantity": 1,
+      "oracleId": "4e89bd75-f59d-4f08-be51-5660fbbba3c2",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Creatures you control have vigilance.\nEach creature you control can block an additional creature each combat.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Bridled Bighorn",
+      "quantity": 1,
+      "oracleId": "6a1ad848-6fda-46dd-aad8-2f6a5c71a696",
+      "manaCost": "{3}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Sheep",
+        "Mount"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Vigilance\nWhenever this creature attacks while saddled, create a 1/1 white Sheep creature token.\nSaddle 2 (Tap any number of other creatures you control with total power 2 or more: This Mount becomes saddled until end of turn. Saddle only as a sorcery.)",
+      "power": "3",
+      "toughness": "4",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Brightfield Glider",
+      "quantity": 1,
+      "oracleId": "acff6e5c-7f25-4ae1-8672-8672450ad844",
+      "manaCost": "{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Mount",
+        "Possum"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Vigilance\nWhenever this creature attacks while saddled, it gets +1/+2 and gains flying until end of turn.\nSaddle 3 (Tap any number of other creatures you control with total power 3 or more: This Mount becomes saddled until end of turn. Saddle only as a sorcery.)",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Brightfield Mustang",
+      "quantity": 1,
+      "oracleId": "1b05e355-38a5-4307-9d8b-e99ec30f8ed3",
+      "manaCost": "{3}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Horse",
+        "Mount"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Whenever this creature attacks while saddled, untap it and put a +1/+1 counter on it.\nSaddle 1 (Tap any number of other creatures you control with total power 1 or more: This Mount becomes saddled until end of turn. Saddle only as a sorcery.)",
+      "power": "3",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Brute Suit",
+      "quantity": 1,
+      "oracleId": "bc64e396-7fa1-4a4e-a528-352737714a9c",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Vehicle"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Vigilance\nCrew 1 (Tap any number of creatures you control with total power 1 or more: This Vehicle becomes an artifact creature until end of turn.)",
+      "power": "4",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Bulwark Ox",
+      "quantity": 1,
+      "oracleId": "bcd56fbf-fde3-41c2-83f5-9636e92d2893",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Ox",
+        "Mount"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Whenever this creature attacks while saddled, put a +1/+1 counter on target creature.\nSacrifice this creature: Creatures you control with counters on them gain hexproof and indestructible until end of turn.\nSaddle 1 (Tap any number of other creatures you control with total power 1 or more: This Mount becomes saddled until end of turn. Saddle only as a sorcery.)",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Captain's Claws",
+      "quantity": 1,
+      "oracleId": "4cacd7de-83ac-4767-b6f2-f5a89f04a0b9",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +1/+0.\nWhenever equipped creature attacks, create a 1/1 white Kor Ally creature token that's tapped and attacking.\nEquip {1}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Charismatic Conqueror",
+      "quantity": 1,
+      "oracleId": "3dcc35f3-74dc-46a8-8aa9-3411189f0547",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Vampire",
+        "Soldier"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Vigilance\nWhenever an artifact or creature an opponent controls enters untapped, they may tap that permanent. If they don't, you create a 1/1 white Vampire creature token with lifelink.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Clifftop Retreat",
+      "quantity": 1,
+      "oracleId": "d7faa3c8-46cf-46b2-bfa4-89000307cf18",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Red"
+      ],
+      "oracleText": "This land enters tapped unless you control a Mountain or a Plains.\n{T}: Add {R} or {W}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Cloudspire Captain",
+      "quantity": 1,
+      "oracleId": "c86bac69-96d6-4b9f-87e4-2d7faecaa112",
+      "manaCost": "{2}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Pilot"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Mounts and Vehicles you control get +1/+1.\nThis creature saddles Mounts and crews Vehicles as though its power were 2 greater.",
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Cloudspire Coordinator",
+      "quantity": 1,
+      "oracleId": "65d8b481-ebe9-4029-98a8-dd4693340bff",
+      "manaCost": "{R}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Pilot"
+      ],
+      "colors": [
+        "White",
+        "Red"
+      ],
+      "colorIdentity": [
+        "White",
+        "Red"
+      ],
+      "oracleText": "When this creature enters, scry 2.\n{T}: Create X 1/1 colorless Pilot creature tokens, where X is the number of Mounts and/or Vehicles that entered the battlefield under your control this turn. The tokens have \"This token saddles Mounts and crews Vehicles as though its power were 2 greater.\"",
+      "power": "3",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Command Tower",
+      "quantity": 1,
+      "oracleId": "0895c9b7-ae7d-4bb3-af17-3b75deb50a25",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "{T}: Add one mana of any color in your commander's color identity.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Dawnsire, Sunstar Dreadnought",
+      "quantity": 1,
+      "oracleId": "afc9436b-8cad-4916-929d-ff33a37b42d5",
+      "manaCost": "{5}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Spacecraft"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 20+.)\n10+ | Whenever you attack, Dawnsire deals 100 damage to up to one target creature or planeswalker.\n20+ | Flying",
+      "power": "20",
+      "toughness": "20",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Dolmen Gate",
+      "quantity": 1,
+      "oracleId": "d53d000f-c92f-4d70-ae60-8be3791da8a2",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Prevent all combat damage that would be dealt to attacking creatures you control.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Dragonmaster Outcast",
+      "quantity": 1,
+      "oracleId": "b6fb79c3-cd32-4045-8177-e52841eea65b",
+      "manaCost": "{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Shaman"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "At the beginning of your upkeep, if you control six or more lands, create a 5/5 red Dragon creature token with flying.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Dynamite Diver",
+      "quantity": 1,
+      "oracleId": "5f9ef763-22aa-4d43-b084-ef02465b489c",
+      "manaCost": "{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Pilot"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "This creature saddles Mounts and crews Vehicles as though its power were 2 greater.\nWhen this creature dies, it deals 1 damage to any target.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Elenda's Hierophant",
+      "quantity": 1,
+      "oracleId": "cb99c675-adc5-4dad-8be8-524f5f921213",
+      "manaCost": "{2}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Vampire",
+        "Cleric"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Flying\nWhenever you gain life, put a +1/+1 counter on this creature.\nWhen this creature dies, create X 1/1 white Vampire creature tokens with lifelink, where X is its power.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Ferocity of the Wilds",
+      "quantity": 1,
+      "oracleId": "c75bdc5f-22f2-4558-bb8f-5a53ff7ab1ac",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Attacking non-Human creatures you control get +1/+0 and have trample.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Flowering of the White Tree",
+      "quantity": 1,
+      "oracleId": "3cda958a-f777-433d-850e-a6c8f581db4e",
+      "manaCost": "{W}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Legendary creatures you control get +2/+1 and have ward {1}.\nNonlegendary creatures you control get +1/+1.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Fortune, Loyal Steed",
+      "quantity": 1,
+      "oracleId": "dc440b62-0bf0-4f23-9210-3550ff0a8d4d",
+      "manaCost": "{2}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Beast",
+        "Mount"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "When Fortune enters, scry 2.\nWhenever Fortune attacks while saddled, at end of combat, exile it and up to one creature that saddled it this turn, then return those cards to the battlefield under their owner's control.\nSaddle 1",
+      "power": "2",
+      "toughness": "4",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Gilded Ghoda",
+      "quantity": 1,
+      "oracleId": "5f4939dc-6e87-47fa-8287-9da60d4b5db2",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Horse",
+        "Mount"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Whenever this creature attacks while saddled, create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")\nSaddle 1 (Tap any number of other creatures you control with total power 1 or more: This Mount becomes saddled until end of turn. Saddle only as a sorcery.)",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Glorious Anthem",
+      "quantity": 1,
+      "oracleId": "e3886fe8-9b76-4613-8891-4ec74657c087",
+      "manaCost": "{1}{W}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Creatures you control get +1/+1.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Gloryheath Lynx",
+      "quantity": 1,
+      "oracleId": "28673657-f05f-4b0a-b80c-939773abdefb",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Cat",
+        "Mount"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Lifelink\nWhenever this creature attacks while saddled, search your library for a basic Plains card, reveal it, put it into your hand, then shuffle.\nSaddle 2 (Tap any number of other creatures you control with total power 2 or more: This Mount becomes saddled until end of turn. Saddle only as a sorcery.)",
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin Instigator",
+      "quantity": 1,
+      "oracleId": "8b022754-6d16-470e-b754-4df6e4f4709e",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Rogue"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "When this creature enters, create a 1/1 red Goblin creature token.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin War Drums",
+      "quantity": 1,
+      "oracleId": "29c21edd-781b-448e-824a-17bc8b8f4077",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Creatures you control have menace. (They can't be blocked except by two or more creatures.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Griffin Aerie",
+      "quantity": 1,
+      "oracleId": "7cab62dc-a256-4da8-a3ea-b3903ec37077",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "At the beginning of your end step, if you gained 3 or more life this turn, create a 2/2 white Griffin creature token with flying.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Guidelight Matrix",
+      "quantity": 1,
+      "oracleId": "98005890-d566-4a27-906f-625513171e85",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "When this artifact enters, draw a card.\n{2}, {T}: Target Mount you control becomes saddled until end of turn. Activate only as a sorcery.\n{2}, {T}: Target Vehicle you control becomes an artifact creature until end of turn.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Haazda Marshal",
+      "quantity": 1,
+      "oracleId": "3a1efa7e-21d5-47a1-bcd8-7d4616be0d58",
+      "manaCost": "{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Soldier"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Whenever this creature and at least two other creatures attack, create a 1/1 white Soldier creature token with lifelink.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Hanweir Militia Captain // Westvale Cult Leader",
+      "quantity": 1,
+      "oracleId": "2d8eba16-cfca-4a38-bde0-6ee36c67231a",
+      "manaCost": "",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Soldier"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "",
+      "power": "",
+      "toughness": "",
+      "layout": "transform",
+      "faces": [
+        {
+          "colors": [
+            "White"
+          ],
+          "flavor": "Her reputation inspires both loyalty and adoration.",
+          "manaCost": "{1}{W}",
+          "name": "Hanweir Militia Captain",
+          "power": "2",
+          "subTypes": [
+            "Human",
+            "Soldier"
+          ],
+          "superTypes": [],
+          "text": "At the beginning of your upkeep, if you control four or more creatures, transform this creature.",
+          "toughness": "2",
+          "types": [
+            "Creature"
+          ],
+          "loyalty": null
+        },
+        {
+          "colors": [
+            "White"
+          ],
+          "flavor": "",
+          "manaCost": "",
+          "name": "Westvale Cult Leader",
+          "power": "*",
+          "subTypes": [
+            "Human",
+            "Cleric"
+          ],
+          "superTypes": [],
+          "text": "Westvale Cult Leader's power and toughness are each equal to the number of creatures you control.\nAt the beginning of your end step, create a 1/1 white and black Human Cleric creature token.",
+          "toughness": "*",
+          "types": [
+            "Creature"
+          ],
+          "loyalty": null
+        }
+      ]
+    },
+    {
+      "name": "Honor of the Pure",
+      "quantity": 1,
+      "oracleId": "eb4188bb-62df-4309-bde1-f66318fe2f05",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "White creatures you control get +1/+1.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Hopeful Eidolon",
+      "quantity": 1,
+      "oracleId": "13c1ca1e-cd17-49ef-bc31-97bff99ec1e3",
+      "manaCost": "{W}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Spirit"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Bestow {3}{W} (If you cast this card for its bestow cost, it's an Aura spell with enchant creature. It becomes a creature again if it's not attached.)\nLifelink (Damage dealt by this creature also causes you to gain that much life.)\nEnchanted creature gets +1/+1 and has lifelink.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Interface Ace",
+      "quantity": 1,
+      "oracleId": "c4272676-a38a-4b23-988e-9cdb2feb46c1",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Creature",
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Pilot",
+        "Robot"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "This creature saddles Mounts and crews Vehicles using its toughness rather than its power.\nWhenever this creature becomes tapped during your turn, untap it. This ability triggers only once each turn.",
+      "power": "0",
+      "toughness": "4",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Krenko, Tin Street Kingpin",
+      "quantity": 1,
+      "oracleId": "e8065e1d-e937-4b56-8011-78f0d07328a0",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Goblin"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Whenever Krenko attacks, put a +1/+1 counter on it, then create a number of 1/1 red Goblin creature tokens equal to Krenko's power.",
+      "power": "1",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Legion's Landing // Adanto, the First Fort",
+      "quantity": 1,
+      "oracleId": "f7d8b91b-6541-4d3e-af51-7e000eac69c1",
+      "manaCost": "",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "",
+      "power": "",
+      "toughness": "",
+      "layout": "transform",
+      "faces": [
+        {
+          "colors": [
+            "White"
+          ],
+          "flavor": "\"I claim this land in the name of the queen.\"\n—Adrian Adanto of Lujio",
+          "manaCost": "{W}",
+          "name": "Legion's Landing",
+          "power": "",
+          "subTypes": [],
+          "superTypes": [
+            "Legendary"
+          ],
+          "text": "When Legion's Landing enters, create a 1/1 white Vampire creature token with lifelink.\nWhen you attack with three or more creatures, transform Legion's Landing.",
+          "toughness": "",
+          "types": [
+            "Enchantment"
+          ],
+          "loyalty": null
+        },
+        {
+          "colors": [],
+          "flavor": "",
+          "manaCost": "",
+          "name": "Adanto, the First Fort",
+          "power": "",
+          "subTypes": [],
+          "superTypes": [
+            "Legendary"
+          ],
+          "text": "(Transforms from Legion's Landing.)\n{T}: Add {W}.\n{2}{W}, {T}: Create a 1/1 white Vampire creature token with lifelink.",
+          "toughness": "",
+          "types": [
+            "Land"
+          ],
+          "loyalty": null
+        }
+      ]
+    },
+    {
+      "name": "Lifelink",
+      "quantity": 1,
+      "oracleId": "4fe8316a-9cff-43e9-a1d5-993a0c9daf3a",
+      "manaCost": "{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Enchant creature\nEnchanted creature has lifelink. (Damage dealt by the creature also causes its controller to gain that much life.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Lumen-Class Frigate",
+      "quantity": 1,
+      "oracleId": "3aa0cda4-fb2d-4fd4-84f6-482089a85547",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Spacecraft"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 12+.)\n2+ | Other creatures you control get +1/+1.\n12+ | Flying, lifelink",
+      "power": "3",
+      "toughness": "5",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Mountain",
+      "quantity": 13,
+      "oracleId": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [
+        "Basic"
+      ],
+      "subTypes": [
+        "Mountain"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "({T}: Add {R}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Murder Investigation",
+      "quantity": 1,
+      "oracleId": "42ca56c5-a9c4-4a2c-ae05-bce47aa6e16c",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Enchant creature you control\nWhen enchanted creature dies, create X 1/1 white Soldier creature tokens, where X is its power.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Needleverge Pathway // Pillarverge Pathway",
+      "quantity": 1,
+      "oracleId": "a9b8d020-4d72-4934-8942-df29ef19fc1d",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Red"
+      ],
+      "oracleText": "",
+      "power": "",
+      "toughness": "",
+      "layout": "modal_dfc",
+      "faces": [
+        {
+          "colors": [],
+          "flavor": "\"Once you really trust the rope, you'll learn to sleep standing up.\"\n—Akiri, kor line-slinger",
+          "manaCost": "",
+          "name": "Needleverge Pathway",
+          "power": "",
+          "subTypes": [],
+          "superTypes": [],
+          "text": "{T}: Add {R}.",
+          "toughness": "",
+          "types": [
+            "Land"
+          ],
+          "loyalty": null
+        },
+        {
+          "colors": [],
+          "flavor": "\"The oxen here take an almost feline delight in pushing things over the edge.\"\n—Akiri, kor line-slinger",
+          "manaCost": "",
+          "name": "Pillarverge Pathway",
+          "power": "",
+          "subTypes": [],
+          "superTypes": [],
+          "text": "{T}: Add {W}.",
+          "toughness": "",
+          "types": [
+            "Land"
+          ],
+          "loyalty": null
+        }
+      ]
+    },
+    {
+      "name": "Ocelot Pride",
+      "quantity": 1,
+      "oracleId": "b4ce2c8f-a19c-461e-8a2e-0ec2bd3ebca3",
+      "manaCost": "{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Cat"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "First strike, lifelink\nAscend (If you control ten or more permanents, you get the city's blessing for the rest of the game.)\nAt the beginning of your end step, if you gained life this turn, create a 1/1 white Cat creature token. Then if you have the city's blessing, for each token you control that entered this turn, create a token that's a copy of it.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Path to Exile",
+      "quantity": 1,
+      "oracleId": "d683d985-9888-4d21-8b5f-69e69ce4a03b",
+      "manaCost": "{W}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Plains",
+      "quantity": 19,
+      "oracleId": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [
+        "Basic"
+      ],
+      "subTypes": [
+        "Plains"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "({T}: Add {W}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Plateau",
+      "quantity": 1,
+      "oracleId": "c7a15ca4-085f-4d92-8387-c3711c04c8fa",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Plains",
+        "Mountain"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Red"
+      ],
+      "oracleText": "({T}: Add {R} or {W}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Quilled Charger",
+      "quantity": 1,
+      "oracleId": "6498e3e9-1a7b-4b47-9e7c-cdbd8928c9c8",
+      "manaCost": "{3}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Porcupine",
+        "Mount"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Whenever this creature attacks while saddled, it gets +1/+2 and gains menace until end of turn. (It can't be blocked except by two or more creatures.)\nSaddle 2 (Tap any number of other creatures you control with total power 2 or more: This Mount becomes saddled until end of turn. Saddle only as a sorcery.)",
+      "power": "4",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Radiant Summit",
+      "quantity": 1,
+      "oracleId": "5dd0cc44-4647-4857-ad3b-22494099d08a",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Plains",
+        "Mountain"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Red"
+      ],
+      "oracleText": "({T}: Add {R} or {W}.)\nThis land enters tapped unless you control two or more basic lands.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Recon Craft Theta",
+      "quantity": 1,
+      "oracleId": "8fba247e-9849-4a06-84ff-242894b0503a",
+      "manaCost": "{4}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Vehicle"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Flying\nWhen this Vehicle enters, create a 0/0 blue Alien creature token. Put a +1/+1 counter on it.\nWhenever this Vehicle attacks, proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)\nCrew 2",
+      "power": "4",
+      "toughness": "4",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Roadside Assistance",
+      "quantity": 1,
+      "oracleId": "814f30a1-c0d6-4243-839d-0645d7bcbe4c",
+      "manaCost": "{2}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Enchant creature or Vehicle\nWhen this Aura enters, create a 1/1 colorless Pilot creature token with \"This token saddles Mounts and crews Vehicles as though its power were 2 greater.\"\nEnchanted permanent gets +1/+1 and has lifelink.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Securitron Squadron",
+      "quantity": 1,
+      "oracleId": "96312b75-3110-4506-9f95-0c6c17d9da11",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Creature",
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Robot"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Squad {3} (As an additional cost to cast this spell, you may pay {3} any number of times. When this creature enters, create that many tokens that are copies of it.)\nVigilance\nWhenever a creature token you control enters, put a +1/+1 counter on it.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Shadowspear",
+      "quantity": 1,
+      "oracleId": "8b27326f-e7b8-4a4d-b589-df459246d19a",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +1/+1 and has trample and lifelink.\n{1}: Permanents your opponents control lose hexproof and indestructible until end of turn.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Skyknight Vanguard",
+      "quantity": 1,
+      "oracleId": "9180f77f-c288-4a24-a35d-a16270b3d737",
+      "manaCost": "{R}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Knight"
+      ],
+      "colors": [
+        "White",
+        "Red"
+      ],
+      "colorIdentity": [
+        "White",
+        "Red"
+      ],
+      "oracleText": "Flying\nWhenever this creature attacks, create a 1/1 white Soldier creature token that's tapped and attacking.",
+      "power": "1",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Sol Ring",
+      "quantity": 1,
+      "oracleId": "6ad8011d-3471-4369-9d68-b264cc027487",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "{T}: Add {C}{C}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Speaker of the Heavens",
+      "quantity": 1,
+      "oracleId": "e4bacf1b-0a45-4c73-857d-dffadb7e6fa5",
+      "manaCost": "{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Cleric"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Vigilance, lifelink (Attacking doesn't cause this creature to tap. Damage dealt by this creature also causes you to gain that much life.)\n{T}: Create a 4/4 white Angel creature token with flying. Activate only if you have at least 7 life more than your starting life total and only as a sorcery.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Sundown Pass",
+      "quantity": 1,
+      "oracleId": "5ad0b405-cca4-475e-985c-4d7e3599d87e",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Red"
+      ],
+      "oracleText": "This land enters tapped unless you control two or more other lands.\n{T}: Add {R} or {W}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Sword of Hearth and Home",
+      "quantity": 1,
+      "oracleId": "913e6182-706a-4872-8c8a-e146b0ae0738",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +2/+2 and has protection from green and from white.\nWhenever equipped creature deals combat damage to a player, exile up to one target creature you own, then search your library for a basic land card. Put both cards onto the battlefield under your control, then shuffle.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Sword of the Animist",
+      "quantity": 1,
+      "oracleId": "d79cbc61-6c15-48ea-bbba-3cffb819ccba",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +1/+1.\nWhenever equipped creature attacks, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "The Eternity Elevator",
+      "quantity": 1,
+      "oracleId": "11323af4-b8b8-4ca9-932f-377c7fd77dea",
+      "manaCost": "{5}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Spacecraft"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "{T}: Add {C}{C}{C}.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery.)\n20+ | {T}: Add X mana of any one color, where X is the number of charge counters on The Eternity Elevator.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Throne of the God-Pharaoh",
+      "quantity": 1,
+      "oracleId": "ea750169-1f6f-40c2-96e9-55719e103a63",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "At the beginning of your end step, each opponent loses life equal to the number of tapped creatures you control.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Thundering Chariot",
+      "quantity": 1,
+      "oracleId": "589ea35b-c64e-4cf6-81c5-806e9463e992",
+      "manaCost": "{4}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Vehicle"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "First strike, trample, haste\nCrew 1 (Tap any number of creatures you control with total power 1 or more: This Vehicle becomes an artifact creature until end of turn.)",
+      "power": "3",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "True Conviction",
+      "quantity": 1,
+      "oracleId": "fc299c1c-50f3-492a-b6b8-a3664bb72ab7",
+      "manaCost": "{3}{W}{W}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Creatures you control have double strike and lifelink.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Untethered Express",
+      "quantity": 1,
+      "oracleId": "652f049d-770e-4bd7-b65f-fe56e618366a",
+      "manaCost": "{4}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Vehicle"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Trample\nWhenever this Vehicle attacks, put a +1/+1 counter on it.\nCrew 1 (Tap any number of creatures you control with total power 1 or more: This Vehicle becomes an artifact creature until end of turn.)",
+      "power": "4",
+      "toughness": "4",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Valor's Flagship",
+      "quantity": 1,
+      "oracleId": "a3023de2-61e7-4f46-aa4a-09d08ee7d939",
+      "manaCost": "{4}{W}{W}{W}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Vehicle"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Flying, first strike, lifelink\nCrew 3\nCycling {X}{2}{W} ({X}{2}{W}, Discard this card: Draw a card.)\nWhen you cycle this card, create X 1/1 colorless Pilot creature tokens with \"This token saddles Mounts and crews Vehicles as though its power were 2 greater.\"",
+      "power": "7",
+      "toughness": "7",
+      "layout": "normal",
+      "faces": []
+    }
+  ],
+  "excludedCardCount": 12
+}
