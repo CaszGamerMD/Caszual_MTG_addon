@@ -48,11 +48,12 @@ class PodIntegration(unittest.TestCase):
 
  def test_observable_persisted_turn_stages(self):
   bot=read("CommanderGolems.java")
-  for stage in ["STAGE_LAND","STAGE_CAST","STAGE_COMBAT","STAGE_END"]:
+  for stage in ["STAGE_LAND","STAGE_CAST","STAGE_COMBAT","STAGE_POSTCOMBAT","STAGE_END"]:
    self.assertIn('private static final String '+stage,bot)
   self.assertIn("progress(golem,STAGE_LAND,STAGE_CAST)",bot)
-  self.assertIn("progress(golem,STAGE_CAST,STAGE_COMBAT)",bot)
-  self.assertIn("progress(golem,STAGE_COMBAT,STAGE_END)",bot)
+  self.assertIn("second?STAGE_POSTCOMBAT:STAGE_CAST,second?STAGE_END:STAGE_COMBAT",bot)
+  self.assertIn("if(s.table.aiAttack()!=null)return;",bot)
+  self.assertIn("progress(golem,STAGE_COMBAT,STAGE_POSTCOMBAT)",bot)
   self.assertIn('say(world,golem,"draws a card (',bot)
   self.assertIn("CommanderBattleActions.playLand(golem,s.table,s.hand)",bot)
   self.assertIn("CommanderBattleActions.castHand(golem,s.table,s.hand)",bot)
@@ -67,7 +68,7 @@ class PodIntegration(unittest.TestCase):
  def test_land_selection_respects_tapped_and_color_requirements(self):
   actions=read("CommanderBattleActions.java")
   mana=read("CommanderMana.java")
-  self.assertIn("CommanderMana.land(meta.typeLine(),meta.oracleText())",actions)
+  self.assertIn("CommanderMana.land(meta.name(),meta.typeLine(),meta.oracleText())",actions)
   self.assertIn("planned.entersTapped(),false",actions)
   self.assertIn("candidate.mask()&~have",actions)
   self.assertIn("boolean entersTapped",mana)
