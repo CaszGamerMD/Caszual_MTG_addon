@@ -7,7 +7,7 @@ import java.util.*;
  * Missing rules support is never interpreted as a blank card effect.
  */
 public final class CommanderSimpleCards {
- private static final Set<String> PASSIVE=Set.of("flying","reach","haste","vigilance","defender","deathtouch","indestructible","trample","lifelink","first strike","double strike");
+ private static final Set<String> PASSIVE=Set.of("flying","reach","haste","vigilance","defender","deathtouch","indestructible","trample","lifelink","first strike","double strike","shadow","skulk","horsemanship");
  private CommanderSimpleCards(){}
  public record Traits(int power,int toughness,Set<String> keywords){
   public boolean has(String keyword){return keywords.contains(keyword);}
@@ -41,7 +41,10 @@ public final class CommanderSimpleCards {
  }
  public static boolean canBlock(Traits blocker,Traits attacker,boolean tapped){
   return blocker!=null&&attacker!=null&&!tapped&&
-    (!attacker.has("flying")||blocker.has("flying")||blocker.has("reach"));
+    (!attacker.has("flying")||blocker.has("flying")||blocker.has("reach"))&&
+    (attacker.has("shadow")==blocker.has("shadow"))&&
+    (!attacker.has("horsemanship")||blocker.has("horsemanship"))&&
+    (!attacker.has("skulk")||blocker.power()<=attacker.power());
  }
  public record Damage(int playerDamage,boolean attackerDies,boolean blockerDies,boolean tapAttacker,
                       int attackerLifeGain,int blockerLifeGain){}

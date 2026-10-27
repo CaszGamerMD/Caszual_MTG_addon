@@ -109,3 +109,11 @@ Rules reference: https://magic.wizards.com/en/keyword-glossary
 First strike and double strike are now supported in the one-attacker/one-blocker resolver. First-strike damage and deaths are resolved before normal damage. Surviving double strikers deal damage again; dead creatures never retaliate. A blocked double striker cannot hit the player after its blocker dies unless it has trample. Damage already marked during the first step counts in the normal step.
 
 The resolver accounts for deathtouch, indestructible, trample and lifelink in both steps, and stops when a player loses during the first step. It does not provide priority windows between damage steps, changing abilities mid-combat, multiple blockers, or damage marked before this combat. Automated combat checks are not an end-to-end multiplayer game.
+
+## Evasion keywords: 0.12.4
+
+Shadow, skulk and horsemanship bring the supported keyword set to fourteen. Shadow restricts both attacking and blocking to creatures with shadow. Skulk prohibits blockers with greater power. Horsemanship requires a horsemanship blocker but does not prevent that creature blocking ordinary attackers. All restrictions are combined with flying/reach and tapped status; satisfying one does not bypass another.
+
+Automated checks cover equal/lesser/greater skulk power, both directions of shadow, horsemanship versus flying/reach, and combined evasion. The live defender response already calls this shared legality check before moving cards or applying damage. Additional unsupported abilities still reject the entire creature. Menace, protection, ward, hexproof, triggers and arbitrary effects remain unsupported. The one-attacker/one-blocker and no-priority-window limits still apply. These are automated logic checks, not a full in-game match test.
+
+Rules references: https://magic.wizards.com/en/rules and https://magic.wizards.com/en/news/feature/shadows-over-innistrad-release-notes-2016-03-30
