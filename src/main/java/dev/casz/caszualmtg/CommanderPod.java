@@ -39,6 +39,24 @@ public final class CommanderPod {
   return new Status(id,g.name,g.started,g.rolling,active,dead,g.order.size(),"");
  }
 
+ /** All registered counters must be known before declaring a winner. */
+ public static CommanderVictory.Result result(ServerLevel world,LifePointBlockEntity life){
+  Status status=status(world,life);
+  if(!status.member())return CommanderVictory.Result.UNKNOWN;
+  var group=LifePlayGroups.getGroup(world,status.id());
+  if(group==null)return CommanderVictory.Result.UNKNOWN;
+  List<CommanderVictory.Participant> players=new ArrayList<>();
+  for(BlockPos pos:group.order){
+   boolean dead=group.dead.contains(pos);
+   boolean known=dead;
+   if(world.hasChunkAt(pos)&&world.getBlockEntity(pos) instanceof LifePointBlockEntity lp){
+    known=true;dead|=lp.getLife()<=0;
+   }
+   players.add(new CommanderVictory.Participant(pos.toShortString(),dead,known));
+  }
+  return CommanderVictory.result(life.getBlockPos().toShortString(),status.started(),status.rolling(),players);
+ }
+
  private static Status missing(String problem){
   return new Status(null,"",false,false,false,false,0,problem);
  }
@@ -76,3 +94,4 @@ public final class CommanderPod {
      "Could not register the Golem's Life Point with the pod.";
  }
 }
+

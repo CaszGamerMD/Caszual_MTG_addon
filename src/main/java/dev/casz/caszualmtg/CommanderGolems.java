@@ -25,6 +25,7 @@ import java.util.*;
  */
 public final class CommanderGolems {
  public static final String TAG="caszual_mtg_commander_golem";
+ private static final String RESULT_REPORTED="caszual_mtg_ai_result_reported";
  private static final String FIRST_HAND="caszual_mtg_ai_opening_hand";
  private static final String ACTION_DONE="caszual_mtg_ai_turn_processed";
  /** Persistent scoreboard tags; one server tick per visible turn stage. */
@@ -215,6 +216,10 @@ public final class CommanderGolems {
   if(!pod.started())return "Golem joined pod '"+pod.name()+"'. Opening hand: "+
     (golem.entityTags().contains(FIRST_HAND)?"ready":"waiting")+"; start the pod when players are ready.";
   if(pod.rolling())return "Pod '"+pod.name()+"' is choosing the first turn. Golem is waiting.";
+  var result=CommanderPod.result(level,s.life);
+  if(result==CommanderVictory.Result.WON)return "Commander Golem wins: every other pod participant is eliminated.";
+  if(result==CommanderVictory.Result.DRAW)return "The pod ended in a draw: no participants remain.";
+  if(pod.dead())return "Commander Golem is eliminated.";
   if(s.table.aiAttack()!=null)return "Commander Golem is waiting for the defender to choose a block or take damage.";
   int incoming=incomingTargets(level,golem,s.table);
   return "Pod: "+pod.name()+" ("+pod.memberCount()+" players) | "+
@@ -297,6 +302,17 @@ public final class CommanderGolems {
    pod=CommanderPod.status(world,s.life);
   }
   if(!pod.member())return;
+  var result=CommanderPod.result(world,s.life);
+  if(result==CommanderVictory.Result.WON||result==CommanderVictory.Result.DRAW
+      ||result==CommanderVictory.Result.LOST){
+   if(!golem.entityTags().contains(RESULT_REPORTED)){
+    say(world,golem,result==CommanderVictory.Result.WON?"wins: every other pod participant is eliminated."
+      :result==CommanderVictory.Result.DRAW?"recognizes a draw: no participants remain.":"is eliminated.");
+    golem.addTag(RESULT_REPORTED);
+   }
+   return;
+  }
+  golem.removeTag(RESULT_REPORTED);
   // Keep the exact linked Life Point in a persisted pod; never treat an
   // ungrouped counter's local turnActive flag as permission to act.
   if(pod.dead()||s.life.getLife()<=0)return;

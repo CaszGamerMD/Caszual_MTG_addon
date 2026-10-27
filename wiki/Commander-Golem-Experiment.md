@@ -117,3 +117,15 @@ Shadow, skulk and horsemanship bring the supported keyword set to fourteen. Shad
 Automated checks cover equal/lesser/greater skulk power, both directions of shadow, horsemanship versus flying/reach, and combined evasion. The live defender response already calls this shared legality check before moving cards or applying damage. Additional unsupported abilities still reject the entire creature. Menace, protection, ward, hexproof, triggers and arbitrary effects remain unsupported. The one-attacker/one-blocker and no-priority-window limits still apply. These are automated logic checks, not a full in-game match test.
 
 Rules references: https://magic.wizards.com/en/rules and https://magic.wizards.com/en/news/feature/shadows-over-innistrad-release-notes-2016-03-30
+
+## Win-condition knowledge: 0.12.5
+
+The live combat planner evaluates every supported ready attacker against eligible opponents' public creatures instead of always choosing the biggest creature against the lowest life total. It prefers lethal damage against every modeled legal single-blocker choice, then minimum net life damage, survival, and unblocked damage. Flying/reach and other evasion, double strike, trample, first strike, indestructible, deathtouch and blocking lifelink use the same combat resolver as actual responses. Unknown untapped creatures prevent a forced-lethal claim. Opponents still choose their own blocks.
+
+The golem recognizes the last surviving member of a started free-for-all pod as the winner, all participants eliminated as a draw, and its own elimination as a loss. It announces the result and stops taking turns. Eliminating one player in a larger pod is not victory. An unloaded/missing live counter prevents a winner claim, a disconnected player is not presumed dead, and pregame/roulette/single-counter setups do not count as completed matches. This reads the linked pod's persisted elimination state; it does not delete cards or automatically reset the pod.
+
+The pure rules model also checks zero life, ten poison, a failed required draw, concession, and 21 combat damage from the SAME commander (separate commanders do not combine; lifegain does not erase it). Live zero-life/combat and empty-library turn-draw losses already feed the pod elimination state. Poison and per-commander damage remain rules-model tests only: they are not newly wired to live counters, and commander attacks remain excluded. Manually registered pod eliminations are respected.
+
+Alternate-card wins such as Thassa's Oracle, Laboratory Maniac and Approach of the Second Sun, poison-producing cards, infinite combos, replacement/prevention effects and triggered wins are still unsupported, rather than guessed from card names. Tactical lethal is conditional on the limited supported battlefield, one attacker/one blocker, and no response stack; it is not a promise against arbitrary Magic cards. Automated logic/build checks do not replace a real in-game match test.
+
+Rules references: https://magic.wizards.com/en/formats/commander and https://magic.wizards.com/en/rules

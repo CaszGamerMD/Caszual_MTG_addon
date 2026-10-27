@@ -45,6 +45,21 @@ public final class CommanderRules {
   private final Map<String,Integer> commanderCasts=new HashMap<>();
   private final Map<String,Integer> commanderDamage=new HashMap<>();
   private int life=STARTING_LIFE;
+  private int poison;
+  private boolean failedDraw,conceded;
+  public void poison(int amount){poison=Math.max(0,poison+amount);}
+  public void failedDraw(){failedDraw=true;}
+  public void concede(){conceded=true;}
+  /** Empty library alone is not a loss; an attempted failed draw is. */
+  public Set<String> lossReasons(){
+   Set<String> reasons=new LinkedHashSet<>();
+   if(life<=0)reasons.add("life");
+   if(poison>=10)reasons.add("poison");
+   if(failedDraw)reasons.add("failed draw");
+   if(conceded)reasons.add("conceded");
+   if(commanderDamage.values().stream().anyMatch(v->v>=LETHAL_COMMANDER_DAMAGE))reasons.add("commander damage");
+   return Set.copyOf(reasons);
+  }
   public Phase phase(){return phase;}
   public int life(){return life;}
   public int landPlays(){return landPlays;}
@@ -67,7 +82,8 @@ public final class CommanderRules {
    life-=damage;
    return life<=0||commanderDamage.get(commanderId)>=LETHAL_COMMANDER_DAMAGE;
   }
-  public boolean lost(){return life<=0||commanderDamage.values().stream().anyMatch(v->v>=LETHAL_COMMANDER_DAMAGE);}
+  public boolean lost(){return !lossReasons().isEmpty();}
   public int commanderDamage(String commanderId){return commanderDamage.getOrDefault(commanderId,0);}
  }
 }
+

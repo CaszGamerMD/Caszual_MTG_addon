@@ -109,6 +109,58 @@ public final class CommanderSimpleCardsCheck {
   check(!CommanderSimpleCards.canBlock(shadow,rider,false),"Horsemanship does not bypass blocker's shadow");
   check(CommanderSimpleCards.creature("Creature — Spirit","Shadow\nWhenever this creature attacks, draw a card.","2","2").isEmpty(),"Evasion never hides unsupported triggers");
   check(CommanderSimpleCards.creature("Creature — Rogue","Skulk, menace","2","2").isEmpty(),"Multi-blocker menace remains unsupported");
+  var lethalFlyer=CommanderVictory.attack(eagle,java.util.List.of(giant),false,40,2);
+  var blockedGiant=CommanderVictory.attack(giant,java.util.List.of(giant),false,40,2);
+  check(lethalFlyer.lethal()&&!blockedGiant.lethal()&&lethalFlyer.compareTo(blockedGiant)>0,
+    "Lethal evasive attacker is preferred to larger blocked creature");
+  check(!CommanderVictory.attack(eagle,java.util.List.of(spider),false,40,2).lethal(),
+    "Reach blocker prevents a false flying lethal");
+  check(!CommanderVictory.attack(eagle,java.util.List.of(),true,40,2).lethal(),
+    "Unknown blocker prevents a forced-lethal claim");
+  check(CommanderVictory.attack(duelist,java.util.List.of(),false,40,4).lethal(),
+    "Double strike contributes both hits to lethal");
+  check(!CommanderVictory.attack(duelist,java.util.List.of(bear),false,40,4).lethal(),
+    "Dead blocker still stops double strike without trample");
+  check(CommanderVictory.attack(crush,java.util.List.of(bear),false,40,4).lethal(),
+    "Trample and double strike can force lethal through a blocker");
+  check(!CommanderVictory.attack(crush,java.util.List.of(drainWall),false,40,1).lethal(),
+    "Blocking lifelink prevents lethal even when raw damage reaches starting life");
+  check(CommanderVictory.attack(snake,java.util.List.of(giant),false,40,40).mayDie(),
+    "Trade risk is evaluated from legal responses");
+  check(!CommanderVictory.attack(eagle,java.util.List.of(giant),false,40,40).mayDie(),
+    "An illegal blocker does not create imaginary trade risk");
+  var a=new CommanderVictory.Participant("self",false,true);
+  var b=new CommanderVictory.Participant("enemy",false,true);
+  var deadB=new CommanderVictory.Participant("enemy",true,true);
+  var c=new CommanderVictory.Participant("third",false,true);
+  check(CommanderVictory.result("self",true,false,java.util.List.of(a,b))==CommanderVictory.Result.ONGOING,"Two living players is ongoing");
+  check(CommanderVictory.result("self",true,false,java.util.List.of(a,deadB))==CommanderVictory.Result.WON,"Last survivor wins");
+  check(CommanderVictory.result("self",true,false,java.util.List.of(a,deadB,c))==CommanderVictory.Result.ONGOING,"One elimination in multiplayer is not a match win");
+  check(CommanderVictory.result("enemy",true,false,java.util.List.of(a,deadB))==CommanderVictory.Result.LOST,"Eliminated player loses");
+  check(CommanderVictory.result("self",true,false,java.util.List.of(new CommanderVictory.Participant("self",true,true),deadB))==CommanderVictory.Result.DRAW,"All eliminated simultaneously is a draw");
+  check(CommanderVictory.result("self",true,false,java.util.List.of(a,new CommanderVictory.Participant("enemy",false,false)))==CommanderVictory.Result.UNKNOWN,"Missing counter is not a win");
+  check(CommanderVictory.result("self",false,false,java.util.List.of(a,deadB))==CommanderVictory.Result.WAITING,"Pregame is not victory");
+  check(CommanderVictory.result("self",true,true,java.util.List.of(a,deadB))==CommanderVictory.Result.WAITING,"Starting roulette is not victory");
+  check(CommanderVictory.result("self",true,false,java.util.List.of(a))==CommanderVictory.Result.WAITING,"Single-person setup is not a completed match");
+  check(CommanderVictory.result("missing",true,false,java.util.List.of(a,deadB))==CommanderVictory.Result.UNKNOWN,"Self must be a participant");
+  check(CommanderVictory.result("self",true,false,java.util.List.of(a,a))==CommanderVictory.Result.UNKNOWN,"Duplicate participants do not manufacture a result");
+  var poisonPlayer=new CommanderRules.Turn();
+  poisonPlayer.poison(9);check(!poisonPlayer.lost(),"Nine poison is not lethal");
+  poisonPlayer.poison(1);check(poisonPlayer.lossReasons().contains("poison"),"Ten poison is lethal in Commander");
+  var decked=new CommanderRules.Turn();
+  check(!decked.lost(),"An empty library without a failed draw is not inherently a loss");
+  decked.failedDraw();check(decked.lossReasons().contains("failed draw"),"Failed required draw loses");
+  var splitCommander=new CommanderRules.Turn();
+  splitCommander.lifeChange(100);
+  splitCommander.combatDamageFromCommander("first",20);
+  splitCommander.combatDamageFromCommander("second",20);
+  check(!splitCommander.lost(),"Damage from different commanders is not combined");
+  splitCommander.combatDamageFromCommander("first",1);
+  splitCommander.lifeChange(100);
+  check(splitCommander.lossReasons().contains("commander damage"),"Lifegain does not erase 21 damage from one commander");
+  var zeroLife=new CommanderRules.Turn();zeroLife.lifeChange(-40);
+  check(zeroLife.lossReasons().contains("life"),"Zero life is lethal");
+  var concession=new CommanderRules.Turn();concession.concede();check(concession.lost(),"Conceded player is eliminated");
   var enemy=new CommanderRules.Turn();
   for(int t=0;t<20;t++){
    if(!enemy.combatDamageFromCommander("same-commander",2))continue;

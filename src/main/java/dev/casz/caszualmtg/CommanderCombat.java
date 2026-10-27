@@ -58,25 +58,43 @@ public final class CommanderCombat {
   UUID group=LifePlayGroups.findGroupId(world,botLife.getBlockPos());
   if(group==null)return false;
   List<TabletopBlockEntity> tiles=connected(world,table.getBlockPos());
-  TabletopBlockEntity defender=null;int lowLife=Integer.MAX_VALUE;
+  TabletopBlockEntity defender=null;
+  TabletopBlockEntity.PlayedCard attacker=null;
+  CommanderVictory.Attack best=null;
+  int lowLife=Integer.MAX_VALUE;
+  // Evaluate each legal attacker against each opponent's public battlefield.
+  // Never inspect private hands or assume an unknown creature cannot block.
   for(TabletopBlockEntity seat:tiles){
    UUID who=seat.seatOwner();
    if(who==null||who.equals(bot.getUUID())||world.getServer().getPlayerList().getPlayer(who)==null)continue;
    LifePointBlockEntity lp=life(world,seat);
-   if(lp==null||lp.getLife()<=0||!group.equals(LifePlayGroups.findGroupId(world,lp.getBlockPos())))continue;
-   if(lp.getLife()<lowLife){lowLife=lp.getLife();defender=seat;}
+   if(lp==null||lp.getLife()<=0||!group.equals(LifePlayGroups.findGroupId(world,lp.getBlockPos()))
+       ||CommanderPod.status(world,lp).dead())continue;
+   List<CommanderSimpleCards.Traits> blockers=new ArrayList<>();
+   boolean unknown=false;
+   for(var card:seat.cards()){
+    if(!who.toString().equals(card.owner())||card.tapped())continue;
+    if(simple(card))blockers.add(CommanderBattleActions.traits(card.stack()).orElseThrow());
+    else{
+     var meta=com.spider.mtgcard.util.TcgCardMeta.read(card.stack());
+     if(card.faceDown()||meta.typeLine()==null||meta.typeLine().isBlank()
+         ||meta.typeLine().toLowerCase(Locale.ROOT).contains("creature"))unknown=true;
+    }
+   }
+   for(var card:CommanderBattleActions.owned(bot,table)){
+    // Commander death/replacement zones still require a separate state machine.
+    if(card.id().startsWith("commander:")||!simple(card))continue;
+    var traits=CommanderBattleActions.traits(card.stack()).orElseThrow();
+    if(!CommanderSimpleCards.canAttack(traits,!CommanderBattleActions.ready(bot,card),card.tapped())
+        ||traits.power()<=0)continue;
+    var value=CommanderVictory.attack(traits,blockers,unknown,botLife.getLife(),lp.getLife());
+    int comparison=best==null?1:value.compareTo(best);
+    if(comparison>0||comparison==0&&lp.getLife()<lowLife){
+     attacker=card;defender=seat;best=value;lowLife=lp.getLife();
+    }
+   }
   }
-  if(defender==null)return false;
-  TabletopBlockEntity.PlayedCard attacker=null;int bestPower=0;
-  for(var card:CommanderBattleActions.owned(bot,table)){
-   // Commander death/replacement zones need their own state machine, so first
-   // pilot restricts automated attacks to ordinary simple creatures.
-   if(card.id().startsWith("commander:")||!simple(card))continue;
-   var traits=CommanderBattleActions.traits(card.stack()).orElseThrow();
-   if(!CommanderSimpleCards.canAttack(traits,!CommanderBattleActions.ready(bot,card),card.tapped()))continue;
-   if(traits.power()>bestPower){attacker=card;bestPower=traits.power();}
-  }
-  if(attacker==null||bestPower<=0)return false;
+  if(attacker==null)return false;
   if(!table.declareAiAttack(attacker.id(),defender.getBlockPos()))return false;
   if(!CommanderBattleActions.traits(attacker.stack()).orElseThrow().has("vigilance"))
    table.replace(attacker.tapped(true));
