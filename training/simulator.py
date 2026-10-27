@@ -26,6 +26,12 @@ HERE = Path(__file__).resolve().parent
 FEATURES = ("power", "toughness", "evasion", "haste", "lethal", "damage",
             "survive", "life", "draw", "cost", "pass")
 DEFAULT_WEIGHTS = dict(zip(FEATURES, (1., .3, .8, .6, 100., 3., 1., .2, .7, -.1, -2.)))
+DIAGNOSTIC_RULINGS = {
+    "Blood Artist": "Each creature death, including an opponent's creature or Blood Artist itself, creates a separate trigger. Simultaneous deaths use the battlefield immediately before the deaths. The two-player diagnostic chooses the opponent as the target.",
+    "Zulaport Cutthroat": "Each death of a creature controlled by Cutthroat's controller, including Cutthroat itself, creates a separate life-loss/life-gain trigger. Opposing creature deaths do not trigger it.",
+    "Nested Shambler": "Use its power immediately before it died, including applicable bonuses and counters. Create that many tapped green 1/1 Squirrel tokens under its last controller's control; zero or negative power creates none.",
+    "Impact Tremors": "Trigger separately for each creature entering under its controller's control, including tokens. Finish the entire token-creation ability before resolving these noncombat damage triggers. Vehicles entering as noncreatures do not trigger it.",
+}
 
 
 def write_json(path: Path, value: Any) -> None:
@@ -425,7 +431,8 @@ class Simulator:
                 colors=frozenset(card.colors))
         game._next_token = self.token_sequence
         known = set(game.battlefield)
-        game.enter(EventPermanent(card.id, definition, self.active))
+        controller = next(i for i, candidate in enumerate(self.players) if candidate is player)
+        game.enter(EventPermanent(card.id, definition, controller))
         player.battlefield.append(Permanent(card))
         for token_id in game.battlefield.keys()-known-{card.id}:
             token_state = game.battlefield[token_id]
@@ -441,7 +448,12 @@ class Simulator:
 
     def resolve_entry_triggers(self, triggers: list[dict], card: Card):
         for event in triggers:
-            if event.get("effect") == "each opponent loses 1 life":
+            if event.get("effect") == "deal 1 damage to each opponent":
+                target = 1-event["controller"]
+                self.players[target].life -= event["amount"]
+                # Noncombat damage: never contributes to commander combat damage.
+                message = f"Impact Tremors deals {event['amount']} damage to Player {target+1}."
+            elif event.get("effect") == "each opponent loses 1 life":
                 source = event["controller"]
                 target = 1-source  # This diagnostic is explicitly two-player.
                 self.players[target].life -= event["amount"]
@@ -455,7 +467,8 @@ class Simulator:
             else:
                 message = (f"{event['source']} makes {card.name} {event['effect']}."
                            if event.get("target") else f"{card.name}: {event['effect']}.")
-            self.log("trigger", message, **{k:v for k,v in event.items() if k != "kind"})
+            self.log("trigger", message, actor=event.get("controller",self.active),
+                     **{k:v for k,v in event.items() if k != "kind"})
             self.outcome()
             if self.finished: return
 
@@ -720,6 +733,7 @@ class Simulator:
                     self.resolve_entry_triggers(triggers, card)
                     if self.finished: return False
                     if card.kind == "token_spell":
+                        token_triggers = []
                         for _ in range(card.token_count):
                             self.token_sequence += 1
                             definition = EventDefinition("Goblin",frozenset({"Creature"}),frozenset({"Goblin"}),
@@ -727,10 +741,11 @@ class Simulator:
                             token = Card(f"token-{self.token_sequence}","Goblin","creature",
                                          traits="1;1;",power=1,toughness=1,
                                          event_definition=definition,is_token=True)
-                            token_triggers = self.enter_creature(token,p)
+                            token_triggers.extend(self.enter_creature(token,p))
                             self.log("token", "Creates a 1/1 red Goblin creature token.", card="Goblin", token=token.id)
-                            self.resolve_entry_triggers(token_triggers, token)
-                            if self.finished: return False
+                        # Finish creating the whole batch before any entry trigger resolves.
+                        self.resolve_entry_triggers(token_triggers, card)
+                        if self.finished: return False
                     if card.kind == "spell":
                         for _ in range(card.draw): self.draw(self.active)
                         p.life += card.life
@@ -769,6 +784,15 @@ class Simulator:
             effective_blocker = self.effective_card(b) if b else None
             if effective_attacker is None: raise RuntimeError("Attacker is no longer a creature")
             d = self.damage(effective_attacker, effective_blocker)
+            dead_ids = ([a.card.id] if d["attackerDies"] else []) + ([b.card.id] if b and d["blockerDies"] else [])
+            death_triggers = self.event_game("combat").death_triggers(dead_ids)
+            # The shared combat helper summarizes first/double-strike and regular
+            # damage in one result; it cannot interleave these death triggers.
+            # Stop rather than falsely treating the two damage steps as simultaneous.
+            traits = [effective_attacker.traits, effective_blocker.traits if effective_blocker else ""]
+            if death_triggers and any("first strike" in t or "double strike" in t for t in traits):
+                self.pause("Death triggers between first-strike and regular combat damage need priority and separate damage steps.",a.card)
+                return False
             self.log("block", choice.label, actor=1-self.active,
                      blocker=b.card.id if b else None)
             p.life += d["gainA"]
@@ -786,6 +810,34 @@ class Simulator:
             self.log("combat", "Combat damage resolves.", **d)
             self.pending = None
             self.outcome()
+            if not self.finished:
+                # APNAP: triggers of the nonactive player resolve first. Within a
+                # controller's set these limited effects are identical choices.
+                for trigger in sorted(death_triggers, key=lambda t: t["controller"] == self.active):
+                    controller = trigger["controller"]
+                    if trigger["effect"] == "create tapped Squirrels":
+                        entry_triggers = []
+                        for _ in range(trigger["amount"]):
+                            self.token_sequence += 1
+                            definition = EventDefinition("Squirrel",frozenset({"Creature"}),frozenset({"Squirrel"}),
+                                False,1,1,frozenset(),colors=frozenset({"Green"}))
+                            token = Card(f"token-{self.token_sequence}","Squirrel","creature",traits="1;1;",
+                                         power=1,toughness=1,event_definition=definition,is_token=True)
+                            owner = self.players[controller]
+                            entry_triggers.extend(self.enter_creature(token,owner))
+                            next(p for p in owner.battlefield if p.card.id == token.id).tapped = True
+                        self.log("trigger", f"Nested Shambler creates {trigger['amount']} tapped Squirrel tokens.", actor=controller, **trigger)
+                        # Newly triggered abilities wait until this whole ability finishes.
+                        if entry_triggers: self.resolve_entry_triggers(entry_triggers, token)
+                        if self.finished: break
+                        continue
+                    target = 1-controller  # Blood Artist chooses the opponent in this two-player pilot.
+                    self.players[target].life -= 1
+                    self.players[controller].life += 1
+                    self.log("trigger", f"{trigger['name']}: Player {target+1} loses 1 life; Player {controller+1} gains 1 life.",
+                             actor=controller, **trigger)
+                    self.outcome()
+                    if self.finished: break
             if not self.finished: self.phase = "second_main"
         elif self.phase == "cleanup":
             # Deterministic discard is a declared sandbox rule, not a learned policy.
@@ -848,7 +900,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                            uid: str, identity: set[str]) -> Card:
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
-    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Obyra, Dreaming Duelist", "Briarberry Cohort", "Faerie Seer", "Bitterblossom", "Bitterbloom Bearer", "Brightfield Mustang", "Goblin Instigator", "Squirrel Mob", "Squirrel Sovereign")
+    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Obyra, Dreaming Duelist", "Briarberry Cohort", "Faerie Seer", "Bitterblossom", "Bitterbloom Bearer", "Brightfield Mustang", "Goblin Instigator", "Squirrel Mob", "Squirrel Sovereign", "Blood Artist", "Zulaport Cutthroat", "Nested Shambler", "Impact Tremors")
                or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
@@ -967,6 +1019,8 @@ def diagnose(rules: RulesBridge, decks: list[dict], seed: int, turns_per_player:
         if q.get("card") in partially_supported:
             q["diagnosticSupport"] = True
             q["supportNote"] = "Supported in the limited diagnostic; full timing, combat and live game integration remain open."
+            if q["card"] in DIAGNOSTIC_RULINGS:
+                q["ruleAnswer"] = DIAGNOSTIC_RULINGS[q["card"]]
     result.update(mode="real-deck-diagnostic", learningEligible=False, productionEligible=False,
                   notice="Diagnostic only: real decks and supported commanders are used; unsupported cards cannot be played and the rules are incomplete. Results are not a valid Commander game.",
                   deckNames=[d["name"] for d in decks],
@@ -974,11 +1028,21 @@ def diagnose(rules: RulesBridge, decks: list[dict], seed: int, turns_per_player:
                   deckFingerprints=[deck_fingerprint(d) for d in decks],
                   commanders=[d["commanders"][0]["name"] for d in decks],
                   turnsCompleted=turns, turnsStarted=started,
-                  questions=audit["questions"],
+                  questions=audit["questions"] + result["questions"],
                   unsupportedInHand=[[c.name for c in p.hand if c.kind == "unsupported"] for p in sim.players],
                   unsupportedDiscarded=[[c.name for c in p.graveyard if c.kind == "unsupported"] for p in sim.players])
     if result["result"] == "timeout" and turns == [turns_per_player, turns_per_player]:
         result["result"] = "diagnostic_window_complete"
+    result["rulesProgress"] = {
+        "notice":"Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic":[sum(c.kind != "unsupported" for c in cards[i]) + int(commanders[i].kind != "unsupported") for i in (0,1)],
+        "landsPlayed":sum(e["kind"]=="land" for e in result["events"]),
+        "spellsCast":sum(e["kind"]=="cast" for e in result["events"]),
+        "triggerLogEntries":sum(e["kind"]=="trigger" for e in result["events"]),
+        "runtimeQuestions":[q["reason"] for q in sim.questions],
+        "unsupportedEncountered":sorted({name for row in result["unsupportedInHand"]+result["unsupportedDiscarded"] for name in row}),
+        "unsupportedCommanders":[c.name for c in commanders if c.kind=="unsupported"],
+    }
     return result
 
 def match_score(report: dict, seat: int) -> tuple[int, int]:
@@ -1166,7 +1230,7 @@ def main():
                 results.append({"match":i+1,"seed":match_seed,"deckNames":report["deckNames"],
                     "commanders":report["commanders"],"deckIds":report["deckIds"],"result":report["result"],
                     "turnsCompleted":report["turnsCompleted"],"life":[p["life"] for p in players],
-                    "winner":report["winner"],"learningEligible":False})
+                    "winner":report["winner"],"learningEligible":False,"rulesProgress":report["rulesProgress"]})
             write_json(args.out/"summary.json", {"matches":results,"notice":"Incomplete diagnostics; never used for training."})
             print(json.dumps({"matches":results},ensure_ascii=False))
         elif args.command == "simulate":

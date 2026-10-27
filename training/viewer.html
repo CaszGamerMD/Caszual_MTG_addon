@@ -79,9 +79,10 @@ function renderQuestions(){
   const el=node("article",undefined,"question");el.append(node("h2",q.card||q.reason),node("p",q.question));
   if(q.deck)el.append(node("small","Deck: "+q.deck+(q.alsoInDecks?.length?" / "+q.alsoInDecks.join(" / "):"")));
   if(q.diagnosticSupport)el.append(node("small",q.supportNote));
+  if(q.ruleAnswer)el.append(node("p","Validated diagnostic ruling: "+q.ruleAnswer));
   if(q.oracleText){const details=node("details");details.append(node("summary","Card rules text"),node("pre",q.oracleText));el.append(details)}
   const answer=node("textarea");answer.placeholder="Human review notes / proposed ruling";answer.value=q.answer||"";answer.setAttribute("aria-label","Answer for "+(q.card||q.reason));answer.oninput=()=>q.answer=answer.value;
-  el.append(answer,node("small","Open · Blocking · Needs implementation and tests"));$("questionList").append(el);
+  el.append(answer,node("small",q.diagnosticSupport ? "Diagnostic subset implemented · Full-game integration still open" : "Open · Blocking · Needs implementation and tests"));$("questionList").append(el);
  }
  if(!(data.questions||[]).length)$("questionList").append(node("p","No open rules questions in this replay."));
 }

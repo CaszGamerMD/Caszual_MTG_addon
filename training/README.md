@@ -145,6 +145,12 @@ The limited real-deck diagnostic recognizes Squirrel Mob and Squirrel Sovereign 
 
 All six distinct deck pairings were rerun for up to ten turns per player; results are in `examples/squirrel-rules-pool-summary.json`. Three sample-deck training generations were evaluated with 16 games each; all candidates tied the champion and none was promoted. `examples/sandbox-checkpoint.json` preserves that sample run's state. To resume it in a fresh checkout, copy it to `training/runs/distinct-demo/state.json`, then run `python3 training/simulator.py train --demo --generations 3 --evaluation-seeds 8`. The checkpoint is for the synthetic environment, not the real decks or live Minecraft golems.
 
+### Rules-focused play tests: deaths and creature entries
+
+Blood Artist, Zulaport Cutthroat, Nested Shambler and Impact Tremors now have limited diagnostic support. See [death-and-entry lessons](rules/death-and-entry.md) for answered rules questions, official sources, regression scenarios and remaining timing gaps. The review UI shows validated diagnostic rulings separately from human notes; full-game questions stay open. Runtime questions raised during play are now retained alongside the initial audit.
+
+The six-pairing seed-142 batch is saved in `examples/death-rules-pool-summary.json`. Each match includes `rulesProgress`: playable card-copy coverage (including commander), lands played, spells cast, trigger log entries, runtime questions and unsupported cards encountered. These measure implemented rules being exercised, not strategic learning or relative deck strength. Real-deck diagnostics still do not update the shared policy.
+
 
 ## Faerie entry, color and scry diagnostic
 

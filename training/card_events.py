@@ -54,6 +54,10 @@ SEER = """Flying
 When this creature enters, scry 2."""
 SQUIRREL_MOB = "This creature gets +1/+1 for each other Squirrel on the battlefield."
 SQUIRREL_SOVEREIGN = "Other Squirrels you control get +1/+1."
+BLOOD_ARTIST = "Whenever this creature or another creature dies, target player loses 1 life and you gain 1 life."
+ZULAPORT = "Whenever this creature or another creature you control dies, each opponent loses 1 life and you gain 1 life."
+NESTED_SHAMBLER = "When this creature dies, create X tapped 1/1 green Squirrel creature tokens, where X is this creature's power."
+IMPACT_TREMORS = "Whenever a creature you control enters, this enchantment deals 1 damage to each opponent."
 INSTIGATOR = "When this creature enters, create a 1/1 red Goblin creature token."
 MUSTANG = """Whenever this creature attacks while saddled, untap it and put a +1/+1 counter on it.
 Saddle 1"""
@@ -116,6 +120,10 @@ def parse_card(card: dict) -> Definition:
         valid = text == BITTERBLOSSOM and "Enchantment" in types and "Faerie" in subtypes
         return Definition(**base, abilities=frozenset(), supported=valid,
                           reason="" if valid else "Bitterblossom metadata/rules mismatch")
+    if name == "Impact Tremors":
+        valid = text == IMPACT_TREMORS and "Enchantment" in types
+        return Definition(**base, abilities=frozenset(), supported=valid,
+                          reason="" if valid else "Impact Tremors metadata/rules mismatch")
     if name == "Bitterbloom Bearer":
         valid = text == BITTERBLOOM and "Creature" in types and "Faerie" in subtypes
         return Definition(**base, abilities=frozenset({"flying","flash"}), supported=valid,
@@ -127,6 +135,12 @@ def parse_card(card: dict) -> Definition:
     if name in ("Squirrel Mob", "Squirrel Sovereign"):
         expected = SQUIRREL_MOB if name == "Squirrel Mob" else SQUIRREL_SOVEREIGN
         valid = text == expected and "Creature" in types and "Squirrel" in subtypes
+        return Definition(**base, abilities=frozenset(), supported=valid,
+                          reason="" if valid else name + " metadata/rules mismatch")
+    if name in ("Blood Artist", "Zulaport Cutthroat", "Nested Shambler"):
+        expected = {"Blood Artist":BLOOD_ARTIST, "Zulaport Cutthroat":ZULAPORT,
+                    "Nested Shambler":NESTED_SHAMBLER}[name]
+        valid = text == expected and "Creature" in types
         return Definition(**base, abilities=frozenset(), supported=valid,
                           reason="" if valid else name + " metadata/rules mismatch")
     if name == "Goblin Instigator":
@@ -226,6 +240,11 @@ class Game:
         self.emit("enters", id=permanent.id, name=permanent.definition.name,
                   controller=permanent.controller, types=sorted(permanent.definition.types),
                   subtypes=sorted(permanent.definition.subtypes))
+        if self.creature(permanent):
+            for watcher in list(self.battlefield.values()):
+                if watcher.controller == permanent.controller and watcher.definition.name == "Impact Tremors":
+                    self.emit("trigger",source=watcher.id,effect="deal 1 damage to each opponent",
+                              controller=watcher.controller,entered=permanent.id,amount=1)
         if "Faerie" in permanent.definition.subtypes:
             for watcher in list(self.battlefield.values()):
                 if (watcher.id != permanent.id and watcher.controller == permanent.controller
@@ -265,6 +284,32 @@ class Game:
             elif p.definition.name == "Bitterbloom Bearer":
                 triggers.append({"source":p.id,"name":p.definition.name,"controller":p.controller,
                                  "colors":["Blue","Black"],"subtypes":["Faerie"]})
+        return triggers
+
+    def death_triggers(self, ids: list[str]) -> list[dict]:
+        """Inspect the battlefield immediately before one simultaneous death event.
+
+        This is only the trigger discovery step, not stack placement or resolution.
+        The caller must actually move all the affected creatures to a graveyard.
+        """
+        if len(ids) != len(set(ids)) or any(i not in self.battlefield for i in ids):
+            raise IllegalAction("Invalid simultaneous death event")
+        dead = [self.battlefield[i] for i in ids]
+        if any(not self.creature(p) for p in dead):
+            raise IllegalAction("Death trigger batch requires creatures")
+        triggers = []
+        for creature in dead:
+            if creature.definition.name == "Nested Shambler":
+                triggers.append({"source":creature.id,"name":"Nested Shambler","controller":creature.controller,
+                                 "dead":creature.id,"effect":"create tapped Squirrels",
+                                 "amount":max(0,self.stats(creature)[0])})
+        for watcher in self.battlefield.values():
+            name = watcher.definition.name
+            if name not in ("Blood Artist", "Zulaport Cutthroat"): continue
+            for creature in dead:
+                if name == "Zulaport Cutthroat" and creature.controller != watcher.controller: continue
+                triggers.append({"source":watcher.id,"name":name,"controller":watcher.controller,
+                                 "dead":creature.id,"effect":"opponent loses 1 life; controller gains 1 life"})
         return triggers
 
     def leave(self, permanent_id: str):

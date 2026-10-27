@@ -13,6 +13,109 @@ import simulator as s
 
 
 class SimulatorChecks(unittest.TestCase):
+    def test_token_spell_finishes_before_lethal_impact_tremors_trigger(self):
+        deck=json.loads((HERE/"decks/5254666-garbo-gobbos.json").read_text())
+        lookup={c["name"]:c for c in deck["mainboard"]}
+        tremors,spell=[s.import_diagnostic_card(self.rules,lookup[name],0,"actual-"+str(i),{"Red"})
+                       for i,name in enumerate(("Impact Tremors","Dragon Fodder"))]
+        lands=[s.Card("red-land-"+str(i),"Mountain","land",mask=8) for i in range(2)]
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+[tremors,spell]+lands,s.demo_deck(1)),diagnostic=True)
+        player=sim.players[0]
+        for card in [tremors,spell]+lands:
+            (player.hand if card in player.hand else player.library).remove(card)
+            if card==spell: player.hand.append(card)
+            elif card==tremors: sim.enter_creature(card,player)
+            else: player.battlefield.append(s.Permanent(card))
+        sim.phase="main"; sim.players[1].life=1
+        with patch.object(sim,"decide",return_value=s.Candidate("cast","cast",card_id=spell.id)):
+            sim.step()
+        self.assertEqual(sum(p.card.is_token for p in player.battlefield),2)
+        self.assertEqual(sim.result,"win")
+        token_events=[e["index"] for e in sim.events if e["kind"]=="token"]
+        damage_events=[e["index"] for e in sim.events if "Impact Tremors deals" in e["message"]]
+        self.assertEqual(len(damage_events),1)  # Opponent loses before the next trigger can resolve.
+        self.assertLess(max(token_events),min(damage_events))
+        self.assertEqual(sim.players[1].commander_damage,{})
+        sim.invariant()
+
+    def death_fixture(self, attack_traits="1;1;", defenders=("Nested Shambler",), allies=()):
+        deck=json.loads((HERE/"decks/8321184-squirrels.json").read_text())
+        lookup={c["name"]:c for c in deck["mainboard"]}
+        power,toughness,_=attack_traits.split(";")
+        attacker=s.Card("scenario-attacker","Scenario attacker","creature",mana_cost="{G}",traits=attack_traits,
+                        power=int(power),toughness=int(toughness))
+        actual=[[s.import_diagnostic_card(self.rules,lookup[name],seat,f"scenario-{seat}-{i}",{"Green","Black"})
+                 for i,name in enumerate(names)] for seat,names in enumerate((allies,defenders))]
+        actual[0].insert(0,attacker)
+        sim=s.Simulator(self.rules,42,decks=tuple(s.demo_deck(i)+actual[i] for i in (0,1)),diagnostic=True)
+        for player,cards in zip(sim.players,actual):
+            for card in cards:
+                (player.hand if card in player.hand else player.library).remove(card)
+                sim.enter_creature(card,player)
+                next(p for p in player.battlefield if p.card.id==card.id).fresh=False
+        sim.phase="block"; sim.pending=attacker.id
+        return sim,actual
+
+    def resolve_fixture_combat(self,sim,actual):
+        with patch.object(sim,"decide",return_value=s.Candidate("block","block",card_id=actual[1][0].id)):
+            sim.step()
+        sim.invariant()
+
+    def test_simultaneous_combat_deaths_trigger_artist_and_cutthroat(self):
+        sim,actual=self.death_fixture(defenders=("Zulaport Cutthroat",),allies=("Blood Artist",))
+        self.resolve_fixture_combat(sim,actual)
+        triggers=[e for e in sim.events if e["kind"]=="trigger" and e["details"].get("dead")]
+        self.assertEqual([e["details"]["name"] for e in triggers],["Zulaport Cutthroat","Blood Artist","Blood Artist"])
+        self.assertEqual([p.life for p in sim.players],[41,39])
+        self.assertFalse(sim.report()["learningEligible"])
+
+    def test_nested_shambler_uses_last_power_and_defender_controls_tapped_tokens(self):
+        sim,actual=self.death_fixture("3;3;")
+        sim.players[1].battlefield[0].counters=2
+        self.resolve_fixture_combat(sim,actual)
+        tokens=[p for p in sim.players[1].battlefield if p.card.is_token]
+        self.assertEqual(len(tokens),3)
+        self.assertTrue(all(p.tapped and p.fresh for p in tokens))
+        self.assertTrue(all(p.definition.subtypes==frozenset({"Squirrel"}) and p.controller==1
+                            for p in sim.event_game("combat").battlefield.values()))
+        self.assertEqual(sim.players[0].battlefield,[])
+        self.assertEqual(sim.players[1].graveyard[-1].name,"Nested Shambler")
+
+    def test_combat_loss_is_checked_before_death_lifegain(self):
+        sim,actual=self.death_fixture("2;2;trample",defenders=("Zulaport Cutthroat",))
+        sim.players[1].life=1
+        self.resolve_fixture_combat(sim,actual)
+        self.assertEqual(sim.result,"win")
+        self.assertEqual(sim.winner,0)
+        self.assertEqual(sim.players[1].life,0)
+        self.assertFalse(any(e["kind"]=="trigger" and e["details"].get("dead") for e in sim.events))
+
+    def test_first_strike_death_timing_is_flagged_before_mutation(self):
+        sim,actual=self.death_fixture("1;1;first strike")
+        before=sim.state()
+        self.resolve_fixture_combat(sim,actual)
+        self.assertEqual(sim.result,"blocked")
+        self.assertIn("separate damage steps",sim.questions[-1]["reason"])
+        self.assertEqual(before,sim.state())
+
+    def test_real_deck_report_keeps_runtime_questions(self):
+        decks=[json.loads((HERE/"decks"/name).read_text()) for name in
+               ("27521806-faeries.json","8321184-squirrels.json")]
+        def blocked_run(sim):
+            sim.pause("Scenario requires a response window")
+            return sim.report()
+        with patch.object(s.Simulator,"run",blocked_run):
+            report=s.diagnose(self.rules,decks,42,10)
+        self.assertEqual(report["result"],"blocked")
+        self.assertTrue(any(q["reason"]=="Scenario requires a response window" for q in report["questions"]))
+        self.assertTrue(any(q.get("card")=="Chatterfang, Squirrel General" for q in report["questions"]))
+        self.assertEqual(report["rulesProgress"]["runtimeQuestions"],["Scenario requires a response window"])
+        self.assertIn("Chatterfang, Squirrel General",report["rulesProgress"]["unsupportedCommanders"])
+        artist=next(q for q in report["questions"] if q.get("card")=="Blood Artist")
+        self.assertTrue(artist["diagnosticSupport"])
+        self.assertIn("Simultaneous deaths",artist["ruleAnswer"])
+        self.assertTrue(artist["blocking"])
+
     def test_real_squirrel_continuous_effects_reach_combat_stats(self):
         deck=json.loads((HERE/"decks/8321184-squirrels.json").read_text())
         lookup={c["name"]:c for c in deck["mainboard"]}

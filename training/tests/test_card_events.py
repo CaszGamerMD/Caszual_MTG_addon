@@ -10,7 +10,9 @@ from card_events import Game, Permanent, Definition, parse_card, NeedsRules, Ill
 deck=json.loads((HERE/"decks/14850373-budget-deck.json").read_text())
 fairies=json.loads((HERE/"decks/27521806-faeries.json").read_text())
 squirrels=json.loads((HERE/"decks/8321184-squirrels.json").read_text())
+goblins=json.loads((HERE/"decks/5254666-garbo-gobbos.json").read_text())
 cards={c["name"]:c for c in deck["commanders"]+deck["mainboard"]+fairies["commanders"]+fairies["mainboard"]+squirrels["commanders"]+squirrels["mainboard"]}
+cards.update({c["name"]:c for c in goblins["mainboard"]})
 
 def real(name,id,controller=0):
     return Permanent(id,parse_card(cards[name]),controller)
@@ -20,6 +22,38 @@ def creature(id,legendary=False,controller=0,power=2,fresh=False):
                                   legendary,power,2,frozenset()),controller,fresh=fresh)
 
 class CardEventChecks(unittest.TestCase):
+    def test_impact_tremors_watches_creatures_and_tokens_not_enemy_or_vehicle(self):
+        g=Game(); g.enter(real("Impact Tremors","tremors"))
+        g.enter(real("Thundering Chariot","vehicle"))
+        g.enter(real("Goblin Instigator","enemy",1))
+        self.assertFalse(any(e.get("effect")=="deal 1 damage to each opponent" for e in g.events))
+        g.enter(real("Goblin Instigator","ally"))
+        triggers=[e for e in g.events if e.get("effect")=="deal 1 damage to each opponent"]
+        self.assertEqual(len(triggers),2)
+        self.assertTrue(all(e["controller"]==0 and e["source"]=="tremors" for e in triggers))
+        altered=dict(cards["Impact Tremors"],oracleText=cards["Impact Tremors"]["oracleText"]+"\nDraw a card.")
+        self.assertFalse(parse_card(altered).supported)
+
+    def test_nested_shambler_death_uses_last_known_power_and_counts_zero(self):
+        g=Game(); g.enter(real("Nested Shambler","shambler"))
+        g.battlefield["shambler"].counters=3
+        self.assertEqual(g.death_triggers(["shambler"])[0]["amount"],4)
+        g.battlefield["shambler"].counters=-2
+        self.assertEqual(g.death_triggers(["shambler"])[0]["amount"],0)
+        altered=dict(cards["Nested Shambler"],oracleText=cards["Nested Shambler"]["oracleText"]+"\nDraw a card.")
+        self.assertFalse(parse_card(altered).supported)
+
+    def test_death_triggers_look_back_and_distinguish_control(self):
+        g=Game(); g.enter(real("Blood Artist","artist")); g.enter(real("Zulaport Cutthroat","z"))
+        g.enter(creature("ally")); g.enter(creature("enemy",controller=1))
+        triggers=g.death_triggers(["artist","z","ally","enemy"])
+        self.assertEqual(sum(t["name"]=="Blood Artist" for t in triggers),4)
+        self.assertEqual(sum(t["name"]=="Zulaport Cutthroat" for t in triggers),3)
+        self.assertNotIn("enemy",[t["dead"] for t in triggers if t["name"]=="Zulaport Cutthroat"])
+        self.assertIn("artist",[t["dead"] for t in triggers if t["name"]=="Blood Artist"])
+        for name in ("Blood Artist","Zulaport Cutthroat"):
+            self.assertFalse(parse_card(dict(cards[name],oracleText=cards[name]["oracleText"]+"\nDraw a card.")).supported)
+
     def test_squirrel_bonuses_count_controller_and_other_permanents(self):
         g=Game(); g.enter(real("Squirrel Mob","mob")); g.enter(real("Squirrel Sovereign","lord"))
         self.assertEqual(g.stats(g.battlefield["mob"]),(4,4))
