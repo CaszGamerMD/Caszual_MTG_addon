@@ -8,7 +8,8 @@ sys.path.insert(0,str(HERE))
 from card_events import Game, Permanent, Definition, parse_card, NeedsRules, IllegalAction
 
 deck=json.loads((HERE/"decks/14850373-budget-deck.json").read_text())
-cards={c["name"]:c for c in deck["commanders"]+deck["mainboard"]}
+fairies=json.loads((HERE/"decks/27521806-faeries.json").read_text())
+cards={c["name"]:c for c in deck["commanders"]+deck["mainboard"]+fairies["commanders"]+fairies["mainboard"]}
 
 def real(name,id,controller=0):
     return Permanent(id,parse_card(cards[name]),controller)
@@ -28,6 +29,50 @@ class CardEventChecks(unittest.TestCase):
         self.assertNotIn("b",g.battlefield)
         modified=dict(cards["Kolodin, Triumph Caster"],oracleText=cards["Kolodin, Triumph Caster"]["oracleText"]+"\nDraw a card.")
         self.assertFalse(parse_card(modified).supported)
+
+    def test_obyra_watches_each_other_faerie_controlled_by_her_player(self):
+        g=Game();g.enter(real("Obyra, Dreaming Duelist","o"))
+        self.assertFalse(any(e.get("effect")=="each opponent loses 1 life" for e in g.events))
+        g.enter(real("Zephyr Sprite","enemy",1))
+        self.assertFalse(any(e.get("effect")=="each opponent loses 1 life" for e in g.events))
+        g.enter(real("Zephyr Sprite","sprite-a"))
+        g.enter(real("Zephyr Sprite","sprite-b"))
+        triggers=[e for e in g.events if e.get("effect")=="each opponent loses 1 life"]
+        self.assertEqual([e["entered"] for e in triggers],["sprite-a","sprite-b"])
+        self.assertTrue(all(e["controller"]==0 and e["amount"]==1 for e in triggers))
+        self.assertTrue(g.has(g.battlefield["o"],"flying"))
+
+    def test_obyra_rejects_changed_rules_text(self):
+        altered=dict(cards["Obyra, Dreaming Duelist"],oracleText=cards["Obyra, Dreaming Duelist"]["oracleText"]+"\nDraw a card.")
+        self.assertFalse(parse_card(altered).supported)
+
+    def test_faerie_seer_and_obyra_both_trigger_on_entry(self):
+        g=Game();g.enter(real("Obyra, Dreaming Duelist","o"));g.enter(real("Faerie Seer","seer"))
+        effects=[e["effect"] for e in g.events if e["kind"]=="trigger"]
+        self.assertEqual(effects,["each opponent loses 1 life","scry"])
+        event=next(e for e in g.events if e.get("effect")=="scry")
+        self.assertEqual((event["controller"],event["amount"]),(0,2))
+
+    def test_cohort_uses_another_blue_creature_you_control(self):
+        g=Game();g.enter(real("Briarberry Cohort","c"))
+        cohort=g.battlefield["c"]
+        self.assertEqual(g.stats(cohort),(1,1))
+        g.enter(real("Zephyr Sprite","enemy",1))
+        self.assertEqual(g.stats(cohort),(1,1))
+        g.enter(creature("red"))
+        self.assertEqual(g.stats(cohort),(1,1))
+        g.enter(real("Zephyr Sprite","ally"))
+        self.assertEqual(g.stats(cohort),(2,2))
+        g.enter(real("Zephyr Sprite","ally2"))
+        self.assertEqual(g.stats(cohort),(2,2))
+        g.leave("ally");g.leave("ally2")
+        self.assertEqual(g.stats(cohort),(1,1))
+
+    def test_cohort_does_not_count_a_blue_noncreature(self):
+        g=Game();g.enter(real("Briarberry Cohort","c"))
+        enchantment=Definition("Blue enchantment",frozenset({"Enchantment"}),frozenset(),False,0,0,frozenset(),colors=frozenset({"Blue"}))
+        g.battlefield["enchantment"]=Permanent("enchantment",enchantment,0)
+        self.assertEqual(g.stats(g.battlefield["c"]),(1,1))
 
     def test_kolodin_sees_types_on_entry_and_controller(self):
         g=Game();g.enter(real("Kolodin, Triumph Caster","k"))

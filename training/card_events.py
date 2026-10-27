@@ -41,6 +41,13 @@ ZURGO = """Haste
 Zurgo attacks each combat if able.
 During your turn, Zurgo has indestructible.
 Whenever a creature dealt damage by Zurgo this turn dies, put a +1/+1 counter on Zurgo."""
+OBYRA = """Flash
+Flying
+Whenever another Faerie you control enters, each opponent loses 1 life."""
+COHORT = """Flying
+This creature gets +1/+1 as long as you control another blue creature."""
+SEER = """Flying
+When this creature enters, scry 2."""
 INSTIGATOR = "When this creature enters, create a 1/1 red Goblin creature token."
 MUSTANG = """Whenever this creature attacks while saddled, untap it and put a +1/+1 counter on it.
 Saddle 1"""
@@ -61,6 +68,7 @@ class Definition:
     saddle: int | None = None
     supported: bool = True
     reason: str = ""
+    colors: frozenset[str] = frozenset()
 
 
 def parse_card(card: dict) -> Definition:
@@ -74,7 +82,8 @@ def parse_card(card: dict) -> Definition:
         return Definition(name, types, subtypes, False, 0, 0, frozenset(), supported=False,
                           reason="Variable power or toughness")
     base = dict(name=name, types=types, subtypes=subtypes,
-                legendary="Legendary" in (card.get("superTypes") or []), power=power, toughness=toughness)
+                legendary="Legendary" in (card.get("superTypes") or []), power=power, toughness=toughness,
+                colors=frozenset(card.get("colors") or []))
     if ("Creature" in types or "Vehicle" in subtypes) and (power < 0 or toughness <= 0):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
     if name == "Kolodin, Triumph Caster":
@@ -89,6 +98,18 @@ def parse_card(card: dict) -> Definition:
         valid = text == ANDURIL and "Artifact" in types and "Equipment" in subtypes
         return Definition(**base, abilities=frozenset(), supported=valid,
                           reason="" if valid else "Andúril metadata/rules mismatch")
+    if name == "Obyra, Dreaming Duelist":
+        valid = text == OBYRA and "Creature" in types and "Faerie" in subtypes
+        return Definition(**base, abilities=frozenset({"flying","flash"}), supported=valid,
+                          reason="" if valid else "Obyra metadata/rules mismatch")
+    if name == "Briarberry Cohort":
+        valid = text == COHORT and "Creature" in types and "Faerie" in subtypes
+        return Definition(**base, abilities=frozenset({"flying"}), supported=valid,
+                          reason="" if valid else "Briarberry Cohort metadata/rules mismatch")
+    if name == "Faerie Seer":
+        valid = text == SEER and "Creature" in types and "Faerie" in subtypes
+        return Definition(**base, abilities=frozenset({"flying"}), supported=valid,
+                          reason="" if valid else "Faerie Seer metadata/rules mismatch")
     if name == "Goblin Instigator":
         valid = text == INSTIGATOR and "Creature" in types
         return Definition(**base, abilities=frozenset(), supported=valid,
@@ -153,7 +174,11 @@ class Game:
             raise IllegalAction("Permanent is not currently a creature")
         bonus = sum(1 for x in self.battlefield.values()
                     if x.definition.name == "Andúril, Flame of the West" and x.attached_to == p.id)
-        return p.definition.power + p.counters + 3*bonus, p.definition.toughness + p.counters + bonus
+        cohort_bonus = int(p.definition.name == "Briarberry Cohort" and
+            any(x.id != p.id and x.controller == p.controller and self.creature(x)
+                and "Blue" in x.definition.colors for x in self.battlefield.values()))
+        return (p.definition.power + p.counters + 3*bonus + cohort_bonus,
+                p.definition.toughness + p.counters + bonus + cohort_bonus)
 
     def has(self, p: Permanent, ability: str) -> bool:
         if ability in p.definition.abilities: return True
@@ -175,11 +200,20 @@ class Game:
         self.emit("enters", id=permanent.id, name=permanent.definition.name,
                   controller=permanent.controller, types=sorted(permanent.definition.types),
                   subtypes=sorted(permanent.definition.subtypes))
+        if "Faerie" in permanent.definition.subtypes:
+            for watcher in list(self.battlefield.values()):
+                if (watcher.id != permanent.id and watcher.controller == permanent.controller
+                        and watcher.definition.name == "Obyra, Dreaming Duelist"):
+                    self.emit("trigger", source=watcher.id, effect="each opponent loses 1 life",
+                              controller=watcher.controller, entered=permanent.id, amount=1)
+        if permanent.definition.name == "Faerie Seer":
+            self.emit("trigger", source=permanent.id, effect="scry", amount=2,
+                      controller=permanent.controller)
         if permanent.definition.name == "Goblin Instigator":
             self._next_token += 1
             token_id = f"goblin-token-{self._next_token}"
             goblin = Definition("Goblin", frozenset({"Creature"}), frozenset({"Goblin"}),
-                                False, 1, 1, frozenset())
+                                False, 1, 1, frozenset(), colors=frozenset({"Red"}))
             self.enter(Permanent(token_id,goblin,permanent.controller,token=True))
             self.emit("trigger", source=permanent.id, effect="create a 1/1 red Goblin token", token=token_id)
         # These are triggered abilities, modeled as immediate resolutions in this
@@ -268,7 +302,7 @@ class Game:
             for _ in range(2):
                 self._next_token += 1
                 token_id = f"spirit-token-{self._next_token}"
-                token = Definition("Spirit",frozenset({"Creature"}),frozenset({"Spirit"}),False,1,1,frozenset({"flying"}))
+                token = Definition("Spirit",frozenset({"Creature"}),frozenset({"Spirit"}),False,1,1,frozenset({"flying"}),colors=frozenset({"White"}))
                 self.enter(Permanent(token_id,token,equipment.controller,tapped=True,attacking=attacking,token=True))
                 ids.append(token_id)
             self.emit("trigger", source=equipment.id, effect="two tapped flying Spirit tokens",

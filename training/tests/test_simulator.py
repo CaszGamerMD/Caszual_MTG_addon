@@ -355,6 +355,115 @@ class SimulatorChecks(unittest.TestCase):
         self.assertFalse(any(c.is_token for c in player.graveyard))
         sim.invariant()
 
+    def test_obyra_faerie_entry_affects_only_opponent_and_can_end_game(self):
+        deck=json.loads((HERE/"decks/27521806-faeries.json").read_text())
+        definition=deck["commanders"][0]
+        sprite=next(c for c in deck["mainboard"] if c["name"]=="Zephyr Sprite")
+        identity=set(definition["colorIdentity"])
+        obyra=s.import_diagnostic_card(self.rules,definition,0,"obyra",identity)
+        one=s.import_diagnostic_card(self.rules,sprite,0,"sprite-1",identity)
+        two=s.import_diagnostic_card(self.rules,sprite,0,"sprite-2",identity)
+        self.assertEqual(obyra.kind,"creature")
+        self.assertIn("flying",obyra.traits)
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+[obyra,one,two],s.demo_deck(1)),diagnostic=True)
+        player=sim.players[0]
+        for card in (obyra,one,two):
+            (player.hand if card in player.hand else player.library).remove(card)
+            triggers=sim.enter_creature(card,player)
+            if card is obyra:self.assertEqual(triggers,[])
+            sim.resolve_entry_triggers(triggers,card)
+        self.assertEqual((player.life,sim.players[1].life),(40,38))
+        self.assertEqual(len([e for e in sim.events if e["kind"]=="trigger" and "Obyra" in e["message"]]),2)
+        sim.players[1].life=1
+        third=s.Card("sprite-3","Zephyr Sprite","creature",mana_cost="{U}",traits="1;1;flying",
+                     power=1,toughness=1,land_subtypes=("Faerie","Wizard"),is_token=True)
+        triggers=sim.enter_creature(third,player)
+        sim.resolve_entry_triggers(triggers,third)
+        self.assertEqual(sim.result,"win")
+        self.assertEqual(sim.winner,0)
+        self.assertFalse(sim.report()["learningEligible"])
+        sim.invariant()
+
+    def test_actual_cohort_and_color_data_affect_simulator_combat_stats(self):
+        deck=json.loads((HERE/"decks/27521806-faeries.json").read_text())
+        lookup={c["name"]:c for c in deck["commanders"]+deck["mainboard"]}
+        cards=[s.import_diagnostic_card(self.rules,lookup[name],0,"actual-"+str(i),{"Blue","Black"})
+               for i,name in enumerate(("Obyra, Dreaming Duelist","Briarberry Cohort","Zephyr Sprite"))]
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+cards,s.demo_deck(1)),diagnostic=True)
+        player=sim.players[0]
+        for card in cards:
+            (player.hand if card in player.hand else player.library).remove(card)
+            triggers=sim.enter_creature(card,player)
+            sim.resolve_entry_triggers(triggers,card)
+        cohort=next(x for x in player.battlefield if x.card.name=="Briarberry Cohort")
+        self.assertEqual((sim.effective_card(cohort).power,sim.effective_card(cohort).toughness),(2,2))
+        self.assertEqual(sim.players[1].life,38)
+        # Ordinary parsed creatures preserve their actual blue color, not just their creature type.
+        sim.send_to_destination(player,next(x for x in player.battlefield if x.card.name=="Obyra, Dreaming Duelist"))
+        self.assertEqual(sim.effective_card(cohort).power,2)
+        sim.send_to_destination(player,next(x for x in player.battlefield if x.card.name=="Zephyr Sprite"))
+        self.assertEqual(sim.effective_card(cohort).power,1)
+        sim.invariant()
+
+    def test_seer_scry_keeps_top_cards_private_and_does_not_draw(self):
+        deck=json.loads((HERE/"decks/27521806-faeries.json").read_text())
+        lookup={c["name"]:c for c in deck["commanders"]+deck["mainboard"]}
+        cards=[s.import_diagnostic_card(self.rules,lookup[name],0,"seer-test-"+str(i),{"Blue","Black"})
+               for i,name in enumerate(("Obyra, Dreaming Duelist","Faerie Seer"))]
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+cards,s.demo_deck(1)),diagnostic=True)
+        player=sim.players[0]
+        (player.hand if cards[0] in player.hand else player.library).remove(cards[0])
+        sim.resolve_entry_triggers(sim.enter_creature(cards[0],player),cards[0])
+        (player.hand if cards[1] in player.hand else player.library).remove(cards[1])
+        top=list(player.library[-2:])
+        triggers=sim.enter_creature(cards[1],player)
+        sim.resolve_entry_triggers(triggers,cards[1])
+        self.assertEqual(player.library[-2:],top)
+        self.assertEqual(sim.players[1].life,39)
+        message=next(e["message"] for e in sim.events if "scries" in e["message"])
+        self.assertIn("scries 2",message)
+        self.assertTrue(all(c.name not in message for c in top))
+        before=sim.observe(1)
+        player.library[-2:]=reversed(player.library[-2:])
+        self.assertEqual(before,sim.observe(1))
+        sim.invariant()
+
+    def test_faerie_rules_are_used_in_real_deck_match(self):
+        decks=[json.loads((HERE/"decks"/name).read_text()) for name in ("5254666-garbo-gobbos.json","27521806-faeries.json")]
+        result=s.diagnose(self.rules,decks,44,10)
+        events=result["events"]
+        self.assertTrue(any(e["kind"]=="cast" and e["details"].get("card")=="Obyra, Dreaming Duelist" for e in events))
+        self.assertTrue(any(e["kind"]=="cast" and e["details"].get("card")=="Briarberry Cohort" for e in events))
+        self.assertTrue(any(e["kind"]=="cast" and e["details"].get("card")=="Faerie Seer" for e in events))
+        self.assertEqual(len([e for e in events if e["kind"]=="trigger" and "Obyra triggers" in e["message"]]),2)
+        self.assertTrue(any("scries 2" in e["message"] for e in events))
+        self.assertFalse(result["learningEligible"])
+        partial={q["card"] for q in result["questions"] if q.get("diagnosticSupport")}
+        self.assertTrue({"Obyra, Dreaming Duelist","Briarberry Cohort","Faerie Seer"}.issubset(partial))
+
+    def test_scry_empty_library_is_not_a_failed_draw(self):
+        sim=s.Simulator(self.rules,42)
+        p=sim.players[0]
+        p.graveyard.extend(p.library);p.library.clear()
+        card=s.Card("scry-source","Test","creature")
+        sim.resolve_entry_triggers([{"kind":"trigger","source":"scry-source","effect":"scry","amount":2,"controller":0}],card)
+        self.assertFalse(p.failed_draw)
+        self.assertFalse(sim.finished)
+        self.assertIn("scries 0",sim.events[-1]["message"])
+
+    def test_opposing_faerie_does_not_trigger_obyra(self):
+        deck=json.loads((HERE/"decks/27521806-faeries.json").read_text())
+        obyra=s.import_diagnostic_card(self.rules,deck["commanders"][0],0,"obyra",{"Blue","Black"})
+        raw=next(c for c in deck["mainboard"] if c["name"]=="Zephyr Sprite")
+        sprite=s.import_diagnostic_card(self.rules,raw,1,"opponent-sprite",{"Blue","Black"})
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+[obyra],s.demo_deck(1)+[sprite]),diagnostic=True)
+        for seat,card in ((0,obyra),(1,sprite)):
+            sim.active=seat;p=sim.players[seat]
+            (p.hand if card in p.hand else p.library).remove(card)
+            triggers=sim.enter_creature(card,p)
+            sim.resolve_entry_triggers(triggers,card)
+        self.assertEqual([p.life for p in sim.players],[40,40])
+
     def test_token_spell_with_extra_text_remains_unsupported(self):
         deck=json.loads((HERE/"decks/5254666-garbo-gobbos.json").read_text())
         definition=next(c for c in deck["mainboard"] if c["name"]=="Dragon Fodder")

@@ -161,3 +161,10 @@ On seed 42 for ten turns each, Zurgo cast Dragon Fodder, attacked with Goblins, 
 ## Four-deck non-mirror pool
 
 Two additional deck snapshots, Obyra Faeries and Chatterfang Squirrels, join Kolodin and Zurgo. The diagnostic randomly selects two different complete deck lists; batch scheduling never repeats a pairing within the batch. Six tests cover all pairings once. An expanded 265-item review queue blocks full-game training; these incomplete diagnostics do not train the live golem or establish relative deck strength.
+
+
+## Faerie card rules
+
+Obyra, Dreaming Duelist, Briarberry Cohort and Faerie Seer now work in the limited real-deck diagnostic using actual color and creature subtype data. Obyra sees each other allied Faerie entering, Cohort checks for another blue creature, and Seer scries without exposing the viewed cards. The current scry choice keeps all viewed cards on top. Six random non-mirror matchups were rerun; the Obyra match demonstrates both triggers and scry.
+
+These are automatic-resolution diagnostic rules, not full stack/flash timing or a completed Commander engine. The results are ineligible for policy training and the live Minecraft golem is unchanged.

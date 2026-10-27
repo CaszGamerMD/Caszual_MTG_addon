@@ -138,3 +138,12 @@ Six seed-42–47 diagnostics exercised all six pairings among the four decks. Tw
 The four-deck audit currently has 265 unique full-game blocking review questions. Some cards have limited diagnostic-only support; audit coverage is not equivalent to a legal match engine. The random real-deck games remain ineligible for learning until those gaps are resolved.
 
 The synthetic demo now uses two distinct sample decks too. To prevent mixing incomparable evaluations, its new checkpoints use training/runs/distinct-demo/ and record the distinct-decks-v2 environment. Earlier mirror-demo data is preserved in its previous directory; it is not overwritten or presented as a new benchmark. A request to resume an older incompatible state is rejected rather than silently mixing results. These synthetic tests do not train on the four real decks.
+
+
+## Faerie entry, color and scry diagnostic
+
+The limited real-deck diagnostic recognizes Obyra, Dreaming Duelist's actual Oracle text, Flying and its entry trigger: whenever another Faerie controlled by Obyra's controller enters, the opponent loses one life. Obyra does not trigger on its own entry or an opponent's Faerie. Imported creatures retain their actual creature subtypes and colors instead of being reduced to a generic creature. This allows Briarberry Cohort to get +1/+1 exactly while its controller has another blue creature, with the bonus removed immediately when the condition ends.
+
+Faerie Seer's real entry ability is supported: the controller scries up to two cards. The current diagnostic policy makes the legal conservative choice to leave all looked-at cards on top in their existing order. The log does not expose card identities or library order; scrying an empty library does not count as a failed draw. The policy does not yet evaluate rearrangements or put cards on the bottom.
+
+The same six non-mirror seed-42–47 matchup diagnostics were rerun. In match 3 (Zurgo vs Obyra), the Obyra player cast Obyra, Briarberry Cohort and Faerie Seer; both Faerie entries triggered Obyra, and Faerie Seer scried. Inspect examples/faerie-rules-replay.html and examples/faerie-rules-pool-summary.json. The five other matches were also rerun. This is still a partial automatic-resolution diagnostic: flash response timing, priority and the stack, many other abilities, multiplayer combat and the full Chatterfang rules remain unsupported. These results do not train or replace the shared policy and are not complete Commander games.

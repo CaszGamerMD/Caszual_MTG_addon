@@ -169,6 +169,8 @@ class Card:
     event_definition: EventDefinition | None = None
     token_count: int = 0
     is_token: bool = False
+    colors: tuple[str, ...] = ()
+    legendary: bool = False
 
 
 
@@ -388,8 +390,9 @@ class Simulator:
                 if definition is None:
                     if card.kind != "creature": continue
                     keywords = frozenset(k for k in card.traits.split(";")[-1].split(",") if k)
-                    definition = EventDefinition(card.name, frozenset({"Creature"}), frozenset(),
-                                                 False, card.power, card.toughness, keywords)
+                    definition = EventDefinition(card.name, frozenset({"Creature"}), frozenset(card.land_subtypes),
+                                                 card.legendary, card.power, card.toughness, keywords,
+                                                 colors=frozenset(card.colors))
                 game.battlefield[card.id] = EventPermanent(card.id, definition, seat, item.tapped,
                     item.fresh, item.saddled, item.animated, counters=item.counters, token=item.card.is_token)
         return game
@@ -417,8 +420,9 @@ class Simulator:
         game = self.event_game("main")
         definition = card.event_definition
         if definition is None:
-            definition = EventDefinition(card.name, frozenset({"Creature"}), frozenset(), False,
-                card.power, card.toughness, frozenset(k for k in card.traits.split(";")[-1].split(",") if k))
+            definition = EventDefinition(card.name, frozenset({"Creature"}), frozenset(card.land_subtypes), card.legendary,
+                card.power, card.toughness, frozenset(k for k in card.traits.split(";")[-1].split(",") if k),
+                colors=frozenset(card.colors))
         game._next_token = self.token_sequence
         known = set(game.battlefield)
         game.enter(EventPermanent(card.id, definition, self.active))
@@ -434,6 +438,26 @@ class Simulator:
         self.token_sequence = game._next_token
         self.sync_events(game)
         return [event for event in game.events if event["kind"] == "trigger"]
+
+    def resolve_entry_triggers(self, triggers: list[dict], card: Card):
+        for event in triggers:
+            if event.get("effect") == "each opponent loses 1 life":
+                source = event["controller"]
+                target = 1-source  # This diagnostic is explicitly two-player.
+                self.players[target].life -= event["amount"]
+                message = f"Obyra triggers: Player {target+1} loses {event['amount']} life."
+            elif event.get("effect") == "scry":
+                source = event["controller"]
+                count = min(event["amount"],len(self.players[source].library))
+                # A valid conservative choice: leave all viewed cards on top in
+                # their current order. Never expose their identities to opponent.
+                message = f"Player {source+1} scries {count}, keeping all on top."
+            else:
+                message = (f"{event['source']} makes {card.name} {event['effect']}."
+                           if event.get("target") else f"{card.name}: {event['effect']}.")
+            self.log("trigger", message, **{k:v for k,v in event.items() if k != "kind"})
+            self.outcome()
+            if self.finished: return
 
     def send_to_destination(self, player: Player, item: Permanent):
         player.battlefield.remove(item)
@@ -673,20 +697,20 @@ class Simulator:
                     self.log("cast", f"Player {self.active + 1} casts {card.name}.",
                              card=card.name, manaSources=payment["sources"],
                              commander=choice.kind == "cast_commander")
-                    for event in triggers:
-                        self.log("trigger", (f"{event['source']} makes {card.name} {event['effect']}."
-                                 if event.get("target") else f"{card.name}: {event['effect']}."),
-                                 **{k:v for k,v in event.items() if k != "kind"})
+                    self.resolve_entry_triggers(triggers, card)
+                    if self.finished: return False
                     if card.kind == "token_spell":
                         for _ in range(card.token_count):
                             self.token_sequence += 1
                             definition = EventDefinition("Goblin",frozenset({"Creature"}),frozenset({"Goblin"}),
-                                                         False,1,1,frozenset())
+                                                         False,1,1,frozenset(),colors=frozenset({"Red"}))
                             token = Card(f"token-{self.token_sequence}","Goblin","creature",
                                          traits="1;1;",power=1,toughness=1,
                                          event_definition=definition,is_token=True)
-                            self.enter_creature(token,p)
+                            token_triggers = self.enter_creature(token,p)
                             self.log("token", "Creates a 1/1 red Goblin creature token.", card="Goblin", token=token.id)
+                            self.resolve_entry_triggers(token_triggers, token)
+                            if self.finished: return False
                     if card.kind == "spell":
                         for _ in range(card.draw): self.draw(self.active)
                         p.life += card.life
@@ -804,7 +828,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                            uid: str, identity: set[str]) -> Card:
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
-    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Goblin Instigator")
+    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Obyra, Dreaming Duelist", "Briarberry Cohort", "Faerie Seer", "Brightfield Mustang", "Goblin Instigator")
                or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
@@ -828,7 +852,8 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         life=parsed.get("life", 0), land_rule=parsed.get("land_rule", ""),
         land_subtypes=tuple(definition.get("subTypes", [])),
         basic_land="Basic" in definition.get("superTypes", []), event_definition=parsed.get("event"),
-        token_count=parsed.get("token_count",0))
+        token_count=parsed.get("token_count",0),
+        colors=tuple(definition.get("colors") or []), legendary="Legendary" in (definition.get("superTypes") or []))
 
 
 def import_diagnostic_deck(rules: RulesBridge, deck: dict, seat: int) -> list[Card]:
