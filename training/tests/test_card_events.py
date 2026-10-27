@@ -9,7 +9,8 @@ from card_events import Game, Permanent, Definition, parse_card, NeedsRules, Ill
 
 deck=json.loads((HERE/"decks/14850373-budget-deck.json").read_text())
 fairies=json.loads((HERE/"decks/27521806-faeries.json").read_text())
-cards={c["name"]:c for c in deck["commanders"]+deck["mainboard"]+fairies["commanders"]+fairies["mainboard"]}
+squirrels=json.loads((HERE/"decks/8321184-squirrels.json").read_text())
+cards={c["name"]:c for c in deck["commanders"]+deck["mainboard"]+fairies["commanders"]+fairies["mainboard"]+squirrels["commanders"]+squirrels["mainboard"]}
 
 def real(name,id,controller=0):
     return Permanent(id,parse_card(cards[name]),controller)
@@ -19,6 +20,22 @@ def creature(id,legendary=False,controller=0,power=2,fresh=False):
                                   legendary,power,2,frozenset()),controller,fresh=fresh)
 
 class CardEventChecks(unittest.TestCase):
+    def test_squirrel_bonuses_count_controller_and_other_permanents(self):
+        g=Game(); g.enter(real("Squirrel Mob","mob")); g.enter(real("Squirrel Sovereign","lord"))
+        self.assertEqual(g.stats(g.battlefield["mob"]),(4,4))
+        self.assertEqual(g.stats(g.battlefield["lord"]),(2,2))
+        g.enter(real("Squirrel Sovereign","enemy",1))
+        self.assertEqual(g.stats(g.battlefield["mob"]),(5,5))
+        self.assertEqual(g.stats(g.battlefield["enemy"]),(2,2))
+        g.enter(real("Squirrel Sovereign","second"))
+        self.assertEqual(g.stats(g.battlefield["mob"]),(7,7))
+        self.assertEqual(g.stats(g.battlefield["lord"]),(3,3))
+        g.leave("second"); g.leave("enemy"); g.leave("lord")
+        self.assertEqual(g.stats(g.battlefield["mob"]),(2,2))
+        for name in ("Squirrel Mob","Squirrel Sovereign"):
+            altered=dict(cards[name],oracleText=cards[name]["oracleText"]+"\nDraw a card.")
+            self.assertFalse(parse_card(altered).supported)
+
     def test_actual_cards_and_unknown_text(self):
         for name in ("Kolodin, Triumph Caster","Andúril, Flame of the West","Brightfield Mustang","Thundering Chariot"):
             self.assertTrue(parse_card(cards[name]).supported,name)

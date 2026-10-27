@@ -13,6 +13,24 @@ import simulator as s
 
 
 class SimulatorChecks(unittest.TestCase):
+    def test_real_squirrel_continuous_effects_reach_combat_stats(self):
+        deck=json.loads((HERE/"decks/8321184-squirrels.json").read_text())
+        lookup={c["name"]:c for c in deck["mainboard"]}
+        cards=[s.import_diagnostic_card(self.rules,lookup[name],0,"squirrel-"+str(i),{"Green","Black"})
+               for i,name in enumerate(("Squirrel Mob","Squirrel Sovereign"))]
+        self.assertTrue(all(card.kind == "creature" for card in cards))
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+cards,s.demo_deck(1)),diagnostic=True)
+        player=sim.players[0]
+        for card in cards:
+            (player.hand if card in player.hand else player.library).remove(card)
+            sim.enter_creature(card,player)
+        mob=next(x for x in player.battlefield if x.card.name=="Squirrel Mob")
+        self.assertEqual((sim.effective_card(mob).power,sim.effective_card(mob).toughness),(4,4))
+        sim.send_to_destination(player,next(x for x in player.battlefield if x.card.name=="Squirrel Sovereign"))
+        self.assertEqual((sim.effective_card(mob).power,sim.effective_card(mob).toughness),(2,2))
+        self.assertFalse(sim.report()["learningEligible"])
+        sim.invariant()
+
     @classmethod
     def setUpClass(cls):
         cls.rules = s.RulesBridge()

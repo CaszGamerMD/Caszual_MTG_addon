@@ -1,0 +1,167 @@
+{
+  "matches": [
+    {
+      "match": 1,
+      "seed": 42,
+      "deckNames": [
+        "faeries",
+        "Budget Deck"
+      ],
+      "commanders": [
+        "Obyra, Dreaming Duelist",
+        "Kolodin, Triumph Caster"
+      ],
+      "deckIds": [
+        27521806,
+        14850373
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        26,
+        23
+      ],
+      "winner": null,
+      "learningEligible": false
+    },
+    {
+      "match": 2,
+      "seed": 43,
+      "deckNames": [
+        "Garbo Gobbos",
+        "squirrels"
+      ],
+      "commanders": [
+        "Zurgo Helmsmasher",
+        "Chatterfang, Squirrel General"
+      ],
+      "deckIds": [
+        5254666,
+        8321184
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        40,
+        40
+      ],
+      "winner": null,
+      "learningEligible": false
+    },
+    {
+      "match": 3,
+      "seed": 44,
+      "deckNames": [
+        "Garbo Gobbos",
+        "faeries"
+      ],
+      "commanders": [
+        "Zurgo Helmsmasher",
+        "Obyra, Dreaming Duelist"
+      ],
+      "deckIds": [
+        5254666,
+        27521806
+      ],
+      "result": "win",
+      "turnsCompleted": [
+        9,
+        9
+      ],
+      "life": [
+        24,
+        13
+      ],
+      "winner": 0,
+      "learningEligible": false
+    },
+    {
+      "match": 4,
+      "seed": 45,
+      "deckNames": [
+        "faeries",
+        "squirrels"
+      ],
+      "commanders": [
+        "Obyra, Dreaming Duelist",
+        "Chatterfang, Squirrel General"
+      ],
+      "deckIds": [
+        27521806,
+        8321184
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        40,
+        29
+      ],
+      "winner": null,
+      "learningEligible": false
+    },
+    {
+      "match": 5,
+      "seed": 46,
+      "deckNames": [
+        "Budget Deck",
+        "Garbo Gobbos"
+      ],
+      "commanders": [
+        "Kolodin, Triumph Caster",
+        "Zurgo Helmsmasher"
+      ],
+      "deckIds": [
+        14850373,
+        5254666
+      ],
+      "result": "win",
+      "turnsCompleted": [
+        9,
+        8
+      ],
+      "life": [
+        16,
+        32
+      ],
+      "winner": 1,
+      "learningEligible": false
+    },
+    {
+      "match": 6,
+      "seed": 47,
+      "deckNames": [
+        "squirrels",
+        "Budget Deck"
+      ],
+      "commanders": [
+        "Chatterfang, Squirrel General",
+        "Kolodin, Triumph Caster"
+      ],
+      "deckIds": [
+        8321184,
+        14850373
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        32,
+        40
+      ],
+      "winner": null,
+      "learningEligible": false
+    }
+  ],
+  "notice": "Incomplete diagnostics; never used for training."
+}

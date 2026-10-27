@@ -848,7 +848,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                            uid: str, identity: set[str]) -> Card:
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
-    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Obyra, Dreaming Duelist", "Briarberry Cohort", "Faerie Seer", "Bitterblossom", "Bitterbloom Bearer", "Brightfield Mustang", "Goblin Instigator")
+    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Obyra, Dreaming Duelist", "Briarberry Cohort", "Faerie Seer", "Bitterblossom", "Bitterbloom Bearer", "Brightfield Mustang", "Goblin Instigator", "Squirrel Mob", "Squirrel Sovereign")
                or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported

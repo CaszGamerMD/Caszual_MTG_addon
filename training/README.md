@@ -139,6 +139,12 @@ The four-deck audit currently has 265 unique full-game blocking review questions
 
 The synthetic demo now uses two distinct sample decks too. To prevent mixing incomparable evaluations, its new checkpoints use training/runs/distinct-demo/ and record the distinct-decks-v2 environment. Earlier mirror-demo data is preserved in its previous directory; it is not overwritten or presented as a new benchmark. A request to resume an older incompatible state is rejected rather than silently mixing results. These synthetic tests do not train on the four real decks.
 
+### Squirrel rules and resumed sample training
+
+The limited real-deck diagnostic recognizes Squirrel Mob and Squirrel Sovereign from the saved Oracle snapshot. Mob counts other Squirrel permanents on either side; each Sovereign gives other Squirrels its controller controls +1/+1. These continuous effects update when permanents enter or leave. They do not implement Chatterfang's replacement effect, its activated ability, or a complete multiplayer rules engine. Unknown cards remain review questions and these games are not eligible for learning.
+
+All six distinct deck pairings were rerun for up to ten turns per player; results are in `examples/squirrel-rules-pool-summary.json`. Three sample-deck training generations were evaluated with 16 games each; all candidates tied the champion and none was promoted. `examples/sandbox-checkpoint.json` preserves that sample run's state. To resume it in a fresh checkout, copy it to `training/runs/distinct-demo/state.json`, then run `python3 training/simulator.py train --demo --generations 3 --evaluation-seeds 8`. The checkpoint is for the synthetic environment, not the real decks or live Minecraft golems.
+
 
 ## Faerie entry, color and scry diagnostic
 

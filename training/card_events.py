@@ -52,6 +52,8 @@ Flying
 At the beginning of your upkeep, you lose 1 life and create a 1/1 blue and black Faerie creature token with flying."""
 SEER = """Flying
 When this creature enters, scry 2."""
+SQUIRREL_MOB = "This creature gets +1/+1 for each other Squirrel on the battlefield."
+SQUIRREL_SOVEREIGN = "Other Squirrels you control get +1/+1."
 INSTIGATOR = "When this creature enters, create a 1/1 red Goblin creature token."
 MUSTANG = """Whenever this creature attacks while saddled, untap it and put a +1/+1 counter on it.
 Saddle 1"""
@@ -122,6 +124,11 @@ def parse_card(card: dict) -> Definition:
         valid = text == SEER and "Creature" in types and "Faerie" in subtypes
         return Definition(**base, abilities=frozenset({"flying"}), supported=valid,
                           reason="" if valid else "Faerie Seer metadata/rules mismatch")
+    if name in ("Squirrel Mob", "Squirrel Sovereign"):
+        expected = SQUIRREL_MOB if name == "Squirrel Mob" else SQUIRREL_SOVEREIGN
+        valid = text == expected and "Creature" in types and "Squirrel" in subtypes
+        return Definition(**base, abilities=frozenset(), supported=valid,
+                          reason="" if valid else name + " metadata/rules mismatch")
     if name == "Goblin Instigator":
         valid = text == INSTIGATOR and "Creature" in types
         return Definition(**base, abilities=frozenset(), supported=valid,
@@ -189,8 +196,15 @@ class Game:
         cohort_bonus = int(p.definition.name == "Briarberry Cohort" and
             any(x.id != p.id and x.controller == p.controller and self.creature(x)
                 and "Blue" in x.definition.colors for x in self.battlefield.values()))
-        return (p.definition.power + p.counters + 3*bonus + cohort_bonus,
-                p.definition.toughness + p.counters + bonus + cohort_bonus)
+        mob_bonus = (sum(1 for x in self.battlefield.values()
+                         if x.id != p.id and "Squirrel" in x.definition.subtypes)
+                     if p.definition.name == "Squirrel Mob" else 0)
+        sovereign_bonus = (sum(1 for x in self.battlefield.values()
+                               if x.id != p.id and x.controller == p.controller
+                               and x.definition.name == "Squirrel Sovereign")
+                           if "Squirrel" in p.definition.subtypes else 0)
+        return (p.definition.power + p.counters + 3*bonus + cohort_bonus + mob_bonus + sovereign_bonus,
+                p.definition.toughness + p.counters + bonus + cohort_bonus + mob_bonus + sovereign_bonus)
 
     def has(self, p: Permanent, ability: str) -> bool:
         if ability in p.definition.abilities: return True

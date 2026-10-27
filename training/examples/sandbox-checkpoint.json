@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "sandboxVariant": "distinct-decks-v2",
+  "seed": 42,
+  "evaluationSeedsPerGeneration": 8,
+  "champion": {
+    "schemaVersion": 1,
+    "version": 0,
+    "scope": "sandbox-single-attacker-v1",
+    "weights": {
+      "power": 1.0,
+      "toughness": 0.3,
+      "evasion": 0.8,
+      "haste": 0.6,
+      "lethal": 100.0,
+      "damage": 3.0,
+      "survive": 1.0,
+      "life": 0.2,
+      "draw": 0.7,
+      "cost": -0.1,
+      "pass": -2.0
+    }
+  },
+  "history": [
+    {
+      "generation": 0,
+      "status": "evaluated",
+      "selfPlayWinner": 1,
+      "selfPlayTurns": 43,
+      "pooledDecisions": [
+        113,
+        119
+      ],
+      "featureFeedback": {
+        "power": -0.06802834052917082,
+        "toughness": 0.0010203608366958588,
+        "evasion": 0.0,
+        "haste": -0.0008626266982963127,
+        "lethal": 0.0,
+        "damage": -0.2377416246244544,
+        "survive": -0.10020307823856352,
+        "life": 0.0,
+        "draw": 0.0,
+        "cost": -0.010241207384449563,
+        "pass": 0.01506295845918488
+      },
+      "evaluationSeeds": [
+        1000042,
+        1000043,
+        1000044,
+        1000045,
+        1000046,
+        1000047,
+        1000048,
+        1000049
+      ],
+      "candidate": [
+        8,
+        -343
+      ],
+      "champion": [
+        8,
+        -343
+      ],
+      "completed": 16,
+      "expected": 16,
+      "promote": false,
+      "promoted": false
+    },
+    {
+      "generation": 1,
+      "status": "evaluated",
+      "selfPlayWinner": 0,
+      "selfPlayTurns": 43,
+      "pooledDecisions": [
+        118,
+        114
+      ],
+      "featureFeedback": {
+        "power": 0.02454072172878089,
+        "toughness": -0.01724137931034481,
+        "evasion": 0.0,
+        "haste": -0.0005748778384593265,
+        "lethal": 0.0,
+        "damage": 0.03196605374823197,
+        "survive": 0.01235071960804329,
+        "life": 0.0,
+        "draw": 0.0,
+        "cost": -0.006825938566552905,
+        "pass": 0.010036067116198852
+      },
+      "evaluationSeeds": [
+        1000050,
+        1000051,
+        1000052,
+        1000053,
+        1000054,
+        1000055,
+        1000056,
+        1000057
+      ],
+      "candidate": [
+        8,
+        -344
+      ],
+      "champion": [
+        8,
+        -344
+      ],
+      "completed": 16,
+      "expected": 16,
+      "promote": false,
+      "promoted": false
+    },
+    {
+      "generation": 2,
+      "status": "evaluated",
+      "selfPlayWinner": 1,
+      "selfPlayTurns": 43,
+      "pooledDecisions": [
+        116,
+        111
+      ],
+      "featureFeedback": {
+        "power": 0.0052095245355899345,
+        "toughness": 0.019302794583693487,
+        "evasion": 0.0,
+        "haste": 0.0007501875468867218,
+        "lethal": 0.0,
+        "damage": 0.22592280870506193,
+        "survive": 0.01872746306851226,
+        "life": 0.0,
+        "draw": 0.0,
+        "cost": 0.008836387312808119,
+        "pass": -0.011690112938379231
+      },
+      "evaluationSeeds": [
+        1000058,
+        1000059,
+        1000060,
+        1000061,
+        1000062,
+        1000063,
+        1000064,
+        1000065
+      ],
+      "candidate": [
+        8,
+        -344
+      ],
+      "champion": [
+        8,
+        -344
+      ],
+      "completed": 16,
+      "expected": 16,
+      "promote": false,
+      "promoted": false
+    }
+  ]
+}
