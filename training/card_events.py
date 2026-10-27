@@ -46,6 +46,10 @@ Flying
 Whenever another Faerie you control enters, each opponent loses 1 life."""
 COHORT = """Flying
 This creature gets +1/+1 as long as you control another blue creature."""
+BITTERBLOSSOM = "At the beginning of your upkeep, you lose 1 life and create a 1/1 black Faerie Rogue creature token with flying."
+BITTERBLOOM = """Flash
+Flying
+At the beginning of your upkeep, you lose 1 life and create a 1/1 blue and black Faerie creature token with flying."""
 SEER = """Flying
 When this creature enters, scry 2."""
 INSTIGATOR = "When this creature enters, create a 1/1 red Goblin creature token."
@@ -106,6 +110,14 @@ def parse_card(card: dict) -> Definition:
         valid = text == COHORT and "Creature" in types and "Faerie" in subtypes
         return Definition(**base, abilities=frozenset({"flying"}), supported=valid,
                           reason="" if valid else "Briarberry Cohort metadata/rules mismatch")
+    if name == "Bitterblossom":
+        valid = text == BITTERBLOSSOM and "Enchantment" in types and "Faerie" in subtypes
+        return Definition(**base, abilities=frozenset(), supported=valid,
+                          reason="" if valid else "Bitterblossom metadata/rules mismatch")
+    if name == "Bitterbloom Bearer":
+        valid = text == BITTERBLOOM and "Creature" in types and "Faerie" in subtypes
+        return Definition(**base, abilities=frozenset({"flying","flash"}), supported=valid,
+                          reason="" if valid else "Bitterbloom metadata/rules mismatch")
     if name == "Faerie Seer":
         valid = text == SEER and "Creature" in types and "Faerie" in subtypes
         return Definition(**base, abilities=frozenset({"flying"}), supported=valid,
@@ -227,6 +239,19 @@ class Game:
         if watched and "Vehicle" in permanent.definition.subtypes:
             permanent.animated = True
             self.emit("trigger", source="Kolodin, Triumph Caster", effect="animated", target=permanent.id)
+
+    def upkeep_triggers(self) -> list[dict]:
+        """One trigger per supported permanent controlled by the active player."""
+        triggers = []
+        for p in self.battlefield.values():
+            if p.controller != self.turn_player: continue
+            if p.definition.name == "Bitterblossom":
+                triggers.append({"source":p.id,"name":p.definition.name,"controller":p.controller,
+                                 "colors":["Black"],"subtypes":["Faerie","Rogue"]})
+            elif p.definition.name == "Bitterbloom Bearer":
+                triggers.append({"source":p.id,"name":p.definition.name,"controller":p.controller,
+                                 "colors":["Blue","Black"],"subtypes":["Faerie"]})
+        return triggers
 
     def leave(self, permanent_id: str):
         p = self.battlefield.pop(permanent_id)

@@ -561,7 +561,7 @@ class Simulator:
                              cost=len(self.payment(c, p.commander_casts).get("sources", []))),
                     "Cast commander " + c.name))
             for c in p.hand:
-                if c.kind in ("creature", "vehicle", "spell", "token_spell") and self.payment(c)["paid"]:
+                if c.kind in ("creature", "vehicle", "enchantment", "spell", "token_spell") and self.payment(c)["paid"]:
                     if c.draw and len(p.library) < c.draw:
                         continue  # never choose a known self-decking draw spell
                     keywords = c.traits.split(";")[-1].split(",") if c.traits else []
@@ -650,6 +650,26 @@ class Simulator:
                 x.tapped, x.fresh = False, False
             self.log("untap", f"Player {self.active + 1} starts turn {self.turn} and untaps.")
         elif self.phase == "untap":
+            self.phase = "upkeep"
+            for trigger in self.event_game("upkeep").upkeep_triggers():
+                controller = trigger["controller"]
+                self.players[controller].life -= 1
+                self.token_sequence += 1
+                definition = EventDefinition("Faerie",frozenset({"Creature"}),frozenset(trigger["subtypes"]),
+                    False,1,1,frozenset({"flying"}),colors=frozenset(trigger["colors"]))
+                token = Card(f"token-{self.token_sequence}","Faerie","creature",traits="1;1;flying",
+                             power=1,toughness=1,event_definition=definition,is_token=True)
+                created_triggers = self.enter_creature(token,self.players[controller])
+                self.log("upkeep", f"{trigger['name']}: Player {controller+1} loses 1 life and creates a flying Faerie.",
+                         source=trigger["source"], token=token.id)
+                # The entire upkeep ability resolves before checking losses. If its controller
+                # loses, newly triggered abilities do not resolve in this two-player pilot.
+                self.outcome()
+                if self.finished: return False
+                self.resolve_entry_triggers(created_triggers,token)
+                if self.finished: return False
+            return True
+        elif self.phase == "upkeep":
             self.phase = "draw"
             if self.diagnostic and self.turn == 1:
                 self.log("draw_skipped", "The starting player skips their first draw in this two-player diagnostic.")
@@ -690,7 +710,7 @@ class Simulator:
                     else:
                         p.hand.remove(card)
                     triggers = []
-                    if card.kind in ("creature", "vehicle"):
+                    if card.kind in ("creature", "vehicle", "enchantment"):
                         triggers = self.enter_creature(card, p)
                     else:
                         p.graveyard.append(card)
@@ -828,13 +848,14 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                            uid: str, identity: set[str]) -> Card:
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
-    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Obyra, Dreaming Duelist", "Briarberry Cohort", "Faerie Seer", "Brightfield Mustang", "Goblin Instigator")
+    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Obyra, Dreaming Duelist", "Briarberry Cohort", "Faerie Seer", "Bitterblossom", "Bitterbloom Bearer", "Brightfield Mustang", "Goblin Instigator")
                or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and re.fullmatch(r"(?:\{(?:[WUBRGC]|[0-9]{1,2})\})+", cost)):
         keywords = sorted(event_definition.abilities)
-        parsed = {"kind":"vehicle" if "Vehicle" in event_definition.subtypes else "creature",
+        parsed = {"kind":("vehicle" if "Vehicle" in event_definition.subtypes else
+                          "creature" if "Creature" in event_definition.types else "enchantment"),
                   "power":event_definition.power,"toughness":event_definition.toughness,
                   "traits":f"{event_definition.power};{event_definition.toughness};"+",".join(keywords),
                   "event":event_definition}

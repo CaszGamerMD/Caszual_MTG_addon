@@ -53,6 +53,25 @@ class CardEventChecks(unittest.TestCase):
         event=next(e for e in g.events if e.get("effect")=="scry")
         self.assertEqual((event["controller"],event["amount"]),(0,2))
 
+    def test_obyra_watches_faerie_kindred_even_if_not_creature(self):
+        g=Game();g.enter(real("Obyra, Dreaming Duelist","o"))
+        g.enter(real("Bitterblossom","bb"))
+        self.assertFalse(g.creature(g.battlefield["bb"]))
+        self.assertTrue(any(e.get("source")=="o" and e.get("entered")=="bb" for e in g.events))
+        upkeep=g.upkeep_triggers()
+        self.assertEqual([(e["name"],e["colors"],e["subtypes"]) for e in upkeep],
+                         [("Bitterblossom",["Black"],["Faerie","Rogue"])])
+        g.turn_player=1
+        self.assertEqual(g.upkeep_triggers(),[])
+
+    def test_bitterbloom_and_bitterblossom_have_separate_upkeep_tokens(self):
+        g=Game();g.enter(real("Bitterblossom","bb"));g.enter(real("Bitterbloom Bearer","bearer"))
+        triggers=g.upkeep_triggers()
+        self.assertEqual(len(triggers),2)
+        bearer=next(t for t in triggers if t["name"]=="Bitterbloom Bearer")
+        self.assertEqual(bearer["colors"],["Blue","Black"])
+        self.assertEqual(bearer["subtypes"],["Faerie"])
+
     def test_cohort_uses_another_blue_creature_you_control(self):
         g=Game();g.enter(real("Briarberry Cohort","c"))
         cohort=g.battlefield["c"]

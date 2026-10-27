@@ -57,7 +57,7 @@ function render(){
    const stats=node("div",undefined,"stats");stats.append(node("span",p.life+" life","life"),node("span","Hand: "+p.handCount),node("span","Library: "+p.libraryCount));
    const damage=Object.values(p.commanderDamage||{});if(damage.length)stats.append(node("span","Commander damage: "+damage.join(", ")));panel.append(stats);
    const cards=node("div",undefined,"cards");
-   for(const c of p.battlefield){const el=node("div",c.name,"card "+c.kind+(c.tapped?" tapped":""));el.append(node("small",c.kind==="creature"?c.power+" / "+c.toughness+(c.fresh?" · New":"")+(c.saddled?" · Saddled":"")+(c.counters?" · +"+c.counters+" counters":""):"Land"),node("small",c.tapped?"Tapped":"Untapped"));cards.append(el)}
+   for(const c of p.battlefield){const el=node("div",c.name,"card "+c.kind+(c.tapped?" tapped":""));el.append(node("small",c.kind==="creature"?c.power+" / "+c.toughness+(c.fresh?" · New":"")+(c.saddled?" · Saddled":"")+(c.counters?" · +"+c.counters+" counters":""):(c.kind==="land"?"Land":c.kind==="enchantment"?"Enchantment":c.kind)),node("small",c.tapped?"Tapped":"Untapped"));cards.append(el)}
    if(!p.battlefield.length)cards.append(node("p","Empty battlefield"));panel.append(cards);
    const grave=node("details");grave.append(node("summary","Graveyard ("+p.graveyard.length+")"),node("p",p.graveyard.map(c=>c.name).join(", ")||"Empty"));panel.append(grave);return panel;
   }));

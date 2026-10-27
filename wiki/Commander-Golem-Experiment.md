@@ -168,3 +168,8 @@ Two additional deck snapshots, Obyra Faeries and Chatterfang Squirrels, join Kol
 Obyra, Dreaming Duelist, Briarberry Cohort and Faerie Seer now work in the limited real-deck diagnostic using actual color and creature subtype data. Obyra sees each other allied Faerie entering, Cohort checks for another blue creature, and Seer scries without exposing the viewed cards. The current scry choice keeps all viewed cards on top. Six random non-mirror matchups were rerun; the Obyra match demonstrates both triggers and scry.
 
 These are automatic-resolution diagnostic rules, not full stack/flash timing or a completed Commander engine. The results are ineligible for policy training and the live Minecraft golem is unchanged.
+
+
+## Faerie upkeep rules
+
+The limited diagnostic now models upkeep life loss and correctly typed flying Faerie tokens for Bitterblossom and Bitterbloom Bearer, including Obyra's trigger when they enter. A seed-3 ten-turn real-deck diagnostic generated eight Bitterbloom tokens and four Obyra triggers; six non-mirror pairings were rerun. Checks include lethal upkeep timing and Faerie Kindred subtype recognition. Flash response timing, the full stack, many other effects and live Minecraft integration remain outstanding, so results cannot train the policy.

@@ -405,6 +405,56 @@ class SimulatorChecks(unittest.TestCase):
         self.assertEqual(sim.effective_card(cohort).power,1)
         sim.invariant()
 
+    def test_bitterblossom_upkeep_creates_faerie_and_triggers_obyra(self):
+        deck=json.loads((HERE/"decks/27521806-faeries.json").read_text())
+        lookup={c["name"]:c for c in deck["commanders"]+deck["mainboard"]}
+        cards=[s.import_diagnostic_card(self.rules,lookup[name],0,"upkeep-"+str(i),{"Blue","Black"})
+               for i,name in enumerate(("Obyra, Dreaming Duelist","Bitterblossom"))]
+        self.assertEqual(cards[1].kind,"enchantment")
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+cards,s.demo_deck(1)),diagnostic=True)
+        p=sim.players[0]
+        for card in cards:
+            (p.hand if card in p.hand else p.library).remove(card)
+            sim.resolve_entry_triggers(sim.enter_creature(card,p),card)
+        self.assertEqual(sim.players[1].life,39)  # Kindred enchantment is itself a Faerie.
+        sim.phase="untap";sim.step()
+        self.assertEqual((p.life,sim.players[1].life),(39,38))
+        token=next(x for x in p.battlefield if x.card.is_token)
+        self.assertEqual(token.card.event_definition.subtypes,frozenset({"Faerie","Rogue"}))
+        self.assertEqual(token.card.event_definition.colors,frozenset({"Black"}))
+        self.assertIn("flying",sim.effective_card(token).traits)
+        sim.invariant()
+
+    def test_lethal_upkeep_resolves_token_before_loss_but_not_later_trigger(self):
+        deck=json.loads((HERE/"decks/27521806-faeries.json").read_text())
+        lookup={c["name"]:c for c in deck["commanders"]+deck["mainboard"]}
+        cards=[s.import_diagnostic_card(self.rules,lookup[name],0,"lethal-"+str(i),{"Blue","Black"})
+               for i,name in enumerate(("Obyra, Dreaming Duelist","Bitterblossom"))]
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+cards,s.demo_deck(1)),diagnostic=True)
+        p=sim.players[0]
+        for card in cards:
+            (p.hand if card in p.hand else p.library).remove(card)
+            sim.resolve_entry_triggers(sim.enter_creature(card,p),card)
+        p.life=1;sim.players[1].life=1
+        sim.phase="untap";sim.step()
+        self.assertEqual(sim.result,"win")
+        self.assertEqual(sim.winner,1)
+        self.assertEqual(sim.players[1].life,1)
+        self.assertTrue(any(x.card.is_token for x in p.battlefield))
+        sim.invariant()
+
+    def test_real_deck_bitterbloom_tokens_feed_obyra(self):
+        decks=[json.loads((HERE/"decks"/name).read_text()) for name in
+               ("27521806-faeries.json","14850373-budget-deck.json")]
+        report=s.diagnose(self.rules,decks,3,10)
+        self.assertEqual(report["turnsCompleted"],[10,10])
+        upkeep=[e for e in report["events"] if e["kind"]=="upkeep" and "Bitterbloom" in e["message"]]
+        triggers=[e for e in report["events"] if e["kind"]=="trigger" and "Obyra triggers" in e["message"]]
+        self.assertEqual(len(upkeep),8)
+        self.assertEqual(len(triggers),4)
+        self.assertTrue(all(e["details"]["amount"]==1 for e in triggers))
+        self.assertFalse(report["learningEligible"])
+
     def test_seer_scry_keeps_top_cards_private_and_does_not_draw(self):
         deck=json.loads((HERE/"decks/27521806-faeries.json").read_text())
         lookup={c["name"]:c for c in deck["commanders"]+deck["mainboard"]}

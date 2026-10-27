@@ -147,3 +147,12 @@ The limited real-deck diagnostic recognizes Obyra, Dreaming Duelist's actual Ora
 Faerie Seer's real entry ability is supported: the controller scries up to two cards. The current diagnostic policy makes the legal conservative choice to leave all looked-at cards on top in their existing order. The log does not expose card identities or library order; scrying an empty library does not count as a failed draw. The policy does not yet evaluate rearrangements or put cards on the bottom.
 
 The same six non-mirror seed-42–47 matchup diagnostics were rerun. In match 3 (Zurgo vs Obyra), the Obyra player cast Obyra, Briarberry Cohort and Faerie Seer; both Faerie entries triggered Obyra, and Faerie Seer scried. Inspect examples/faerie-rules-replay.html and examples/faerie-rules-pool-summary.json. The five other matches were also rerun. This is still a partial automatic-resolution diagnostic: flash response timing, priority and the stack, many other abilities, multiplayer combat and the full Chatterfang rules remain unsupported. These results do not train or replace the shared policy and are not complete Commander games.
+
+
+## Faerie upkeep, tokens and life loss
+
+The diagnostic supports the exact current imported text for Bitterblossom and Bitterbloom Bearer. On their controller's upkeep, the controller loses one life and creates the appropriate 1/1 flying Faerie token: black Faerie Rogue for Bitterblossom, blue-black Faerie for Bitterbloom Bearer. Obyra watches each allied Faerie permanent entering, including a Kindred Faerie enchantment such as Bitterblossom and the new tokens. Token types and colors remain available for later effects.
+
+The upkeep ability creates its token before the loss check. If its controller loses at that point, pending later Obyra triggers do not resolve in this two-player diagnostic. Tests cover that edge case. Trigger resolutions are still automatic, not a priority/stack implementation, and flash is only cast in the AI main phase. The agent currently keeps all cards on top when it scries.
+
+A targeted real-deck seed-3 diagnostic of Faeries versus Kolodin completed ten turns each: Bitterbloom Bearer created eight upkeep Faeries, and Obyra triggered on four of the later entries. See examples/faerie-upkeep-replay.html. All six non-mirror pairings were also rerun; examples/faerie-upkeep-pool-summary.json contains the resulting life totals. These diagnostics are incomplete and do not change any training checkpoints or the live golem.
