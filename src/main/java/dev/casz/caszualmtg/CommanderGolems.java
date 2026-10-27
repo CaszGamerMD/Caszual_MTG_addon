@@ -28,6 +28,8 @@ public final class CommanderGolems {
  private static final String FIRST_HAND="caszual_mtg_ai_opening_hand";
  private static final String ACTION_DONE="caszual_mtg_ai_turn_processed";
  /** Persistent scoreboard tags; one server tick per visible turn stage. */
+ private static final String LAND_CHECKED="caszual_mtg_ai_land_checked";
+ private static final String LAND_PLAYED="caszual_mtg_ai_land_played";
  private static final String STAGE_LAND="caszual_mtg_ai_stage_land";
  private static final String STAGE_CAST="caszual_mtg_ai_stage_cast";
  private static final String STAGE_COMBAT="caszual_mtg_ai_stage_combat";
@@ -35,6 +37,7 @@ public final class CommanderGolems {
  private static final String STAGE_END="caszual_mtg_ai_stage_end";
  private static void clearTurn(IronGolem golem){
   golem.removeTag(ACTION_DONE);
+  golem.removeTag(LAND_CHECKED);golem.removeTag(LAND_PLAYED);
   golem.removeTag(STAGE_LAND);
   golem.removeTag(STAGE_CAST);
   golem.removeTag(STAGE_COMBAT);
@@ -355,6 +358,8 @@ public final class CommanderGolems {
    if(s.table.aiAttack()!=null)return; // The defender still owns the combat decision.
    boolean second=golem.entityTags().contains(STAGE_POSTCOMBAT);
    progress(golem,second?STAGE_POSTCOMBAT:STAGE_CAST,second?STAGE_END:STAGE_COMBAT);
+   if(second&&golem.entityTags().contains(LAND_CHECKED)&&!golem.entityTags().contains(LAND_PLAYED)
+       &&CommanderBattleActions.playLand(golem,s.table,s.hand))golem.addTag(LAND_PLAYED);
    boolean commander=CommanderBattleActions.castCommander(golem,s.table,box);
    int creatures=CommanderBattleActions.castHand(golem,s.table,s.hand);
    int spells=CommanderBattleActions.castSimpleSpells(world,golem,s.table,s.hand,s.deck,s.life);
@@ -370,6 +375,7 @@ public final class CommanderGolems {
    progress(golem,STAGE_LAND,STAGE_CAST);
    int previous=s.table.cards().size();
    boolean placed=CommanderBattleActions.playLand(golem,s.table,s.hand);
+   golem.addTag(LAND_CHECKED);if(placed)golem.addTag(LAND_PLAYED);
    if(placed&&s.table.cards().size()>previous)
     say(world,golem,"plays "+TcgCardMeta.displayName(s.table.cards().getLast().stack())+".");
    return;
