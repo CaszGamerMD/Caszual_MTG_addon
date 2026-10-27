@@ -71,9 +71,9 @@ public final class CommanderCombat {
   for(var card:CommanderBattleActions.owned(bot,table)){
    // Commander death/replacement zones need their own state machine, so first
    // pilot restricts automated attacks to ordinary simple creatures.
-   if(card.id().startsWith("commander:")||!simple(card)||!CommanderBattleActions.ready(bot,card))continue;
+   if(card.id().startsWith("commander:")||!simple(card))continue;
    var traits=CommanderBattleActions.traits(card.stack()).orElseThrow();
-   if(!CommanderSimpleCards.canAttack(traits,false,card.tapped()))continue;
+   if(!CommanderSimpleCards.canAttack(traits,!CommanderBattleActions.ready(bot,card),card.tapped()))continue;
    if(traits.power()>bestPower){attacker=card;bestPower=traits.power();}
   }
   if(attacker==null||bestPower<=0)return false;
