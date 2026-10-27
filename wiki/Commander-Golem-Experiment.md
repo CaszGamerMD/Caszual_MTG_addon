@@ -92,3 +92,14 @@ The AI now recognizes balanced parenthetical reminder text without discarding ac
 During its main phase the golem can also pay for whole-text, untargeted draw (one through seven cards) and simple lifegain instants/sorceries. Physical spell cards move to the adjacent Graveyard; mana sources tap, drawn cards enter the private Hand, and lifegain updates the linked Life Point. A missing/full Graveyard or insufficient hand/library space prevents the action. Unsupported additional clauses, targets, variable costs and drawbacks are never ignored. Draw spells can supply creatures for the same main phase.
 
 This remains an automatic-resolution prototype, with no priority/response stack. It does not understand arbitrary Oracle text, triggers, replacement effects, activated abilities or all Commander rules. Parser checks are not a real multiplayer game acceptance test.
+
+
+## Keyword teaching: 0.12.2
+
+The first new keyword batch adds deathtouch, indestructible, trample and lifelink to existing flying, reach, haste, vigilance and defender support. Only complete supported Oracle text is accepted. Unknown additional abilities still prevent automated play.
+
+Combat now resolves lethal deathtouch only for positive damage, respects indestructible without preventing damage, assigns trample excess after lethal blocker damage (one with deathtouch), and applies both controllers' lifelink to linked Life Points. Lifegain and player damage are combined before checking life-total losses.
+
+Scope remains one attacker and at most one blocker, ordinary simultaneous damage, no combat damage already marked from other events. First strike, double strike, menace, protection, ward, hexproof, triggered abilities and arbitrary effects remain unsupported. Mana, targeting, priority and multiplayer-wide continuous effects are not a complete rules engine. Parser/combat tests are automated logic checks, not an end-to-end multiplayer game.
+
+Rules reference: https://magic.wizards.com/en/keyword-glossary

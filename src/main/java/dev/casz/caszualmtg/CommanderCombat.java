@@ -115,6 +115,9 @@ public final class CommanderCombat {
   }
   var damage=CommanderSimpleCards.combat(attackTraits,
    blocker==null?null:CommanderBattleActions.traits(blocker.stack()).orElseThrow());
+  LifePointBlockEntity attackerLife=life(world,attackers);
+  if(damage.attackerLifeGain()>0&&attackerLife==null)
+   return "Attacker's linked Life Point is required to resolve lifelink.";
   // Preflight storage for both deaths; never delete cards when a required GY
   // is absent. Tokens vanish, but physical cards need actual destination slots.
   GraveyardBlockEntity attackGrave=null,blockGrave=null;
@@ -137,10 +140,13 @@ public final class CommanderCombat {
    defending.remove(blocker.id());
    if(blockGrave!=null)blockGrave.setStack(blockSlot,TabletopCounters.leavingBattlefield(blocker.stack()));
   }
-  if(damage.playerDamage()>0){
-   targetLife.addLife(-damage.playerDamage());
-   if(targetLife.getLife()<=0)LifePlayGroups.setDead(world,targetLife.getBlockPos(),true);
-  }
+  // Apply simultaneous damage/lifelink before checking either player's life.
+  if(damage.attackerLifeGain()>0)attackerLife.addLife(damage.attackerLifeGain());
+  int defenderChange=damage.blockerLifeGain()-damage.playerDamage();
+  if(defenderChange!=0)targetLife.addLife(defenderChange);
+  if(targetLife.getLife()<=0)LifePlayGroups.setDead(world,targetLife.getBlockPos(),true);
+  if(attackerLife!=null&&attackerLife.getLife()<=0)
+   LifePlayGroups.setDead(world,attackerLife.getBlockPos(),true);
   attackers.clearAiAttack();
   // The server can resume the AI turn on its next tick and pass naturally.
   UUID bot=attackers.seatOwner();
@@ -150,3 +156,4 @@ public final class CommanderCombat {
        +(damage.blockerDies()?"blocker died.":"blocker survived.");
  }
 }
+

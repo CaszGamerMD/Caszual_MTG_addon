@@ -7,7 +7,7 @@ import java.util.*;
  * Missing rules support is never interpreted as a blank card effect.
  */
 public final class CommanderSimpleCards {
- private static final Set<String> PASSIVE=Set.of("flying","reach","haste","vigilance","defender");
+ private static final Set<String> PASSIVE=Set.of("flying","reach","haste","vigilance","defender","deathtouch","indestructible","trample","lifelink");
  private CommanderSimpleCards(){}
  public record Traits(int power,int toughness,Set<String> keywords){
   public boolean has(String keyword){return keywords.contains(keyword);}
@@ -43,14 +43,24 @@ public final class CommanderSimpleCards {
   return blocker!=null&&attacker!=null&&!tapped&&
     (!attacker.has("flying")||blocker.has("flying")||blocker.has("reach"));
  }
- public record Damage(int playerDamage,boolean attackerDies,boolean blockerDies,boolean tapAttacker){}
+ public record Damage(int playerDamage,boolean attackerDies,boolean blockerDies,boolean tapAttacker,
+                      int attackerLifeGain,int blockerLifeGain){}
  public static Damage combat(Traits attacker,Traits blocker){
   if(attacker==null)throw new IllegalArgumentException("Attacker required");
-  if(blocker==null)return new Damage(attacker.power(),false,false,!attacker.has("vigilance"));
-  // All supported creatures deal normal simultaneous damage. No first/double
-  // strike, prevention, protection, lifelink, trample or deathtouch is modeled.
-  return new Damage(0,blocker.power()>=attacker.toughness(),
-    attacker.power()>=blocker.toughness(),!attacker.has("vigilance"));
+  int attack=Math.max(0,attacker.power());
+  boolean tap=!attacker.has("vigilance");
+  if(blocker==null)return new Damage(attack,false,false,tap,attacker.has("lifelink")?attack:0,0);
+  int block=Math.max(0,blocker.power());
+  // Damage is simultaneous. Deathtouch requires positive damage;
+  // indestructible prevents destruction but does not prevent damage.
+  boolean attackerDies=!attacker.has("indestructible")&&block>0
+      &&(block>=attacker.toughness()||blocker.has("deathtouch"));
+  boolean blockerDies=!blocker.has("indestructible")&&attack>0
+      &&(attack>=blocker.toughness()||attacker.has("deathtouch"));
+  int lethal=attacker.has("deathtouch")?1:blocker.toughness();
+  // Trample assignment still requires lethal damage to an indestructible blocker.
+  int spill=attacker.has("trample")?Math.max(0,attack-lethal):0;
+  return new Damage(spill,attackerDies,blockerDies,tap,
+      attacker.has("lifelink")?attack:0,blocker.has("lifelink")?block:0);
  }
 }
-
