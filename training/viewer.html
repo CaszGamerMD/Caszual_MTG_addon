@@ -52,7 +52,8 @@ function render(){
   $("heading").textContent="Turn "+e.turn+" · "+e.phase+" · Event "+(position+1)+" / "+events.length;
   $("message").textContent=e.message;
   $("players").replaceChildren(...state.players.map(p=>{
-   const panel=node("section",undefined,"panel");panel.append(node("h2","Player "+(p.seat+1)+(state.active===p.seat?" · Active":"")));
+   const panel=node("section",undefined,"panel");panel.append(node("h2","Player "+(p.seat+1)+(data.deckNames?" · "+data.deckNames[p.seat]:"")+(state.active===p.seat?" · Active":"")));
+   if(data.commanders)panel.append(node("small","Commander: "+data.commanders[p.seat]+" · unsupported in this diagnostic"));
    const stats=node("div",undefined,"stats");stats.append(node("span",p.life+" life","life"),node("span","Hand: "+p.handCount),node("span","Library: "+p.libraryCount));panel.append(stats);
    const cards=node("div",undefined,"cards");
    for(const c of p.battlefield){const el=node("div",c.name,"card "+c.kind+(c.tapped?" tapped":""));el.append(node("small",c.kind==="creature"?c.power+" / "+c.toughness+(c.fresh?" · New":""):"Land"),node("small",c.tapped?"Tapped":"Untapped"));cards.append(el)}

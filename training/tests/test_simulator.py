@@ -202,6 +202,41 @@ class SimulatorChecks(unittest.TestCase):
             self.assertEqual(len(r["history"]),2)
             with self.assertRaises(ValueError):s.train(self.rules,out,1,999,2)
 
+    def test_real_decks_complete_requested_window_without_training(self):
+        decks = [json.loads(p.read_text()) for p in sorted((HERE/"decks").glob("*.json"))]
+        report = s.diagnose(self.rules, decks, 42, 10)
+        self.assertEqual(report["turnsCompleted"], [10,10])
+        self.assertEqual(report["result"], "diagnostic_window_complete")
+        self.assertEqual(report["commanders"], ["Kolodin, Triumph Caster","Zurgo Helmsmasher"])
+        self.assertFalse(report["learningEligible"])
+        self.assertFalse(report["productionEligible"])
+        self.assertEqual(len(report["questions"]),133)
+        self.assertEqual([p["life"] for p in report["events"][-1]["state"]["players"]],[40,40])
+        self.assertEqual([p["libraryCount"] for p in report["events"][-1]["state"]["players"]],[83,82])
+        self.assertTrue(any(e["kind"]=="draw_skipped" and e["actor"]==0 for e in report["events"]))
+        played = [e["details"].get("card") for e in report["events"] if e["kind"] in ("land","cast")]
+        self.assertIn("Command Tower", played)
+        self.assertIn("Smoldering Marsh", played)
+
+    def test_diagnostic_lands_respect_color_identity_and_entry_conditions(self):
+        tower={"oracleText":"{T}: Add one mana of any color in your commander's color identity."}
+        self.assertEqual(s.diagnostic_land(tower,{"White","Red"})["mask"],9)
+        self.assertEqual(s.diagnostic_land(tower,{"White","Red","Black"})["mask"],13)
+        self.assertIsNone(s.diagnostic_land(tower,set()))
+        p=s.Card("p","Plains","land",mask=1,land_subtypes=("Plains",),basic_land=True)
+        m=s.Card("m","Mountain","land",mask=8,land_subtypes=("Mountain",),basic_land=True)
+        dual=s.Card("dual","Dual","land",mask=9,land_rule="has_type:Plains,Swamp")
+        self.assertTrue(s.land_enters_tapped(dual,[]))
+        self.assertTrue(s.land_enters_tapped(dual,[m]))
+        self.assertFalse(s.land_enters_tapped(dual,[p]))
+        slow=s.Card("s","Slow","land",mask=9,land_rule="two_other_lands")
+        self.assertTrue(s.land_enters_tapped(slow,[p]))
+        self.assertFalse(s.land_enters_tapped(slow,[p,m]))
+        basics=s.Card("b","Basic check","land",mask=12,land_rule="two_basics")
+        self.assertTrue(s.land_enters_tapped(basics,[p,dual]))
+        self.assertFalse(s.land_enters_tapped(basics,[p,m]))
+        self.assertIsNone(s.diagnostic_land({"oracleText":tower["oracleText"]+" Draw a card."},{"White"}))
+
     def test_viewer_payload_cannot_close_script(self):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/"test.json"

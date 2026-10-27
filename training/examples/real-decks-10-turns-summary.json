@@ -1,0 +1,57 @@
+{
+  "mode": "real-deck-diagnostic",
+  "notice": "Diagnostic only: real main decks, but unsupported cards cannot be played, commanders are not cast, and the rules are incomplete. Results are not a valid Commander game.",
+  "seed": 42,
+  "deckNames": [
+    "Budget Deck",
+    "Garbo Gobbos"
+  ],
+  "commanders": [
+    "Kolodin, Triumph Caster",
+    "Zurgo Helmsmasher"
+  ],
+  "turnsCompleted": [
+    10,
+    10
+  ],
+  "learningEligible": false,
+  "unsupportedInHand": [
+    [
+      "The Eternity Elevator",
+      "Hanweir Militia Captain // Westvale Cult Leader",
+      "Basilisk Collar",
+      "Andúril, Flame of the West",
+      "Roadside Assistance",
+      "Krenko, Tin Street Kingpin",
+      "Ferocity of the Wilds"
+    ],
+    [
+      "Rally the Ranks",
+      "Caterwauling Boggart",
+      "Goblin Sledder",
+      "Dragon Fodder",
+      "Ethereal Absolution"
+    ]
+  ],
+  "unsupportedDiscarded": [
+    [
+      "Needleverge Pathway // Pillarverge Pathway"
+    ],
+    []
+  ],
+  "players": [
+    {
+      "life": 40,
+      "lands": 8,
+      "spellsCast": 0,
+      "attacks": 0
+    },
+    {
+      "life": 40,
+      "lands": 10,
+      "spellsCast": 0,
+      "attacks": 0
+    }
+  ],
+  "questionCount": 133
+}

@@ -24,6 +24,8 @@ jobs:
         run: python -m unittest discover -s training/tests -v
       - name: Audit both supplied decks and flag blocking questions
         run: python training/simulator.py audit
+      - name: Diagnose both submitted decks for ten turns each
+        run: python training/simulator.py diagnose
       - name: Generate public turn replay
         run: python training/simulator.py simulate --demo --seed 42
       - name: Exercise three generations and sixteen evaluation games per generation

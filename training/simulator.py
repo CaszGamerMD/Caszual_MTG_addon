@@ -12,6 +12,7 @@ import json
 import math
 from pathlib import Path
 import random
+import re
 import shutil
 import subprocess
 import tempfile
@@ -159,6 +160,21 @@ class Card:
     enters_tapped: bool = False
     draw: int = 0
     life: int = 0
+    land_rule: str = ""
+    land_subtypes: tuple[str, ...] = ()
+    basic_land: bool = False
+
+
+
+def land_enters_tapped(card: Card, lands: list[Card]) -> bool:
+    if card.land_rule == "two_other_lands":
+        return len(lands) < 2
+    if card.land_rule == "two_basics":
+        return sum(land.basic_land for land in lands) < 2
+    if card.land_rule.startswith("has_type:"):
+        required = set(card.land_rule.removeprefix("has_type:").split(","))
+        return not any(required.intersection(land.land_subtypes) for land in lands)
+    return card.enters_tapped
 
 
 @dataclass
@@ -249,10 +265,12 @@ class Simulator:
     """Deterministic classroom turn model. No priority, stack, commanders or multi-attack combat."""
     def __init__(self, rules: RulesBridge, seed: int, starter: int = 0,
                  policies: tuple[Policy, Policy] = (Policy(), Policy()), max_turns: int = 100,
-                 decks: tuple[list[Card], list[Card]] | None = None, starting_life: int = 40):
+                 decks: tuple[list[Card], list[Card]] | None = None, starting_life: int = 40,
+                 diagnostic: bool = False):
         if starter not in (0, 1) or max_turns < 1 or starting_life < 1:
             raise ValueError("Invalid simulation options")
         self.rules, self.seed, self.starter = rules, seed, starter
+        self.diagnostic = diagnostic
         self.policies = tuple(replace(p) for p in policies)  # frozen per-match snapshots
         self.max_turns = max_turns
         self.players = []
@@ -276,6 +294,8 @@ class Simulator:
         self.log("setup", "Two independent agents use frozen policies; sandbox rules apply.")
         for player in self.players:
             for card in player.library:
+                if card.kind == "unsupported" and self.diagnostic:
+                    continue  # Retained in the real library/hand but never treated as playable.
                 if card.kind not in ("land", "creature", "spell"):
                     self.pause("Unsupported sandbox card kind: " + card.kind, card)
                     return
@@ -448,8 +468,11 @@ class Simulator:
             self.log("untap", f"Player {self.active + 1} starts turn {self.turn} and untaps.")
         elif self.phase == "untap":
             self.phase = "draw"
-            self.draw(self.active)
-            self.outcome()
+            if self.diagnostic and self.turn == 1:
+                self.log("draw_skipped", "The starting player skips their first draw in this two-player diagnostic.")
+            else:
+                self.draw(self.active)
+                self.outcome()
         elif self.phase == "draw":
             self.phase = "land"
             self.log("phase", "First main phase: land decision.")
@@ -462,7 +485,8 @@ class Simulator:
                 card = next(c for c in p.hand if c.id == choice.card_id)
                 if choice.kind == "land":
                     p.hand.remove(card)
-                    p.battlefield.append(Permanent(card, card.enters_tapped))
+                    lands = [x.card for x in p.battlefield if x.card.kind == "land"]
+                    p.battlefield.append(Permanent(card, land_enters_tapped(card, lands)))
                     self.land_played = True
                     self.phase = "main"
                     self.log("land", f"Player {self.active + 1} plays {card.name}.", card=card.name)
@@ -536,10 +560,83 @@ class Simulator:
         return {"schemaVersion": 1, "kind": "turn-replay", "mode": "sandbox-single-attacker-v1",
                 "notice": "Synthetic classroom match; not a complete Commander game or Minecraft entity test.",
                 "seed": self.seed, "starter": self.starter, "turns": self.turn, "result": self.result,
-                "winner": self.winner, "learningEligible": self.result in ("win", "draw") and not self.questions,
+                "winner": self.winner, "learningEligible": not self.diagnostic and self.result in ("win", "draw") and not self.questions,
                 "productionEligible": False, "policyVersions": [p.version for p in self.policies],
                 "events": self.events, "questions": self.questions}
 
+
+
+def diagnostic_land(definition: dict, identity: set[str]) -> dict | None:
+    """Explicit land patterns in the submitted decks; no generalized Oracle guessing."""
+    text = definition.get("oracleText", "")
+    names = {"White": 1, "Blue": 2, "Black": 4, "Red": 8, "Green": 16}
+    if text == "{T}: Add one mana of any color in your commander's color identity.":
+        mask = sum(names.get(color, 0) for color in identity)
+        return {"kind":"land", "mask":mask, "land_rule":""} if mask else None
+    lines = text.splitlines()
+    if len(lines) == 2:
+        two = re.fullmatch(r"\{T\}: Add \{([WUBRG])\} or \{([WUBRG])\}\.", lines[1])
+        if two:
+            bits = {"W":1,"U":2,"B":4,"R":8,"G":16}
+            mask = bits[two[1]] | bits[two[2]]
+            if lines[0] == "This land enters tapped unless you control two or more other lands.":
+                return {"kind":"land","mask":mask,"land_rule":"two_other_lands"}
+            typed = re.fullmatch(r"This land enters tapped unless you control a (Plains|Island|Swamp|Mountain|Forest) or a (Plains|Island|Swamp|Mountain|Forest)\.",lines[0])
+            if typed:
+                return {"kind":"land","mask":mask,"land_rule":"has_type:"+typed[1]+","+typed[2]}
+        if (lines[0] == "({T}: Add {B} or {R}.)"
+                and lines[1] == "This land enters tapped unless you control two or more basic lands."
+                and set(definition.get("subTypes", [])) == {"Swamp", "Mountain"}):
+            return {"kind":"land","mask":12,"land_rule":"two_basics"}
+    return None
+
+
+def import_diagnostic_deck(rules: RulesBridge, deck: dict, seat: int) -> list[Card]:
+    """Keep all 99 actual main-deck cards. Unsupported cards remain unplayable, never blanked."""
+    if sum(c["quantity"] for c in deck["commanders"]) != 1 or sum(c["quantity"] for c in deck["mainboard"]) != 99:
+        raise ValueError("Expected one commander and 99 main-deck cards")
+    result = []
+    identity = set(deck["commanders"][0].get("colorIdentity", []))
+    for definition in deck["mainboard"]:
+        parsed = audit_card(rules, definition)
+        if parsed["kind"] == "unsupported":
+            parsed = diagnostic_land(definition, identity) or parsed
+        for _ in range(definition["quantity"]):
+            uid = f"{seat}-card-{len(result):03d}"
+            result.append(Card(id=uid, name=definition["name"], kind=parsed["kind"],
+                mana_cost=definition.get("manaCost") or "", traits=parsed.get("traits", ""),
+                power=parsed.get("power", 0), toughness=parsed.get("toughness", 0),
+                mask=parsed.get("mask", 0), enters_tapped=parsed.get("tapped", False),
+                draw=parsed.get("draw", 0), life=parsed.get("life", 0),
+                land_rule=parsed.get("land_rule", ""),
+                land_subtypes=tuple(definition.get("subTypes", [])),
+                basic_land="Basic" in definition.get("superTypes", [])))
+    return result
+
+
+def diagnose(rules: RulesBridge, decks: list[dict], seed: int, turns_per_player: int) -> dict:
+    """Limited visible diagnostic, never a legal game or eligible for learning."""
+    if len(decks) != 2 or turns_per_player < 1:
+        raise ValueError("Two decks and a positive turn count are required")
+    cards = tuple(import_diagnostic_deck(rules, deck, seat) for seat, deck in enumerate(decks))
+    sim = Simulator(rules, seed, max_turns=turns_per_player * 2, decks=cards, diagnostic=True)
+    result = sim.run()
+    turns = [sum(e["kind"] == "end" and e["actor"] == seat for e in result["events"])
+             for seat in (0, 1)]
+    started = [sum(e["kind"] == "untap" and e["actor"] == seat for e in result["events"])
+               for seat in (0, 1)]
+    audit = audit_decks(rules, decks)
+    result.update(mode="real-deck-diagnostic", learningEligible=False, productionEligible=False,
+                  notice="Diagnostic only: real main decks, but unsupported cards cannot be played, commanders are not cast, and the rules are incomplete. Results are not a valid Commander game.",
+                  deckNames=[d["name"] for d in decks],
+                  commanders=[d["commanders"][0]["name"] for d in decks],
+                  turnsCompleted=turns, turnsStarted=started,
+                  questions=audit["questions"],
+                  unsupportedInHand=[[c.name for c in p.hand if c.kind == "unsupported"] for p in sim.players],
+                  unsupportedDiscarded=[[c.name for c in p.graveyard if c.kind == "unsupported"] for p in sim.players])
+    if result["result"] == "timeout" and turns == [turns_per_player, turns_per_player]:
+        result["result"] = "diagnostic_window_complete"
+    return result
 
 def match_score(report: dict, seat: int) -> tuple[int, int]:
     # Lexicographic: speed never compensates for one fewer win. Loss speed has no benefit.
@@ -672,6 +769,11 @@ def main():
     sim.add_argument("--starter", type=int, choices=(0,1), default=0)
     sim.add_argument("--max-turns", type=int, default=100)
     sim.add_argument("--out", type=Path, default=HERE/"reports/demo-replay.json")
+    diagnostic = sub.add_parser("diagnose", help="Run real decks in a visibly incomplete, non-training diagnostic")
+    diagnostic.add_argument("--decks", nargs=2, type=Path, default=sorted((HERE/"decks").glob("*.json")))
+    diagnostic.add_argument("--seed", type=int, default=42)
+    diagnostic.add_argument("--turns-per-player", type=int, default=10)
+    diagnostic.add_argument("--out", type=Path, default=HERE/"reports/real-decks-diagnostic.json")
     learning = sub.add_parser("train", help="Persistent evolutionary learning in the sandbox only")
     learning.add_argument("--demo", action="store_true", required=True)
     learning.add_argument("--generations", type=int, default=3)
@@ -689,6 +791,13 @@ def main():
                     q["answer"] = answers.get(q["id"])
             export_review(args.out, report)
             print(json.dumps({"status": report["status"], "questions": len(report["questions"]), "output": str(args.out)}))
+        elif args.command == "diagnose":
+            report = diagnose(rules, [json.loads(p.read_text()) for p in args.decks],
+                              args.seed, args.turns_per_player)
+            export_review(args.out, report)
+            print(json.dumps({k: report[k] for k in ("result", "deckNames", "commanders",
+                              "turnsCompleted", "learningEligible", "unsupportedInHand",
+                              "unsupportedDiscarded")}, ensure_ascii=False))
         elif args.command == "simulate":
             report = Simulator(rules, args.seed, args.starter, max_turns=args.max_turns).run()
             export_review(args.out, report)

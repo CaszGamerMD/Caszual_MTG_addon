@@ -73,7 +73,7 @@ Only candidates that beat the champion in the paired evaluation are retained. Ti
 
 The synthetic demonstration decks are not the user's lists and are not represented as legal Commander decks. The turn model starts at 40 life, draws on each turn, allows one land and supported spells, resolves at most one attacker/one blocker, discards deterministically to seven, and ends on zero life or failed draw. It has no priority/response stack, commanders, mulligans, multiple attackers/blockers, upkeep triggers, team continuous effects or card-specific replacement effects. It is a testbed for privacy, self-play orchestration, retained policy evaluation and log review.
 
-Policies carry a sandbox scope marker and are not loaded into live golems. The actual supplied decks never enter this simplified sandbox. A fully legal engine remains the next required integration.
+Policies carry a sandbox scope marker and are not loaded into live golems. The submitted decks may run only in the explicitly limited, non-training diagnostic described below. A fully legal engine remains the next required integration.
 
 GitHub Actions runs the checks, audits both real decks, generates a public replay and exercises three generations. Download the `commander-training-review` artifact for HTML/JSON review files and checkpoint history. The regular mod check also runs the simulator's regression suite.
 
@@ -85,3 +85,13 @@ GitHub Actions runs the checks, audits both real decks, generates a public repla
 - [First three-generation training report](examples/first-training-run.json): three self-play games and 48 paired evaluation games; all candidate policies tied the champion, so none was promoted.
 
 Generated HTML embeds only the public replay and uses lossless packing to reduce file size. JSON reports retain the expanded, readable event format. CI validation runs start fresh; continuing a training campaign requires retaining its output directory, not just launching another CI run.
+
+## Real-deck diagnostic: ten turns per player
+
+Run `python3 training/simulator.py diagnose --seed 42 --turns-per-player 10` to shuffle and draw from all 99 actual main-deck cards for both saved lists. The commander identities are recorded separately. This diagnostic deliberately keeps unsupported cards in the physical library and hand as unplayable objects; it does not substitute a vanilla effect or manufacture legal decisions. The two-player starting player skips the first turn's draw. This is an incomplete diagnostic, not a Commander game or eligible training data.
+
+A narrow diagnostic-only land extension recognizes Command Tower using the actual commander's color identity, checklands by basic land subtype, the two-other-lands entry condition, and the two-basic-lands condition on Smoldering Marsh. These do not imply support in the live Minecraft golem. The full audit questions remain open for the live game and full backend.
+
+Seed 42 completed ten turns for each player. Kolodin: 8 lands, 0 spells, 0 attacks, 40 life. Zurgo: 10 lands, 0 spells, 0 attacks, 40 life. Both commanders and the cards needed for actual play remain unsupported. One unsupported card was discarded during cleanup; this is a sandbox decision and should not be treated as a trained Magic strategy.
+
+The replay is saved in `examples/real-decks-10-turns.html`, including the public event log, two deck names and commanders, plus all blocking review questions. The complete JSON output includes the cards remaining in each hand for **post-run human inspection**. Neither agent receives its opponent's private hand or this post-run report. The diagnostic never changes the retained training checkpoint.

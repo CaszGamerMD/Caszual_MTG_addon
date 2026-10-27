@@ -137,3 +137,9 @@ The standalone training tools under training/ now execute deterministic matches 
 Unsupported card effects and runtime stages generate blocking questions instead of being approximated; blocked or truncated matches are excluded from learning. The Kolodin and Zurgo deck audit currently has 133 blocking questions and does not run those decks. The initial three sandbox generations and 48 evaluation games found no improvement, so the baseline policy was retained.
 
 This first runner is an explicitly synthetic one-attacker/one-blocker classroom model, not full Commander, and policies are not yet connected to live Minecraft golems. See training/README.md for commands, retained data, review examples, current limits, and the full-engine integration requirement.
+
+## Actual-deck diagnostic
+
+A non-training, ten-turn-per-player diagnostic now shuffles the actual 99-card Kolodin and Zurgo main decks. Unsupported cards remain in the deck and hand but cannot be played, their missing rules stay flagged, and both commanders remain unavailable to the current sandbox. Narrow land support handles Command Tower's commander identity and several conditional dual-land entry rules.
+
+In the seed-42 diagnostic, Kolodin played eight lands and Zurgo played ten; neither cast a spell or attacked, and both ended at 40 life. These results show the need for more rules implementation and are not a valid full Commander match or evidence of trained strategy. The training folder contains a step-by-step HTML replay.
