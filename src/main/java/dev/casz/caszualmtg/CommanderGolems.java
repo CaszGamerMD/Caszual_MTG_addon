@@ -31,6 +31,7 @@ public final class CommanderGolems {
  private static final String STAGE_LAND="caszual_mtg_ai_stage_land";
  private static final String STAGE_CAST="caszual_mtg_ai_stage_cast";
  private static final String STAGE_COMBAT="caszual_mtg_ai_stage_combat";
+ private static final String STAGE_POSTCOMBAT="caszual_mtg_ai_stage_postcombat";
  private static final String STAGE_END="caszual_mtg_ai_stage_end";
  private static void clearTurn(IronGolem golem){
   golem.removeTag(ACTION_DONE);
@@ -38,6 +39,7 @@ public final class CommanderGolems {
   golem.removeTag(STAGE_CAST);
   golem.removeTag(STAGE_COMBAT);
   golem.removeTag(STAGE_END);
+  golem.removeTag(STAGE_POSTCOMBAT);
  }
  private static void progress(IronGolem golem,String oldStage,String nextStage){
   if(oldStage!=null)golem.removeTag(oldStage);
@@ -53,6 +55,7 @@ public final class CommanderGolems {
   if(golem.entityTags().contains(STAGE_LAND))return "playing a land";
   if(golem.entityTags().contains(STAGE_CAST))return "casting creatures";
   if(golem.entityTags().contains(STAGE_COMBAT))return "declaring combat";
+  if(golem.entityTags().contains(STAGE_POSTCOMBAT))return "second main phase";
   if(golem.entityTags().contains(STAGE_END)||golem.entityTags().contains(ACTION_DONE))return "cleaning up";
   return "drawing";
  }
@@ -316,7 +319,8 @@ public final class CommanderGolems {
      golem.entityTags().contains(ACTION_DONE)&&
      !golem.entityTags().contains(STAGE_LAND)&&
      !golem.entityTags().contains(STAGE_CAST)&&
-     !golem.entityTags().contains(STAGE_COMBAT)){
+     !golem.entityTags().contains(STAGE_COMBAT)&&
+     !golem.entityTags().contains(STAGE_POSTCOMBAT)){
    if(s.table.aiAttack()!=null){
     if(world.getGameTime()%100==0){
      var attack=s.table.aiAttack();
@@ -339,7 +343,7 @@ public final class CommanderGolems {
   }
 
   if(golem.entityTags().contains(STAGE_COMBAT)){
-   progress(golem,STAGE_COMBAT,STAGE_END);
+   progress(golem,STAGE_COMBAT,STAGE_POSTCOMBAT);
    if(CommanderCombat.declare(world,golem,s.table,s.life)){
     say(world,golem,"declares an attack; waiting for the defender to block or take damage.");
     return;
@@ -347,11 +351,13 @@ public final class CommanderGolems {
    return;
   }
 
-  if(golem.entityTags().contains(STAGE_CAST)){
-   progress(golem,STAGE_CAST,STAGE_COMBAT);
-   int spells=CommanderBattleActions.castSimpleSpells(world,golem,s.table,s.hand,s.deck,s.life);
-   int creatures=CommanderBattleActions.castHand(golem,s.table,s.hand);
+  if(golem.entityTags().contains(STAGE_CAST)||golem.entityTags().contains(STAGE_POSTCOMBAT)){
+   if(s.table.aiAttack()!=null)return; // The defender still owns the combat decision.
+   boolean second=golem.entityTags().contains(STAGE_POSTCOMBAT);
+   progress(golem,second?STAGE_POSTCOMBAT:STAGE_CAST,second?STAGE_END:STAGE_COMBAT);
    boolean commander=CommanderBattleActions.castCommander(golem,s.table,box);
+   int creatures=CommanderBattleActions.castHand(golem,s.table,s.hand);
+   int spells=CommanderBattleActions.castSimpleSpells(world,golem,s.table,s.hand,s.deck,s.life);
    creatures+=CommanderBattleActions.castHand(golem,s.table,s.hand);
    if(creatures>0)say(world,golem,"casts "+creatures+" creature"+(creatures==1?"":"s")+".");
    if(commander)say(world,golem,"casts its commander.");
