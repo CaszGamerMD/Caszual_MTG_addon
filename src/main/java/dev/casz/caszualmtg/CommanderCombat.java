@@ -113,9 +113,10 @@ public final class CommanderCombat {
    if(!CommanderSimpleCards.canBlock(CommanderBattleActions.traits(blocker.stack()).orElseThrow(),attackTraits,blocker.tapped()))
     return "That creature cannot legally block this attacker.";
   }
-  var damage=CommanderSimpleCards.combat(attackTraits,
-   blocker==null?null:CommanderBattleActions.traits(blocker.stack()).orElseThrow());
   LifePointBlockEntity attackerLife=life(world,attackers);
+  var damage=CommanderSimpleCards.combat(attackTraits,
+   blocker==null?null:CommanderBattleActions.traits(blocker.stack()).orElseThrow(),
+   attackerLife==null?1_000_000:attackerLife.getLife(),targetLife.getLife());
   if(damage.attackerLifeGain()>0&&attackerLife==null)
    return "Attacker's linked Life Point is required to resolve lifelink.";
   // Preflight storage for both deaths; never delete cards when a required GY

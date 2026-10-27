@@ -103,3 +103,9 @@ Combat now resolves lethal deathtouch only for positive damage, respects indestr
 Scope remains one attacker and at most one blocker, ordinary simultaneous damage, no combat damage already marked from other events. First strike, double strike, menace, protection, ward, hexproof, triggered abilities and arbitrary effects remain unsupported. Mana, targeting, priority and multiplayer-wide continuous effects are not a complete rules engine. Parser/combat tests are automated logic checks, not an end-to-end multiplayer game.
 
 Rules reference: https://magic.wizards.com/en/keyword-glossary
+
+## Damage-step keywords: 0.12.3
+
+First strike and double strike are now supported in the one-attacker/one-blocker resolver. First-strike damage and deaths are resolved before normal damage. Surviving double strikers deal damage again; dead creatures never retaliate. A blocked double striker cannot hit the player after its blocker dies unless it has trample. Damage already marked during the first step counts in the normal step.
+
+The resolver accounts for deathtouch, indestructible, trample and lifelink in both steps, and stops when a player loses during the first step. It does not provide priority windows between damage steps, changing abilities mid-combat, multiple blockers, or damage marked before this combat. Automated combat checks are not an end-to-end multiplayer game.
