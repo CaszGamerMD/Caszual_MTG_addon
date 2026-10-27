@@ -1,0 +1,1933 @@
+{
+  "schemaVersion": 1,
+  "sourceUrl": "https://archidekt.com/decks/5254666/garbo_gobbos",
+  "sourceDeckId": 5254666,
+  "name": "Garbo Gobbos",
+  "sourceUpdatedAt": "2026-10-27T07:51:16.404025Z",
+  "retrievedAt": "2026-10-27T07:52:24.108289+00:00",
+  "format": "commander",
+  "commanders": [
+    {
+      "name": "Zurgo Helmsmasher",
+      "quantity": 1,
+      "oracleId": "6c48d888-9f5d-43f4-adbd-61dbdba09260",
+      "manaCost": "{2}{R}{W}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Warrior",
+        "Orc"
+      ],
+      "colors": [
+        "White",
+        "Red",
+        "Black"
+      ],
+      "colorIdentity": [
+        "White",
+        "Black",
+        "Red"
+      ],
+      "oracleText": "Haste\nZurgo attacks each combat if able.\nDuring your turn, Zurgo has indestructible.\nWhenever a creature dealt damage by Zurgo this turn dies, put a +1/+1 counter on Zurgo.",
+      "power": "7",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    }
+  ],
+  "mainboard": [
+    {
+      "name": "Akroma's Memorial",
+      "quantity": 1,
+      "oracleId": "967e8b3f-8266-4d9a-a38b-d0e10184e1e4",
+      "manaCost": "{7}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Creatures you control have flying, first strike, vigilance, trample, haste, and protection from black and from red.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Ankle Shanker",
+      "quantity": 1,
+      "oracleId": "22052572-0b7d-4dd8-84a8-e2658f77b85e",
+      "manaCost": "{2}{R}{W}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Berserker"
+      ],
+      "colors": [
+        "White",
+        "Red",
+        "Black"
+      ],
+      "colorIdentity": [
+        "White",
+        "Black",
+        "Red"
+      ],
+      "oracleText": "Haste\nWhenever this creature attacks, creatures you control gain first strike and deathtouch until end of turn.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Auntie's Hovel",
+      "quantity": 1,
+      "oracleId": "245469ff-72b6-4846-8a82-a1d29f4d09bb",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "Black",
+        "Red"
+      ],
+      "oracleText": "As this land enters, you may reveal a Goblin card from your hand. If you don't, this land enters tapped.\n{T}: Add {B} or {R}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Austere Command",
+      "quantity": 1,
+      "oracleId": "09cc8709-fe10-472a-b05c-e89f3523018d",
+      "manaCost": "{4}{W}{W}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Choose two —\n• Destroy all artifacts.\n• Destroy all enchantments.\n• Destroy all creatures with mana value 3 or less.\n• Destroy all creatures with mana value 4 or greater.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Badlands",
+      "quantity": 1,
+      "oracleId": "13ff3222-91cb-4796-a34e-899ed817694c",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Swamp",
+        "Mountain"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Black",
+        "Red"
+      ],
+      "oracleText": "({T}: Add {B} or {R}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Banehound",
+      "quantity": 1,
+      "oracleId": "63d846e2-4bef-4911-9508-273c75a4a040",
+      "manaCost": "{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Nightmare",
+        "Dog"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Lifelink, haste",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Basilisk Collar",
+      "quantity": 1,
+      "oracleId": "f5f4dd28-f4ae-4d39-b9b8-6ebfd63c93fe",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature has deathtouch and lifelink. (Any amount of damage it deals to a creature is enough to destroy it. Damage dealt by this creature also causes you to gain that much life.)\nEquip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Beloved Princess",
+      "quantity": 1,
+      "oracleId": "682cbf2a-2723-4590-ae52-7c5d8b2573cf",
+      "manaCost": "{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Noble"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Lifelink\nThis creature can't be blocked by creatures with power 3 or greater.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Blood Money",
+      "quantity": 1,
+      "oracleId": "75f5d372-4ff9-430c-8302-72472439e0d2",
+      "manaCost": "{5}{B}{B}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Destroy all creatures. For each nontoken creature destroyed this way, you create a tapped Treasure token.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Blood Moon",
+      "quantity": 1,
+      "oracleId": "94fac5fe-97d5-4c12-a80c-8efff9d853ae",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Nonbasic lands are Mountains.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Bloodmark Mentor",
+      "quantity": 1,
+      "oracleId": "8c22b218-cf40-47af-8c11-73c581a43390",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Warrior"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Red creatures you control have first strike.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Boggart Birth Rite",
+      "quantity": 1,
+      "oracleId": "030e9e3e-ce78-4c3b-bd83-969c07c70459",
+      "manaCost": "{B}",
+      "types": [
+        "Sorcery",
+        "Kindred"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Return target Goblin card from your graveyard to your hand.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Cabal Slaver",
+      "quantity": 1,
+      "oracleId": "22a189a9-e755-4cbb-b419-5ba2e5acbe1b",
+      "manaCost": "{2}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Cleric"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Whenever a Goblin deals combat damage to a player, that player discards a card.",
+      "power": "2",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Caterwauling Boggart",
+      "quantity": 1,
+      "oracleId": "ab3f4455-7329-4145-b9c4-93eef38bf327",
+      "manaCost": "{3}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Shaman"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Goblins you control and Elementals you control have menace. (They can't be blocked except by two or more creatures.)",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Cathars' Crusade",
+      "quantity": 1,
+      "oracleId": "cc65ac73-5bef-4ecb-ad8e-39199084c027",
+      "manaCost": "{3}{W}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Whenever a creature you control enters, put a +1/+1 counter on each creature you control.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Chained to the Rocks",
+      "quantity": 1,
+      "oracleId": "afb0c14c-41ac-4536-bfce-f1c36066b278",
+      "manaCost": "{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Enchant Mountain you control\nWhen this Aura enters, exile target creature an opponent controls until this Aura leaves the battlefield. (That creature returns under its owner's control.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Chivalric Alliance",
+      "quantity": 1,
+      "oracleId": "9b8d9236-0452-4509-aca4-a53a399fff85",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Whenever you attack with two or more creatures, draw a card.\n{2}, Discard a card: Create a 2/2 white and blue Knight creature token with vigilance.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Chromatic Orrery",
+      "quantity": 1,
+      "oracleId": "95c3976c-33f3-490b-bfd3-7f1af2fe0416",
+      "manaCost": "{7}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "You may spend mana as though it were mana of any color.\n{T}: Add {C}{C}{C}{C}{C}.\n{5}, {T}: Draw a card for each color among permanents you control.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Citywide Bust",
+      "quantity": 1,
+      "oracleId": "3ac01298-e45b-4ea0-8379-2074279716a4",
+      "manaCost": "{1}{W}{W}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Destroy all creatures with toughness 4 or greater.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Clifftop Retreat",
+      "quantity": 1,
+      "oracleId": "d7faa3c8-46cf-46b2-bfa4-89000307cf18",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Red"
+      ],
+      "oracleText": "This land enters tapped unless you control a Mountain or a Plains.\n{T}: Add {R} or {W}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Cloudshift",
+      "quantity": 1,
+      "oracleId": "6879f5ce-7a1b-4606-bad1-885779b0d456",
+      "manaCost": "{W}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Exile target creature you control, then return that card to the battlefield under your control.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Coat of Arms",
+      "quantity": 1,
+      "oracleId": "5f7f133e-58ea-41ab-b1be-be4b400fac4c",
+      "manaCost": "{5}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Each creature gets +1/+1 for each other creature on the battlefield that shares at least one creature type with it. (For example, if two Goblin Warriors and a Goblin Shaman are on the battlefield, each gets +2/+2.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Damnation",
+      "quantity": 1,
+      "oracleId": "d57a8f0b-7989-4db5-8756-6f2690097252",
+      "manaCost": "{2}{B}{B}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Destroy all creatures. They can't be regenerated.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Divine Visitation",
+      "quantity": 1,
+      "oracleId": "5917216f-5b42-41fa-8976-401bdbeb782e",
+      "manaCost": "{3}{W}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "If one or more creature tokens would be created under your control, that many 4/4 white Angel creature tokens with flying and vigilance are created instead.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Dragon Fodder",
+      "quantity": 1,
+      "oracleId": "d0d2c45b-b6e3-4999-bdab-976e8f0d6617",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Create two 1/1 red Goblin creature tokens.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Dragonskull Summit",
+      "quantity": 1,
+      "oracleId": "63398c02-6fb1-481d-9d9f-81063532fbc0",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "Black",
+        "Red"
+      ],
+      "oracleText": "This land enters tapped unless you control a Swamp or a Mountain.\n{T}: Add {B} or {R}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Empty the Warrens",
+      "quantity": 1,
+      "oracleId": "3a59c882-8bb8-49ba-862f-125020dd5bec",
+      "manaCost": "{3}{R}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Create two 1/1 red Goblin creature tokens.\nStorm (When you cast this spell, copy it for each spell cast before it this turn.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Ephemerate",
+      "quantity": 1,
+      "oracleId": "0fd57894-b917-41c8-a394-360d1d31b236",
+      "manaCost": "{W}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Exile target creature you control, then return it to the battlefield under its owner's control.\nRebound (If you cast this spell from your hand, exile it as it resolves. At the beginning of your next upkeep, you may cast this card from exile without paying its mana cost.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Ethereal Absolution",
+      "quantity": 1,
+      "oracleId": "e6f95e3a-61a6-40a9-8070-ffd2767764ad",
+      "manaCost": "{4}{W}{B}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White",
+        "Black"
+      ],
+      "colorIdentity": [
+        "White",
+        "Black"
+      ],
+      "oracleText": "Creatures you control get +1/+1.\nCreatures your opponents control get -1/-1.\n{2}{W}{B}: Exile target card from an opponent's graveyard. If it was a creature card, you create a 1/1 white and black Spirit creature token with flying.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Frogtosser Banneret",
+      "quantity": 1,
+      "oracleId": "91ebedb5-cb5f-4c58-ad30-6c6b0a106aa0",
+      "manaCost": "{1}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Rogue"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Haste\nGoblin spells and Rogue spells you cast cost {1} less to cast.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin Arsonist",
+      "quantity": 1,
+      "oracleId": "c1177f22-a1cf-4da3-a68d-ff954e878403",
+      "manaCost": "{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Shaman"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "When this creature dies, you may have it deal 1 damage to any target.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin Assault",
+      "quantity": 1,
+      "oracleId": "d1255776-b88b-4f05-9b71-ff89a2eba453",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "At the beginning of your upkeep, create a 1/1 red Goblin creature token with haste.\nGoblin creatures attack each combat if able.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin Chainwhirler",
+      "quantity": 1,
+      "oracleId": "0342b085-be20-475a-bc38-59b9cb6012e8",
+      "manaCost": "{R}{R}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Warrior"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "First strike\nWhen this creature enters, it deals 1 damage to each opponent and each creature and planeswalker they control.",
+      "power": "3",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin Chieftain",
+      "quantity": 1,
+      "oracleId": "368b4052-174e-4458-a6e6-eaf8093aa0fe",
+      "manaCost": "{1}{R}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Haste (This creature can attack and {T} as soon as it comes under your control.)\nOther Goblin creatures you control get +1/+1 and have haste.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin Instigator",
+      "quantity": 1,
+      "oracleId": "8b022754-6d16-470e-b754-4df6e4f4709e",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Rogue"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "When this creature enters, create a 1/1 red Goblin creature token.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin King",
+      "quantity": 1,
+      "oracleId": "d236b3fc-0d3f-4d99-875d-e32a33fe5767",
+      "manaCost": "{1}{R}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Other Goblins get +1/+1 and have mountainwalk.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin Lackey",
+      "quantity": 1,
+      "oracleId": "213fbbdd-f1bc-4bba-9124-7b26e9a706c8",
+      "manaCost": "{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Whenever this creature deals damage to a player, you may put a Goblin permanent card from your hand onto the battlefield.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin Matron",
+      "quantity": 1,
+      "oracleId": "145737a7-c597-4dec-b752-207c2d0501e3",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "When this creature enters, you may search your library for a Goblin card, reveal that card, put it into your hand, then shuffle.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin Offensive",
+      "quantity": 1,
+      "oracleId": "25cb5c86-83cd-4a06-b0d1-a0f6fc9158a6",
+      "manaCost": "{X}{1}{R}{R}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Create X 1/1 red Goblin creature tokens.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin Rabblemaster",
+      "quantity": 1,
+      "oracleId": "24661b81-6bee-4ad8-b3ab-53cb65005c51",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Warrior"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Other Goblin creatures you control attack each combat if able.\nAt the beginning of combat on your turn, create a 1/1 red Goblin creature token with haste.\nWhenever this creature attacks, it gets +1/+0 until end of turn for each other attacking Goblin.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin Rally",
+      "quantity": 1,
+      "oracleId": "9ccb6ce8-ccb6-4809-a1cc-cebd38744815",
+      "manaCost": "{3}{R}{R}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Create four 1/1 red Goblin creature tokens.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin Sledder",
+      "quantity": 1,
+      "oracleId": "ae93292a-458a-441b-a7de-4b10f0d20cc0",
+      "manaCost": "{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Sacrifice a Goblin: Target creature gets +1/+1 until end of turn.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Goblin Warchief",
+      "quantity": 1,
+      "oracleId": "39882df0-c20f-469d-94ba-1617224e71a1",
+      "manaCost": "{1}{R}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Warrior"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Goblin spells you cast cost {1} less to cast.\nGoblins you control have haste.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Haazda Marshal",
+      "quantity": 1,
+      "oracleId": "3a1efa7e-21d5-47a1-bcd8-7d4616be0d58",
+      "manaCost": "{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Soldier"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Whenever this creature and at least two other creatures attack, create a 1/1 white Soldier creature token with lifelink.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Haunted Ridge",
+      "quantity": 1,
+      "oracleId": "e2a37967-4212-4553-9f77-bcb613405807",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "Black",
+        "Red"
+      ],
+      "oracleText": "This land enters tapped unless you control two or more other lands.\n{T}: Add {B} or {R}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Heliod, God of the Sun",
+      "quantity": 1,
+      "oracleId": "4ea488b2-5ba0-4565-b928-570c8e03b926",
+      "manaCost": "{3}{W}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "God"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Indestructible\nAs long as your devotion to white is less than five, Heliod isn't a creature. (Each {W} in the mana costs of permanents you control counts toward your devotion to white.)\nOther creatures you control have vigilance.\n{2}{W}{W}: Create a 2/1 white Cleric enchantment creature token.",
+      "power": "5",
+      "toughness": "6",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Hordeling Outburst",
+      "quantity": 1,
+      "oracleId": "a6450b8e-eb18-431c-9eb7-7daf107978b2",
+      "manaCost": "{1}{R}{R}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Create three 1/1 red Goblin creature tokens.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Impact Tremors",
+      "quantity": 1,
+      "oracleId": "9242cd3e-1a71-4700-8182-9c1005616033",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Whenever a creature you control enters, this enchantment deals 1 damage to each opponent.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Isolated Chapel",
+      "quantity": 1,
+      "oracleId": "7e5d9efe-48a9-434b-bb09-056e0e09cc9a",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Black"
+      ],
+      "oracleText": "This land enters tapped unless you control a Plains or a Swamp.\n{T}: Add {W} or {B}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Knucklebone Witch",
+      "quantity": 1,
+      "oracleId": "4d165c0f-3e40-45ad-92a1-53b13c07b34d",
+      "manaCost": "{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Shaman"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Whenever a Goblin you control is put into a graveyard from the battlefield, you may put a +1/+1 counter on this creature.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Krenko's Command",
+      "quantity": 1,
+      "oracleId": "9cfe86ae-eebe-44aa-a956-4b3e9e621105",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Create two 1/1 red Goblin creature tokens.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Krenko, Mob Boss",
+      "quantity": 1,
+      "oracleId": "68418069-f615-40ef-ae0d-764192acae00",
+      "manaCost": "{2}{R}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Goblin",
+        "Warrior"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "{T}: Create X 1/1 red Goblin creature tokens, where X is the number of Goblins you control.",
+      "power": "3",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Krenko, Tin Street Kingpin",
+      "quantity": 1,
+      "oracleId": "e8065e1d-e937-4b56-8011-78f0d07328a0",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Goblin"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Whenever Krenko attacks, put a +1/+1 counter on it, then create a number of 1/1 red Goblin creature tokens equal to Krenko's power.",
+      "power": "1",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Legion Warboss",
+      "quantity": 1,
+      "oracleId": "0ccb9af3-6902-4130-a59c-4c882dc3a2fd",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Soldier"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Mentor (Whenever this creature attacks, put a +1/+1 counter on target attacking creature with lesser power.)\nAt the beginning of combat on your turn, create a 1/1 red Goblin creature token. That token gains haste until end of turn and attacks this combat if able.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Lifelink",
+      "quantity": 1,
+      "oracleId": "4fe8316a-9cff-43e9-a1d5-993a0c9daf3a",
+      "manaCost": "{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Enchant creature\nEnchanted creature has lifelink. (Damage dealt by the creature also causes its controller to gain that much life.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Mad Auntie",
+      "quantity": 1,
+      "oracleId": "b582b696-17fa-4eea-8124-293f9bd3a208",
+      "manaCost": "{2}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Shaman"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Other Goblin creatures you control get +1/+1.\n{T}: Regenerate another target Goblin.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Mardu Ascendancy",
+      "quantity": 1,
+      "oracleId": "aa1de5ce-ddd4-4c1f-8c52-0311f4419e7b",
+      "manaCost": "{R}{W}{B}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White",
+        "Red",
+        "Black"
+      ],
+      "colorIdentity": [
+        "White",
+        "Black",
+        "Red"
+      ],
+      "oracleText": "Whenever a nontoken creature you control attacks, create a 1/1 red Goblin creature token that's tapped and attacking.\nSacrifice this enchantment: Creatures you control get +0/+3 until end of turn.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Mauhúr, Uruk-hai Captain",
+      "quantity": 1,
+      "oracleId": "9966cac0-331f-4627-be5a-5060a6ac5a32",
+      "manaCost": "{B}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Soldier",
+        "Orc"
+      ],
+      "colors": [
+        "Red",
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black",
+        "Red"
+      ],
+      "oracleText": "Menace\nIf one or more +1/+1 counters would be put on an Army, Goblin, or Orc you control, that many plus one +1/+1 counters are put on it instead.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Mirkwood Bats",
+      "quantity": 1,
+      "oracleId": "0636b6c3-0662-420a-b30d-f0a14e7c512d",
+      "manaCost": "{3}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Bat"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Flying\nWhenever you create or sacrifice a token, each opponent loses 1 life.",
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Mountain",
+      "quantity": 10,
+      "oracleId": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [
+        "Basic"
+      ],
+      "subTypes": [
+        "Mountain"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "({T}: Add {R}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Muxus, Goblin Grandee",
+      "quantity": 1,
+      "oracleId": "07c82cde-f00d-4454-9df4-9286e344c9bb",
+      "manaCost": "{4}{R}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Goblin",
+        "Noble"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "When Muxus enters, reveal the top six cards of your library. Put all Goblin creature cards with mana value 5 or less from among them onto the battlefield and the rest on the bottom of your library in a random order.\nWhenever Muxus attacks, it gets +1/+1 until end of turn for each other Goblin you control.",
+      "power": "4",
+      "toughness": "4",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Orcish Siegemaster",
+      "quantity": 1,
+      "oracleId": "d852099f-46c6-4676-860c-20a582f733d1",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Soldier",
+        "Orc"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Trample\nOther Orcs and Goblins you control have trample.\nWhenever this creature attacks, it gets +X/+0 until end of turn, where X is the greatest power among creatures you control.",
+      "power": "0",
+      "toughness": "5",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Path to Exile",
+      "quantity": 1,
+      "oracleId": "d683d985-9888-4d21-8b5f-69e69ce4a03b",
+      "manaCost": "{W}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Plains",
+      "quantity": 5,
+      "oracleId": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [
+        "Basic"
+      ],
+      "subTypes": [
+        "Plains"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "({T}: Add {W}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Plateau",
+      "quantity": 1,
+      "oracleId": "c7a15ca4-085f-4d92-8387-c3711c04c8fa",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Plains",
+        "Mountain"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Red"
+      ],
+      "oracleText": "({T}: Add {R} or {W}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Rally the Ranks",
+      "quantity": 1,
+      "oracleId": "eeb07c8a-21d1-43fa-a5f3-ee3fe328a671",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "As this enchantment enters, choose a creature type.\nCreatures you control of the chosen type get +1/+1.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Ruinous Ultimatum",
+      "quantity": 1,
+      "oracleId": "a6f38908-aa4f-4f99-a28e-85d11dab52e4",
+      "manaCost": "{R}{R}{W}{W}{W}{B}{B}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White",
+        "Red",
+        "Black"
+      ],
+      "colorIdentity": [
+        "White",
+        "Black",
+        "Red"
+      ],
+      "oracleText": "Destroy all nonland permanents your opponents control.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Rundvelt Hordemaster",
+      "quantity": 1,
+      "oracleId": "1e080c7d-102c-4d28-bcb9-62b36d400d13",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Warrior"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Other Goblins you control get +1/+1.\nWhenever this creature or another Goblin you control dies, exile the top card of your library. If it's a Goblin creature card, you may cast that card until the end of your next turn.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Scrubland",
+      "quantity": 1,
+      "oracleId": "c8d95ca8-7d12-4072-aeaf-e20f248c7e39",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Plains",
+        "Swamp"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Black"
+      ],
+      "oracleText": "({T}: Add {W} or {B}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Serra Ascendant",
+      "quantity": 1,
+      "oracleId": "27ad3e00-6ffb-48f7-8469-8868d066d1e2",
+      "manaCost": "{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Monk"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Lifelink (Damage dealt by this creature also causes you to gain that much life.)\nAs long as you have 30 or more life, this creature gets +5/+5 and has flying.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Shattered Sanctum",
+      "quantity": 1,
+      "oracleId": "c854ecb0-cc60-4c48-a9aa-7f2348a7a8c6",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Black"
+      ],
+      "oracleText": "This land enters tapped unless you control two or more other lands.\n{T}: Add {W} or {B}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Skirk Prospector",
+      "quantity": 1,
+      "oracleId": "c18013e4-0b99-44e3-a2b2-027ace68723a",
+      "manaCost": "{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Sacrifice a Goblin: Add {R}.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Smoldering Marsh",
+      "quantity": 1,
+      "oracleId": "390f1b56-264e-4336-83be-dc1fe79bfdcf",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Swamp",
+        "Mountain"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Black",
+        "Red"
+      ],
+      "oracleText": "({T}: Add {B} or {R}.)\nThis land enters tapped unless you control two or more basic lands.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Sol Ring",
+      "quantity": 1,
+      "oracleId": "6ad8011d-3471-4369-9d68-b264cc027487",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "{T}: Add {C}{C}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Sundown Pass",
+      "quantity": 1,
+      "oracleId": "5ad0b405-cca4-475e-985c-4d7e3599d87e",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Red"
+      ],
+      "oracleText": "This land enters tapped unless you control two or more other lands.\n{T}: Add {R} or {W}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Swamp",
+      "quantity": 7,
+      "oracleId": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [
+        "Basic"
+      ],
+      "subTypes": [
+        "Swamp"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "({T}: Add {B}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Swords to Plowshares",
+      "quantity": 1,
+      "oracleId": "b1544f21-7e98-461b-aed5-e748b0168c52",
+      "manaCost": "{W}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "oracleText": "Exile target creature. Its controller gains life equal to its power.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Uglúk of the White Hand",
+      "quantity": 1,
+      "oracleId": "ebd6a3a0-ae8d-44e6-8d0b-048da6dd1f03",
+      "manaCost": "{2}{B}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Soldier",
+        "Orc"
+      ],
+      "colors": [
+        "Red",
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black",
+        "Red"
+      ],
+      "oracleText": "Whenever another creature you control dies, put a +1/+1 counter on Uglúk. If that creature was a Goblin or Orc, put two +1/+1 counters on Uglúk instead.",
+      "power": "3",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Warren Instigator",
+      "quantity": 1,
+      "oracleId": "47f75e25-8a52-4452-a3a8-bf1bd00942d1",
+      "manaCost": "{R}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Berserker"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Double strike\nWhenever this creature deals damage to an opponent, you may put a Goblin creature card from your hand onto the battlefield.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Wort, Boggart Auntie",
+      "quantity": 1,
+      "oracleId": "6f477e2e-220e-48d9-9236-9564478e796a",
+      "manaCost": "{2}{B}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Goblin",
+        "Shaman"
+      ],
+      "colors": [
+        "Red",
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black",
+        "Red"
+      ],
+      "oracleText": "Fear (This creature can't be blocked except by artifact creatures and/or black creatures.)\nAt the beginning of your upkeep, you may return target Goblin card from your graveyard to your hand.",
+      "power": "3",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    }
+  ],
+  "excludedCardCount": 19
+}
