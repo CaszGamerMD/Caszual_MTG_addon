@@ -1,0 +1,82 @@
+# faeries
+
+Source: https://archidekt.com/decks/27521806/faeries
+
+## Commander
+
+1 Obyra, Dreaming Duelist
+
+## Main deck
+
+1 Alchemist's Gift
+1 Banehound
+1 Barrow Naughty
+1 Basilisk Collar
+1 Bitterbloom Bearer
+1 Bitterblossom
+1 Bitterthorn, Nissa's Animus
+1 Boot Nipper
+1 Briarberry Cohort
+1 Citizen V, Helmut Zemo
+1 Clearwater Pathway // Murkwater Pathway
+1 Cloud of Faeries
+1 Command Tower
+1 Dawn-Blessed Pennant
+1 Dino DNA
+1 Drowned Catacomb
+1 Endless Evil
+1 Endless Ranks of the Dead
+1 Enduring Tenacity
+1 Excalibur II
+1 Exquisite Blood
+1 Eye Collector
+1 Faebloom Trick
+1 Faerie Bladecrafter
+1 Faerie Dreamthief
+1 Faerie Impostor
+1 Faerie Seer
+1 Faerie Slumber Party
+1 Faerie Swarm
+1 Feywild Visitor
+1 Followed Footsteps
+1 Glen Elendra Liege
+1 Guildpact Informant
+1 Indulgent Aristocrat
+12 Island
+1 Kaito Shizuki
+1 Liliana, Heretical Healer // Liliana, Defiant Necromancer
+1 Liliana, the Last Hope
+1 Marauding Blight-Priest
+1 Maskwood Nexus
+1 Nectar Faerie
+1 Nested Shambler
+1 Notorious Throng
+1 Oona's Blackguard
+1 Oona, Queen of the Fae
+1 Orcrist, Goblin-cleaver
+1 Peppersmoke
+1 Scion of Oona
+1 Shadow Puppeteers
+1 Shadowspear
+1 Shipwreck Marsh
+1 Sol Ring
+1 Sower of Temptation
+1 Spell Stutter
+1 Sprite Noble
+1 Starscape Cleric
+1 Stonecoil Serpent
+1 Sunken Hollow
+17 Swamp
+1 Sword of Vengeance
+1 Sword of the Animist
+1 Tainted Remedy
+1 Talion, the Kindly Lord
+1 Team Pennant
+1 Tegwyll's Scouring
+1 Tegwyll, Duke of Splendor
+1 The Book of Vile Darkness
+1 Underground Sea
+1 Urborg, Tomb of Yawgmoth
+1 Vampire of the Dire Moon
+1 Vito, Thorn of the Dusk Rose
+1 Zephyr Sprite

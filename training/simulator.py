@@ -18,6 +18,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import unicodedata
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -265,11 +266,13 @@ def demo_deck(seat: int) -> list[Card]:
         result.append(Card(f"{seat}-forest-{i}", "Forest", "land", mask=16))
     for i in range(14):
         # Vary casting/attack decisions without unsupported abilities.
-        p, t, cost, keywords = ((2, 2, "{1}{G}", ""), (3, 3, "{2}{G}", ""),
+        patterns = ((2, 2, "{1}{G}", ""), (3, 3, "{2}{G}", ""),
                                (1, 1, "{G}", "haste"), (4, 4, "{3}{G}", "trample"),
                                (2, 3, "{2}{G}", "vigilance"), (2, 2, "{2}{G}", "lifelink"),
-                               (2, 2, "{2}{G}", "double strike"))[i % 7]
-        result.append(Card(f"{seat}-creature-{i}", "Training creature " + str(i + 1), "creature",
+                               (2, 2, "{2}{G}", "double strike"))
+        p, t, cost, keywords = patterns[i % 7]
+        if seat == 1 and i % 7 == 1: p, t = 2, 4
+        result.append(Card(f"{seat}-creature-{i}", ("Training A " if seat == 0 else "Training B ") + str(i + 1), "creature",
                            cost, f"{p};{t};{keywords}", p, t))
     return result
 
@@ -282,6 +285,12 @@ class Simulator:
                  diagnostic: bool = False, commanders: tuple[Card, Card] | None = None):
         if starter not in (0, 1) or max_turns < 1 or starting_life < 1:
             raise ValueError("Invalid simulation options")
+        if decks is not None:
+            def signature(cards, commander):
+                main = sorted((c.name.casefold(),c.kind,c.mana_cost,c.traits,c.mask,c.token_count) for c in cards)
+                return (commander.name.casefold() if commander else "", main)
+            if signature(decks[0],commanders[0] if commanders else None) == signature(decks[1],commanders[1] if commanders else None):
+                raise ValueError("Mirror matches are disabled.")
         self.rules, self.seed, self.starter = rules, seed, starter
         self.diagnostic = diagnostic
         self.policies = tuple(replace(p) for p in policies)  # frozen per-match snapshots
@@ -834,10 +843,60 @@ def import_diagnostic_deck(rules: RulesBridge, deck: dict, seat: int) -> list[Ca
     return result
 
 
+def deck_fingerprint(deck: dict) -> str:
+    """Deck identity uses commander and complete card quantities, not title or printing."""
+    def counts(cards):
+        total = {}
+        for card in cards:
+            name = unicodedata.normalize("NFKC", card["name"]).casefold().strip()
+            total[name] = total.get(name, 0) + int(card["quantity"])
+        return sorted(total.items())
+    content = {"commanders":counts(deck.get("commanders", [])), "mainboard":counts(deck.get("mainboard", []))}
+    return hashlib.sha256(json.dumps(content, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def unique_decks(pool: list[dict]) -> list[dict]:
+    unique = []
+    seen_ids, seen_lists = set(), set()
+    for deck in pool:
+        key = deck_fingerprint(deck)
+        source_id = deck.get("sourceDeckId")
+        if key in seen_lists or source_id is not None and source_id in seen_ids: continue
+        seen_lists.add(key)
+        if source_id is not None: seen_ids.add(source_id)
+        unique.append(deck)
+    return unique
+
+
+def select_decks(pool: list[dict], seed: int) -> list[dict]:
+    """Uniformly choose two different deck lists, reproducible without exposing shuffles to agents."""
+    unique = unique_decks(pool)
+    if len(unique) < 2: raise ValueError("At least two different deck lists are required; mirror matches are disabled.")
+    return random.Random(seed ^ 0x4341535A).sample(unique, 2)
+
+
+def schedule_decks(pool: list[dict], seed: int, matches: int) -> list[list[dict]]:
+    """Randomize distinct matchups, without repeating a pairing within a batch."""
+    unique = unique_decks(pool)
+    pairs = list(itertools.combinations(unique, 2))
+    if matches < 1 or matches > len(pairs):
+        raise ValueError(f"Request 1 to {len(pairs)} distinct matches; repeated/mirror pairings are disabled.")
+    rng = random.Random(seed ^ 0x4341535A)
+    rng.shuffle(pairs)
+    result = []
+    for first, second in pairs[:matches]:
+        result.append([second,first] if rng.randrange(2) else [first,second])
+    return result
+
+
 def diagnose(rules: RulesBridge, decks: list[dict], seed: int, turns_per_player: int) -> dict:
     """Limited visible diagnostic, never a legal game or eligible for learning."""
     if len(decks) != 2 or turns_per_player < 1:
         raise ValueError("Two decks and a positive turn count are required")
+    if (deck_fingerprint(decks[0]) == deck_fingerprint(decks[1])
+            or decks[0].get("sourceDeckId") is not None
+            and decks[0].get("sourceDeckId") == decks[1].get("sourceDeckId")):
+        raise ValueError("Mirror matches are disabled.")
     cards = tuple(import_diagnostic_deck(rules, deck, seat) for seat, deck in enumerate(decks))
     commanders = tuple(import_diagnostic_card(rules, deck["commanders"][0], seat, f"{seat}-commander",
         set(deck["commanders"][0].get("colorIdentity", []))) for seat, deck in enumerate(decks))
@@ -865,6 +924,8 @@ def diagnose(rules: RulesBridge, decks: list[dict], seed: int, turns_per_player:
     result.update(mode="real-deck-diagnostic", learningEligible=False, productionEligible=False,
                   notice="Diagnostic only: real decks and supported commanders are used; unsupported cards cannot be played and the rules are incomplete. Results are not a valid Commander game.",
                   deckNames=[d["name"] for d in decks],
+                  deckIds=[d.get("sourceDeckId") for d in decks],
+                  deckFingerprints=[deck_fingerprint(d) for d in decks],
                   commanders=[d["commanders"][0]["name"] for d in decks],
                   turnsCompleted=turns, turnsStarted=started,
                   questions=audit["questions"],
@@ -904,16 +965,20 @@ def train(rules: RulesBridge, output: Path, generations: int, seed: int, games: 
     state_path = output / "state.json"
     if state_path.exists():
         saved = json.loads(state_path.read_text())
+        if saved.get("sandboxVariant") != "distinct-decks-v2":
+            raise ValueError("This checkpoint belongs to the older mirror-deck demo; use a new output directory to preserve it.")
         if saved["seed"] != seed or saved["evaluationSeedsPerGeneration"] != games:
             raise ValueError("Resume with the original seed/evaluation settings, or choose a new output directory.")
         champion = Policy.from_json(saved["champion"])
         history = saved["history"]
     else:
-        champion = Policy.from_json(json.loads(checkpoint.read_text())) if checkpoint.exists() else Policy()
-        history = json.loads(journal_path.read_text()) if journal_path.exists() else []
+        if checkpoint.exists() or journal_path.exists():
+            raise ValueError("Missing authoritative training state; preserve this directory and select a new one.")
+        champion = Policy()
+        history = []
     def save_training():
         # One authoritative atomic generation commit; other files are readable exports.
-        write_json(state_path, {"schemaVersion":1,"seed":seed,"evaluationSeedsPerGeneration":games,
+        write_json(state_path, {"schemaVersion":1,"sandboxVariant":"distinct-decks-v2","seed":seed,"evaluationSeedsPerGeneration":games,
                                 "champion":champion.to_json(),"history":history})
         write_json(checkpoint, champion.to_json())
         write_json(journal_path, history)
@@ -1008,16 +1073,22 @@ def main():
     sim.add_argument("--max-turns", type=int, default=100)
     sim.add_argument("--out", type=Path, default=HERE/"reports/demo-replay.json")
     diagnostic = sub.add_parser("diagnose", help="Run real decks in a visibly incomplete, non-training diagnostic")
-    diagnostic.add_argument("--decks", nargs=2, type=Path, default=sorted((HERE/"decks").glob("*.json")))
+    diagnostic.add_argument("--decks", nargs="+", type=Path, default=sorted((HERE/"decks").glob("*.json")))
     diagnostic.add_argument("--seed", type=int, default=42)
     diagnostic.add_argument("--turns-per-player", type=int, default=10)
     diagnostic.add_argument("--out", type=Path, default=HERE/"reports/real-decks-diagnostic.json")
+    pool = sub.add_parser("pool-diagnose", help="Run random, non-mirror real-deck diagnostics (never used for training)")
+    pool.add_argument("--decks", nargs="+", type=Path, default=sorted((HERE/"decks").glob("*.json")))
+    pool.add_argument("--seed", type=int, default=42)
+    pool.add_argument("--matches", type=int, default=6)
+    pool.add_argument("--turns-per-player", type=int, default=10)
+    pool.add_argument("--out", type=Path, default=HERE/"reports/pool")
     learning = sub.add_parser("train", help="Persistent evolutionary learning in the sandbox only")
     learning.add_argument("--demo", action="store_true", required=True)
     learning.add_argument("--generations", type=int, default=3)
     learning.add_argument("--seed", type=int, default=42)
     learning.add_argument("--evaluation-seeds", type=int, default=8)
-    learning.add_argument("--out", type=Path, default=HERE/"runs/demo")
+    learning.add_argument("--out", type=Path, default=HERE/"runs/distinct-demo")
     args = parser.parse_args()
     with RulesBridge() as rules:
         if args.command == "audit":
@@ -1030,12 +1101,28 @@ def main():
             export_review(args.out, report)
             print(json.dumps({"status": report["status"], "questions": len(report["questions"]), "output": str(args.out)}))
         elif args.command == "diagnose":
-            report = diagnose(rules, [json.loads(p.read_text()) for p in args.decks],
-                              args.seed, args.turns_per_player)
+            selected = select_decks([json.loads(p.read_text()) for p in args.decks], args.seed)
+            report = diagnose(rules, selected, args.seed, args.turns_per_player)
             export_review(args.out, report)
             print(json.dumps({k: report[k] for k in ("result", "deckNames", "commanders",
                               "turnsCompleted", "learningEligible", "unsupportedInHand",
                               "unsupportedDiscarded")}, ensure_ascii=False))
+        elif args.command == "pool-diagnose":
+            if args.matches < 1: raise ValueError("At least one match is required")
+            deck_pool = [json.loads(p.read_text()) for p in args.decks]
+            results = []
+            schedule = schedule_decks(deck_pool, args.seed, args.matches)
+            for i, selected in enumerate(schedule):
+                match_seed = args.seed + i
+                report = diagnose(rules, selected, match_seed, args.turns_per_player)
+                export_review(args.out / f"match-{i+1:03d}.json", report)
+                players = report["events"][-1]["state"]["players"]
+                results.append({"match":i+1,"seed":match_seed,"deckNames":report["deckNames"],
+                    "commanders":report["commanders"],"deckIds":report["deckIds"],"result":report["result"],
+                    "turnsCompleted":report["turnsCompleted"],"life":[p["life"] for p in players],
+                    "winner":report["winner"],"learningEligible":False})
+            write_json(args.out/"summary.json", {"matches":results,"notice":"Incomplete diagnostics; never used for training."})
+            print(json.dumps({"matches":results},ensure_ascii=False))
         elif args.command == "simulate":
             report = Simulator(rules, args.seed, args.starter, max_turns=args.max_turns).run()
             export_review(args.out, report)

@@ -156,3 +156,8 @@ This prototype does not yet feed the full self-play simulator or live golem. Tri
 The real-deck diagnostic now uses the event prototype for Kolodin, Zurgo, selected Mounts/Vehicles, crew and saddle. It can cast these two commanders from the command zone, applies commander tax, tracks commander damage and automatically chooses return to the command zone after a commander dies. It also recognizes whole-text Goblin-token sorceries such as Dragon Fodder and Goblin Instigator's entry trigger.
 
 On seed 42 for ten turns each, Zurgo cast Dragon Fodder, attacked with Goblins, then cast and attacked with Zurgo. Kolodin was cast four times and blocked Zurgo; the final life totals were 24 and 40, with 14 commander damage and four +1/+1 counters on Zurgo. These are partial diagnostic results, not a valid complete game or eligible training. Andúril, the full stack, multiple attackers/blockers, many card effects, and live golem integration are still outstanding.
+
+
+## Four-deck non-mirror pool
+
+Two additional deck snapshots, Obyra Faeries and Chatterfang Squirrels, join Kolodin and Zurgo. The diagnostic randomly selects two different complete deck lists; batch scheduling never repeats a pairing within the batch. Six tests cover all pairings once. An expanded 265-item review queue blocks full-game training; these incomplete diagnostics do not train the live golem or establish relative deck strength.

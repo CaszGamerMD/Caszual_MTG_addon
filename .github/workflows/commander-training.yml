@@ -22,10 +22,12 @@ jobs:
           python-version: '3.12'
       - name: Verify rules, privacy, reproducibility and checkpoint retention
         run: python -m unittest discover -s training/tests -v
-      - name: Audit both supplied decks and flag blocking questions
+      - name: Audit all supplied decks and flag blocking questions
         run: python training/simulator.py audit
-      - name: Diagnose both submitted decks for ten turns each
+      - name: Diagnose a random pair of submitted decks for ten turns each
         run: python training/simulator.py diagnose
+      - name: Exercise all six random distinct deck pairings
+        run: python training/simulator.py pool-diagnose --matches 6 --seed 42 --turns-per-player 10
       - name: Generate public turn replay
         run: python training/simulator.py simulate --demo --seed 42
       - name: Exercise three generations and sixteen evaluation games per generation
@@ -36,5 +38,5 @@ jobs:
           name: commander-training-review
           path: |
             training/reports/
-            training/runs/demo/
+            training/runs/distinct-demo/
           retention-days: 14

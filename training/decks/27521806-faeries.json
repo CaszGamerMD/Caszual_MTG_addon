@@ -1,0 +1,1822 @@
+{
+  "schemaVersion": 1,
+  "sourceUrl": "https://archidekt.com/decks/27521806/faeries",
+  "sourceDeckId": 27521806,
+  "name": "faeries",
+  "sourceUpdatedAt": "2026-10-17T23:33:20.228353Z",
+  "retrievedAt": "2026-10-27T14:16:17.738765+00:00",
+  "format": "commander",
+  "commanders": [
+    {
+      "name": "Obyra, Dreaming Duelist",
+      "quantity": 1,
+      "oracleId": "4162e60f-9d70-4b8c-a838-df57b83c208d",
+      "manaCost": "{U}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Warrior",
+        "Faerie"
+      ],
+      "colors": [
+        "Black",
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue",
+        "Black"
+      ],
+      "oracleText": "Flash\nFlying\nWhenever another Faerie you control enters, each opponent loses 1 life.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    }
+  ],
+  "mainboard": [
+    {
+      "name": "Alchemist's Gift",
+      "quantity": 1,
+      "oracleId": "4e698713-6203-44f2-b438-1b26b951536d",
+      "manaCost": "{B}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Target creature gets +1/+1 and gains your choice of deathtouch or lifelink until end of turn. (Any amount of damage a creature with deathtouch deals to a creature is enough to destroy it. Damage dealt by a creature with lifelink also causes its controller to gain that much life.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Banehound",
+      "quantity": 1,
+      "oracleId": "63d846e2-4bef-4911-9508-273c75a4a040",
+      "manaCost": "{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Nightmare",
+        "Dog"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Lifelink, haste",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Barrow Naughty",
+      "quantity": 1,
+      "oracleId": "95664c29-9801-4dfc-9dbd-465abf6bb4ee",
+      "manaCost": "{1}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Faerie"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Flying\nThis creature has lifelink as long as you control another Faerie.\n{2}{B}: This creature gets +1/+0 until end of turn.",
+      "power": "1",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Basilisk Collar",
+      "quantity": 1,
+      "oracleId": "f5f4dd28-f4ae-4d39-b9b8-6ebfd63c93fe",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature has deathtouch and lifelink. (Any amount of damage it deals to a creature is enough to destroy it. Damage dealt by this creature also causes you to gain that much life.)\nEquip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Bitterbloom Bearer",
+      "quantity": 1,
+      "oracleId": "5effb651-f9e0-4c14-8192-bd0e132b8d5d",
+      "manaCost": "{B}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Rogue",
+        "Faerie"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Flash\nFlying\nAt the beginning of your upkeep, you lose 1 life and create a 1/1 blue and black Faerie creature token with flying.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Bitterblossom",
+      "quantity": 1,
+      "oracleId": "fb868840-09fa-49b1-85cb-b08ad065e972",
+      "manaCost": "{1}{B}",
+      "types": [
+        "Enchantment",
+        "Kindred"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Faerie"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "At the beginning of your upkeep, you lose 1 life and create a 1/1 black Faerie Rogue creature token with flying.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Bitterthorn, Nissa's Animus",
+      "quantity": 1,
+      "oracleId": "5a57fba3-01e3-4852-8c45-7c910502bd03",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Living weapon (When this Equipment enters, create a 0/0 black Phyrexian Germ creature token, then attach this to it.)\nEquipped creature gets +1/+1.\nWhenever equipped creature attacks, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nEquip {3}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Boot Nipper",
+      "quantity": 1,
+      "oracleId": "e6337404-2978-47a8-a5ae-4a70add2df69",
+      "manaCost": "{1}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Beast"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "This creature enters with your choice of a deathtouch counter or a lifelink counter on it.",
+      "power": "2",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Briarberry Cohort",
+      "quantity": 1,
+      "oracleId": "598283f3-ae29-43b9-8743-6c065136dcad",
+      "manaCost": "{1}{U}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Soldier",
+        "Faerie"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Flying\nThis creature gets +1/+1 as long as you control another blue creature.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Citizen V, Helmut Zemo",
+      "quantity": 1,
+      "oracleId": "974fbeb0-77d6-4a29-aa91-226cb5b32233",
+      "manaCost": "{2}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Human",
+        "Villain",
+        "Noble"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Lifelink\nWhenever you gain life, put a +1/+1 counter on each Villain you control.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Clearwater Pathway // Murkwater Pathway",
+      "quantity": 1,
+      "oracleId": "144119bc-7fd1-45c5-9e29-f742e7c255ac",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "Blue",
+        "Black"
+      ],
+      "oracleText": "",
+      "power": "",
+      "toughness": "",
+      "layout": "modal_dfc",
+      "faces": [
+        {
+          "colors": [],
+          "flavor": "\"Just when the river seems most peaceful, suddenly you round a bend and hurtle down a waterfall.\"\n—Zahr Gada, Halimar expedition leader",
+          "manaCost": "",
+          "name": "Clearwater Pathway",
+          "power": "",
+          "subTypes": [],
+          "superTypes": [],
+          "text": "{T}: Add {U}.",
+          "toughness": "",
+          "types": [
+            "Land"
+          ],
+          "loyalty": null
+        },
+        {
+          "colors": [],
+          "flavor": "\"Here, at least, the danger is usually in plain sight.\"\n—Zahr Gada, Halimar expedition leader",
+          "manaCost": "",
+          "name": "Murkwater Pathway",
+          "power": "",
+          "subTypes": [],
+          "superTypes": [],
+          "text": "{T}: Add {B}.",
+          "toughness": "",
+          "types": [
+            "Land"
+          ],
+          "loyalty": null
+        }
+      ]
+    },
+    {
+      "name": "Cloud of Faeries",
+      "quantity": 1,
+      "oracleId": "adc1f3b4-cce7-42c9-a208-dbab1d1924f5",
+      "manaCost": "{1}{U}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Faerie"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Flying\nWhen this creature enters, untap up to two lands.\nCycling {2} ({2}, Discard this card: Draw a card.)",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Command Tower",
+      "quantity": 1,
+      "oracleId": "0895c9b7-ae7d-4bb3-af17-3b75deb50a25",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "{T}: Add one mana of any color in your commander's color identity.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Dawn-Blessed Pennant",
+      "quantity": 1,
+      "oracleId": "311eef28-21e9-44fa-96df-d281f0a9ba34",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "As this artifact enters, choose Elemental, Elf, Faerie, Giant, Goblin, Kithkin, Merfolk, or Treefolk.\nWhenever a permanent you control of the chosen type enters, you gain 1 life.\n{2}, {T}, Sacrifice this artifact: Return target card of the chosen type from your graveyard to your hand.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Dino DNA",
+      "quantity": 1,
+      "oracleId": "26e988da-52cf-4382-8646-a27c5ad1b92d",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Imprint — {1}, {T}: Exile target creature card from a graveyard. Activate only as a sorcery.\n{6}: Create a token that's a copy of target creature card exiled with this artifact, except it's a 6/6 green Dinosaur creature with trample. Activate only as a sorcery.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Drowned Catacomb",
+      "quantity": 1,
+      "oracleId": "819fc966-434e-470f-91e9-a38df974ad17",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "Blue",
+        "Black"
+      ],
+      "oracleText": "This land enters tapped unless you control an Island or a Swamp.\n{T}: Add {U} or {B}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Endless Evil",
+      "quantity": 1,
+      "oracleId": "05157e8e-4c8c-455e-a5a1-de8271951c51",
+      "manaCost": "{2}{U}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Enchant creature you control\nAt the beginning of your upkeep, create a token that's a copy of enchanted creature, except the token is 1/1.\nWhen enchanted creature dies, if that creature was a Horror, return this card to its owner's hand.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Endless Ranks of the Dead",
+      "quantity": 1,
+      "oracleId": "69d4ecac-4735-4667-bfc1-c8800b436d08",
+      "manaCost": "{2}{B}{B}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "At the beginning of your upkeep, create X 2/2 black Zombie creature tokens, where X is half the number of Zombies you control, rounded down.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Enduring Tenacity",
+      "quantity": 1,
+      "oracleId": "98e698ae-1a69-469c-9cfb-0e3fedeb71d4",
+      "manaCost": "{2}{B}{B}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Snake",
+        "Glimmer"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Whenever you gain life, target opponent loses that much life.\nWhen Enduring Tenacity dies, if it was a creature, return it to the battlefield under its owner's control. It's an enchantment. (It's not a creature.)",
+      "power": "4",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Excalibur II",
+      "quantity": 1,
+      "oracleId": "bfb6651c-e0b3-4dbd-b26a-3eeb690985fc",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Whenever you gain life, put a charge counter on Excalibur II.\nEquipped creature gets +1/+1 for each charge counter on Excalibur II.\nEquip {3}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Exquisite Blood",
+      "quantity": 1,
+      "oracleId": "8f933fae-6c0c-42d7-a817-14760d8285cd",
+      "manaCost": "{4}{B}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Whenever an opponent loses life, you gain that much life.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Eye Collector",
+      "quantity": 1,
+      "oracleId": "553c2006-e123-406e-ab4a-1d1f67c7468c",
+      "manaCost": "{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Faerie"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Flying\nWhenever this creature deals combat damage to a player, each player mills a card. (Each player puts the top card of their library into their graveyard.)",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Faebloom Trick",
+      "quantity": 1,
+      "oracleId": "903d114b-1899-4e67-bee3-af0673850388",
+      "manaCost": "{2}{U}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Create two 1/1 blue Faerie creature tokens with flying. When you do, tap target creature an opponent controls.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Faerie Bladecrafter",
+      "quantity": 1,
+      "oracleId": "164b064e-de50-468a-b874-b054897a5be9",
+      "manaCost": "{2}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Rogue",
+        "Faerie"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Flying\nWhenever one or more Faeries you control deal combat damage to a player, put a +1/+1 counter on this creature.\nWhen this creature dies, each opponent loses X life and you gain X life, where X is its power.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Faerie Dreamthief",
+      "quantity": 1,
+      "oracleId": "d6e68414-80cb-4e08-ae84-b084a3f4b6de",
+      "manaCost": "{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Faerie",
+        "Warlock"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Flying\nWhen this creature enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)\n{2}{B}, Exile this card from your graveyard: You draw a card and you lose 1 life.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Faerie Impostor",
+      "quantity": 1,
+      "oracleId": "0d78ba2c-4de0-47d9-b1b9-13dc9de8844b",
+      "manaCost": "{U}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Rogue",
+        "Faerie"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Flying\nWhen this creature enters, sacrifice it unless you return another creature you control to its owner's hand.",
+      "power": "2",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Faerie Seer",
+      "quantity": 1,
+      "oracleId": "b2e65e8b-5f08-4cc2-ab1d-00f8903dbea2",
+      "manaCost": "{U}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Wizard",
+        "Faerie"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Flying\nWhen this creature enters, scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Faerie Slumber Party",
+      "quantity": 1,
+      "oracleId": "48ee9007-2d1c-446f-aee3-795d23028e06",
+      "manaCost": "{4}{U}{U}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Return all creatures to their owners' hands. For each opponent who controlled a creature returned this way, you create two 1/1 blue Faerie creature tokens with flying and \"This token can block only creatures with flying.\"",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Faerie Swarm",
+      "quantity": 1,
+      "oracleId": "d7178feb-29ce-45d9-a970-2c6003779a00",
+      "manaCost": "{3}{U}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Faerie"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Flying\nFaerie Swarm's power and toughness are each equal to the number of blue permanents you control.",
+      "power": "*",
+      "toughness": "*",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Feywild Visitor",
+      "quantity": 1,
+      "oracleId": "cbc93912-2c36-4554-9b42-1dcca059fbb5",
+      "manaCost": "{2}{U}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Background"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Commander creatures you own have \"Whenever one or more nontoken creatures you control deal combat damage to a player, you create a 1/1 blue Faerie Dragon creature token with flying.\"",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Followed Footsteps",
+      "quantity": 1,
+      "oracleId": "732b1314-68bb-4d3d-9f3f-7e66e763caf5",
+      "manaCost": "{3}{U}{U}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Enchant creature\nAt the beginning of your upkeep, create a token that's a copy of enchanted creature.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Glen Elendra Liege",
+      "quantity": 1,
+      "oracleId": "946bba74-0951-408c-b06f-167739b10934",
+      "manaCost": "{1}{U/B}{U/B}{U/B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Knight",
+        "Faerie"
+      ],
+      "colors": [
+        "Black",
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue",
+        "Black"
+      ],
+      "oracleText": "Flying\nOther blue creatures you control get +1/+1.\nOther black creatures you control get +1/+1.",
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Guildpact Informant",
+      "quantity": 1,
+      "oracleId": "330f97ee-6bb2-4a4b-a8bc-411659dc4260",
+      "manaCost": "{2}{U}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Rogue",
+        "Faerie"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Flying\nWhenever this creature deals combat damage to a player or planeswalker, proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Indulgent Aristocrat",
+      "quantity": 1,
+      "oracleId": "c7054a2d-2e7b-4487-8fc3-f6a47a716fd3",
+      "manaCost": "{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Vampire",
+        "Noble"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Lifelink\n{2}, Sacrifice a creature: Put a +1/+1 counter on each Vampire you control.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Island",
+      "quantity": 12,
+      "oracleId": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [
+        "Basic"
+      ],
+      "subTypes": [
+        "Island"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "({T}: Add {U}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Kaito Shizuki",
+      "quantity": 1,
+      "oracleId": "ba48e067-f4d9-45b2-ade1-71cf8cda418c",
+      "manaCost": "{1}{U}{B}",
+      "types": [
+        "Planeswalker"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Kaito"
+      ],
+      "colors": [
+        "Black",
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue",
+        "Black"
+      ],
+      "oracleText": "At the beginning of your end step, if Kaito entered this turn, he phases out.\n+1: Draw a card. Then discard a card unless you attacked this turn.\n−2: Create a 1/1 blue Ninja creature token with \"This token can't be blocked.\"\n−7: You get an emblem with \"Whenever a creature you control deals combat damage to a player, search your library for a blue or black creature card, put it onto the battlefield, then shuffle.\"",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Liliana, Heretical Healer // Liliana, Defiant Necromancer",
+      "quantity": 1,
+      "oracleId": "b96a8ad2-3d86-459b-a34f-19c9dc07c3c4",
+      "manaCost": "",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Human",
+        "Cleric"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "",
+      "power": "",
+      "toughness": "",
+      "layout": "transform",
+      "faces": [
+        {
+          "colors": [
+            "Black"
+          ],
+          "flavor": "",
+          "manaCost": "{1}{B}{B}",
+          "name": "Liliana, Heretical Healer",
+          "power": "2",
+          "subTypes": [
+            "Human",
+            "Cleric"
+          ],
+          "superTypes": [
+            "Legendary"
+          ],
+          "text": "Lifelink\nWhenever another nontoken creature you control dies, exile Liliana, Heretical Healer, then return her to the battlefield transformed under her owner's control. If you do, create a 2/2 black Zombie creature token.",
+          "toughness": "3",
+          "types": [
+            "Creature"
+          ],
+          "loyalty": null
+        },
+        {
+          "colors": [
+            "Black"
+          ],
+          "flavor": "",
+          "manaCost": "",
+          "name": "Liliana, Defiant Necromancer",
+          "power": "",
+          "subTypes": [
+            "Liliana"
+          ],
+          "superTypes": [
+            "Legendary"
+          ],
+          "text": "+2: Each player discards a card.\n−X: Return target nonlegendary creature card with mana value X from your graveyard to the battlefield.\n−8: You get an emblem with \"Whenever a creature dies, return it to the battlefield under your control at the beginning of the next end step.\"",
+          "toughness": "",
+          "types": [
+            "Planeswalker"
+          ],
+          "loyalty": "3"
+        }
+      ]
+    },
+    {
+      "name": "Liliana, the Last Hope",
+      "quantity": 1,
+      "oracleId": "64a9a6b4-26b5-4d23-be86-85c54e9c4727",
+      "manaCost": "{1}{B}{B}",
+      "types": [
+        "Planeswalker"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Liliana"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "+1: Up to one target creature gets -2/-1 until your next turn.\n−2: Mill two cards, then you may return a creature card from your graveyard to your hand.\n−7: You get an emblem with \"At the beginning of your end step, create X 2/2 black Zombie creature tokens, where X is two plus the number of Zombies you control.\"",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Marauding Blight-Priest",
+      "quantity": 1,
+      "oracleId": "814b87fe-2a75-4ff2-8637-7e69e3fb285b",
+      "manaCost": "{2}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Vampire",
+        "Cleric"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Whenever you gain life, each opponent loses 1 life.",
+      "power": "3",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Maskwood Nexus",
+      "quantity": 1,
+      "oracleId": "9b2cdbed-c733-409b-b0e4-2c8960c25111",
+      "manaCost": "{4}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Creatures you control are every creature type. The same is true for creature spells you control and creature cards you own that aren't on the battlefield.\n{3}, {T}: Create a 2/2 blue Shapeshifter creature token with changeling. (It is every creature type.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Nectar Faerie",
+      "quantity": 1,
+      "oracleId": "6d0a2e5f-af10-4754-81d7-b7afa6282d7d",
+      "manaCost": "{1}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Wizard",
+        "Faerie"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Flying\n{B}, {T}: Target Faerie or Elf gains lifelink until end of turn. (Damage dealt by the creature also causes its controller to gain that much life.)",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Nested Shambler",
+      "quantity": 1,
+      "oracleId": "bfa882ee-de18-4ef8-8957-3e04ed6e3c1e",
+      "manaCost": "{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Zombie"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "When this creature dies, create X tapped 1/1 green Squirrel creature tokens, where X is this creature's power.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Notorious Throng",
+      "quantity": 1,
+      "oracleId": "b1461f2a-2f12-49ae-8821-d934dddcb567",
+      "manaCost": "{3}{U}",
+      "types": [
+        "Sorcery",
+        "Kindred"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Rogue"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Prowl {5}{U} (You may cast this for its prowl cost if you dealt combat damage to a player this turn with a Rogue.)\nCreate X 1/1 black Faerie Rogue creature tokens with flying, where X is the damage dealt to your opponents this turn. If this spell's prowl cost was paid, take an extra turn after this one.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Oona's Blackguard",
+      "quantity": 1,
+      "oracleId": "b72cedc2-73b3-4e7f-8b58-8db532a69f6e",
+      "manaCost": "{1}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Rogue",
+        "Faerie"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Flying\nEach other Rogue creature you control enters with an additional +1/+1 counter on it.\nWhenever a creature you control with a +1/+1 counter on it deals combat damage to a player, that player discards a card.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Oona, Queen of the Fae",
+      "quantity": 1,
+      "oracleId": "6052822d-47a2-4d69-a32d-40cdd600d7a9",
+      "manaCost": "{3}{U/B}{U/B}{U/B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Wizard",
+        "Faerie"
+      ],
+      "colors": [
+        "Black",
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue",
+        "Black"
+      ],
+      "oracleText": "Flying\n{X}{U/B}: Choose a color. Target opponent exiles the top X cards of their library. For each card of the chosen color exiled this way, create a 1/1 blue and black Faerie Rogue creature token with flying.",
+      "power": "5",
+      "toughness": "5",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Orcrist, Goblin-cleaver",
+      "quantity": 1,
+      "oracleId": "cc65821a-1893-4087-b461-35cf9fd26c71",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +2/+2 and has trample.\nWhenever equipped creature deals combat damage to a player, choose a creature type. Create a Treasure token for each creature you control of that type.\nEquip {3}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Peppersmoke",
+      "quantity": 1,
+      "oracleId": "071733a2-6dc6-4b6e-8ed6-a130d14657fd",
+      "manaCost": "{B}",
+      "types": [
+        "Instant",
+        "Kindred"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Faerie"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Target creature gets -1/-1 until end of turn. If you control a Faerie, draw a card.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Scion of Oona",
+      "quantity": 1,
+      "oracleId": "b34601d2-2aeb-4649-9d73-d0895611bd69",
+      "manaCost": "{2}{U}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Soldier",
+        "Faerie"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Flash\nFlying\nOther Faerie creatures you control get +1/+1.\nOther Faeries you control have shroud. (They can't be the targets of spells or abilities.)",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Shadow Puppeteers",
+      "quantity": 1,
+      "oracleId": "0a570fdb-2104-4592-b158-5b5d88f1d087",
+      "manaCost": "{6}{U}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Wizard",
+        "Faerie"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Flying, ward {2}\nWhen this creature enters, create two 1/1 black Faerie Rogue creature tokens with flying.\nWhenever a creature you control with flying attacks, you may have it become a red Dragon with base power and toughness 4/4 in addition to its other colors and types until end of turn.",
+      "power": "4",
+      "toughness": "4",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Shadowspear",
+      "quantity": 1,
+      "oracleId": "8b27326f-e7b8-4a4d-b589-df459246d19a",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +1/+1 and has trample and lifelink.\n{1}: Permanents your opponents control lose hexproof and indestructible until end of turn.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Shipwreck Marsh",
+      "quantity": 1,
+      "oracleId": "5f42b67f-87fd-4f98-a0e8-0c8313f4bbc8",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "Blue",
+        "Black"
+      ],
+      "oracleText": "This land enters tapped unless you control two or more other lands.\n{T}: Add {U} or {B}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Sol Ring",
+      "quantity": 1,
+      "oracleId": "6ad8011d-3471-4369-9d68-b264cc027487",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "{T}: Add {C}{C}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Sower of Temptation",
+      "quantity": 1,
+      "oracleId": "5881aac2-4f31-45cb-bdb5-64a29ec23316",
+      "manaCost": "{2}{U}{U}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Wizard",
+        "Faerie"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Flying\nWhen this creature enters, gain control of target creature for as long as this creature remains on the battlefield.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Spell Stutter",
+      "quantity": 1,
+      "oracleId": "f9bf996e-ae14-40a3-a8d8-f5725ddaa270",
+      "manaCost": "{1}{U}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Counter target spell unless its controller pays {2} plus an additional {1} for each Faerie you control.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Sprite Noble",
+      "quantity": 1,
+      "oracleId": "bf3e3004-4133-4542-9ee3-2fb98e759ffa",
+      "manaCost": "{1}{U}{U}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Faerie",
+        "Noble"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Flying\nOther creatures you control with flying get +0/+1.\n{T}: Other creatures you control with flying get +1/+0 until end of turn.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Starscape Cleric",
+      "quantity": 1,
+      "oracleId": "8d72ddb3-ef6e-4847-b6d4-5d85b1dd5802",
+      "manaCost": "{1}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Cleric",
+        "Bat"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Offspring {2}{B} (You may pay an additional {2}{B} as you cast this spell. If you do, when this creature enters, create a 1/1 token copy of it.)\nFlying\nThis creature can't block.\nWhenever you gain life, each opponent loses 1 life.",
+      "power": "2",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Stonecoil Serpent",
+      "quantity": 1,
+      "oracleId": "78124cd1-2658-43f3-a339-0755d84154d2",
+      "manaCost": "{X}",
+      "types": [
+        "Creature",
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Snake"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Reach, trample, protection from multicolored\nThis creature enters with X +1/+1 counters on it.",
+      "power": "0",
+      "toughness": "0",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Sunken Hollow",
+      "quantity": 1,
+      "oracleId": "cd2c90ac-2b04-461c-92f3-939871b6b6a3",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Island",
+        "Swamp"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Blue",
+        "Black"
+      ],
+      "oracleText": "({T}: Add {U} or {B}.)\nThis land enters tapped unless you control two or more basic lands.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Swamp",
+      "quantity": 17,
+      "oracleId": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [
+        "Basic"
+      ],
+      "subTypes": [
+        "Swamp"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "({T}: Add {B}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Sword of Vengeance",
+      "quantity": 1,
+      "oracleId": "e366afb3-c447-4bde-b358-41c8568142d5",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +2/+0 and has first strike, vigilance, trample, and haste.\nEquip {3}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Sword of the Animist",
+      "quantity": 1,
+      "oracleId": "d79cbc61-6c15-48ea-bbba-3cffb819ccba",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +1/+1.\nWhenever equipped creature attacks, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Tainted Remedy",
+      "quantity": 1,
+      "oracleId": "51b114cd-c174-4d74-a854-07c68b41fc9d",
+      "manaCost": "{2}{B}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "If an opponent would gain life, that player loses that much life instead.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Talion, the Kindly Lord",
+      "quantity": 1,
+      "oracleId": "a019e34d-00c4-4687-9d41-fe550bf1dbdc",
+      "manaCost": "{2}{U}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Faerie",
+        "Noble"
+      ],
+      "colors": [
+        "Black",
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue",
+        "Black"
+      ],
+      "oracleText": "Flying\nAs Talion enters, choose a number between 1 and 10.\nWhenever an opponent casts a spell with mana value, power, or toughness equal to the chosen number, that player loses 2 life and you draw a card.",
+      "power": "3",
+      "toughness": "4",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Team Pennant",
+      "quantity": 1,
+      "oracleId": "0fa51915-7c0b-4018-802a-90fd431f0036",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +1/+1 and has vigilance and trample.\nEquip creature token {1}\nEquip {3}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Tegwyll's Scouring",
+      "quantity": 1,
+      "oracleId": "58ebaaba-7e35-4588-9679-23b22e39789b",
+      "manaCost": "{4}{B}{B}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "You may cast this spell as though it had flash by tapping three untapped creatures you control with flying in addition to paying its other costs.\nDestroy all creatures. Create three 1/1 black Faerie Rogue creature tokens with flying.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Tegwyll, Duke of Splendor",
+      "quantity": 1,
+      "oracleId": "868f0a0a-ca9e-4baf-8295-6b228aa834e5",
+      "manaCost": "{1}{U}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Faerie",
+        "Noble"
+      ],
+      "colors": [
+        "Black",
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue",
+        "Black"
+      ],
+      "oracleText": "Flying, deathtouch\nOther Faeries you control get +1/+1.\nWhenever another Faerie you control dies, you draw a card and you lose 1 life.",
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "The Book of Vile Darkness",
+      "quantity": 1,
+      "oracleId": "fcc666bc-6fea-44e0-94bc-462c742db528",
+      "manaCost": "{B}{B}{B}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Book"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "At the beginning of your end step, if you lost 2 or more life this turn, create a 2/2 black Zombie creature token.\n{T}, Exile The Book of Vile Darkness and artifacts you control named Eye of Vecna and Hand of Vecna: Create Vecna, a legendary 8/8 black Zombie God creature token with indestructible and all triggered abilities of the exiled cards.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Underground Sea",
+      "quantity": 1,
+      "oracleId": "4b22be3a-8ce1-47d1-b82e-6c3ccfb0548b",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Island",
+        "Swamp"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Blue",
+        "Black"
+      ],
+      "oracleText": "({T}: Add {U} or {B}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Urborg, Tomb of Yawgmoth",
+      "quantity": 1,
+      "oracleId": "db6174d7-211d-4817-b8e4-8384594c83f9",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Each land is a Swamp in addition to its other land types.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Vampire of the Dire Moon",
+      "quantity": 1,
+      "oracleId": "5a938371-8428-48e3-85ed-6a84a39b29c6",
+      "manaCost": "{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Vampire"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Deathtouch (Any amount of damage this deals to a creature is enough to destroy it.)\nLifelink (Damage dealt by this creature also causes you to gain that much life.)",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Vito, Thorn of the Dusk Rose",
+      "quantity": 1,
+      "oracleId": "7336a541-3ae9-4ab2-acb8-f574c0a5b3a9",
+      "manaCost": "{2}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Vampire",
+        "Cleric"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Whenever you gain life, target opponent loses that much life.\n{3}{B}{B}: Creatures you control gain lifelink until end of turn.",
+      "power": "1",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Zephyr Sprite",
+      "quantity": 1,
+      "oracleId": "11f77158-0240-4882-94a4-6bd6b3d94bcc",
+      "manaCost": "{U}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Faerie"
+      ],
+      "colors": [
+        "Blue"
+      ],
+      "colorIdentity": [
+        "Blue"
+      ],
+      "oracleText": "Flying",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    }
+  ],
+  "excludedCardCount": 0
+}

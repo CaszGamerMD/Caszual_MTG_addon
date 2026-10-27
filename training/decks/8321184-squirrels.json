@@ -1,0 +1,1855 @@
+{
+  "schemaVersion": 1,
+  "sourceUrl": "https://archidekt.com/decks/8321184/squirrels",
+  "sourceDeckId": 8321184,
+  "name": "squirrels",
+  "sourceUpdatedAt": "2026-07-28T11:38:58.293202Z",
+  "retrievedAt": "2026-10-27T14:16:17.745315+00:00",
+  "format": "commander",
+  "commanders": [
+    {
+      "name": "Chatterfang, Squirrel General",
+      "quantity": 1,
+      "oracleId": "f15b3b76-d38a-48db-bb44-3296183c8641",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Warrior",
+        "Squirrel"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Black",
+        "Green"
+      ],
+      "oracleText": "Forestwalk (This creature can't be blocked as long as defending player controls a Forest.)\nIf one or more tokens would be created under your control, those tokens plus that many 1/1 green Squirrel creature tokens are created instead.\n{B}, Sacrifice X Squirrels: Target creature gets +X/-X until end of turn.",
+      "power": "3",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    }
+  ],
+  "mainboard": [
+    {
+      "name": "Academy Manufactor",
+      "quantity": 1,
+      "oracleId": "f36d1d8b-8303-44a9-ab56-531931641ea2",
+      "manaCost": "{3}",
+      "types": [
+        "Creature",
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Assembly-Worker"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "If you would create a Clue, Food, or Treasure token, instead create one of each.",
+      "power": "1",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Adaptive Automaton",
+      "quantity": 1,
+      "oracleId": "53c730c6-2f8c-4af8-b400-b9d573a71e60",
+      "manaCost": "{3}",
+      "types": [
+        "Creature",
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Construct"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "As this creature enters, choose a creature type.\nThis creature is the chosen type in addition to its other types.\nOther creatures you control of the chosen type get +1/+1.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Alpha Status",
+      "quantity": 1,
+      "oracleId": "839fb071-6585-4f3e-a13e-1c14779b401a",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Enchant creature\nEnchanted creature gets +2/+2 for each other creature on the battlefield that shares a creature type with it.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Animal Friend",
+      "quantity": 1,
+      "oracleId": "ae4249de-1b8c-4b15-8960-180557a15065",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Enchant creature\nEnchanted creature has \"Whenever this creature attacks, create a 1/1 green Squirrel creature token. Put a +1/+1 counter on that token for each Aura and Equipment attached to this creature other than Animal Friend.\"",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Awaken the Woods",
+      "quantity": 1,
+      "oracleId": "3cc79d36-1a24-4395-8ad1-915a65db8a60",
+      "manaCost": "{X}{G}{G}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Create X 1/1 green Forest Dryad land creature tokens. (They're affected by summoning sickness.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Blasting Station",
+      "quantity": 1,
+      "oracleId": "3a38d2d1-c4ff-4088-b1df-5feb9602ee2e",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "{T}, Sacrifice a creature: This artifact deals 1 damage to any target.\nWhenever a creature enters, you may untap this artifact.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Blood Artist",
+      "quantity": 1,
+      "oracleId": "310f141c-7f37-4729-aed6-dd9c09db448d",
+      "manaCost": "{1}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Vampire"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Whenever this creature or another creature dies, target player loses 1 life and you gain 1 life.",
+      "power": "0",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Bloodline Pretender",
+      "quantity": 1,
+      "oracleId": "51d6d164-6e5f-4be3-8f09-433e0b8d4c6b",
+      "manaCost": "{3}",
+      "types": [
+        "Creature",
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Shapeshifter"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Changeling (This card is every creature type.)\nAs this creature enters, choose a creature type.\nWhenever another creature you control of the chosen type enters, put a +1/+1 counter on this creature.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Broodhatch Nantuko",
+      "quantity": 1,
+      "oracleId": "b0a54050-3493-4ff6-8eca-e43b92c1f3d3",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Druid",
+        "Insect"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Whenever this creature is dealt damage, you may create that many 1/1 green Insect creature tokens.\nMorph {2}{G} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Bushy Bodyguard",
+      "quantity": 1,
+      "oracleId": "5436bb0d-b5c7-43a9-8b3f-67cdc0dd0381",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Warrior",
+        "Squirrel"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Offspring {2} (You may pay an additional {2} as you cast this spell. If you do, when this creature enters, create a 1/1 token copy of it.)\nWhen this creature enters, you may forage. If you do, put two +1/+1 counters on it. (To forage, exile three cards from your graveyard or sacrifice a Food.)",
+      "power": "2",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Camellia, the Seedmiser",
+      "quantity": 1,
+      "oracleId": "312c7a7b-2084-42b0-9b13-0a6d3e43a73d",
+      "manaCost": "{1}{B}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Squirrel",
+        "Warlock"
+      ],
+      "colors": [
+        "Green",
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black",
+        "Green"
+      ],
+      "oracleText": "Menace\nOther Squirrels you control have menace.\nWhenever you sacrifice one or more Foods, create a 1/1 green Squirrel creature token.\n{2}, Forage: Put a +1/+1 counter on each other Squirrel you control. (To forage, exile three cards from your graveyard or sacrifice a Food.)",
+      "power": "3",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Chatter of the Squirrel",
+      "quantity": 1,
+      "oracleId": "b0aaa4b1-5188-43a6-997d-7a9b2ad452bc",
+      "manaCost": "{G}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Create a 1/1 green Squirrel creature token.\nFlashback {1}{G} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Chatterstorm",
+      "quantity": 1,
+      "oracleId": "7e6c7b57-bd6a-4ac8-bcab-c3a879f479c2",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Create a 1/1 green Squirrel creature token.\nStorm (When you cast this spell, copy it for each spell cast before it this turn.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Chitterspitter",
+      "quantity": 1,
+      "oracleId": "4a338863-d599-46e7-9c30-e11b898ae1b0",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "At the beginning of your upkeep, you may sacrifice a token. If you do, put an acorn counter on this artifact.\nSquirrels you control get +1/+1 for each acorn counter on this artifact.\n{G}, {T}: Create a 1/1 green Squirrel creature token.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Cloakwood Hermit",
+      "quantity": 1,
+      "oracleId": "f898bf43-6a9c-46eb-b805-63cb12bab273",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Background"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Commander creatures you own have \"At the beginning of your end step, if a creature card was put into your graveyard from anywhere this turn, create two tapped 1/1 green Squirrel creature tokens.\"",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Coat of Arms",
+      "quantity": 1,
+      "oracleId": "5f7f133e-58ea-41ab-b1be-be4b400fac4c",
+      "manaCost": "{5}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Each creature gets +1/+1 for each other creature on the battlefield that shares at least one creature type with it. (For example, if two Goblin Warriors and a Goblin Shaman are on the battlefield, each gets +2/+2.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Creakwood Liege",
+      "quantity": 1,
+      "oracleId": "1e67b4eb-e5d2-4368-8284-4ba5c4c42455",
+      "manaCost": "{1}{B/G}{B/G}{B/G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Horror"
+      ],
+      "colors": [
+        "Green",
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black",
+        "Green"
+      ],
+      "oracleText": "Other black creatures you control get +1/+1.\nOther green creatures you control get +1/+1.\nAt the beginning of your upkeep, you may create a 1/1 black and green Worm creature token.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Darkbore Pathway // Slitherbore Pathway",
+      "quantity": 1,
+      "oracleId": "868e6e68-4367-4073-a864-235d5961ae56",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "Black",
+        "Green"
+      ],
+      "oracleText": "",
+      "power": "",
+      "toughness": "",
+      "layout": "modal_dfc",
+      "faces": [
+        {
+          "colors": [],
+          "flavor": "\"Hush, and stay still. No matter how dreary the darkness, a light in the Skelle Mire is never a good sign.\"\n—Haugar, Kannah wayfinder",
+          "manaCost": "",
+          "name": "Darkbore Pathway",
+          "power": "",
+          "subTypes": [],
+          "superTypes": [],
+          "text": "{T}: Add {B}.",
+          "toughness": "",
+          "types": [
+            "Land"
+          ],
+          "loyalty": null
+        },
+        {
+          "colors": [],
+          "flavor": "\"The Cosmos Serpent carved these tunnels, and his echo remains, a twisting aura of ferocity and boundless growth.\"\n—Haugar, Kannah wayfinder",
+          "manaCost": "",
+          "name": "Slitherbore Pathway",
+          "power": "",
+          "subTypes": [],
+          "superTypes": [],
+          "text": "{T}: Add {G}.",
+          "toughness": "",
+          "types": [
+            "Land"
+          ],
+          "loyalty": null
+        }
+      ]
+    },
+    {
+      "name": "Darksteel Plate",
+      "quantity": 1,
+      "oracleId": "b5b4cf54-ed5e-42d0-9d98-5fec76b0b0b8",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Indestructible\nEquipped creature has indestructible.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Deathcap Glade",
+      "quantity": 1,
+      "oracleId": "f6d24565-5b32-4eff-b2e0-6e2c25516ff0",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "Black",
+        "Green"
+      ],
+      "oracleText": "This land enters tapped unless you control two or more other lands.\n{T}: Add {B} or {G}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Deep Forest Hermit",
+      "quantity": 1,
+      "oracleId": "80e9a42e-f4f4-4bfc-91a2-ad124737dca2",
+      "manaCost": "{3}{G}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Elf",
+        "Druid"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Vanishing 3 (This creature enters with three time counters on it. At the beginning of your upkeep, remove a time counter from it. When the last is removed, sacrifice it.)\nWhen this creature enters, create four 1/1 green Squirrel creature tokens.\nSquirrels you control get +1/+1.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Deranged Hermit",
+      "quantity": 1,
+      "oracleId": "b9cd714b-2ad8-4fdb-a8aa-82b17730e071",
+      "manaCost": "{3}{G}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Elf"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Echo {3}{G}{G} (At the beginning of your upkeep, if this came under your control since the beginning of your last upkeep, sacrifice it unless you pay its echo cost.)\nWhen this creature enters, create four 1/1 green Squirrel creature tokens.\nSquirrel creatures get +1/+1.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Doubling Season",
+      "quantity": 1,
+      "oracleId": "01546b7d-a233-4176-8843-d732074dc5b6",
+      "manaCost": "{4}{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.\nIf an effect would put one or more counters on a permanent you control, it puts twice that many of those counters on that permanent instead.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Dreampod Druid",
+      "quantity": 1,
+      "oracleId": "db2af2b0-a5aa-4e4a-b5bc-52a5ac3968fc",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Druid"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "At the beginning of each upkeep, if this creature is enchanted, create a 1/1 green Saproling creature token.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Druid's Call",
+      "quantity": 1,
+      "oracleId": "e71f4fe8-2ecd-450b-8c41-5e38d749f59d",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Enchant creature\nWhenever enchanted creature is dealt damage, its controller creates that many 1/1 green Squirrel creature tokens.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Experimental Confectioner",
+      "quantity": 1,
+      "oracleId": "87f82d15-5b6b-400f-8a15-d45a2a735f7d",
+      "manaCost": "{2}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Peasant"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "When this creature enters, create a Food token. (It's an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")\nWhenever you sacrifice a Food, create a 1/1 black Rat creature token with \"This token can't block.\"",
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Forest",
+      "quantity": 15,
+      "oracleId": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [
+        "Basic"
+      ],
+      "subTypes": [
+        "Forest"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "({T}: Add {G}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Golgari Rot Farm",
+      "quantity": 1,
+      "oracleId": "1b301478-b14f-4ef8-94e6-9647d582eabe",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "Black",
+        "Green"
+      ],
+      "oracleText": "This land enters tapped.\nWhen this land enters, return a land you control to its owner's hand.\n{T}: Add {B}{G}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Guardian Gladewalker",
+      "quantity": 1,
+      "oracleId": "03a3f54e-9289-4d99-beab-bfa0988a050e",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Shapeshifter"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Changeling (This card is every creature type.)\nWhen this creature enters, put a +1/+1 counter on target creature.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Hardened Scales",
+      "quantity": 1,
+      "oracleId": "a1f3da21-af6d-450e-bf0b-985d158418e6",
+      "manaCost": "{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "If one or more +1/+1 counters would be put on a creature you control, that many plus one +1/+1 counters are put on it instead.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Hazel of the Rootbloom",
+      "quantity": 1,
+      "oracleId": "845b40b1-dc09-44fa-9910-22544c1424ba",
+      "manaCost": "{2}{B}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Druid",
+        "Squirrel"
+      ],
+      "colors": [
+        "Green",
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black",
+        "Green"
+      ],
+      "oracleText": "{T}, Pay 2 life, Tap X untapped tokens you control: Add X mana in any combination of colors.\nAt the beginning of your end step, create a token that's a copy of target token you control. If that token is a Squirrel, instead create two tokens that are copies of it.",
+      "power": "3",
+      "toughness": "5",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Herald's Horn",
+      "quantity": 1,
+      "oracleId": "c02c5547-b9c9-4b2d-9d12-e87bfba8f2d2",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "As this artifact enters, choose a creature type.\nCreature spells you cast of the chosen type cost {1} less to cast.\nAt the beginning of your upkeep, look at the top card of your library. If it's a creature card of the chosen type, you may reveal it and put it into your hand.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Herd Baloth",
+      "quantity": 1,
+      "oracleId": "03873314-6e64-43ab-95c0-3d8692a57a03",
+      "manaCost": "{3}{G}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Beast"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Whenever one or more +1/+1 counters are put on this creature, you may create a 4/4 green Beast creature token.",
+      "power": "4",
+      "toughness": "4",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Honored Dreyleader",
+      "quantity": 1,
+      "oracleId": "44bffa3e-4d31-4f9b-829c-e2066ab2f641",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Warrior",
+        "Squirrel"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Trample\nWhen this creature enters, put a +1/+1 counter on it for each other Squirrel and/or Food you control.\nWhenever another Squirrel or Food you control enters, put a +1/+1 counter on this creature.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Hornet Nest",
+      "quantity": 1,
+      "oracleId": "123d2b6e-114e-4767-860d-50790382ca4a",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Insect"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Defender (This creature can't attack.)\nWhenever this creature is dealt damage, create that many 1/1 green Insect creature tokens with flying and deathtouch. (Any amount of damage a creature with deathtouch deals to a creature is enough to destroy it.)",
+      "power": "0",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Icon of Ancestry",
+      "quantity": 1,
+      "oracleId": "2b4973cc-83b0-4986-a19e-b4252706527e",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "As this artifact enters, choose a creature type.\nCreatures you control of the chosen type get +1/+1.\n{3}, {T}: Look at the top three cards of your library. You may reveal a creature card of the chosen type from among them and put it into your hand. Put the rest on the bottom of your library in a random order.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Instruments of War",
+      "quantity": 1,
+      "oracleId": "8be46af9-1b70-4da9-b16d-869c3831dc99",
+      "manaCost": "{4}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Flash\nAs this artifact enters, choose a creature type.\nCreatures you control of the chosen type get +1/+1.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Ivy Lane Denizen",
+      "quantity": 1,
+      "oracleId": "a5da5ad6-4ed2-4041-a983-76a8c87fa109",
+      "manaCost": "{3}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Warrior",
+        "Elf"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Whenever another green creature you control enters, put a +1/+1 counter on target creature.",
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Kami of Whispered Hopes",
+      "quantity": 1,
+      "oracleId": "f122624f-f30d-444e-a62a-939829241045",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Spirit"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "If one or more +1/+1 counters would be put on a permanent you control, that many plus one +1/+1 counters are put on that permanent instead.\n{T}: Add X mana of any one color, where X is this creature's power.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Maskwood Nexus",
+      "quantity": 1,
+      "oracleId": "9b2cdbed-c733-409b-b0e4-2c8960c25111",
+      "manaCost": "{4}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Creatures you control are every creature type. The same is true for creature spells you control and creature cards you own that aren't on the battlefield.\n{3}, {T}: Create a 2/2 blue Shapeshifter creature token with changeling. (It is every creature type.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Metallic Mimic",
+      "quantity": 1,
+      "oracleId": "1f91297a-ec2b-4ea8-9198-aa1daac20ff8",
+      "manaCost": "{2}",
+      "types": [
+        "Creature",
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Shapeshifter"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "As this creature enters, choose a creature type.\nThis creature is the chosen type in addition to its other types.\nEach other creature you control of the chosen type enters with an additional +1/+1 counter on it.",
+      "power": "2",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Mirkwood Bats",
+      "quantity": 1,
+      "oracleId": "0636b6c3-0662-420a-b30d-f0a14e7c512d",
+      "manaCost": "{3}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Bat"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Flying\nWhenever you create or sacrifice a token, each opponent loses 1 life.",
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Mycoloth",
+      "quantity": 1,
+      "oracleId": "d7fd16ce-282d-49cd-b2b4-0d25935e7a72",
+      "manaCost": "{3}{G}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Fungus"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Devour 2 (As this creature enters, you may sacrifice any number of creatures. It enters with twice that many +1/+1 counters on it.)\nAt the beginning of your upkeep, create a 1/1 green Saproling creature token for each +1/+1 counter on this creature.",
+      "power": "4",
+      "toughness": "4",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Nadier's Nightblade",
+      "quantity": 1,
+      "oracleId": "391978f6-0bbc-41e8-9246-f7d0e21c7900",
+      "manaCost": "{2}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Warrior",
+        "Elf"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Whenever a token you control leaves the battlefield, each opponent loses 1 life and you gain 1 life.",
+      "power": "1",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Nested Shambler",
+      "quantity": 1,
+      "oracleId": "bfa882ee-de18-4ef8-8957-3e04ed6e3c1e",
+      "manaCost": "{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Zombie"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "When this creature dies, create X tapped 1/1 green Squirrel creature tokens, where X is this creature's power.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Nuka-Cola Vending Machine",
+      "quantity": 1,
+      "oracleId": "6cfb03e5-aca6-4fe2-a3f1-93e1f0cbf9e1",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "{1}, {T}: Create a Food token. (It's an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")\nWhenever you sacrifice a Food, create a tapped Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Nut Collector",
+      "quantity": 1,
+      "oracleId": "4e1bc03c-e131-4422-beba-0a45a26fdf43",
+      "manaCost": "{5}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Druid"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "At the beginning of your upkeep, you may create a 1/1 green Squirrel creature token.\nThreshold — All Squirrels get +2/+2 as long as there are seven or more cards in your graveyard.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Oran-Rief, the Vastwood",
+      "quantity": 1,
+      "oracleId": "e88027a6-24cc-4a8b-86db-734f26149ea8",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "This land enters tapped.\n{T}: Add {G}.\n{T}: Put a +1/+1 counter on each green creature that entered this turn.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Overgrown Tomb",
+      "quantity": 1,
+      "oracleId": "975ec9a3-6f20-4177-8211-82526e092538",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Swamp",
+        "Forest"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Black",
+        "Green"
+      ],
+      "oracleText": "({T}: Add {B} or {G}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Parallel Lives",
+      "quantity": 1,
+      "oracleId": "84dc94b2-95fb-4d53-aaa2-191cb645639f",
+      "manaCost": "{3}{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Peregrin Took",
+      "quantity": 1,
+      "oracleId": "188da0ad-8524-4fb2-915e-1876dc9df89f",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Citizen",
+        "Halfling"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "If one or more tokens would be created under your control, those tokens plus an additional Food token are created instead. (It's an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")\nSacrifice three Foods: Draw a card.",
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Pitiless Plunderer",
+      "quantity": 1,
+      "oracleId": "a784481f-eccb-4112-bb38-04a659319660",
+      "manaCost": "{3}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Pirate"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Whenever another creature you control dies, create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")",
+      "power": "1",
+      "toughness": "4",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Primal Vigor",
+      "quantity": 1,
+      "oracleId": "c665544f-557b-4631-a1dc-39571470ca2e",
+      "manaCost": "{4}{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "If one or more tokens would be created, twice that many of those tokens are created instead.\nIf one or more +1/+1 counters would be put on a creature, twice that many +1/+1 counters are put on that creature instead.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Ravenous Squirrel",
+      "quantity": 1,
+      "oracleId": "8fb48d65-406b-4231-83ea-9cf3bb8dff76",
+      "manaCost": "{B/G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Squirrel"
+      ],
+      "colors": [
+        "Green",
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black",
+        "Green"
+      ],
+      "oracleText": "Whenever you sacrifice an artifact or creature, put a +1/+1 counter on this creature.\n{1}{B}{G}, Sacrifice an artifact or creature: You gain 1 life and draw a card.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Scurry Oak",
+      "quantity": 1,
+      "oracleId": "eee6c02b-7d6a-4445-ad27-8b03176147d4",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Treefolk"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Evolve (Whenever a creature you control enters, if that creature has greater power or toughness than this creature, put a +1/+1 counter on this creature.)\nWhenever one or more +1/+1 counters are put on this creature, you may create a 1/1 green Squirrel creature token.",
+      "power": "1",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Sol Ring",
+      "quantity": 1,
+      "oracleId": "6ad8011d-3471-4369-9d68-b264cc027487",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "{T}: Add {C}{C}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Sporeweb Weaver",
+      "quantity": 1,
+      "oracleId": "2e7c3881-6fa6-4fd2-ae86-9e3a0fcecdbd",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Spider"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Reach, hexproof from blue\nWhenever this creature is dealt damage, you gain 1 life and create a 1/1 green Saproling creature token.",
+      "power": "1",
+      "toughness": "4",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Squirrel Mob",
+      "quantity": 1,
+      "oracleId": "451486df-6160-4ff7-b47c-dd3760417a31",
+      "manaCost": "{1}{G}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Squirrel"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "This creature gets +1/+1 for each other Squirrel on the battlefield.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Squirrel Nest",
+      "quantity": 1,
+      "oracleId": "2d584333-b25e-4291-a2c9-80c6d9f8732a",
+      "manaCost": "{1}{G}{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Enchant land\nEnchanted land has \"{T}: Create a 1/1 green Squirrel creature token.\"",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Squirrel Sanctuary",
+      "quantity": 1,
+      "oracleId": "693d20e9-ad92-44ad-9190-d247c94660eb",
+      "manaCost": "{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "When this enchantment enters, create a 1/1 green Squirrel creature token.\nWhenever a nontoken creature you control dies, you may pay {1}. If you do, return this enchantment to its owner's hand.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Squirrel Sovereign",
+      "quantity": 1,
+      "oracleId": "f43d1ea5-8127-4b64-a87b-ee5cc9b9e9fa",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Squirrel",
+        "Noble"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Other Squirrels you control get +1/+1.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Swamp",
+      "quantity": 9,
+      "oracleId": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [
+        "Basic"
+      ],
+      "subTypes": [
+        "Swamp"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "({T}: Add {B}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "The Mycotyrant",
+      "quantity": 1,
+      "oracleId": "b69bbb8d-7f8c-45d6-983a-759b5fce6ebd",
+      "manaCost": "{1}{B}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Elder",
+        "Fungus"
+      ],
+      "colors": [
+        "Green",
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black",
+        "Green"
+      ],
+      "oracleText": "Trample\nThe Mycotyrant's power and toughness are each equal to the number of creatures you control that are Fungi and/or Saprolings.\nAt the beginning of your end step, create X 1/1 black Fungus creature tokens with \"This token can't block,\" where X is the number of times you descended this turn. (You descend each time a permanent card is put into your graveyard from anywhere.)",
+      "power": "*",
+      "toughness": "*",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Thornvault Forager",
+      "quantity": 1,
+      "oracleId": "7b18cfad-a1cf-46c2-bcdd-7762c13d50e5",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Squirrel",
+        "Ranger"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "{T}: Add {G}.\n{T}, Forage: Add two mana in any combination of colors. (To forage, exile three cards from your graveyard or sacrifice a Food.)\n{3}{G}, {T}: Search your library for a Squirrel card, reveal it, put it into your hand, then shuffle.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Tribute to the World Tree",
+      "quantity": 1,
+      "oracleId": "72deedab-7c17-4505-aeca-4bc8596d80a5",
+      "manaCost": "{G}{G}{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Whenever a creature you control enters, draw a card if its power is 3 or greater. Otherwise, put two +1/+1 counters on it.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Twitching Doll",
+      "quantity": 1,
+      "oracleId": "fd6e1967-237a-41f6-bbf4-2c869f9447c8",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Creature",
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Spider",
+        "Toy"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "{T}: Add one mana of any color. Put a nest counter on this creature.\n{T}, Sacrifice this creature: Create a 2/2 green Spider creature token with reach for each counter on this creature. Activate only as a sorcery.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Umbral Mantle",
+      "quantity": 1,
+      "oracleId": "44f3241f-af82-4f2e-b15d-7f279bf6e816",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature has \"{3}, {Q}: This creature gets +2/+2 until end of turn.\" ({Q} is the untap symbol.)\nEquip {0}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Universal Automaton",
+      "quantity": 1,
+      "oracleId": "d50b1d2e-1825-432a-ab73-068fdc356f50",
+      "manaCost": "{1}",
+      "types": [
+        "Creature",
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Shapeshifter"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Changeling (This card is every creature type.)",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Urza's Incubator",
+      "quantity": 1,
+      "oracleId": "b380c04b-0bce-4328-8f0a-1425e48bee72",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "As this artifact enters, choose a creature type.\nCreature spells of the chosen type cost {2} less to cast.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Valley Rotcaller",
+      "quantity": 1,
+      "oracleId": "8da0599a-8f63-4dba-857f-b4e10b7191b6",
+      "manaCost": "{1}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Squirrel",
+        "Warlock"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Menace\nWhenever this creature attacks, each opponent loses X life and you gain X life, where X is the number of other Squirrels, Bats, Lizards, and Rats you control.",
+      "power": "1",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Verdant Command",
+      "quantity": 1,
+      "oracleId": "5a5d426b-e5eb-44f0-b5fe-c258bec6d59e",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Choose two —\n• Target player creates two tapped 1/1 green Squirrel creature tokens.\n• Counter target loyalty ability of a planeswalker.\n• Exile target card from a graveyard.\n• Target player gains 3 life.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Vinereap Mentor",
+      "quantity": 1,
+      "oracleId": "db649e15-24ca-4fd8-9f0b-f1df28c9c57d",
+      "manaCost": "{B}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Druid",
+        "Squirrel"
+      ],
+      "colors": [
+        "Green",
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black",
+        "Green"
+      ],
+      "oracleText": "When this creature enters or dies, create a Food token. (It's an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")",
+      "power": "3",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Wildwood Scourge",
+      "quantity": 1,
+      "oracleId": "b9dec104-c636-4770-a7fc-7a3331face15",
+      "manaCost": "{X}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Hydra"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "This creature enters with X +1/+1 counters on it.\nWhenever one or more +1/+1 counters are put on another non-Hydra creature you control, put a +1/+1 counter on this creature.",
+      "power": "0",
+      "toughness": "0",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Woodland Cemetery",
+      "quantity": 1,
+      "oracleId": "c9fe1383-1331-4a58-a45a-3320250221a9",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "Black",
+        "Green"
+      ],
+      "oracleText": "This land enters tapped unless you control a Swamp or a Forest.\n{T}: Add {B} or {G}.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Woodland Changeling",
+      "quantity": 1,
+      "oracleId": "338f0ab6-f744-4e5a-a358-05e71b93758d",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Shapeshifter"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "oracleText": "Changeling (This card is every creature type.)",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Ygra, Eater of All",
+      "quantity": 1,
+      "oracleId": "62511d43-8eaf-405a-9c81-7bd593d3a01e",
+      "manaCost": "{3}{B}{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Elemental",
+        "Cat"
+      ],
+      "colors": [
+        "Green",
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black",
+        "Green"
+      ],
+      "oracleText": "Ward—Sacrifice a Food.\nOther creatures are Food artifacts in addition to their other types and have \"{2}, {T}, Sacrifice this permanent: You gain 3 life.\"\nWhenever a Food is put into a graveyard from the battlefield, put two +1/+1 counters on Ygra.",
+      "power": "6",
+      "toughness": "6",
+      "layout": "normal",
+      "faces": []
+    },
+    {
+      "name": "Zulaport Cutthroat",
+      "quantity": 1,
+      "oracleId": "76b003e0-15af-4f22-bdf2-1ade5430964a",
+      "manaCost": "{1}{B}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Rogue",
+        "Ally"
+      ],
+      "colors": [
+        "Black"
+      ],
+      "colorIdentity": [
+        "Black"
+      ],
+      "oracleText": "Whenever this creature or another creature you control dies, each opponent loses 1 life and you gain 1 life.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": []
+    }
+  ],
+  "excludedCardCount": 16
+}

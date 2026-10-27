@@ -82,7 +82,8 @@ class SimulatorChecks(unittest.TestCase):
         for event in replay["events"]:
             if event["kind"] == "draw":
                 self.assertNotIn("card", event["details"])
-                self.assertNotIn("Training creature", event["message"])
+                self.assertNotIn("Training A", event["message"])
+                self.assertNotIn("Training B", event["message"])
                 for p in event["state"]["players"]:
                     self.assertNotIn("hand", p)
                     self.assertNotIn("library", p)
@@ -145,7 +146,7 @@ class SimulatorChecks(unittest.TestCase):
         report = s.audit_decks(self.rules,decks)
         self.assertEqual(report["status"], "blocked")
         self.assertFalse(report["learningEligible"])
-        self.assertEqual([d["mainCount"] for d in report["decks"]],[99,99])
+        self.assertEqual([d["mainCount"] for d in report["decks"]],[99,99,99,99])
         names = {q["card"] for q in report["questions"]}
         self.assertIn("Kolodin, Triumph Caster",names)
         self.assertIn("Zurgo Helmsmasher",names)
@@ -202,8 +203,34 @@ class SimulatorChecks(unittest.TestCase):
             self.assertEqual(len(r["history"]),2)
             with self.assertRaises(ValueError):s.train(self.rules,out,1,999,2)
 
+    def test_random_decks_are_distinct_reproducible_and_cover_all_pairs(self):
+        decks=[json.loads(p.read_text()) for p in sorted((HERE/"decks").glob("*.json"))]
+        pairs=set()
+        for seed in range(300):
+            selected=s.select_decks(decks,seed)
+            self.assertNotEqual(s.deck_fingerprint(selected[0]),s.deck_fingerprint(selected[1]))
+            self.assertNotEqual(selected[0]["sourceDeckId"],selected[1]["sourceDeckId"])
+            self.assertEqual([d["sourceDeckId"] for d in selected],
+                             [d["sourceDeckId"] for d in s.select_decks(decks,seed)])
+            pairs.add(tuple(sorted(d["sourceDeckId"] for d in selected)))
+        self.assertEqual(len(pairs),6)
+        schedule=s.schedule_decks(decks,42,6)
+        self.assertEqual(len({tuple(sorted(d["sourceDeckId"] for d in pair)) for pair in schedule}),6)
+        self.assertEqual([[d["sourceDeckId"] for d in pair] for pair in schedule],
+                         [[d["sourceDeckId"] for d in pair] for pair in s.schedule_decks(decks,42,6)])
+        with self.assertRaises(ValueError):s.schedule_decks(decks,42,7)
+        with self.assertRaises(ValueError):s.select_decks([decks[0],dict(decks[0],sourceDeckId=999)],42)
+        with self.assertRaises(ValueError):s.diagnose(self.rules,[decks[0],decks[0]],42,10)
+
+    def test_synthetic_demo_decks_are_not_mirrors(self):
+        a,b=s.demo_deck(0),s.demo_deck(1)
+        self.assertNotEqual([(c.name,c.power,c.toughness) for c in a],
+                            [(c.name,c.power,c.toughness) for c in b])
+        copy=[dataclasses.replace(c,id="copy-"+c.id) for c in a]
+        with self.assertRaises(ValueError):s.Simulator(self.rules,42,decks=(a,copy))
+
     def test_real_decks_complete_requested_window_without_training(self):
-        decks = [json.loads(p.read_text()) for p in sorted((HERE/"decks").glob("*.json"))]
+        decks = [json.loads((HERE/"decks"/name).read_text()) for name in ("14850373-budget-deck.json","5254666-garbo-gobbos.json")]
         report = s.diagnose(self.rules, decks, 42, 10)
         self.assertEqual(report["turnsCompleted"], [10,10])
         self.assertEqual(report["result"], "diagnostic_window_complete")
@@ -228,7 +255,7 @@ class SimulatorChecks(unittest.TestCase):
         self.assertIn("Smoldering Marsh", played)
 
     def test_extended_real_deck_diagnostic_stops_on_commander_damage(self):
-        decks=[json.loads(p.read_text()) for p in sorted((HERE/"decks").glob("*.json"))]
+        decks=[json.loads((HERE/"decks"/name).read_text()) for name in ("14850373-budget-deck.json","5254666-garbo-gobbos.json")]
         report=s.diagnose(self.rules,decks,42,12)
         self.assertEqual(report["winner"],1)
         self.assertEqual(report["turnsStarted"],[11,11])
@@ -354,6 +381,16 @@ class SimulatorChecks(unittest.TestCase):
         self.assertTrue(s.land_enters_tapped(basics,[p,dual]))
         self.assertFalse(s.land_enters_tapped(basics,[p,m]))
         self.assertIsNone(s.diagnostic_land({"oracleText":tower["oracleText"]+" Draw a card."},{"White"}))
+
+    def test_old_mirror_training_state_is_not_overwritten(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out=Path(directory)
+            legacy={"schemaVersion":1,"seed":42,"evaluationSeedsPerGeneration":2,
+                    "champion":s.Policy().to_json(),"history":[{"generation":0}]}
+            s.write_json(out/"state.json",legacy)
+            before=(out/"state.json").read_bytes()
+            with self.assertRaises(ValueError):s.train(self.rules,out,1,42,2)
+            self.assertEqual(before,(out/"state.json").read_bytes())
 
     def test_viewer_payload_cannot_close_script(self):
         with tempfile.TemporaryDirectory() as directory:

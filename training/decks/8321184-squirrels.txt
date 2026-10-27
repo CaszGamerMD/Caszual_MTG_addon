@@ -1,0 +1,87 @@
+# squirrels
+
+Source: https://archidekt.com/decks/8321184/squirrels
+
+## Commander
+
+1 Chatterfang, Squirrel General
+
+## Main deck
+
+1 Academy Manufactor
+1 Adaptive Automaton
+1 Alpha Status
+1 Animal Friend
+1 Awaken the Woods
+1 Blasting Station
+1 Blood Artist
+1 Bloodline Pretender
+1 Broodhatch Nantuko
+1 Bushy Bodyguard
+1 Camellia, the Seedmiser
+1 Chatter of the Squirrel
+1 Chatterstorm
+1 Chitterspitter
+1 Cloakwood Hermit
+1 Coat of Arms
+1 Creakwood Liege
+1 Darkbore Pathway // Slitherbore Pathway
+1 Darksteel Plate
+1 Deathcap Glade
+1 Deep Forest Hermit
+1 Deranged Hermit
+1 Doubling Season
+1 Dreampod Druid
+1 Druid's Call
+1 Experimental Confectioner
+15 Forest
+1 Golgari Rot Farm
+1 Guardian Gladewalker
+1 Hardened Scales
+1 Hazel of the Rootbloom
+1 Herald's Horn
+1 Herd Baloth
+1 Honored Dreyleader
+1 Hornet Nest
+1 Icon of Ancestry
+1 Instruments of War
+1 Ivy Lane Denizen
+1 Kami of Whispered Hopes
+1 Maskwood Nexus
+1 Metallic Mimic
+1 Mirkwood Bats
+1 Mycoloth
+1 Nadier's Nightblade
+1 Nested Shambler
+1 Nuka-Cola Vending Machine
+1 Nut Collector
+1 Oran-Rief, the Vastwood
+1 Overgrown Tomb
+1 Parallel Lives
+1 Peregrin Took
+1 Pitiless Plunderer
+1 Primal Vigor
+1 Ravenous Squirrel
+1 Scurry Oak
+1 Sol Ring
+1 Sporeweb Weaver
+1 Squirrel Mob
+1 Squirrel Nest
+1 Squirrel Sanctuary
+1 Squirrel Sovereign
+9 Swamp
+1 The Mycotyrant
+1 Thornvault Forager
+1 Tribute to the World Tree
+1 Twitching Doll
+1 Umbral Mantle
+1 Universal Automaton
+1 Urza's Incubator
+1 Valley Rotcaller
+1 Verdant Command
+1 Vinereap Mentor
+1 Wildwood Scourge
+1 Woodland Cemetery
+1 Woodland Changeling
+1 Ygra, Eater of All
+1 Zulaport Cutthroat

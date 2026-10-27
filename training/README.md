@@ -38,7 +38,7 @@ Two independent agents receive separate observations: their own hand, legally kn
 
 ## Simulator and review tools (0.12.6)
 
-The first runnable version provides a deterministic classroom sandbox. It reuses the mod's Java card parser, mana planner and damage resolver through a local subprocess. It does not duplicate those rules in Python. The two actual Commander decks remain blocked until their unsupported effects and the complete game backend are implemented. No live Minecraft entities are exercised by this tool.
+The first runnable version provides a deterministic classroom sandbox. It reuses the mod's Java card parser, mana planner and damage resolver through a local subprocess. It does not duplicate those rules in Python. The actual Commander decks remain blocked from valid training until their unsupported effects and the complete game backend are implemented. No live Minecraft entities are exercised by this tool.
 
 Requirements: Python 3.10+ and a JDK 17+ on PATH (the mod build still requires Java 25). No Python packages or network access are needed to run the tools after checkout.
 
@@ -122,3 +122,19 @@ Rules references: https://magic.wizards.com/en/rules and https://magic.wizards.c
 
 
 If the same partial diagnostic continues, Zurgo wins on its eleventh turn with 25 commander damage while Kolodin's player has 13 life. This outcome depends on unsupported cards remaining unplayable and the simplified combat model; it is not a prediction of a real game or evidence of learning.
+
+
+## Four-deck pool and non-mirror matchmaking
+
+The pool also contains **faeries** (Obyra, Dreaming Duelist) and **squirrels** (Chatterfang, Squirrel General), each with one commander and 99 main-deck cards. The faeries snapshot had no excluded sideboard/maybeboard cards; squirrels excluded 16. Category exclusion takes precedence over the site included flag, preserving the earlier request.
+
+    python3 training/simulator.py diagnose --seed 42 --turns-per-player 10
+    python3 training/simulator.py pool-diagnose --matches 6 --seed 42 --turns-per-player 10
+
+The single diagnostic randomly selects an ordered pair from the supplied pool. A batch randomly orders distinct pairings and randomly assigns their player seats; a batch cannot request more than the number of possible distinct unordered pairs. Identical deck IDs or the same complete commander/main-deck list are deduplicated even if copied or renamed. Direct diagnostic and generic simulator entry points also reject a mirror. Given the same snapshots and seed, the selection and shuffles are reproducible.
+
+Six seed-42–47 diagnostics exercised all six pairings among the four decks. Two ended early through commander damage; four reached ten turns for each side. These are incomplete diagnostics, not evidence of relative deck strength. The summary is in examples/four-deck-pool-summary.json; each generated diagnostic includes its selected deck IDs, source commander, seed, review questions and full event replay.
+
+The four-deck audit currently has 265 unique full-game blocking review questions. Some cards have limited diagnostic-only support; audit coverage is not equivalent to a legal match engine. The random real-deck games remain ineligible for learning until those gaps are resolved.
+
+The synthetic demo now uses two distinct sample decks too. To prevent mixing incomparable evaluations, its new checkpoints use training/runs/distinct-demo/ and record the distinct-decks-v2 environment. Earlier mirror-demo data is preserved in its previous directory; it is not overwritten or presented as a new benchmark. A request to resume an older incompatible state is rejected rather than silently mixing results. These synthetic tests do not train on the four real decks.
