@@ -95,3 +95,16 @@ A narrow diagnostic-only land extension recognizes Command Tower using the actua
 Seed 42 completed ten turns for each player. Kolodin: 8 lands, 0 spells, 0 attacks, 40 life. Zurgo: 10 lands, 0 spells, 0 attacks, 40 life. Both commanders and the cards needed for actual play remain unsupported. One unsupported card was discarded during cleanup; this is a sandbox decision and should not be treated as a trained Magic strategy.
 
 The replay is saved in `examples/real-decks-10-turns.html`, including the public event log, two deck names and commanders, plus all blocking review questions. The complete JSON output includes the cards remaining in each hand for **post-run human inspection**. Neither agent receives its opponent's private hand or this post-run report. The diagnostic never changes the retained training checkpoint.
+
+## Type-aware event prototype: Kolodin and Andúril
+
+`card_events.py` is a separate, focused rules prototype. It reads actual card types, creature subtypes, legendary status and Oracle text; records entry and attack events; and handles the following interactions in isolation:
+
+- Kolodin grants your Mounts and Vehicles haste while controlled. A Mount entering while Kolodin is already present becomes saddled until end of turn; a Vehicle entering becomes an artifact creature until end of turn. Existing Mounts/Vehicles do not retroactively receive those entry triggers when Kolodin enters later.
+- Mounts are already creatures; saddle is a status. Crew and saddle tap other untapped creatures of enough total power, including freshly entered creatures. Saddle is restricted to sorcery timing.
+- Andúril's equip ability costs two generic mana and targets a creature you control. Its attached creature gets +3/+1. On attack, it creates two tapped 1/1 white Spirit creature tokens with flying; they enter attacking if the equipped creature is legendary and the equipment controller is also the attacking player.
+- Brightfield Mustang untaps and receives a persistent +1/+1 counter when it attacks while saddled. End-of-turn cleanup removes saddle/animation but not counters, and Equipment detaches from a Vehicle when it stops being a creature.
+
+Regression tests use actual card metadata from the supplied deck and reject unsupported additional rules instead of ignoring them. A small event trace is saved as `examples/kolodin-anduril-events.json`.
+
+The prototype resolves events immediately; it does not yet implement the stack, response windows, full attack/block choices or combat damage for multiple attacking creatures. It is **not connected to the full match simulator or Minecraft golem**, and the cards remain in the diagnostic review queue until that integration is complete. These focused tests are not a completed game.

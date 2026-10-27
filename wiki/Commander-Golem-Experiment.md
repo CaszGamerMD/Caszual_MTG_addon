@@ -143,3 +143,9 @@ This first runner is an explicitly synthetic one-attacker/one-blocker classroom 
 A non-training, ten-turn-per-player diagnostic now shuffles the actual 99-card Kolodin and Zurgo main decks. Unsupported cards remain in the deck and hand but cannot be played, their missing rules stay flagged, and both commanders remain unavailable to the current sandbox. Narrow land support handles Command Tower's commander identity and several conditional dual-land entry rules.
 
 In the seed-42 diagnostic, Kolodin played eight lands and Zurgo played ten; neither cast a spell or attacked, and both ended at 40 life. These results show the need for more rules implementation and are not a valid full Commander match or evidence of trained strategy. The training folder contains a step-by-step HTML replay.
+
+## Kolodin and Andúril event rules
+
+A separate type-aware event prototype under training/card_events.py now covers Kolodin's Mount/Vehicle entry triggers and haste, crew/saddle, Andúril's equip bonus and tapped Spirit token attack trigger, and Brightfield Mustang's saddled attack trigger. Tests use the actual imported card text and leave unfamiliar extra abilities flagged.
+
+This prototype does not yet feed the full self-play simulator or live golem. Trigger timing is automatic and the complete stack, multiplayer combat and token combat remain unfinished; the deck audit continues to flag these cards until integration.

@@ -1,0 +1,119 @@
+{
+  "notice": "Focused isolated rules example, not a complete Magic match; triggered effects resolve immediately.",
+  "kolodinPowerToughness": [
+    5,
+    4
+  ],
+  "mustangSaddled": true,
+  "chariotAnimated": true,
+  "chariotHaste": true,
+  "events": [
+    {
+      "kind": "enters",
+      "id": "kolodin",
+      "name": "Kolodin, Triumph Caster",
+      "controller": 0,
+      "types": [
+        "Creature"
+      ],
+      "subtypes": [
+        "Human",
+        "Pilot"
+      ]
+    },
+    {
+      "kind": "enters",
+      "id": "mustang",
+      "name": "Brightfield Mustang",
+      "controller": 0,
+      "types": [
+        "Creature"
+      ],
+      "subtypes": [
+        "Horse",
+        "Mount"
+      ]
+    },
+    {
+      "kind": "trigger",
+      "source": "Kolodin, Triumph Caster",
+      "effect": "saddled",
+      "target": "mustang"
+    },
+    {
+      "kind": "enters",
+      "id": "chariot",
+      "name": "Thundering Chariot",
+      "controller": 0,
+      "types": [
+        "Artifact"
+      ],
+      "subtypes": [
+        "Vehicle"
+      ]
+    },
+    {
+      "kind": "trigger",
+      "source": "Kolodin, Triumph Caster",
+      "effect": "animated",
+      "target": "chariot"
+    },
+    {
+      "kind": "enters",
+      "id": "anduril",
+      "name": "Andúril, Flame of the West",
+      "controller": 0,
+      "types": [
+        "Artifact"
+      ],
+      "subtypes": [
+        "Equipment"
+      ]
+    },
+    {
+      "kind": "equip",
+      "equipment": "anduril",
+      "target": "kolodin",
+      "mana": 2
+    },
+    {
+      "kind": "attacks",
+      "id": "kolodin",
+      "defending": 1
+    },
+    {
+      "kind": "enters",
+      "id": "spirit-token-1",
+      "name": "Spirit",
+      "controller": 0,
+      "types": [
+        "Creature"
+      ],
+      "subtypes": [
+        "Spirit"
+      ]
+    },
+    {
+      "kind": "enters",
+      "id": "spirit-token-2",
+      "name": "Spirit",
+      "controller": 0,
+      "types": [
+        "Creature"
+      ],
+      "subtypes": [
+        "Spirit"
+      ]
+    },
+    {
+      "kind": "trigger",
+      "source": "anduril",
+      "effect": "two tapped flying Spirit tokens",
+      "tokens": [
+        "spirit-token-1",
+        "spirit-token-2"
+      ],
+      "attacking": 1
+    }
+  ]
+}
