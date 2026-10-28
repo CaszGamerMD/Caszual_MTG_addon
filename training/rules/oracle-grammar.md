@@ -122,3 +122,13 @@ Unused mana survives repeated actions in one main phase, then empties at simulat
 Validation: 102 tests pass. The new planner agrees with Java payment results on 250 combinations of single-mana sources and costs. Focused tests cast the real Sol Ring, spend its output across two spells, preserve the leftover, reject colored payment and malformed symbols, and verify cleanup. Six distinct deck pairings (seeds 842–847): four reached ten turns per player, two ended earlier, no new runtime questions. Sol Ring was cast three times across two matches. Reports remain diagnostic, not training eligible. Summary: `training/examples/mana-pool-842.json`.
 
 Rules reference: Wizards Comprehensive Rules, mana and step/phase boundaries: https://media.wizards.com/2026/downloads/MagicCompRules%2020260619.pdf
+
+## Chosen-X sorceries
+
+A whole-text grammar now composes a mana cost containing X with fixed-characteristic “Create X … creature tokens”, “Draw X cards”, or “You gain X life”. Each affordable nonnegative X is an explicit candidate with its own value and score; repeated X symbols use the same chosen value and each contributes that much generic mana. Colored and fixed generic costs still apply. Cast and decision logs record `xValue`; resolution substitutes that value into the effect without altering the original card placed in the graveyard. X=0 is supported. The draw policy excludes choices that knowingly exceed its remaining library.
+
+Goblin Offensive from the real deck imports through the generic grammar. No card names select behavior. Other X cards remain blocked in full: Awaken the Woods needs land-creature token mana and summoning sickness; Wildwood Scourge needs entry counters and counter-event triggers; Stonecoil Serpent needs entry counters and protection from multicolored. Variable power/toughness, targeting, instant priority, alternative costs, and definitions of X supplied by additional rules text are not silently approximated.
+
+Validation: 108 tests pass, including fixed costs, repeated X, zero X, token characteristics, draw/life substitution, and Sol Ring paying an X spell while retaining surplus. Six distinct real-deck pairings (seeds 942–947): five reached ten turns per player, one ended earlier, no new runtime questions. None of these six random matches cast an X spell, so direct X coverage comes from focused tests and the recorded `training/examples/x-focused.json` scenario. Pool summary: `training/examples/x-spells-942.json`. This remains diagnostic only, not live Java golem integration or strategy training.
+
+Rules reference: Wizards Comprehensive Rules 107.3 and casting procedure: https://media.wizards.com/2026/downloads/MagicCompRules%2020260417.pdf

@@ -225,3 +225,7 @@ Ordinary two-color hybrid costs now work through the shared Java payment planner
 ### Mana pools and fixed mana artifacts
 
 The Python diagnostic now parses unconditional fixed-output mana artifacts, including Sol Ring, and retains unused mana until the step/phase ends. Colorless can pay generic or colorless requirements. Cast logs record mana sources and the remaining pool. All 102 tests pass, including 250 comparisons with the Java single-mana planner. Seeds 842–847 ran six unique deck pairings with no new runtime questions; Sol Ring was cast three times. See `examples/mana-pool-842.json`. The live Java actions still need pool integration, and X-card decisions/effects remain unsupported even though selected-X payment is tested.
+
+### Chosen-X sorceries
+
+The diagnostic now chooses and logs X for whole-text token creation, draw, and life-gain sorceries. Goblin Offensive works through this reusable grammar. Fixed costs, repeated X symbols, X=0, and Sol Ring leftovers are tested. All 108 tests pass. Seeds 942–947 produced five complete ten-turn windows and one earlier win, with no runtime questions; no X spell was cast in that random batch. Direct coverage is recorded in `examples/x-focused.json` and the tests. `examples/x-spells-942.json` contains the batch summary. Other X-card abilities remain flagged; live golem integration is still pending.

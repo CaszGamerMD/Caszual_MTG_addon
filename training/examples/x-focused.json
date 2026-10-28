@@ -1,0 +1,1350 @@
+{
+  "kind": "focused-rules-scenario",
+  "notice": "Constructed battlefield with actual Goblin Offensive Oracle text; not a full deck match or learned policy.",
+  "learningEligible": false,
+  "legalChoices": [
+    {
+      "x": 0,
+      "label": "Cast Goblin Offensive with X=0"
+    },
+    {
+      "x": 1,
+      "label": "Cast Goblin Offensive with X=1"
+    },
+    {
+      "x": 2,
+      "label": "Cast Goblin Offensive with X=2"
+    }
+  ],
+  "chosenX": 2,
+  "events": [
+    {
+      "index": 0,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 0,
+      "kind": "setup",
+      "message": "Two independent agents use frozen policies; sandbox rules apply.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 0,
+            "libraryCount": 34,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 0,
+            "libraryCount": 28,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 1,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 0,
+      "kind": "draw",
+      "message": "Player 1 draws one card.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 1,
+            "libraryCount": 33,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 0,
+            "libraryCount": 28,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 2,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 0,
+      "kind": "draw",
+      "message": "Player 1 draws one card.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 2,
+            "libraryCount": 32,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 0,
+            "libraryCount": 28,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 3,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 0,
+      "kind": "draw",
+      "message": "Player 1 draws one card.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 3,
+            "libraryCount": 31,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 0,
+            "libraryCount": 28,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 4,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 0,
+      "kind": "draw",
+      "message": "Player 1 draws one card.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 4,
+            "libraryCount": 30,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 0,
+            "libraryCount": 28,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 5,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 0,
+      "kind": "draw",
+      "message": "Player 1 draws one card.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 5,
+            "libraryCount": 29,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 0,
+            "libraryCount": 28,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 6,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 0,
+      "kind": "draw",
+      "message": "Player 1 draws one card.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 6,
+            "libraryCount": 28,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 0,
+            "libraryCount": 28,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 7,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 0,
+      "kind": "draw",
+      "message": "Player 1 draws one card.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 7,
+            "libraryCount": 27,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 0,
+            "libraryCount": 28,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 8,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 1,
+      "kind": "draw",
+      "message": "Player 2 draws one card.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 7,
+            "libraryCount": 27,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 1,
+            "libraryCount": 27,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 9,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 1,
+      "kind": "draw",
+      "message": "Player 2 draws one card.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 7,
+            "libraryCount": 27,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 2,
+            "libraryCount": 26,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 10,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 1,
+      "kind": "draw",
+      "message": "Player 2 draws one card.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 7,
+            "libraryCount": 27,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 3,
+            "libraryCount": 25,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 11,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 1,
+      "kind": "draw",
+      "message": "Player 2 draws one card.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 7,
+            "libraryCount": 27,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 4,
+            "libraryCount": 24,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 12,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 1,
+      "kind": "draw",
+      "message": "Player 2 draws one card.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 7,
+            "libraryCount": 27,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 5,
+            "libraryCount": 23,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 13,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 1,
+      "kind": "draw",
+      "message": "Player 2 draws one card.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 7,
+            "libraryCount": 27,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 6,
+            "libraryCount": 22,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 14,
+      "turn": 0,
+      "phase": "setup",
+      "actor": 1,
+      "kind": "draw",
+      "message": "Player 2 draws one card.",
+      "details": {},
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "setup",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 7,
+            "libraryCount": 27,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 7,
+            "libraryCount": 21,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 15,
+      "turn": 0,
+      "phase": "main",
+      "actor": 0,
+      "kind": "cast",
+      "message": "Player 1 casts Goblin Offensive.",
+      "details": {
+        "card": "Goblin Offensive",
+        "manaSources": [
+          "land0",
+          "land1",
+          "land2",
+          "land3",
+          "land4"
+        ],
+        "manaPool": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "commander": false,
+        "xValue": 2
+      },
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "main",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 6,
+            "libraryCount": 22,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [
+              {
+                "id": "land0",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "land1",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "land2",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "land3",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "land4",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              }
+            ],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": [
+              {
+                "id": "variable",
+                "name": "Goblin Offensive"
+              }
+            ]
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 7,
+            "libraryCount": 21,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 16,
+      "turn": 0,
+      "phase": "main",
+      "actor": 0,
+      "kind": "token",
+      "message": "Creates a 1/1 Goblin creature token.",
+      "details": {
+        "card": "Goblin",
+        "token": "token-1"
+      },
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "main",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 6,
+            "libraryCount": 22,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [
+              {
+                "id": "land0",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "land1",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "land2",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "land3",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "land4",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "token-1",
+                "name": "Goblin",
+                "kind": "creature",
+                "power": 1,
+                "toughness": 1,
+                "traits": "1;1;",
+                "tapped": false,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              }
+            ],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": [
+              {
+                "id": "variable",
+                "name": "Goblin Offensive"
+              }
+            ]
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 7,
+            "libraryCount": 21,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    },
+    {
+      "index": 17,
+      "turn": 0,
+      "phase": "main",
+      "actor": 0,
+      "kind": "token",
+      "message": "Creates a 1/1 Goblin creature token.",
+      "details": {
+        "card": "Goblin",
+        "token": "token-2"
+      },
+      "state": {
+        "active": 0,
+        "turn": 0,
+        "phase": "main",
+        "players": [
+          {
+            "seat": 0,
+            "life": 40,
+            "handCount": 6,
+            "libraryCount": 22,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [
+              {
+                "id": "land0",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "land1",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "land2",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "land3",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "land4",
+                "name": "Test land",
+                "kind": "land",
+                "power": 0,
+                "toughness": 0,
+                "traits": "",
+                "tapped": true,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "token-1",
+                "name": "Goblin",
+                "kind": "creature",
+                "power": 1,
+                "toughness": 1,
+                "traits": "1;1;",
+                "tapped": false,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              },
+              {
+                "id": "token-2",
+                "name": "Goblin",
+                "kind": "creature",
+                "power": 1,
+                "toughness": 1,
+                "traits": "1;1;",
+                "tapped": false,
+                "fresh": true,
+                "saddled": false,
+                "counters": 0
+              }
+            ],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": [
+              {
+                "id": "variable",
+                "name": "Goblin Offensive"
+              }
+            ]
+          },
+          {
+            "seat": 1,
+            "life": 40,
+            "handCount": 7,
+            "libraryCount": 21,
+            "manaPool": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "battlefield": [],
+            "commanderInZone": false,
+            "commanderDamage": {},
+            "graveyard": []
+          }
+        ]
+      }
+    }
+  ],
+  "finalState": {
+    "active": 0,
+    "turn": 0,
+    "phase": "main",
+    "players": [
+      {
+        "seat": 0,
+        "life": 40,
+        "handCount": 6,
+        "libraryCount": 22,
+        "manaPool": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "battlefield": [
+          {
+            "id": "land0",
+            "name": "Test land",
+            "kind": "land",
+            "power": 0,
+            "toughness": 0,
+            "traits": "",
+            "tapped": true,
+            "fresh": true,
+            "saddled": false,
+            "counters": 0
+          },
+          {
+            "id": "land1",
+            "name": "Test land",
+            "kind": "land",
+            "power": 0,
+            "toughness": 0,
+            "traits": "",
+            "tapped": true,
+            "fresh": true,
+            "saddled": false,
+            "counters": 0
+          },
+          {
+            "id": "land2",
+            "name": "Test land",
+            "kind": "land",
+            "power": 0,
+            "toughness": 0,
+            "traits": "",
+            "tapped": true,
+            "fresh": true,
+            "saddled": false,
+            "counters": 0
+          },
+          {
+            "id": "land3",
+            "name": "Test land",
+            "kind": "land",
+            "power": 0,
+            "toughness": 0,
+            "traits": "",
+            "tapped": true,
+            "fresh": true,
+            "saddled": false,
+            "counters": 0
+          },
+          {
+            "id": "land4",
+            "name": "Test land",
+            "kind": "land",
+            "power": 0,
+            "toughness": 0,
+            "traits": "",
+            "tapped": true,
+            "fresh": true,
+            "saddled": false,
+            "counters": 0
+          },
+          {
+            "id": "token-1",
+            "name": "Goblin",
+            "kind": "creature",
+            "power": 1,
+            "toughness": 1,
+            "traits": "1;1;",
+            "tapped": false,
+            "fresh": true,
+            "saddled": false,
+            "counters": 0
+          },
+          {
+            "id": "token-2",
+            "name": "Goblin",
+            "kind": "creature",
+            "power": 1,
+            "toughness": 1,
+            "traits": "1;1;",
+            "tapped": false,
+            "fresh": true,
+            "saddled": false,
+            "counters": 0
+          }
+        ],
+        "commanderInZone": false,
+        "commanderDamage": {},
+        "graveyard": [
+          {
+            "id": "variable",
+            "name": "Goblin Offensive"
+          }
+        ]
+      },
+      {
+        "seat": 1,
+        "life": 40,
+        "handCount": 7,
+        "libraryCount": 21,
+        "manaPool": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "battlefield": [],
+        "commanderInZone": false,
+        "commanderDamage": {},
+        "graveyard": []
+      }
+    ]
+  }
+}
