@@ -469,7 +469,7 @@ class Simulator:
                 owner.life -= event.get("controllerLoss",0)
                 for _ in range(spec["amount"]):
                     self.token_sequence+=1
-                    definition=EventDefinition(" ".join(spec["subtypes"]),frozenset({"Creature"}),frozenset(spec["subtypes"]),
+                    definition=EventDefinition(" ".join(spec["subtypes"]),frozenset({"Land","Creature"} if spec.get("land") else {"Creature"}),frozenset(spec["subtypes"]),
                         False,spec["power"],spec["toughness"],frozenset(spec["keywords"]),colors=frozenset(spec["colors"]))
                     token=Card(f"token-{self.token_sequence}",definition.name,"creature",
                         traits=f"{definition.power};{definition.toughness};"+",".join(sorted(definition.abilities)),
@@ -564,17 +564,29 @@ class Simulator:
             self.log("result", "Draw." if self.winner is None else f"Player {self.winner + 1} wins.",
                      lossReasons=[[r for r in row if r] for row in reasons])
 
-    def payment(self, card: Card, tax: int = 0, x: int | None = None) -> dict:
-        cost = card.mana_cost + (("{2}" * tax) if tax else "")
-        player=self.players[self.active]
+    def mana_sources(self, seat: int):
         sources=[]
-        for item in player.battlefield:
+        for item in self.players[seat].battlefield:
             if item.tapped: continue
-            if item.card.kind=='land':
-                options=tuple(tuple(int(i==color) for i in range(6)) for color in range(6) if item.card.mask&(1<<color))
+            definition=item.card.event_definition
+            mask=item.card.mask if item.card.kind=='land' else 0
+            if definition and 'Land' in definition.types:
+                mask=sum(bit for subtype,bit in {'Plains':1,'Island':2,'Swamp':4,'Mountain':8,'Forest':16}.items()
+                         if subtype in definition.subtypes)
+                if 'Creature' in definition.types and item.fresh:
+                    effective=self.effective_card(item)
+                    if effective is None or 'haste' not in effective.traits.split(';')[-1].split(','): continue
+            if mask:
+                options=tuple(tuple(int(i==color) for i in range(6)) for color in range(6) if mask&(1<<color))
             elif item.card.kind=='mana_artifact': options=(item.card.mana_production,)
             else: continue
             sources.append((item.card.id,options))
+        return sources
+
+    def payment(self, card: Card, tax: int = 0, x: int | None = None) -> dict:
+        cost = card.mana_cost + (("{2}" * tax) if tax else "")
+        player=self.players[self.active]
+        sources=self.mana_sources(self.active)
         return mana_pool.plan(cost,player.mana_pool,sources,x)
 
     def damage(self, a: Card, b: Card | None) -> dict:
@@ -628,8 +640,7 @@ class Simulator:
                     "Cast commander " + c.name))
             for c in p.hand:
                 if c.kind == "x_spell":
-                    budget=sum(p.mana_pool)+sum(1 if item.card.kind=='land' else sum(item.card.mana_production)
-                        for item in p.battlefield if not item.tapped and item.card.kind in ('land','mana_artifact'))
+                    budget=sum(p.mana_pool)+sum(max(map(sum,options)) for _,options in self.mana_sources(seat))
                     for x in range(budget//c.mana_cost.count('{X}')+1):
                         payment=self.payment(c,x=x)
                         if not payment['paid']: continue
@@ -771,7 +782,10 @@ class Simulator:
                 if card is None: raise RuntimeError("Commander is no longer in command zone")
                 if choice.kind == "land":
                     p.hand.remove(card)
-                    lands = [x.card for x in p.battlefield if x.card.kind == "land"]
+                    lands = [replace(x.card,land_subtypes=tuple(x.card.event_definition.subtypes))
+                             if x.card.event_definition else x.card
+                             for x in p.battlefield if x.card.kind == "land" or
+                             (x.card.event_definition and "Land" in x.card.event_definition.types)]
                     p.battlefield.append(Permanent(card, land_enters_tapped(card, lands)))
                     self.land_played = True
                     if self.phase == "land": self.phase = "main"
@@ -988,7 +1002,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         text = definition.get("oracleText", "")
         token_spec = parse_token_creation(text)
         if definition.get("types") == ["Sorcery"] and token_spec and rules.query("cost",cost)["supported"]:
-            template = EventDefinition(" ".join(token_spec.subtypes),frozenset({"Creature"}),frozenset(token_spec.subtypes),
+            template = EventDefinition(" ".join(token_spec.subtypes),frozenset({"Land","Creature"} if token_spec.land else {"Creature"}),frozenset(token_spec.subtypes),
                 False,token_spec.power,token_spec.toughness,token_spec.keywords,colors=frozenset(token_spec.colors))
             parsed = {"kind":"token_spell", "token_count":token_spec.amount,
                       "token_definition":template,"token_tapped":token_spec.tapped}
@@ -999,7 +1013,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         parsed={'kind':'x_spell','x_effect':variable['effect']}
         if variable['effect']=='tokens':
             spec=variable['token']
-            parsed['token_definition']=EventDefinition(' '.join(spec.subtypes),frozenset({'Creature'}),frozenset(spec.subtypes),
+            parsed['token_definition']=EventDefinition(' '.join(spec.subtypes),frozenset({'Land','Creature'} if spec.land else {'Creature'}),frozenset(spec.subtypes),
                 False,spec.power,spec.toughness,spec.keywords,colors=frozenset(spec.colors))
             parsed['token_tapped']=spec.tapped
     output=mana_pool.production(definition.get("oracleText", ""))

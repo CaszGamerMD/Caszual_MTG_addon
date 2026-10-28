@@ -79,7 +79,6 @@ class XSpellChecks(unittest.TestCase):
 
     def test_unsupported_remaining_abilities_reject_whole_card(self):
         for text in ['Create X 1/1 red Goblin creature tokens. Draw a card.',
-                     'Create X 1/1 green Forest Dryad land creature tokens.',
                      'Draw X cards. X is the number of creatures you control.',
                      'You gain twice X life.']:
             self.assertIsNone(x_spells.parse('{X}',text,['Sorcery']))

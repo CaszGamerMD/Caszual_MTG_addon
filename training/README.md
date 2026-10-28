@@ -229,3 +229,7 @@ The Python diagnostic now parses unconditional fixed-output mana artifacts, incl
 ### Chosen-X sorceries
 
 The diagnostic now chooses and logs X for whole-text token creation, draw, and life-gain sorceries. Goblin Offensive works through this reusable grammar. Fixed costs, repeated X symbols, X=0, and Sol Ring leftovers are tested. All 108 tests pass. Seeds 942–947 produced five complete ten-turn windows and one earlier win, with no runtime questions; no X spell was cast in that random batch. Direct coverage is recorded in `examples/x-focused.json` and the tests. `examples/x-spells-942.json` contains the batch summary. Other X-card abilities remain flagged; live golem integration is still pending.
+
+### Land-creature tokens
+
+Awaken the Woods now works through the generic X/token grammar. Land-creature tokens preserve types, gain basic-land-type mana abilities, and obey summoning sickness and haste. Payment and X-budget enumeration share source discovery. All 112 tests pass, including a focused cast and next-turn mana payment. Seeds 1042–1047 produced six matches without runtime questions, but none cast Awaken the Woods; see `examples/land-tokens-1042.json`. This is diagnostic simulator support, not live golem integration.

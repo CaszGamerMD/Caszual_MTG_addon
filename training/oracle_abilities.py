@@ -11,18 +11,19 @@ class TokenSpec:
     subtypes: tuple[str, ...]
     keywords: frozenset[str]
     tapped: bool = False
+    land: bool = False
 
 def parse_token_creation(text):
     """A whole standalone instruction, not a substring stripped of extra rules."""
-    m=re.fullmatch(r'Create (a|an|one|two|three|four|[1-9][0-9]*) (tapped )?([0-9]+)/([1-9][0-9]*) (white|blue|black|red|green|colorless)(?: and (white|blue|black|red|green))? ([A-Z][a-z]+(?: [A-Z][a-z]+)*) creature tokens?(?: with (.+))?\.',text)
+    m=re.fullmatch(r'Create (a|an|one|two|three|four|[1-9][0-9]*) (tapped )?([0-9]+)/([1-9][0-9]*) (white|blue|black|red|green|colorless)(?: and (white|blue|black|red|green))? ([A-Z][a-z]+(?: [A-Z][a-z]+)*) (land )?creature tokens?(?: with (.+))?\.',text)
     if not m: return None
-    abilities=frozenset(re.split(r', | and ',m[8] or ''))-{''}
+    abilities=frozenset(re.split(r', | and ',m[9] or ''))-{''}
     if not abilities <= KEYWORDS-{'flash'}: return None
     if m[5]=='colorless' and m[6]: return None
     amount={'a':1,'an':1,'one':1,'two':2,'three':3,'four':4}.get(m[1])
     if amount is None: amount=int(m[1])
     return TokenSpec(amount,int(m[3]),int(m[4]),tuple(c.title() for c in (m[5],m[6]) if c and c!='colorless'),
-                     tuple(m[7].split()),abilities,bool(m[2]))
+                     tuple(m[7].split()),abilities,bool(m[2]),bool(m[8]))
 
 @dataclass(frozen=True)
 class Selector:

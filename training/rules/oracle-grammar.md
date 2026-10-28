@@ -132,3 +132,13 @@ Goblin Offensive from the real deck imports through the generic grammar. No card
 Validation: 108 tests pass, including fixed costs, repeated X, zero X, token characteristics, draw/life substitution, and Sol Ring paying an X spell while retaining surplus. Six distinct real-deck pairings (seeds 942–947): five reached ten turns per player, one ended earlier, no new runtime questions. None of these six random matches cast an X spell, so direct X coverage comes from focused tests and the recorded `training/examples/x-focused.json` scenario. Pool summary: `training/examples/x-spells-942.json`. This remains diagnostic only, not live Java golem integration or strategy training.
 
 Rules reference: Wizards Comprehensive Rules 107.3 and casting procedure: https://media.wizards.com/2026/downloads/MagicCompRules%2020260417.pdf
+
+## Land-creature tokens
+
+The reusable token grammar now preserves an optional land card type alongside creature, including for fixed counts, triggered creation, and X sorceries. Awaken the Woods imports with its reminder text removed by the existing reminder parser. Tokens retain both Land and Creature, Forest and Dryad, and remain nonbasic. Their intrinsic mana ability follows their basic land subtype; token color alone does not grant production. Fresh land creatures cannot tap for mana or attack unless they have haste; the controller's next untap removes freshness. Used sources tap once, and tokens that leave no longer produce mana.
+
+Mana-source discovery is shared between payment and the available-X budget. Land creatures also count for the diagnostic's supported conditional land-entry checks, with subtype metadata preserved. This does not enable arbitrary land cards with creatures' abilities or general landfall triggers; unsupported text remains rejected.
+
+Validation: 112 tests pass. Focused Awaken the Woods tests cover X=2, land/creature types, nonbasic status, no immediate mana or attacks, next-turn payment, source tapping, source removal, haste, and subtype-dependent color. Six distinct pairings at seeds 1042–1047 produced three ten-turn windows and three earlier wins, without runtime questions. None cast Awaken the Woods in that batch; direct coverage is from focused tests. Summary: `training/examples/land-tokens-1042.json`. Live golem integration remains pending.
+
+Rules reference: Wizards Comprehensive Rules 302.6, 305.6, 305.8, and 702.10: https://media.wizards.com/2026/downloads/MagicCompRules%2020260619.pdf
