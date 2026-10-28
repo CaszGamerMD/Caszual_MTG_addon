@@ -186,6 +186,7 @@ class Card:
     is_token: bool = False
     colors: tuple[str, ...] = ()
     legendary: bool = False
+    instant: bool = False
 
 
 
@@ -339,6 +340,7 @@ class Simulator:
         self.land_played = False
         self.main_return = ""
         self.stack=PriorityStack(starter)
+        self._current_spell=None
         self.manual_priority=False
         self._resolving_stack=False
         self.token_sequence = 0
@@ -404,6 +406,12 @@ class Simulator:
         for i, p in enumerate(self.players):
             cards = p.library + p.hand + p.graveyard + [x.card for x in p.battlefield]
             if p.command_zone: cards.append(p.command_zone)
+            cards += [frame.payload[1] for frame in self.stack.items
+                      if frame.controller==i and frame.payload[0].get('operation')=='spell'
+                      and not frame.payload[0].get('copy')]
+            if self._current_spell and self._current_spell[0]==i:
+                resolving=self._current_spell[1]
+                if not any(c.id==resolving.id for c in cards): cards.append(resolving)
             if sum(not c.is_token for c in cards) != self.total_cards[i] or len({c.id for c in cards}) != len(cards):
                 raise RuntimeError("Card conservation failed")
 
@@ -486,14 +494,105 @@ class Simulator:
 
     def pass_priority(self, actor):
         status,item=self.stack.pass_priority(actor)
+        if item and item.payload[0].get('operation')=='spell' and not item.payload[0].get('copy'):
+            self._current_spell=(item.controller,item.payload[1])
         self.log('priority_pass',f'Player {actor+1} passes priority.',actor=actor)
         if status=='resolve':
             self.log('stack_resolve',f'{item.label} resolves.',stackId=item.id)
             self._resolving_stack=True
-            try: self._resolve_entry_effects([item.payload[0]],item.payload[1])
-            finally: self._resolving_stack=False
+            try:
+                if item.payload[0].get('operation')=='spell': self.resolve_spell(item.payload[0],item.payload[1])
+                else: self._resolve_entry_effects([item.payload[0]],item.payload[1])
+            finally:
+                self._resolving_stack=False
+                self._current_spell=None
             self.stack.priority=self.active
         return status
+
+    def response_choices(self,seat):
+        if seat!=self.stack.priority: return ()
+        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','token_spell')
+                     and self.payment(c,seat=seat)['paid'])
+
+    def priority_observation(self,seat):
+        if seat!=self.stack.priority: raise ValueError('Player lacks priority')
+        actions=[Candidate('priority-pass','priority_pass',label='Pass priority')]
+        actions.extend(Candidate(c.id,'respond',c.id,features(draw=c.draw,life=c.life),label='Respond with '+c.name)
+                       for c in self.response_choices(seat))
+        return Observation(seat,self.turn,self.phase,tuple(self.players[seat].hand),
+                           json.dumps(self.state(),sort_keys=True),tuple(actions))
+
+    def act_priority(self,seat,choice):
+        if choice not in self.priority_observation(seat).legal_actions: raise ValueError('Illegal priority choice')
+        if choice.kind=='priority_pass': return self.pass_priority(seat)
+        card=next(c for c in self.players[seat].hand if c.id==choice.card_id)
+        self.cast_spell(seat,card)
+        return 'cast'
+
+    def cast_spell(self,seat,card,x=None,commander=False):
+        player=self.players[seat]
+        if not card.instant and seat!=self.stack.priority: raise ValueError('Player lacks priority')
+        if self.stack.items:
+            if seat!=self.stack.priority or not card.instant: raise ValueError('Spell timing or priority invalid')
+        elif seat!=self.active or self.phase not in ('main','second_main'):
+            if not card.instant or seat!=self.stack.priority: raise ValueError('Spell timing invalid')
+        if not commander and card not in player.hand: raise ValueError('Card not in hand')
+        payment=self.payment(card,player.commander_casts if commander else 0,x=x,seat=seat)
+        if not payment['paid']: raise ValueError('Cannot pay spell cost')
+        for source in player.battlefield:
+            if source.card.id in payment['sources']:source.tapped=True
+        player.mana_pool=list(payment['pool'])
+        if commander:player.command_zone=None;player.commander_casts+=1
+        else:player.hand.remove(card)
+        prior=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)
+        self.stack.active=self.active
+        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x},card),card.name)
+        self.log('cast',f'Player {seat+1} casts {card.name}.',actor=seat,card=card.name,
+                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x)
+        self.stack.priority=seat
+        self.log('stack_push',f'{card.name} goes on the stack.',stackId=frame.id,controller=seat)
+        if card.storm:
+            self.log('storm',f'{card.name} creates {prior} spell copies.',copies=prior)
+            for _ in range(prior):self.stack.push(seat,({'operation':'spell','controller':seat,'copy':True,'x':x},card),card.name+' copy')
+        if not self.manual_priority and not self._resolving_stack:
+            while self.stack.items and not self.finished:self.pass_priority(self.stack.priority)
+
+    def resolve_spell(self,event,original):
+        controller=event['controller'];p=self.players[controller];card=original
+        if event.get('copy'): self.log('spell_copy',f'A copy of {card.name} resolves.',card=card.name)
+        if card.kind in ('creature','vehicle','enchantment'):
+            triggers=self.enter_creature(card,p)
+            self.resolve_entry_triggers(triggers,card)
+        elif card.kind=='mana_artifact': p.battlefield.append(Permanent(card))
+        elif not event.get('copy'): p.graveyard.append(original)
+        if card.kind=='x_spell':
+            x=event['x']
+            card=replace(card,kind='token_spell' if card.x_effect=='tokens' else 'spell',
+                         token_count=x if card.x_effect=='tokens' else 0,
+                         draw=x if card.x_effect=='draw' else 0,life=x if card.x_effect=='life' else 0)
+        if card.kind == "token_spell":
+            for resolution in range(1):
+                token_triggers = []
+                for _ in range(card.token_count):
+                    self.token_sequence += 1
+                    definition = card.token_definition
+                    if definition is None: raise RuntimeError("Missing parsed token characteristics")
+                    token = Card(f"token-{self.token_sequence}",definition.name,"creature",
+                                 traits=f"{definition.power};{definition.toughness};"+",".join(sorted(definition.abilities)),
+                                 power=definition.power,toughness=definition.toughness,
+                                 event_definition=definition,is_token=True)
+                    token_triggers.extend(self.enter_creature(token,p))
+                    next(x for x in p.battlefield if x.card.id==token.id).tapped = card.token_tapped
+                    self.log("token", f"Creates a {definition.power}/{definition.toughness} {definition.name} creature token.",
+                             card=definition.name, token=token.id)
+                # Finish creating the whole batch before any entry trigger resolves.
+                self.resolve_entry_triggers(token_triggers, card)
+                if self.finished: return False
+        if card.kind == "spell":
+            for _ in range(card.draw): self.draw(controller)
+            p.life += card.life
+            self.log("resolve", f"{card.name} resolves.", lifeGain=card.life, drawn=card.draw)
+            self.outcome()
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
@@ -639,10 +738,11 @@ class Simulator:
             sources.append((item.card.id,options))
         return sources
 
-    def payment(self, card: Card, tax: int = 0, x: int | None = None) -> dict:
+    def payment(self, card: Card, tax: int = 0, x: int | None = None, seat: int | None = None) -> dict:
         cost = card.mana_cost + (("{2}" * tax) if tax else "")
-        player=self.players[self.active]
-        sources=self.mana_sources(self.active)
+        seat=self.active if seat is None else seat
+        player=self.players[seat]
+        sources=self.mana_sources(seat)
         return mana_pool.plan(cost,player.mana_pool,sources,x)
 
     def damage(self, a: Card, b: Card | None) -> dict:
@@ -801,6 +901,7 @@ class Simulator:
                 return False
             if self.phase == "end": self.active = 1 - self.active
             self.turn += 1
+            self.stack.active=self.active;self.stack.priority=self.active
             self.land_played = False
             self.phase = "untap"
             p = self.players[self.active]
@@ -849,60 +950,7 @@ class Simulator:
                     if self.phase == "land": self.phase = "main"
                     self.log("land", f"Player {self.active + 1} plays {card.name}.", card=card.name)
                 else:
-                    payment = self.payment(card, p.commander_casts if choice.kind == "cast_commander" else 0, x=choice.x_value)
-                    if not payment["paid"]: raise RuntimeError("Mana changed before action")
-                    for x in p.battlefield:
-                        if x.card.id in payment["sources"]: x.tapped = True
-                    p.mana_pool=list(payment["pool"])
-                    if choice.kind == "cast_commander":
-                        p.command_zone = None
-                        p.commander_casts += 1
-                    else:
-                        p.hand.remove(card)
-                    triggers = []
-                    if card.kind in ("creature", "vehicle", "enchantment"):
-                        triggers = self.enter_creature(card, p)
-                    elif card.kind == "mana_artifact":
-                        p.battlefield.append(Permanent(card))
-                    else:
-                        p.graveyard.append(card)
-                    if card.kind == 'x_spell':
-                        if type(choice.x_value) is not int or choice.x_value<0: raise RuntimeError('Missing chosen X')
-                        card=replace(card,kind='token_spell' if card.x_effect=='tokens' else 'spell',
-                            token_count=choice.x_value if card.x_effect=='tokens' else 0,
-                            draw=choice.x_value if card.x_effect=='draw' else 0,
-                            life=choice.x_value if card.x_effect=='life' else 0)
-                    self.log("cast", f"Player {self.active + 1} casts {card.name}.",
-                             card=card.name, manaSources=payment["sources"], manaPool=list(p.mana_pool),
-                             commander=choice.kind == "cast_commander", xValue=choice.x_value)
-                    self.resolve_entry_triggers(triggers, card)
-                    if self.finished: return False
-                    if card.kind == "token_spell":
-                        copies=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)-1 if card.storm else 0
-                        if card.storm: self.log('storm',f'{card.name} creates {copies} spell copies.',copies=copies)
-                        for resolution in range(copies+1):
-                            if resolution<copies: self.log('spell_copy',f'A copy of {card.name} resolves.',card=card.name)
-                            token_triggers = []
-                            for _ in range(card.token_count):
-                                self.token_sequence += 1
-                                definition = card.token_definition
-                                if definition is None: raise RuntimeError("Missing parsed token characteristics")
-                                token = Card(f"token-{self.token_sequence}",definition.name,"creature",
-                                             traits=f"{definition.power};{definition.toughness};"+",".join(sorted(definition.abilities)),
-                                             power=definition.power,toughness=definition.toughness,
-                                             event_definition=definition,is_token=True)
-                                token_triggers.extend(self.enter_creature(token,p))
-                                next(x for x in p.battlefield if x.card.id==token.id).tapped = card.token_tapped
-                                self.log("token", f"Creates a {definition.power}/{definition.toughness} {definition.name} creature token.",
-                                         card=definition.name, token=token.id)
-                            # Finish creating the whole batch before any entry trigger resolves.
-                            self.resolve_entry_triggers(token_triggers, card)
-                            if self.finished: return False
-                    if card.kind == "spell":
-                        for _ in range(card.draw): self.draw(self.active)
-                        p.life += card.life
-                        self.log("resolve", f"{card.name} resolves.", lifeGain=card.life, drawn=card.draw)
-                        self.outcome()
+                    self.cast_spell(self.active,card,choice.x_value,choice.kind=='cast_commander')
         elif self.phase == "attack":
             choice = self.decide(self.active)
             if choice.kind == "pass":
@@ -1105,7 +1153,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
     return Card(id=uid, name=definition["name"], kind=parsed["kind"],
-        mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
+        instant="Instant" in definition.get("types",[]), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),
         life=parsed.get("life", 0), land_rule=parsed.get("land_rule", ""),
