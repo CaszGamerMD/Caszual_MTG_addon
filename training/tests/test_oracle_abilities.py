@@ -4,10 +4,46 @@ import unittest
 from dataclasses import replace
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from card_events import parse_card, Game, Permanent, Definition
-from oracle_abilities import compile_abilities
+from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
 class OracleGrammarChecks(unittest.TestCase):
+    def test_token_instruction_extracts_all_characteristics(self):
+        spec=parse_token_creation('Create three tapped 2/3 blue and black Faerie Rogue creature tokens with flying and lifelink.')
+        self.assertEqual((spec.amount,spec.power,spec.toughness,spec.tapped),(3,2,3,True))
+        self.assertEqual(spec.colors,('Blue','Black'))
+        self.assertEqual(spec.subtypes,('Faerie','Rogue'))
+        self.assertEqual(spec.keywords,frozenset({'flying','lifelink'}))
+        self.assertEqual(parse_token_creation('Create a 4/4 colorless Golem creature token.').colors,())
+        for text in ['Create X 1/1 red Goblin creature tokens.',
+                     'Create two 1/1 red Goblin creature tokens. Draw a card.',
+                     'Create two 1/1 red Goblin creature tokens with ward {2}.',
+                     'Create a 0/0 green Ooze creature token.']:
+            self.assertIsNone(parse_token_creation(text))
+
+    def test_unfamiliar_token_spell_executes_parsed_characteristics(self):
+        raw=dict(name='Unseen token spell',types=['Sorcery'],manaCost='{G}',
+                 oracleText='Create two tapped 2/3 blue and black Faerie Rogue creature tokens with flying.')
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'spell',{'Green'})
+            land=s.Card('mana-land','Forest','land',mask=16)
+            self.assertEqual(card.kind,'token_spell')
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card,land],s.demo_deck(1)),diagnostic=True)
+            player=sim.players[0]
+            for item in [card,land]:
+                (player.hand if item in player.hand else player.library).remove(item)
+            player.hand.append(card);player.battlefield.append(s.Permanent(land))
+            sim.phase='main'
+            from unittest.mock import patch
+            with patch.object(sim,'decide',return_value=s.Candidate('cast','cast',card_id=card.id)):
+                sim.step()
+            tokens=[p for p in player.battlefield if p.card.is_token]
+            self.assertEqual(len(tokens),2)
+            self.assertTrue(all(p.tapped and p.fresh for p in tokens))
+            self.assertTrue(all(sim.effective_card(p).traits=='2;3;flying' for p in tokens))
+            self.assertTrue(all(p.card.event_definition.colors==frozenset({'Blue','Black'}) for p in tokens))
+            sim.invariant()
+
     def test_keyword_grant_uses_color_controller_and_source_presence(self):
         d=self.definition('Red creatures you control have first strike.','Unfamiliar teacher')
         self.assertTrue(d.supported)

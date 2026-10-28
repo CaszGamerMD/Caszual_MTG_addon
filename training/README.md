@@ -193,3 +193,11 @@ controlled creature. Continuous effects can grant one supported combat keyword
 to creatures filtered by controller, color and “other.” Cathars' Crusade and
 Bloodmark Mentor use these generic paths. There are 87 regression checks;
 `examples/counter-keyword-242.json` records the rerun of the six deck pairings.
+
+### Generic token spell parsing
+
+Fixed creature-token instructions now parse quantity, stats, colors, subtypes,
+keywords and tapped status instead of assuming red 1/1 Goblins. Complete-text
+validation keeps additional unsupported abilities blocked. See
+[rules/oracle-grammar.md](rules/oracle-grammar.md) for scope and remaining token
+work. There are 89 regression checks and a new six-pairing seed-342 summary.

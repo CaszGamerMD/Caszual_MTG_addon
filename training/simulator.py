@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 from card_events import Game as EventGame, Permanent as EventPermanent, Definition as EventDefinition, parse_card as parse_event_card
 import base64
+from oracle_abilities import parse_token_creation
 from dataclasses import dataclass, field, replace, asdict
 import hashlib
 import itertools
@@ -174,6 +175,8 @@ class Card:
     basic_land: bool = False
     event_definition: EventDefinition | None = None
     token_count: int = 0
+    token_definition: EventDefinition | None = None
+    token_tapped: bool = False
     is_token: bool = False
     colors: tuple[str, ...] = ()
     legendary: bool = False
@@ -332,7 +335,7 @@ class Simulator:
                     continue  # Retained in the real library/hand but never treated as playable.
                 if self.diagnostic and card.event_definition and card.event_definition.supported:
                     continue
-                if self.diagnostic and card.kind == "token_spell" and 1 <= card.token_count <= 4:
+                if self.diagnostic and card.kind == "token_spell" and card.token_count > 0 and card.token_definition is not None:
                     continue
                 if card.kind not in ("land", "creature", "spell"):
                     self.pause("Unsupported sandbox card kind: " + card.kind, card)
@@ -747,13 +750,16 @@ class Simulator:
                         token_triggers = []
                         for _ in range(card.token_count):
                             self.token_sequence += 1
-                            definition = EventDefinition("Goblin",frozenset({"Creature"}),frozenset({"Goblin"}),
-                                                         False,1,1,frozenset(),colors=frozenset({"Red"}))
-                            token = Card(f"token-{self.token_sequence}","Goblin","creature",
-                                         traits="1;1;",power=1,toughness=1,
+                            definition = card.token_definition
+                            if definition is None: raise RuntimeError("Missing parsed token characteristics")
+                            token = Card(f"token-{self.token_sequence}",definition.name,"creature",
+                                         traits=f"{definition.power};{definition.toughness};"+",".join(sorted(definition.abilities)),
+                                         power=definition.power,toughness=definition.toughness,
                                          event_definition=definition,is_token=True)
                             token_triggers.extend(self.enter_creature(token,p))
-                            self.log("token", "Creates a 1/1 red Goblin creature token.", card="Goblin", token=token.id)
+                            next(x for x in p.battlefield if x.card.id==token.id).tapped = card.token_tapped
+                            self.log("token", f"Creates a {definition.power}/{definition.toughness} {definition.name} creature token.",
+                                     card=definition.name, token=token.id)
                         # Finish creating the whole batch before any entry trigger resolves.
                         self.resolve_entry_triggers(token_triggers, card)
                         if self.finished: return False
@@ -924,9 +930,12 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                   "event":event_definition}
     if parsed["kind"] == "unsupported":
         text = definition.get("oracleText", "")
-        token_match = re.fullmatch(r"Create (two|three|four) 1/1 red Goblin creature tokens\.", text)
-        if definition.get("types") == ["Sorcery"] and token_match and re.fullmatch(r"(?:\{(?:[WUBRGC]|[0-9]{1,2})\})+", cost):
-            parsed = {"kind":"token_spell", "token_count":{"two":2,"three":3,"four":4}[token_match[1]]}
+        token_spec = parse_token_creation(text)
+        if definition.get("types") == ["Sorcery"] and token_spec and re.fullmatch(r"(?:\{(?:[WUBRGC]|[0-9]{1,2})\})+", cost):
+            template = EventDefinition(" ".join(token_spec.subtypes),frozenset({"Creature"}),frozenset(token_spec.subtypes),
+                False,token_spec.power,token_spec.toughness,token_spec.keywords,colors=frozenset(token_spec.colors))
+            parsed = {"kind":"token_spell", "token_count":token_spec.amount,
+                      "token_definition":template,"token_tapped":token_spec.tapped}
         else:
             parsed = diagnostic_land(definition, identity) or parsed
     return Card(id=uid, name=definition["name"], kind=parsed["kind"],
@@ -937,6 +946,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         land_subtypes=tuple(definition.get("subTypes", [])),
         basic_land="Basic" in definition.get("superTypes", []), event_definition=parsed.get("event"),
         token_count=parsed.get("token_count",0),
+        token_definition=parsed.get("token_definition"),token_tapped=parsed.get("token_tapped",False),
         colors=tuple(definition.get("colors") or []), legendary="Legendary" in (definition.get("superTypes") or []))
 
 

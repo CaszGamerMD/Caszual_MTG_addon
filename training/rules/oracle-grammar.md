@@ -46,3 +46,23 @@ conditions end, and unhandled-text rejection. Six distinct real-deck pairings
 (seeds 142–147) each completed ten turns per player: 61 land plays, 20 casts and
 22 trigger log entries, preserving the previous baseline. Results are in
 `examples/oracle-grammar-pool-summary.json`.
+
+## Generic standalone token instructions
+
+Fixed-quantity sorcery instructions now compile through `parse_token_creation`
+into a TokenSpec: amount, power/toughness, colors, subtypes, supported keywords
+and tapped state. The simulator executes those characteristics, replacing the
+former red-1/1-Goblin-only spell path. Unknown names use the same parser. Token
+creation finishes its batch before entry triggers resolve. Creature tokens retain
+colors/subtypes and enter fresh; tapped tokens remain tapped.
+
+This does not yet migrate the legacy upkeep, death or self-entry token handlers.
+Instant timing, X amounts, variable P/T, 0-toughness token state-based actions,
+replacement effects, ward and additional instructions remain rejected or flagged.
+There is no automatic flashback support. Complete-text parsing prevents a simple
+creation instruction from hiding unimplemented additional abilities.
+
+89 regression tests pass, including an unfamiliar spell creating tapped 2/3
+blue-black Faerie Rogues with flying. A six-pairing real-deck batch (seed 342) is
+recorded in examples/token-grammar-342.json. Five completed ten turns each; one
+ended earlier under diagnostic rules. No strategic-learning claim is made.
