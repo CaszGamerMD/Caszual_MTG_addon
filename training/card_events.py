@@ -331,7 +331,7 @@ class Game:
         equipment.attached_to = target.id
         self.emit("equip", equipment=equipment_id, target=creature_id, mana=2)
 
-    def attack(self, attacker_id: str, defending_player: int):
+    def attack(self, attacker_id: str, defending_player: int, defer=False):
         a = self.battlefield[attacker_id]
         if self.phase != "combat" or a.controller != self.turn_player or defending_player not in (0,1) or defending_player == a.controller:
             raise IllegalAction("Attacker/defender or phase invalid")
@@ -345,11 +345,14 @@ class Game:
                 a.counters+=power
                 self.emit('trigger',source=a.id,effect='add +1/+1 counter',target=a.id)
             elif operation=='counter_power_tokens':
-                a.counters+=power
+                last_power=self.stats(a)[0]
+                if not defer: a.counters+=power
                 amount=max(0,self.stats(a)[0])
                 spec=dict(asdict(keyword),amount=amount,keywords=sorted(keyword.keywords))
                 self.emit('trigger',source=a.id,name=a.definition.name,controller=a.controller,
-                          operation='create_tokens',effect='counter then create tokens equal to power',tokenSpec=spec)
+                          operation='counter_power_tokens' if defer else 'create_tokens',
+                          counterAmount=power,lastPower=last_power,
+                          effect='counter then create tokens equal to power',tokenSpec=spec)
             elif operation=='saddled_boost' and a.saddled:
                 a.temporary_power+=power;a.temporary_toughness+=toughness
                 a.temporary_abilities=a.temporary_abilities|{keyword}

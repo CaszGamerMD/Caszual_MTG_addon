@@ -10,6 +10,7 @@ import base64
 from oracle_abilities import parse_token_creation
 import mana_pool
 import x_spells
+from priority_stack import PriorityStack
 from dataclasses import dataclass, field, replace, asdict
 import hashlib
 import itertools
@@ -337,6 +338,9 @@ class Simulator:
         self.pending: str | None = None
         self.land_played = False
         self.main_return = ""
+        self.stack=PriorityStack(starter)
+        self.manual_priority=False
+        self._resolving_stack=False
         self.token_sequence = 0
         self.log("setup", "Two independent agents use frozen policies; sandbox rules apply.")
         for player in self.players:
@@ -387,6 +391,7 @@ class Simulator:
 
     def state(self) -> dict:
         return {"active": self.active, "turn": self.turn, "phase": self.phase,
+                "stack": self.stack.public(), "priority": self.stack.priority,
                 "players": [{"seat": i, "life": p.life, "handCount": len(p.hand),
                              "libraryCount": len(p.library), "manaPool": list(p.mana_pool),
                              "battlefield": [self.display_permanent(x) for x in p.battlefield],
@@ -467,7 +472,40 @@ class Simulator:
         return [event for event in game.events if event["kind"] == "trigger"]
 
     def resolve_entry_triggers(self, triggers: list[dict], card: Card):
+        # APNAP placement: active controller first, nonactive on top. Each controller
+        # uses reverse discovery order on placement to preserve discovery resolution order.
+        self.stack.active=self.active
+        for controller in (self.active,1-self.active):
+            for event in reversed([e for e in triggers if e.get('controller',self.active)==controller]):
+                item=self.stack.push(controller,(event,card),event.get('name',card.name))
+                self.log('stack_push',f'{item.label} ability goes on the stack.',stackId=item.id,controller=controller)
+        if not self._resolving_stack: self.stack.priority=self.active
+        if not self.manual_priority and not self._resolving_stack:
+            while self.stack.items and not self.finished:
+                self.pass_priority(self.stack.priority)
+
+    def pass_priority(self, actor):
+        status,item=self.stack.pass_priority(actor)
+        self.log('priority_pass',f'Player {actor+1} passes priority.',actor=actor)
+        if status=='resolve':
+            self.log('stack_resolve',f'{item.label} resolves.',stackId=item.id)
+            self._resolving_stack=True
+            try: self._resolve_entry_effects([item.payload[0]],item.payload[1])
+            finally: self._resolving_stack=False
+            self.stack.priority=self.active
+        return status
+
+    def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='counter_power_tokens':
+                game=self.event_game('main')
+                source=game.battlefield.get(event['source'])
+                if source is not None:
+                    source.counters+=event['counterAmount']
+                    amount=max(0,game.stats(source)[0])
+                    self.sync_events(game)
+                else: amount=max(0,event['lastPower'])
+                event=dict(event,operation='create_tokens',tokenSpec=dict(event['tokenSpec'],amount=amount))
             if event.get("operation") == "create_tokens":
                 spec=event["tokenSpec"]
                 owner=self.players[event["controller"]]
@@ -532,6 +570,11 @@ class Simulator:
             if self.finished: return
 
     def send_to_destination(self, player: Player, item: Permanent):
+        for frame in self.stack.items:
+            event,_=frame.payload
+            if event.get('operation')=='counter_power_tokens' and event.get('source')==item.card.id:
+                effective=self.effective_card(item)
+                if effective: event['lastPower']=effective.power
         player.battlefield.remove(item)
         if item.card.is_token:
             return  # Tokens cease to exist after leaving the battlefield.
@@ -735,6 +778,8 @@ class Simulator:
         return choice
 
     def step(self) -> bool:
+        if self.manual_priority and self.stack.items:
+            raise RuntimeError('Pending stack objects require priority actions before advancing the turn')
         previous=(self.active,"main" if self.phase=="land" else self.phase)
         result=self._step()
         if previous!=(self.active,"main" if self.phase=="land" else self.phase):
@@ -867,14 +912,14 @@ class Simulator:
                 self.pending = choice.card_id
                 x = next(x for x in p.battlefield if x.card.id == self.pending)
                 game = self.event_game("combat")
-                game.attack(x.card.id, 1-self.active)
+                game.attack(x.card.id, 1-self.active, defer=True)
                 self.sync_events(game)
                 self.phase = "block"
                 self.log("attack", f"Player {self.active + 1} attacks with {x.card.name}.",
                          attacker=x.card.id)
                 for event in game.events:
                     if event["kind"] == "trigger":
-                        if event.get('operation')=='create_tokens':
+                        if event.get('operation') in ('create_tokens','counter_power_tokens'):
                             self.resolve_entry_triggers([event],x.card)
                             if self.finished: return False
                             continue
