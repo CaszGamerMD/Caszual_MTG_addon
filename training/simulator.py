@@ -874,6 +874,10 @@ class Simulator:
                          attacker=x.card.id)
                 for event in game.events:
                     if event["kind"] == "trigger":
+                        if event.get('operation')=='create_tokens':
+                            self.resolve_entry_triggers([event],x.card)
+                            if self.finished: return False
+                            continue
                         self.log("trigger", f"{x.card.name}: {event['effect']}.",
                                  **{k:v for k,v in event.items() if k != "kind"})
         elif self.phase == "block":

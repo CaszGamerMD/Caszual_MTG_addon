@@ -5,7 +5,7 @@ combat damage, costs for casting spells, or the full turn simulator. Unknown
 rules raise NeedsRules rather than being treated as blank.
 """
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 import re
 from attack_abilities import compile as compile_attacks
 from oracle_abilities import Trigger, StaticEffect, compile_abilities, matches, event_data
@@ -104,7 +104,11 @@ def parse_card(card: dict) -> Definition:
     program = compile_abilities(text,name)
     if program is not None and ("Creature" in types or "Enchantment" in types):
         return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects)
-    attack_program=compile_attacks(text)
+    attack_text=text.replace(name,'this creature') if name else text
+    if ',' in name:
+        short=name.split(',')[0]
+        attack_text=re.sub(r'\b'+re.escape(short)+r"(?= attacks|\'s power)",'this creature',attack_text)
+    attack_program=compile_attacks(attack_text)
     if attack_program:
         keywords,crew,saddle,effects=attack_program
         if (crew is not None and 'Vehicle' not in subtypes) or (saddle is not None and 'Mount' not in subtypes):
@@ -340,6 +344,12 @@ class Game:
             if operation=='counter':
                 a.counters+=power
                 self.emit('trigger',source=a.id,effect='add +1/+1 counter',target=a.id)
+            elif operation=='counter_power_tokens':
+                a.counters+=power
+                amount=max(0,self.stats(a)[0])
+                spec=dict(asdict(keyword),amount=amount,keywords=sorted(keyword.keywords))
+                self.emit('trigger',source=a.id,name=a.definition.name,controller=a.controller,
+                          operation='create_tokens',effect='counter then create tokens equal to power',tokenSpec=spec)
             elif operation=='saddled_boost' and a.saddled:
                 a.temporary_power+=power;a.temporary_toughness+=toughness
                 a.temporary_abilities=a.temporary_abilities|{keyword}

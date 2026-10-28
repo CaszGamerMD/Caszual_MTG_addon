@@ -1,6 +1,6 @@
 """Whole-program grammar for keyword/crew/saddle and self attack effects."""
 import re
-from oracle_abilities import KEYWORDS
+from oracle_abilities import KEYWORDS, parse_token_creation
 
 def compile(text):
     keywords=set();crew=saddle=None;effects=[]
@@ -9,6 +9,11 @@ def compile(text):
         if not line: continue
         words={w.strip().lower() for w in line.split(',')}
         if words<=KEYWORDS: keywords.update(words);continue
+        m=re.fullmatch(r"Whenever this creature attacks, put a \+1/\+1 counter on it, then create a number of (.+) equal to this creature's power\.",line)
+        if m:
+            token=parse_token_creation('Create a '+m[1]+'.')
+            if token: effects.append(('counter_power_tokens',1,0,token));continue
+            return None
         m=re.fullmatch(r'(Crew|Saddle) ([1-9][0-9]*)',line)
         if m:
             if m[1]=='Crew': crew=int(m[2])

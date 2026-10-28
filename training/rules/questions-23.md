@@ -18,7 +18,7 @@ Three resolved through reusable parsing: Honor of the Pure (capitalized color se
 | Heliod, God of the Sun | Devotion, conditional creature type, activated token creation |
 | Honor of the Pure | Implemented in diagnostic simulator |
 | Hopeful Eidolon | Bestow and Aura attachment/type transitions |
-| Krenko, Tin Street Kingpin | Sequential attack effects, counters then last-current power token count |
+| Krenko, Tin Street Kingpin | Implemented in diagnostic: counter then current-power token creation |
 | Lifelink | Aura targeting and attached ability grants |
 | Lumen-Class Frigate | Station activation and counter thresholds |
 | Muxus, Goblin Grandee | Library reveal/filter, mana value, multiple entries, temporary attack stats |
@@ -37,3 +37,5 @@ Reference: https://magic.wizards.com/en/news/feature/modern-horizons-2-release-n
 Attack follow-up: 116 tests cover these two cards, unfamiliar names and amounts, unsaddled non-triggering, persistent counters, temporary flying/stat cleanup, and simulator state roundtrips. Seventeen original cards remain blocked; this is not complete Magic support.
 
 Combat-damage follow-up: generic subtype watchers discard only after positive player combat damage. The damaged player chooses their last card deterministically, without a hidden-hand observation by the attacking AI. Empty hands do nothing. Damage and death triggers use controller ordering together; first/double-strike interleaving remains a blocking question. 117 tests cover normal damage and zero damage in addition to prior regressions.
+
+Power-token follow-up: the whole attack instruction composes self-counter addition with parsed token characteristics and a current-power count. Self references normalize full and Oracle short names without behavior dispatch. Tokens resolve as a batch before their entry triggers and are not declared attackers. Full response windows and source departure while a trigger is on the stack remain unavailable in this diagnostic. Focused tests cover real Krenko and an unfamiliar 2/3 flying Drake producer, prior counters, repeated attacks, and rejection of unparsed trailing text. Sixteen original cards remain blocked.
