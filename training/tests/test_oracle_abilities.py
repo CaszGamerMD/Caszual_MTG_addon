@@ -58,7 +58,7 @@ class OracleGrammarChecks(unittest.TestCase):
             self.assertFalse(sim.players[0].battlefield)
             sim.invariant()
         self.assertFalse(self.definition('Whenever a creature you control enters, create a 1/1 green Squirrel creature token.').supported)
-        self.assertFalse(self.definition('When this creature dies, create a 1/1 green Squirrel creature token.').supported)
+        self.assertTrue(self.definition('When this creature dies, create a 1/1 green Squirrel creature token.').supported)
 
     def test_token_instruction_extracts_all_characteristics(self):
         spec=parse_token_creation('Create three tapped 2/3 blue and black Faerie Rogue creature tokens with flying and lifelink.')

@@ -147,10 +147,8 @@ def compile_abilities(text, name=''):
         subject=selector(m[1]); action=effect(m[3])
         if subject is None or action is None: return None
         event='dies' if m[2]=='dies' else 'enters'
-        if action.operation=='create_tokens' and (event!='enters' or not subject.self_only):
+        if action.operation=='create_tokens' and not subject.self_only:
             return None  # Repeating token engines need bounded stack/loop handling.
-        # Scry on death needs a new resolution implementation, not just parsing.
-        if event=='dies' and action.operation in ('scry','add_counters'): return None
         triggers.append(Trigger(event,subject,action))
     return Program(tuple(triggers),frozenset(keywords),tuple(static_effects)) if triggers or static_effects else None
 

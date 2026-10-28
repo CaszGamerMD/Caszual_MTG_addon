@@ -69,6 +69,69 @@ class SimulatorChecks(unittest.TestCase):
         self.assertEqual([p.life for p in sim.players],[41,39])
         self.assertFalse(sim.report()["learningEligible"])
 
+    def generic_death_fixture(self, text):
+        sim,actual=self.death_fixture()
+        raw=dict(name="Unfamiliar death source",types=["Creature"],power="1",toughness="1",
+                 manaCost="{G}",oracleText=text)
+        card=s.import_diagnostic_card(self.rules,raw,1,actual[1][0].id,{"Green"})
+        self.assertEqual(card.kind,"creature")
+        sim.players[1].battlefield[0].card=card
+        actual[1][0]=card
+        return sim,actual
+
+    def test_generic_death_tokens_resolve_after_source_leaves(self):
+        sim,actual=self.generic_death_fixture(
+            "When this creature dies, create two tapped 2/3 blue Drake creature tokens with flying.")
+        self.resolve_fixture_combat(sim,actual)
+        tokens=[p for p in sim.players[1].battlefield if p.card.is_token]
+        self.assertEqual(len(tokens),2)
+        self.assertTrue(all(p.tapped and p.fresh and p.card.traits=="2;3;flying" for p in tokens))
+        self.assertIn(actual[1][0],sim.players[1].graveyard)
+        self.assertFalse(sim.players[0].battlefield)
+        combat=next(e["index"] for e in sim.events if e["kind"]=="combat")
+        created=[e["index"] for e in sim.events if e["kind"]=="trigger" and e["details"].get("operation")=="create_tokens"]
+        self.assertEqual(len(created),1)
+        self.assertGreater(created[0],combat)
+
+    def test_death_token_batch_finishes_before_lethal_entry_trigger(self):
+        sim,actual=self.generic_death_fixture(
+            "When this creature dies, create two 1/1 red Goblin creature tokens.")
+        raw=dict(name="Unfamiliar entry watcher",types=["Enchantment"],manaCost="{R}",
+                 oracleText="Whenever a creature you control enters, this enchantment deals 1 damage to each opponent.")
+        watcher=s.import_diagnostic_card(self.rules,raw,1,"death-watcher",{"Red"})
+        # Replace an existing library card to preserve the fixture's card count.
+        sim.players[1].library.pop()
+        sim.enter_creature(watcher,sim.players[1])
+        sim.players[0].life=1
+        self.resolve_fixture_combat(sim,actual)
+        self.assertEqual(sim.winner,1)
+        self.assertEqual(sum(p.card.is_token for p in sim.players[1].battlefield),2)
+        effects=[e for e in sim.events if e["kind"]=="trigger" and e["details"].get("operation")=="damage"]
+        self.assertEqual(len(effects),1)
+        batch=next(e for e in sim.events if e["kind"]=="trigger" and e["details"].get("operation")=="create_tokens")
+        self.assertLess(batch["index"],effects[0]["index"])
+
+    def test_generic_death_scry_keeps_controller_library_private(self):
+        sim,actual=self.generic_death_fixture("When this creature dies, scry 3.")
+        before=[list(p.library) for p in sim.players]
+        self.resolve_fixture_combat(sim,actual)
+        self.assertEqual([p.library for p in sim.players],before)
+        events=[e for e in sim.events if e["details"].get("operation")=="scry"]
+        self.assertEqual(len(events),1)
+        self.assertIn("Player 2 scries 3",events[0]["message"])
+        self.assertFalse(any(c.id in json.dumps(events) for c in before[1]))
+
+    def test_generic_death_counters_only_affect_surviving_controller_creatures(self):
+        sim,actual=self.generic_death_fixture("When this creature dies, put 2 +1/+1 counters on each creature you control.")
+        for seat in (0,1):
+            card=next(c for c in sim.players[seat].library+sim.players[seat].hand if c.kind=="creature")
+            p=sim.players[seat]
+            (p.hand if card in p.hand else p.library).remove(card)
+            sim.enter_creature(card,p)
+        self.resolve_fixture_combat(sim,actual)
+        self.assertEqual([p.counters for p in sim.players[0].battlefield],[0])
+        self.assertEqual([p.counters for p in sim.players[1].battlefield],[2])
+
     def test_nested_shambler_uses_last_power_and_defender_controls_tapped_tokens(self):
         sim,actual=self.death_fixture("3;3;")
         sim.players[1].battlefield[0].counters=2

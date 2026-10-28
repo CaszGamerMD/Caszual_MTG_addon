@@ -213,3 +213,7 @@ token engines, replacement effects and general stack timing remain flagged.
 ### Generic upkeep follow-up
 
 Upkeep token engines now compile from Oracle text rather than Bitterblossom/Bitterbloom card names. Parsed mandatory life loss and token creation finish together before game-loss checks; new entry triggers follow afterward. Conditions and optional payments remain unsupported. Validation: 92 tests and six distinct real-deck pairings (seeds 542–547), capped at ten turns per player; four reached the cap and two ended earlier with a winner. See `examples/upkeep-542.json` and `rules/oracle-grammar.md`. This is diagnostic rules coverage, not learned strategy.
+
+### Generic death-effect follow-up
+
+Death triggers now compose with fixed self-death token creation, scry, and counters through the common effect interpreter. Tests cover source departure, controller ownership, surviving recipients, hidden library information, and completing token batches before lethal entry triggers. Validation: 96 tests; seeds 642–647 ran six distinct real-deck pairings (four full ten-turn windows, two nine-turn wins). See `examples/death-effects-642.json`. These are rules diagnostics, not learned strategy.

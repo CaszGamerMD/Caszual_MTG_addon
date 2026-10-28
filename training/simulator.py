@@ -839,7 +839,7 @@ class Simulator:
             self.outcome()
             if not self.finished:
                 # APNAP: triggers of the nonactive player resolve first. Within a
-                # controller's set these limited effects are identical choices.
+                # controller's set, discovery order is a deterministic legal choice.
                 for trigger in sorted(death_triggers, key=lambda t: t["controller"] == self.active):
                     controller = trigger["controller"]
                     if trigger["effect"] == "create tapped Squirrels":
@@ -858,12 +858,9 @@ class Simulator:
                         if entry_triggers: self.resolve_entry_triggers(entry_triggers, token)
                         if self.finished: break
                         continue
-                    target = 1-controller  # Blood Artist chooses the opponent in this two-player pilot.
-                    self.players[target].life -= trigger["amount"]
-                    self.players[controller].life += trigger["gain"]
-                    self.log("trigger", f"{trigger['name']}: Player {target+1} loses {trigger['amount']} life; Player {controller+1} gains {trigger['gain']} life.",
-                             actor=controller, **trigger)
-                    self.outcome()
+                    # Use the same effect interpreter for entry, upkeep, and death.
+                    # The event retains its controller even after its source leaves.
+                    self.resolve_entry_triggers([trigger],a.card)
                     if self.finished: break
             if not self.finished: self.phase = "second_main"
         elif self.phase == "cleanup":

@@ -92,3 +92,11 @@ Bitterblossom and Bitterbloom Bearer now use this grammar; their name-specific p
 Validation: 92 tests pass, including unfamiliar upkeep text, opponent-turn exclusion, repeated upkeeps, and existing lethal-life-loss/token-entry timing tests. Seeds 542–547 ran all six distinct deck pairings: four reached ten turns per player; two ended earlier with a winner. Summary: `training/examples/upkeep-542.json`. These runs are not eligible for policy training.
 
 Rules reference: Wizards’ Double Masters 2022 release notes, Bitterblossom: mandatory life loss is not a payment; token creation still occurs. https://media.wizards.com/2022/downloads/2X2_Release_Notes/EN_MTG2X2_Release%20Notes_20220418.pdf
+
+## Generic death effects
+
+Fixed self-death token creation, death-triggered scry, and death-triggered counters now use the common effect interpreter. Trigger discovery still examines the battlefield before simultaneous deaths. Resolution happens after all dying creatures leave and after game-loss checks; the captured controller receives tokens or scry, and counters apply only to surviving creatures that controller controls. Nonactive-player triggers resolve first; discovery order supplies a deterministic ordering within each controller's triggers.
+
+A whole token batch enters before its entry triggers resolve, including when the first entry trigger ends the game. Scry conservatively retains all cards on top without exposing their identities. Repeating token watchers, variable token counts (apart from the existing Nested Shambler implementation), full priority, and first/double-strike death-trigger interleaving remain unsupported. No new card-name handlers were added.
+
+Validation: 96 tests, including unknown card names and actual combat execution. Six real-deck pairings at seeds 642–647: four reached ten turns per player, two ended with a winner after nine turns each; no new runtime questions. Unsupported cards remain in the question reports and these diagnostic games remain ineligible for training. Summary: `training/examples/death-effects-642.json`.
