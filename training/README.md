@@ -221,3 +221,7 @@ Death triggers now compose with fixed self-death token creation, scry, and count
 ### Hybrid mana follow-up
 
 Ordinary two-color hybrid costs now work through the shared Java payment planner and diagnostic importer, including a focused Glen Elendra Liege cast. Payments backtrack across available sources without spending a source twice and retain commander tax. Validation: Java mana checks and 96 Python tests pass; all six distinct pairings at seeds 742–747 reached ten turns per player without runtime questions. See `examples/hybrid-mana-742.json`. Sol Ring, floating pools, and other unsupported cost types still need implementation.
+
+### Mana pools and fixed mana artifacts
+
+The Python diagnostic now parses unconditional fixed-output mana artifacts, including Sol Ring, and retains unused mana until the step/phase ends. Colorless can pay generic or colorless requirements. Cast logs record mana sources and the remaining pool. All 102 tests pass, including 250 comparisons with the Java single-mana planner. Seeds 842–847 ran six unique deck pairings with no new runtime questions; Sol Ring was cast three times. See `examples/mana-pool-842.json`. The live Java actions still need pool integration, and X-card decisions/effects remain unsupported even though selected-X payment is tested.

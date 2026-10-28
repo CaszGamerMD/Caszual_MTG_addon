@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Independent self-play sandbox, strict real-deck intake, and human-readable replays.
-The existing Java subset is the authority for card parsing, mana and combat.
+The Java subset supplies card parsing and combat; diagnostic mana pools extend its payment rules.
 This is NOT a complete Commander rules engine or a Minecraft entity test.
 """
 from __future__ import annotations
@@ -8,6 +8,7 @@ import argparse
 from card_events import Game as EventGame, Permanent as EventPermanent, Definition as EventDefinition, parse_card as parse_event_card
 import base64
 from oracle_abilities import parse_token_creation
+import mana_pool
 from dataclasses import dataclass, field, replace, asdict
 import hashlib
 import itertools
@@ -167,6 +168,7 @@ class Card:
     power: int = 0
     toughness: int = 0
     mask: int = 0
+    mana_production: tuple[int, ...] = ()
     enters_tapped: bool = False
     draw: int = 0
     life: int = 0
@@ -212,6 +214,7 @@ class Player:
     graveyard: list[Card] = field(default_factory=list)
     life: int = 40
     failed_draw: bool = False
+    mana_pool: list[int] = field(default_factory=lambda: [0]*6)
     command_zone: Card | None = None
     commander_id: str = ""
     commander_casts: int = 0
@@ -337,6 +340,8 @@ class Simulator:
                     continue
                 if self.diagnostic and card.kind == "token_spell" and card.token_count > 0 and card.token_definition is not None:
                     continue
+                if self.diagnostic and card.kind == "mana_artifact" and len(card.mana_production)==6:
+                    continue
                 if card.kind not in ("land", "creature", "spell"):
                     self.pause("Unsupported sandbox card kind: " + card.kind, card)
                     return
@@ -374,7 +379,7 @@ class Simulator:
     def state(self) -> dict:
         return {"active": self.active, "turn": self.turn, "phase": self.phase,
                 "players": [{"seat": i, "life": p.life, "handCount": len(p.hand),
-                             "libraryCount": len(p.library),
+                             "libraryCount": len(p.library), "manaPool": list(p.mana_pool),
                              "battlefield": [self.display_permanent(x) for x in p.battlefield],
                              "commanderInZone": p.command_zone is not None,
                              "commanderDamage": dict(p.commander_damage),
@@ -556,9 +561,16 @@ class Simulator:
 
     def payment(self, card: Card, tax: int = 0) -> dict:
         cost = card.mana_cost + (("{2}" * tax) if tax else "")
-        return self.rules.query("pay", cost, *[
-            x.card.id + ":" + str(x.card.mask) for x in self.players[self.active].battlefield
-            if x.card.kind == "land" and not x.tapped])
+        player=self.players[self.active]
+        sources=[]
+        for item in player.battlefield:
+            if item.tapped: continue
+            if item.card.kind=='land':
+                options=tuple(tuple(int(i==color) for i in range(6)) for color in range(6) if item.card.mask&(1<<color))
+            elif item.card.kind=='mana_artifact': options=(item.card.mana_production,)
+            else: continue
+            sources.append((item.card.id,options))
+        return mana_pool.plan(cost,player.mana_pool,sources)
 
     def damage(self, a: Card, b: Card | None) -> dict:
         return self.rules.query("combat", a.traits, b.traits if b else "",
@@ -610,7 +622,7 @@ class Simulator:
                              cost=len(self.payment(c, p.commander_casts).get("sources", []))),
                     "Cast commander " + c.name))
             for c in p.hand:
-                if c.kind in ("creature", "vehicle", "enchantment", "spell", "token_spell") and self.payment(c)["paid"]:
+                if c.kind in ("creature", "vehicle", "enchantment", "spell", "token_spell", "mana_artifact") and self.payment(c)["paid"]:
                     if c.draw and len(p.library) < c.draw:
                         continue  # never choose a known self-decking draw spell
                     keywords = c.traits.split(";")[-1].split(",") if c.traits else []
@@ -682,6 +694,17 @@ class Simulator:
         return choice
 
     def step(self) -> bool:
+        previous=(self.active,"main" if self.phase=="land" else self.phase)
+        result=self._step()
+        if previous!=(self.active,"main" if self.phase=="land" else self.phase):
+            for seat,player in enumerate(self.players):
+                if any(player.mana_pool):
+                    expired=list(player.mana_pool)
+                    player.mana_pool=[0]*6
+                    self.log("mana_empty","Unused mana empties at the step or phase boundary.",actor=seat,mana=expired)
+        return result
+
+    def _step(self) -> bool:
         """Advance exactly one stage or decision for step-by-step human review."""
         if self.finished: return False
         p = self.players[self.active]
@@ -734,13 +757,14 @@ class Simulator:
                     lands = [x.card for x in p.battlefield if x.card.kind == "land"]
                     p.battlefield.append(Permanent(card, land_enters_tapped(card, lands)))
                     self.land_played = True
-                    self.phase = "main"
+                    if self.phase == "land": self.phase = "main"
                     self.log("land", f"Player {self.active + 1} plays {card.name}.", card=card.name)
                 else:
                     payment = self.payment(card, p.commander_casts if choice.kind == "cast_commander" else 0)
                     if not payment["paid"]: raise RuntimeError("Mana changed before action")
                     for x in p.battlefield:
                         if x.card.id in payment["sources"]: x.tapped = True
+                    p.mana_pool=list(payment["pool"])
                     if choice.kind == "cast_commander":
                         p.command_zone = None
                         p.commander_casts += 1
@@ -749,10 +773,12 @@ class Simulator:
                     triggers = []
                     if card.kind in ("creature", "vehicle", "enchantment"):
                         triggers = self.enter_creature(card, p)
+                    elif card.kind == "mana_artifact":
+                        p.battlefield.append(Permanent(card))
                     else:
                         p.graveyard.append(card)
                     self.log("cast", f"Player {self.active + 1} casts {card.name}.",
-                             card=card.name, manaSources=payment["sources"],
+                             card=card.name, manaSources=payment["sources"], manaPool=list(p.mana_pool),
                              commander=choice.kind == "cast_commander")
                     self.resolve_entry_triggers(triggers, card)
                     if self.finished: return False
@@ -945,8 +971,12 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                       "token_definition":template,"token_tapped":token_spec.tapped}
         else:
             parsed = diagnostic_land(definition, identity) or parsed
+    output=mana_pool.production(definition.get("oracleText", ""))
+    if (parsed["kind"]=="unsupported" and definition.get("types")==["Artifact"]
+            and output and rules.query("cost",cost)["supported"]):
+        parsed={"kind":"mana_artifact","mana_production":output}
     return Card(id=uid, name=definition["name"], kind=parsed["kind"],
-        mana_cost=cost, traits=parsed.get("traits", ""), power=parsed.get("power", 0),
+        mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),
         life=parsed.get("life", 0), land_rule=parsed.get("land_rule", ""),

@@ -110,3 +110,15 @@ Glen Elendra Liege now imports and casts in a focused scenario with mixed blue/b
 Still unsupported: `{2/W}`-style costs, Phyrexian costs, snow, X choices, multi-mana sources such as Sol Ring, and floating mana pools. This change does not implement those mechanics or certify a full mod build.
 
 Rules reference: Wizards, War of the Spark Release Notes (hybrid mana choices): https://magic.wizards.com/en/news/feature/war-spark-release-notes-2019-04-19
+
+## Diagnostic mana pools and fixed mana artifacts
+
+The diagnostic now tracks six mana types separately (W, U, B, R, G, C). Its pure payment planner spends floating mana and activates each chosen untapped source at most once, preserving unused production. Colorless pays generic and explicit colorless requirements, but not colored or hybrid-colored symbols. A selected nonnegative X is supported in the low-level payment API; real X cards remain blocked until choices and variable effects are integrated.
+
+Whole Oracle instructions of the form `{T}: Add {C}{C}.` (including fixed colored/mixed sequences) import as mana artifacts when Artifact is the only card type. No card-name dispatch is used. Additional costs, restrictions, conditional text, and other abilities reject the entire source. Newly cast noncreature artifacts can tap immediately. Sol Ring is now usable in diagnostic matches. This Python pool extension is not yet wired into the live Minecraft Java actions.
+
+Unused mana survives repeated actions in one main phase, then empties at simulated step/phase boundaries for both players. The internal land-decision stage is part of first main, not a separate phase; playing a land during second main keeps that phase. Cast logs and public state include remaining pools. Planning failures do not change pools or tap sources.
+
+Validation: 102 tests pass. The new planner agrees with Java payment results on 250 combinations of single-mana sources and costs. Focused tests cast the real Sol Ring, spend its output across two spells, preserve the leftover, reject colored payment and malformed symbols, and verify cleanup. Six distinct deck pairings (seeds 842–847): four reached ten turns per player, two ended earlier, no new runtime questions. Sol Ring was cast three times across two matches. Reports remain diagnostic, not training eligible. Summary: `training/examples/mana-pool-842.json`.
+
+Rules reference: Wizards Comprehensive Rules, mana and step/phase boundaries: https://media.wizards.com/2026/downloads/MagicCompRules%2020260619.pdf
