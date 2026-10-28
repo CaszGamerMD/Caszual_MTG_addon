@@ -31,3 +31,11 @@ Tests cover an ordinary counter, filtered target rejection without payment, targ
 Rules references: Wizards Comprehensive Rules, countering and illegal targets:
 https://media.wizards.com/2025/downloads/MagicCompRules%2020250919.pdf
 https://media.wizards.com/2025/downloads/MagicCompRules%2020251114.pdf
+
+## Automated priority decisions
+
+The automatic stack drain now asks the priority holder's frozen policy to choose among legal responses and passing, through the same own-hand/public-state Observation boundary. It records choices and target IDs. A reentrancy guard keeps response casting from recursively draining the stack. Response selection resets passes through normal cast handling; after resolution priority returns to the active player.
+
+Baseline response features give opposing spell targets positive value and friendly spell targets a strong negative value, so the default policy counters an opponent rather than its own spell. Supported draw/life instants use their existing features and mana cost; known self-decking draw responses are excluded. This is a simple deterministic heuristic, not strategy learned from real games and not a prediction of whether every opponent spell should be countered. Priority-pass decisions carry complete zero feature vectors so classroom training aggregation remains valid.
+
+Validation: 131 tests, including automatic counterspell use, an automatic two-player counter exchange that saves the original spell, and earlier priority/conservation regressions. Six distinct real-deck pairings at seeds 1242–1247 completed without runtime questions (four ten-turn windows and two earlier wins). No supported instant responses occurred in that random batch; focused tests provide the direct behavioral evidence. Summary: `training/examples/responses-1242.json`. Targeted removal, blink, equipment, and the original unresolved card queue remain unfinished.

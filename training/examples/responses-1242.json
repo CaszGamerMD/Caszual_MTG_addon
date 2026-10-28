@@ -1,0 +1,373 @@
+{
+  "matches": [
+    {
+      "match": 1,
+      "seed": 1242,
+      "deckNames": [
+        "Garbo Gobbos",
+        "faeries"
+      ],
+      "commanders": [
+        "Zurgo Helmsmasher",
+        "Obyra, Dreaming Duelist"
+      ],
+      "deckIds": [
+        5254666,
+        27521806
+      ],
+      "result": "win",
+      "turnsCompleted": [
+        6,
+        6
+      ],
+      "life": [
+        40,
+        18
+      ],
+      "winner": 0,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          47,
+          44
+        ],
+        "landsPlayed": 6,
+        "spellsCast": 4,
+        "triggerLogEntries": 0,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alchemist's Gift",
+          "Boot Nipper",
+          "Cloud of Faeries",
+          "Endless Ranks of the Dead",
+          "Faerie Impostor",
+          "Goblin Assault",
+          "Goblin Lackey",
+          "Goblin Matron",
+          "Liliana, Heretical Healer // Liliana, Defiant Necromancer",
+          "Marauding Blight-Priest",
+          "Maskwood Nexus",
+          "Rundvelt Hordemaster",
+          "Scion of Oona",
+          "Spell Stutter",
+          "Starscape Cleric",
+          "Tegwyll, Duke of Splendor",
+          "Warren Instigator"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "match": 2,
+      "seed": 1243,
+      "deckNames": [
+        "squirrels",
+        "Budget Deck"
+      ],
+      "commanders": [
+        "Chatterfang, Squirrel General",
+        "Kolodin, Triumph Caster"
+      ],
+      "deckIds": [
+        8321184,
+        14850373
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        24,
+        40
+      ],
+      "winner": null,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          34,
+          48
+        ],
+        "landsPlayed": 9,
+        "spellsCast": 3,
+        "triggerLogEntries": 0,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Archetype of Courage",
+          "Blasting Station",
+          "Chatter of the Squirrel",
+          "Coat of Arms",
+          "Darkbore Pathway // Slitherbore Pathway",
+          "Darksteel Plate",
+          "Deep Forest Hermit",
+          "Dolmen Gate",
+          "Dragonmaster Outcast",
+          "Dreampod Druid",
+          "Golgari Rot Farm",
+          "Griffin Aerie",
+          "Murder Investigation",
+          "Path to Exile",
+          "Peregrin Took",
+          "Roadside Assistance",
+          "Squirrel Nest",
+          "Squirrel Sanctuary",
+          "The Eternity Elevator",
+          "Verdant Command"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "match": 3,
+      "seed": 1244,
+      "deckNames": [
+        "Budget Deck",
+        "faeries"
+      ],
+      "commanders": [
+        "Kolodin, Triumph Caster",
+        "Obyra, Dreaming Duelist"
+      ],
+      "deckIds": [
+        14850373,
+        27521806
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        27,
+        38
+      ],
+      "winner": null,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          48,
+          44
+        ],
+        "landsPlayed": 10,
+        "spellsCast": 3,
+        "triggerLogEntries": 2,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Baird, Argivian Recruiter",
+          "Basilisk Collar",
+          "Clearwater Pathway // Murkwater Pathway",
+          "Cloudspire Coordinator",
+          "Exquisite Blood",
+          "Faerie Impostor",
+          "Faerie Slumber Party",
+          "Gilded Ghoda",
+          "Griffin Aerie",
+          "Hopeful Eidolon",
+          "Liliana, Heretical Healer // Liliana, Defiant Necromancer",
+          "Shadow Puppeteers",
+          "Shadowspear",
+          "Skyknight Vanguard",
+          "Speaker of the Heavens",
+          "Sprite Noble",
+          "Starscape Cleric",
+          "Team Pennant",
+          "The Book of Vile Darkness",
+          "Valor's Flagship"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "match": 4,
+      "seed": 1245,
+      "deckNames": [
+        "faeries",
+        "squirrels"
+      ],
+      "commanders": [
+        "Obyra, Dreaming Duelist",
+        "Chatterfang, Squirrel General"
+      ],
+      "deckIds": [
+        27521806,
+        8321184
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        39,
+        25
+      ],
+      "winner": null,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          44,
+          34
+        ],
+        "landsPlayed": 5,
+        "spellsCast": 4,
+        "triggerLogEntries": 3,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alpha Status",
+          "Barrow Naughty",
+          "Blasting Station",
+          "Boot Nipper",
+          "Creakwood Liege",
+          "Darksteel Plate",
+          "Doubling Season",
+          "Indulgent Aristocrat",
+          "Instruments of War",
+          "Ivy Lane Denizen",
+          "Kami of Whispered Hopes",
+          "Notorious Throng",
+          "Oran-Rief, the Vastwood",
+          "Overgrown Tomb",
+          "Peregrin Took",
+          "Sprite Noble",
+          "The Mycotyrant",
+          "Umbral Mantle",
+          "Urborg, Tomb of Yawgmoth",
+          "Vito, Thorn of the Dusk Rose",
+          "Wildwood Scourge"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "match": 5,
+      "seed": 1246,
+      "deckNames": [
+        "Garbo Gobbos",
+        "squirrels"
+      ],
+      "commanders": [
+        "Zurgo Helmsmasher",
+        "Chatterfang, Squirrel General"
+      ],
+      "deckIds": [
+        5254666,
+        8321184
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        46,
+        34
+      ],
+      "winner": null,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          47,
+          34
+        ],
+        "landsPlayed": 8,
+        "spellsCast": 1,
+        "triggerLogEntries": 0,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Blood Moon",
+          "Boggart Birth Rite",
+          "Broodhatch Nantuko",
+          "Chained to the Rocks",
+          "Deranged Hermit",
+          "Doubling Season",
+          "Goblin Arsonist",
+          "Hardened Scales",
+          "Herald's Horn",
+          "Mardu Ascendancy",
+          "Mirkwood Bats",
+          "Parallel Lives",
+          "Pitiless Plunderer",
+          "Primal Vigor",
+          "Rally the Ranks",
+          "Swords to Plowshares",
+          "Tribute to the World Tree",
+          "Twitching Doll",
+          "Universal Automaton",
+          "Wort, Boggart Auntie",
+          "Ygra, Eater of All"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "match": 6,
+      "seed": 1247,
+      "deckNames": [
+        "Budget Deck",
+        "Garbo Gobbos"
+      ],
+      "commanders": [
+        "Kolodin, Triumph Caster",
+        "Zurgo Helmsmasher"
+      ],
+      "deckIds": [
+        14850373,
+        5254666
+      ],
+      "result": "win",
+      "turnsCompleted": [
+        10,
+        9
+      ],
+      "life": [
+        19,
+        21
+      ],
+      "winner": 1,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          48,
+          47
+        ],
+        "landsPlayed": 11,
+        "spellsCast": 6,
+        "triggerLogEntries": 5,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Akroma's Memorial",
+          "Blood Money",
+          "Boggart Birth Rite",
+          "Bovine Intervention",
+          "Caterwauling Boggart",
+          "Dynamite Diver",
+          "Elenda's Hierophant",
+          "Ferocity of the Wilds",
+          "Gloryheath Lynx",
+          "Goblin Arsonist",
+          "Lifelink",
+          "Mad Auntie",
+          "Mirkwood Bats",
+          "Quilled Charger",
+          "Rally the Ranks",
+          "Skirk Prospector",
+          "Speaker of the Heavens",
+          "Throne of the God-Pharaoh"
+        ],
+        "unsupportedCommanders": []
+      }
+    }
+  ]
+}

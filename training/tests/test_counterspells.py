@@ -57,6 +57,25 @@ class CounterChecks(unittest.TestCase):
   sim.pass_priority(0);sim.pass_priority(1)
   self.assertEqual(sim.players[0].life,45)
   self.assertIn(counter,sim.players[1].graveyard);sim.invariant()
+ def test_automated_player_casts_counter_response(self):
+  sim,spell,counter=self.fixture()
+  sim.manual_priority=False;sim.drain_priority()
+  self.assertIn(counter,sim.players[1].graveyard)
+  self.assertIn(spell,sim.players[0].graveyard)
+  self.assertEqual(sim.players[0].life,40)
+  self.assertTrue(any(d['phase']=='priority' and d['action']=='respond' and d['seat']==1 for d in sim.decisions))
+  self.assertFalse(sim.stack.items);sim.invariant()
+ def test_automated_counter_war_does_not_counter_own_spell(self):
+  sim,spell,counter=self.fixture()
+  removed=sim.players[0].library.pop()
+  answer=s.import_diagnostic_card(self.rules,dict(name='Unknown answer',types=['Instant'],manaCost='{0}',oracleText='Counter target spell.'),0,removed.id,{'Blue'})
+  sim.players[0].hand.append(answer)
+  sim.manual_priority=False;sim.drain_priority()
+  self.assertEqual(sim.players[0].life,45)
+  replies=[d for d in sim.decisions if d['phase']=='priority' and d['action']=='respond']
+  self.assertEqual([d['seat'] for d in replies],[1,0])
+  self.assertEqual(len(sim.players[0].graveyard),2)
+  self.assertFalse(sim.stack.items);sim.invariant()
  def test_rejects_additional_rules_and_costs(self):
   for text in ['Counter target spell unless its controller pays {2}.','Counter target spell. Draw a card.']:
    card=s.import_diagnostic_card(self.rules,dict(name='Unknown denial',types=['Instant'],manaCost='{U}',oracleText=text),0,'x',{'Blue'})

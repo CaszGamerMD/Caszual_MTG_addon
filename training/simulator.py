@@ -344,6 +344,7 @@ class Simulator:
         self.stack=PriorityStack(starter)
         self._current_spell=None
         self.manual_priority=False
+        self._draining_priority=False
         self._resolving_stack=False
         self.token_sequence = 0
         self.log("setup", "Two independent agents use frozen policies; sandbox rules apply.")
@@ -493,8 +494,24 @@ class Simulator:
                 self.log('stack_push',f'{item.label} ability goes on the stack.',stackId=item.id,controller=controller)
         if not self._resolving_stack: self.stack.priority=self.active
         if not self.manual_priority and not self._resolving_stack:
+            self.drain_priority()
+
+    def drain_priority(self):
+        if self._draining_priority: return
+        self._draining_priority=True
+        try:
             while self.stack.items and not self.finished:
-                self.pass_priority(self.stack.priority)
+                seat=self.stack.priority
+                observation=self.priority_observation(seat)
+                choice=self.policies[seat].choose(observation)
+                if choice not in observation.legal_actions: raise RuntimeError('Illegal response decision')
+                self.decisions.append({'seat':seat,'turn':self.turn,'phase':'priority',
+                    'action':choice.kind,'cardId':choice.card_id,'targetStack':choice.target_stack,
+                    'features':list(choice.features)})
+                self.log('priority_choice',choice.label,actor=seat,action=choice.kind,
+                         cardId=choice.card_id,targetStack=choice.target_stack)
+                self.act_priority(seat,choice)
+        finally: self._draining_priority=False
 
     def pass_priority(self, actor):
         status,item=self.stack.pass_priority(actor)
@@ -516,6 +533,7 @@ class Simulator:
     def response_choices(self,seat):
         if seat!=self.stack.priority: return ()
         return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','token_spell','counter_spell')
+                     and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
 
     def counter_targets(self,card):
@@ -527,13 +545,16 @@ class Simulator:
 
     def priority_observation(self,seat):
         if seat!=self.stack.priority: raise ValueError('Player lacks priority')
-        actions=[Candidate('priority-pass','priority_pass',label='Pass priority')]
+        actions=[Candidate('priority-pass','priority_pass',features=features(),label='Pass priority')]
         for card in self.response_choices(seat):
             if card.kind=='counter_spell':
                 actions.extend(Candidate(card.id+':target='+str(frame.id),'respond',card.id,
+                    features=features(power=2 if frame.controller!=seat else -100,
+                                      cost=len(self.payment(card,seat=seat).get('sources',[]))),
                     label='Cast '+card.name+' targeting '+frame.label,target_stack=frame.id)
                     for frame in self.counter_targets(card))
-            else: actions.append(Candidate(card.id,'respond',card.id,features(draw=card.draw,life=card.life),label='Respond with '+card.name))
+            else: actions.append(Candidate(card.id,'respond',card.id,features(draw=card.draw,life=card.life,
+                    power=card.token_count,cost=len(self.payment(card,seat=seat).get('sources',[]))),label='Respond with '+card.name))
         return Observation(seat,self.turn,self.phase,tuple(self.players[seat].hand),
                            json.dumps(self.state(),sort_keys=True),tuple(actions))
 
@@ -572,7 +593,7 @@ class Simulator:
             self.log('storm',f'{card.name} creates {prior} spell copies.',copies=prior)
             for _ in range(prior):self.stack.push(seat,({'operation':'spell','controller':seat,'copy':True,'x':x},card),card.name+' copy')
         if not self.manual_priority and not self._resolving_stack:
-            while self.stack.items and not self.finished:self.pass_priority(self.stack.priority)
+            self.drain_priority()
 
     def resolve_spell(self,event,original):
         controller=event['controller'];p=self.players[controller];card=original
