@@ -10,9 +10,13 @@ import java.util.regex.*;
  */
 public final class CommanderMana {
  private CommanderMana(){}
- public record Cost(int generic,int white,int blue,int black,int red,int green,int colorless) {
-  public int total(){return generic+white+blue+black+red+green+colorless;}
-  public Cost taxed(int tax){return new Cost(generic+tax,white,blue,black,red,green,colorless);}
+ public record Cost(int generic,int white,int blue,int black,int red,int green,int colorless,List<Integer> hybrid) {
+  public Cost { hybrid=List.copyOf(hybrid); }
+  public Cost(int generic,int white,int blue,int black,int red,int green,int colorless){
+   this(generic,white,blue,black,red,green,colorless,List.of());
+  }
+  public int total(){return generic+white+blue+black+red+green+colorless+hybrid.size();}
+  public Cost taxed(int tax){return new Cost(generic+tax,white,blue,black,red,green,colorless,hybrid);}
   public int requirement(int index){return switch(index){
    case 0->white;case 1->blue;case 2->black;case 3->red;case 4->green;case 5->colorless;
    default->throw new IllegalArgumentException("Unknown mana index");
@@ -27,18 +31,21 @@ public final class CommanderMana {
   String s=raw.trim().toUpperCase(Locale.ROOT);
   if(s.isBlank())return Optional.empty(); // An absent mana cost is not {0}.
   Matcher m=Pattern.compile("\\{([^{}]+)}").matcher(s);
-  int[] counts=new int[6];int generic=0,last=0;
+  int[] counts=new int[6];int generic=0,last=0;List<Integer> hybrid=new ArrayList<>();
   while(m.find()){
    if(!s.substring(last,m.start()).isBlank())return Optional.empty();
    last=m.end();String symbol=m.group(1);
    int type=switch(symbol){case "W"->0;case "U"->1;case "B"->2;case "R"->3;case "G"->4;case "C"->5;default->-1;};
    if(type>=0){counts[type]++;continue;}
-   if(!symbol.matches("[0-9]{1,2}"))return Optional.empty(); // X, hybrid, phyrexian, snow etc.
+   if(symbol.matches("[WUBRG]/[WUBRG]")&&symbol.charAt(0)!=symbol.charAt(2)){
+    hybrid.add(bit(symbol.charAt(0))|bit(symbol.charAt(2)));continue;
+   }
+   if(!symbol.matches("[0-9]{1,2}"))return Optional.empty(); // X, two-generic hybrid, phyrexian, snow etc.
    generic+=Integer.parseInt(symbol);
    if(generic>99)return Optional.empty();
   }
   if(!s.substring(last).isBlank()||last==0)return Optional.empty();
-  return Optional.of(new Cost(generic,counts[0],counts[1],counts[2],counts[3],counts[4],counts[5]));
+  return Optional.of(new Cost(generic,counts[0],counts[1],counts[2],counts[3],counts[4],counts[5],hybrid));
  }
  /** Only deterministic, unconditional one-mana land abilities can be automated.
   * Recognize the common ETB-tapped basic duals without ignoring their drawback. */
@@ -88,6 +95,7 @@ public final class CommanderMana {
  /** Source IDs are unique battlefield card ids. Plan is a deterministic list of ids to tap. */
  public static Optional<List<String>> pay(Cost cost,List<Source> available){
   if(cost==null||available==null||cost.total()>available.size())return Optional.empty();
+  if(available.stream().map(Source::id).distinct().count()!=available.size())return Optional.empty();
   if(cost.total()==0)return Optional.of(List.of());
   boolean[] used=new boolean[available.size()];
   List<String> chosen=new ArrayList<>();
@@ -99,7 +107,7 @@ public final class CommanderMana {
   final int[] order={5,0,1,2,3,4};
   int needed=0;
   for(int type:order)needed+=cost.requirement(type);
-  if(step>=needed){
+  if(step>=needed+cost.hybrid().size()){
    int generic=cost.generic();
    for(int i=0;i<sources.size()&&generic>0;i++)if(!used[i]){
     out.add(sources.get(i).id());generic--;
@@ -110,7 +118,7 @@ public final class CommanderMana {
   }
   int rem=step,type=-1;
   for(int index:order){int n=cost.requirement(index);if(rem<n){type=index;break;}rem-=n;}
-  int bit=1<<type;
+  int bit=step<needed ? 1<<type : cost.hybrid().get(step-needed);
   for(int i=0;i<sources.size();i++){
    Source source=sources.get(i);
    if(used[i]||(source.manaMask()&bit)==0)continue;

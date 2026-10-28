@@ -100,3 +100,13 @@ Fixed self-death token creation, death-triggered scry, and death-triggered count
 A whole token batch enters before its entry triggers resolve, including when the first entry trigger ends the game. Scry conservatively retains all cards on top without exposing their identities. Repeating token watchers, variable token counts (apart from the existing Nested Shambler implementation), full priority, and first/double-strike death-trigger interleaving remain unsupported. No new card-name handlers were added.
 
 Validation: 96 tests, including unknown card names and actual combat execution. Six real-deck pairings at seeds 642–647: four reached ten turns per player, two ended with a winner after nine turns each; no new runtime questions. Unsupported cards remain in the question reports and these diagnostic games remain ineligible for training. Summary: `training/examples/death-effects-642.json`.
+
+## Two-color hybrid mana
+
+The shared Java mana planner accepts ordinary two-color hybrid symbols such as `{U/B}`. Each symbol requires one source able to produce either component color; different symbols choose independently. Backtracking preserves constrained colored requirements, commander tax remains generic, and duplicate source IDs are rejected. Card colors still come from metadata, not the mana spent. The diagnostic importer now asks the shared parser whether a cost is supported rather than maintaining its own narrower regular expression.
+
+Glen Elendra Liege now imports and casts in a focused scenario with mixed blue/black sources. Tests verify that all four lands tap and cannot pay again. Java checks cover all-one-color and mixed-color payments, backtracking, unrelated colors, duplicate IDs, insufficient sources, and tax. All 96 Python tests pass. Six distinct deck pairings at seeds 742–747 reached ten turns per player with no runtime questions; unsupported cards remain explicitly recorded and games remain ineligible for training. See `training/examples/hybrid-mana-742.json`.
+
+Still unsupported: `{2/W}`-style costs, Phyrexian costs, snow, X choices, multi-mana sources such as Sol Ring, and floating mana pools. This change does not implement those mechanics or certify a full mod build.
+
+Rules reference: Wizards, War of the Spark Release Notes (hybrid mana choices): https://magic.wizards.com/en/news/feature/war-spark-release-notes-2019-04-19

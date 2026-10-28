@@ -138,7 +138,7 @@ class OracleGrammarChecks(unittest.TestCase):
             self.assertEqual(mentor.kind,'creature')
             self.assertTrue(mentor.event_definition.static_effects[0].grant=='first strike')
 
-    def test_real_anthem_import_and_hybrid_liege_boundary(self):
+    def test_real_anthem_and_hybrid_liege_cast(self):
         import json
         root=Path(__file__).resolve().parents[1]
         lookup={c['name']:c for p in (root/'decks').glob('*.json') for c in json.loads(p.read_text())['mainboard']}
@@ -147,7 +147,23 @@ class OracleGrammarChecks(unittest.TestCase):
             self.assertEqual(anthem.kind,'enchantment')
             self.assertTrue(parse_card(lookup['Glen Elendra Liege']).supported)
             liege=s.import_diagnostic_card(rules,lookup['Glen Elendra Liege'],0,'liege',{'Blue','Black'})
-            self.assertEqual(liege.kind,'unsupported')  # Hybrid costs are not implemented.
+            self.assertEqual(liege.kind,'creature')
+            lands=[s.Card('hybrid-land-'+str(i),'Test land','land',mask=mask) for i,mask in enumerate([2,4,2,32])]
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[liege]+lands,s.demo_deck(1)),diagnostic=True)
+            player=sim.players[0]
+            for card in [liege]+lands:
+                (player.hand if card in player.hand else player.library).remove(card)
+            player.hand.append(liege)
+            player.battlefield.extend(s.Permanent(card) for card in lands)
+            self.assertTrue(sim.payment(liege)['paid'])
+            sim.phase='main'
+            from unittest.mock import patch
+            with patch.object(sim,'decide',return_value=s.Candidate('cast','cast',card_id=liege.id)):
+                sim.step()
+            self.assertTrue(all(p.tapped for p in player.battlefield if p.card.kind=='land'))
+            self.assertTrue(any(p.card.id==liege.id for p in player.battlefield))
+            self.assertFalse(sim.payment(liege)['paid'])
+            sim.invariant()
 
     def test_color_anthems_stack_for_multicolored_creatures_and_cease(self):
         lord=self.definition('Flying\nOther blue creatures you control get +1/+1.\nOther black creatures you control get +1/+1.')

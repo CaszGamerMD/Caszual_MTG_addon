@@ -9,7 +9,18 @@ public final class CommanderManaCheck {
   ok(c.total()==4&&c.generic()==2&&c.white()==1&&c.blue()==1,"parse colored cost");
   ok(CommanderMana.parse("").isEmpty(),"absent mana cost is not a free spell");
   ok(CommanderMana.parse("{X}{G}").isEmpty(),"X cannot be guessed");
-  ok(CommanderMana.parse("{W/U}").isEmpty(),"hybrid is unsupported");
+  ok(CommanderMana.parse("{W/U}").orElseThrow().total()==1,"hybrid is one mana");
+  for(String unsupported:List.of("{2/W}","{W/W}","{W/C}","{W/U/P}"))
+   ok(CommanderMana.parse(unsupported).isEmpty(),"unsupported symbol "+unsupported);
+  var hybrid=CommanderMana.parse("{U/B}{U/B}").orElseThrow();
+  ok(CommanderMana.pay(hybrid,List.of(new CommanderMana.Source("u",2),new CommanderMana.Source("b",4))).isPresent(),"each hybrid symbol chooses independently");
+  ok(CommanderMana.pay(hybrid,List.of(new CommanderMana.Source("u",2),new CommanderMana.Source("u2",2))).isPresent(),"both can use same color");
+  ok(CommanderMana.pay(hybrid,List.of(new CommanderMana.Source("c",32),new CommanderMana.Source("g",16))).isEmpty(),"unrelated colors cannot pay hybrid");
+  ok(CommanderMana.pay(hybrid,List.of(new CommanderMana.Source("dual",6))).isEmpty(),"dual source produces only one mana");
+  ok(CommanderMana.pay(hybrid,List.of(new CommanderMana.Source("same",2),new CommanderMana.Source("same",4))).isEmpty(),"duplicate source ids cannot pay twice");
+  var constrained=CommanderMana.parse("{W/U}{U/B}").orElseThrow();
+  ok(CommanderMana.pay(constrained,List.of(new CommanderMana.Source("u",2),new CommanderMana.Source("w",1))).orElseThrow().equals(List.of("w","u")),"backtrack hybrid assignment");
+  ok(CommanderMana.pay(hybrid.taxed(2),List.of(new CommanderMana.Source("u",2),new CommanderMana.Source("b",4))).isEmpty(),"tax preserved on hybrid");
   ok(CommanderMana.parse("{2}{G/P}").isEmpty(),"Phyrexian must be rejected");
   ok(CommanderMana.parse("{S}").isEmpty(),"snow mana must be rejected");
   ok(CommanderMana.parse("two mana").isEmpty(),"freeform text must be rejected");

@@ -928,7 +928,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                or bool(event_definition.triggers or event_definition.static_effects) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
-            and re.fullmatch(r"(?:\{(?:[WUBRGC]|[0-9]{1,2})\})+", cost)):
+            and rules.query("cost",cost)["supported"]):
         keywords = sorted(event_definition.abilities)
         parsed = {"kind":("vehicle" if "Vehicle" in event_definition.subtypes else
                           "creature" if "Creature" in event_definition.types else "enchantment"),
@@ -938,7 +938,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     if parsed["kind"] == "unsupported":
         text = definition.get("oracleText", "")
         token_spec = parse_token_creation(text)
-        if definition.get("types") == ["Sorcery"] and token_spec and re.fullmatch(r"(?:\{(?:[WUBRGC]|[0-9]{1,2})\})+", cost):
+        if definition.get("types") == ["Sorcery"] and token_spec and rules.query("cost",cost)["supported"]:
             template = EventDefinition(" ".join(token_spec.subtypes),frozenset({"Creature"}),frozenset(token_spec.subtypes),
                 False,token_spec.power,token_spec.toughness,token_spec.keywords,colors=frozenset(token_spec.colors))
             parsed = {"kind":"token_spell", "token_count":token_spec.amount,

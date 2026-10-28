@@ -43,6 +43,7 @@ public final class RulesBridge {
  private static String run(String[] p){
   switch(p[0]){
    case "audit":return audit(p);
+   case "cost":return "{\"supported\":"+CommanderMana.parse(p[1]).isPresent()+"}";
    case "pay":{
     var cost=CommanderMana.parse(p[1]);List<CommanderMana.Source> sources=new ArrayList<>();
     for(int i=2;i<p.length;i++){String[] s=p[i].split(":");sources.add(new CommanderMana.Source(s[0],Integer.parseInt(s[1])));}

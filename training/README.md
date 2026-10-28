@@ -217,3 +217,7 @@ Upkeep token engines now compile from Oracle text rather than Bitterblossom/Bitt
 ### Generic death-effect follow-up
 
 Death triggers now compose with fixed self-death token creation, scry, and counters through the common effect interpreter. Tests cover source departure, controller ownership, surviving recipients, hidden library information, and completing token batches before lethal entry triggers. Validation: 96 tests; seeds 642–647 ran six distinct real-deck pairings (four full ten-turn windows, two nine-turn wins). See `examples/death-effects-642.json`. These are rules diagnostics, not learned strategy.
+
+### Hybrid mana follow-up
+
+Ordinary two-color hybrid costs now work through the shared Java payment planner and diagnostic importer, including a focused Glen Elendra Liege cast. Payments backtrack across available sources without spending a source twice and retain commander tax. Validation: Java mana checks and 96 Python tests pass; all six distinct pairings at seeds 742–747 reached ten turns per player without runtime questions. See `examples/hybrid-mana-742.json`. Sol Ring, floating pools, and other unsupported cost types still need implementation.
