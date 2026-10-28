@@ -18,6 +18,7 @@ class StaticEffect:
     toughness: int
     count: Selector | None = None
     condition: Selector | None = None
+    grant: str = ''
 
 @dataclass(frozen=True)
 class Effect:
@@ -39,6 +40,8 @@ class Program:
     static_effects: tuple[StaticEffect, ...] = ()
 
 def static_effect(text):
+    m=re.fullmatch(r'(Other )?(?:([Ww]hite|[Bb]lue|[Bb]lack|[Rr]ed|[Gg]reen) )?[Cc]reatures you control have (flying|first strike|double strike|lifelink|vigilance|trample|haste|defender|reach|deathtouch|indestructible)\.',text)
+    if m: return StaticEffect(Selector(relation='controller',other=bool(m[1]),creature=True,color=(m[2] or '').title()),0,0,grant=m[3])
     m=re.fullmatch(r'(Other )?(?:(white|blue|black|red|green) )?[Cc]reatures you control get \+([0-9]+)/\+([0-9]+)\.',text)
     if m: return StaticEffect(Selector(relation='controller',other=bool(m[1]),creature=True,
                                       color=(m[2] or '').title()),int(m[3]),int(m[4]))
@@ -75,6 +78,8 @@ def selector(text):
                     subtype='' if noun=='creature' else noun.split()[0])
 
 def effect(text):
+    m=re.fullmatch(r'put (a|[1-9][0-9]*) \+1/\+1 counters? on each creature you control\.',text)
+    if m: return Effect('add_counters',1 if m[1]=='a' else int(m[1]),'controlled creatures')
     m=re.fullmatch(r'(each opponent|target player) loses ([1-9][0-9]*) life(?: and you gain ([1-9][0-9]*) life)?\.',text)
     if m: return Effect('lose_life',int(m[2]),m[1],int(m[3] or 0))
     m=re.fullmatch(r'this (?:creature|enchantment|permanent) deals ([1-9][0-9]*) damage to each opponent\.',text)
@@ -106,7 +111,7 @@ def compile_abilities(text, name=''):
         if subject is None or action is None: return None
         event='dies' if m[2]=='dies' else 'enters'
         # Scry on death needs a new resolution implementation, not just parsing.
-        if event=='dies' and action.operation=='scry': return None
+        if event=='dies' and action.operation in ('scry','add_counters'): return None
         triggers.append(Trigger(event,subject,action))
     return Program(tuple(triggers),frozenset(keywords),tuple(static_effects)) if triggers or static_effects else None
 
@@ -121,7 +126,8 @@ def matches(subject, source, entered, is_creature):
 def event_data(trigger, source, subject):
     e=trigger.effect
     label={'lose_life':f'{e.recipient} loses {e.amount} life',
-           'damage':f'deal {e.amount} damage to each opponent','scry':'scry'}[e.operation]
+           'damage':f'deal {e.amount} damage to each opponent','scry':'scry',
+           'add_counters':f'put {e.amount} +1/+1 counters on each creature you control'}[e.operation]
     if e.gain: label+=f'; controller gains {e.gain} life'
     return {'source':source.id,'name':source.definition.name,'controller':source.controller,
             'effect':label,'operation':e.operation,'recipient':e.recipient,

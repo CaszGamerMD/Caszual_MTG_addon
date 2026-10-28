@@ -34,3 +34,20 @@ The same seeds were rerun after the parser change. Outcomes/turn counts were
 unchanged; the shuffled matches did not establish strategic improvement. 84
 regression checks pass. These diagnostics still do not update learned policy
 weights or control live Minecraft golems.
+
+## Generic counter and keyword follow-up
+
+The parser now supports “put N +1/+1 counters on each creature you control” as
+an entry-trigger effect, and “(Other) (COLOR) creatures you control have KEYWORD”
+as a continuous grant for the supported combat keywords. This covers Cathars'
+Crusade and Bloodmark Mentor through text parsing. Granting a keyword requires
+matching type/color/controller, and ends when the source leaves. Counter effects
+select controlled creatures at resolution and include the entering creature if
+it is still present. Death-trigger counter effects remain rejected until their
+resolution path is implemented. Extra unhandled clauses reject the entire card.
+
+87 checks pass, including unfamiliar names and changed counter amounts. The six
+seed-242 pairings were rerun; their summaries are in
+examples/counter-keyword-242.json. These are still incomplete diagnostic games.
+Token replacement, multi-mana production, sacrifice costs, hybrid payment and
+exile/return effects remain open; no policy learning is claimed.

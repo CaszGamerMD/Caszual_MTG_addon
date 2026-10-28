@@ -417,7 +417,8 @@ class Simulator:
         if not state or not game.creature(state): return None
         power, toughness = game.stats(state)
         keywords = set(state.definition.abilities)
-        for ability in ("haste", "indestructible"):
+        for ability in ("haste", "indestructible", "flying", "first strike", "double strike",
+                        "lifelink", "vigilance", "trample", "defender", "reach", "deathtouch"):
             if game.has(state, ability): keywords.add(ability)
         return replace(item.card, kind="creature", power=power, toughness=toughness,
                        traits=f"{power};{toughness};"+",".join(sorted(keywords)))
@@ -448,7 +449,16 @@ class Simulator:
 
     def resolve_entry_triggers(self, triggers: list[dict], card: Card):
         for event in triggers:
-            if event.get("operation") == "damage":
+            if event.get("operation") == "add_counters":
+                game = self.event_game("main")
+                affected = []
+                for identifier,permanent in game.battlefield.items():
+                    if permanent.controller == event["controller"] and game.creature(permanent):
+                        permanent.counters += event["amount"]
+                        affected.append(identifier)
+                self.sync_events(game)
+                message = f"{event['name']} puts {event['amount']} +1/+1 counters on each of {len(affected)} creatures."
+            elif event.get("operation") == "damage":
                 target = 1-event["controller"]
                 self.players[target].life -= event["amount"]
                 # Noncombat damage: never contributes to commander combat damage.

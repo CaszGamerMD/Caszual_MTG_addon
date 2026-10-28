@@ -204,6 +204,9 @@ class Game:
 
     def has(self, p: Permanent, ability: str) -> bool:
         if ability in p.definition.abilities: return True
+        if any(effect.grant == ability and matches(effect.subject,source,p,self.creature(p))
+               for source in self.battlefield.values() for effect in source.definition.static_effects):
+            return True
         if ability == "indestructible" and p.definition.name == "Zurgo Helmsmasher" and p.controller == self.turn_player:
             return True
         if ability == "haste" and ({"Mount","Vehicle"} & p.definition.subtypes):

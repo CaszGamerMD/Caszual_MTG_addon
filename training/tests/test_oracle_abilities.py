@@ -8,6 +8,48 @@ from oracle_abilities import compile_abilities
 import simulator as s
 
 class OracleGrammarChecks(unittest.TestCase):
+    def test_keyword_grant_uses_color_controller_and_source_presence(self):
+        d=self.definition('Red creatures you control have first strike.','Unfamiliar teacher')
+        self.assertTrue(d.supported)
+        g=Game();g.enter(Permanent('teacher',d,0))
+        for identifier,color,controller in [('ally','Red',0),('enemy','Red',1),('blue','Blue',0)]:
+            g.enter(Permanent(identifier,replace(self.definition(''),colors=frozenset({color})),controller))
+        self.assertTrue(g.has(g.battlefield['ally'],'first strike'))
+        self.assertFalse(g.has(g.battlefield['enemy'],'first strike'))
+        self.assertFalse(g.has(g.battlefield['blue'],'first strike'))
+        g.leave('teacher');self.assertFalse(g.has(g.battlefield['ally'],'first strike'))
+        self.assertFalse(self.definition('Red creatures you control have first strike and ward {2}.').supported)
+
+    def test_other_keyword_grant_excludes_source(self):
+        d=self.definition('Other creatures you control have flying.')
+        g=Game();g.enter(Permanent('s',d,0));g.enter(Permanent('a',self.definition(''),0))
+        self.assertFalse(g.has(g.battlefield['s'],'flying'))
+        self.assertTrue(g.has(g.battlefield['a'],'flying'))
+
+    def test_generic_counter_effect_resolves_for_current_controlled_creatures(self):
+        import json
+        root=Path(__file__).resolve().parents[1]
+        lookup={c['name']:c for p in (root/'decks').glob('*.json') for c in json.loads(p.read_text())['mainboard']}
+        with s.RulesBridge() as rules:
+            raw=dict(lookup["Cathars' Crusade"],name='Unfamiliar crusade',
+                     oracleText='Whenever a creature you control enters, put 2 +1/+1 counters on each creature you control.')
+            source=s.import_diagnostic_card(rules,raw,0,'source',{'White'})
+            creature=s.Card('subject','Subject','creature',mana_cost='{W}',traits='1;1;',power=1,toughness=1)
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[source,creature],s.demo_deck(1)),diagnostic=True)
+            p=sim.players[0]
+            for card in [source,creature]:
+                (p.hand if card in p.hand else p.library).remove(card)
+                triggers=sim.enter_creature(card,p)
+                sim.resolve_entry_triggers(triggers,card)
+            target=next(x for x in p.battlefield if x.card.id=='subject')
+            self.assertEqual(target.counters,2)
+            self.assertEqual(sim.effective_card(target).power,3)
+            self.assertEqual(next(x for x in p.battlefield if x.card.id=='source').counters,0)
+            sim.invariant()
+            mentor=s.import_diagnostic_card(rules,lookup['Bloodmark Mentor'],0,'mentor',{'Red'})
+            self.assertEqual(mentor.kind,'creature')
+            self.assertTrue(mentor.event_definition.static_effects[0].grant=='first strike')
+
     def test_real_anthem_import_and_hybrid_liege_boundary(self):
         import json
         root=Path(__file__).resolve().parents[1]

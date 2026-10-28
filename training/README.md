@@ -185,3 +185,11 @@ unsupported cards, the generic anthem grammar added in response, and remaining
 mana, token-event and zone-change work. Before/after summaries are committed in
 `examples/questions-242.json`. Parsing Liege's text does not enable its unsupported
 hybrid cost. There are now 84 regression checks.
+
+### Generic counters and keyword grants
+
+Entry-trigger effects can now put a parsed number of +1/+1 counters on each
+controlled creature. Continuous effects can grant one supported combat keyword
+to creatures filtered by controller, color and “other.” Cathars' Crusade and
+Bloodmark Mentor use these generic paths. There are 87 regression checks;
+`examples/counter-keyword-242.json` records the rerun of the six deck pairings.
