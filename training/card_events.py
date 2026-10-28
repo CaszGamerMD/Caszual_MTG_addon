@@ -7,6 +7,7 @@ rules raise NeedsRules rather than being treated as blank.
 from __future__ import annotations
 from dataclasses import dataclass, field
 import re
+from attack_abilities import compile as compile_attacks
 from oracle_abilities import Trigger, StaticEffect, compile_abilities, matches, event_data
 
 
@@ -82,6 +83,7 @@ class Definition:
     colors: frozenset[str] = frozenset()
     triggers: tuple[Trigger, ...] = ()
     static_effects: tuple[StaticEffect, ...] = ()
+    attack_effects: tuple = ()
 
 
 def parse_card(card: dict) -> Definition:
@@ -102,6 +104,13 @@ def parse_card(card: dict) -> Definition:
     program = compile_abilities(text,name)
     if program is not None and ("Creature" in types or "Enchantment" in types):
         return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects)
+    attack_program=compile_attacks(text)
+    if attack_program:
+        keywords,crew,saddle,effects=attack_program
+        if (crew is not None and 'Vehicle' not in subtypes) or (saddle is not None and 'Mount' not in subtypes):
+            return Definition(**base,abilities=frozenset(),supported=False,reason='Activation/type mismatch')
+        if 'Creature' in types or 'Vehicle' in subtypes:
+            return Definition(**base,abilities=keywords,crew=crew,saddle=saddle,attack_effects=effects)
     if name == "Kolodin, Triumph Caster":
         valid = text == KOLODIN and "Creature" in types
         return Definition(**base, abilities=frozenset(), supported=valid,
@@ -155,6 +164,9 @@ class Permanent:
     counters: int = 0
     attacking: int | None = None
     token: bool = False
+    temporary_power: int = 0
+    temporary_toughness: int = 0
+    temporary_abilities: frozenset[str] = frozenset()
 
 
 @dataclass
@@ -178,7 +190,7 @@ class Game:
             raise IllegalAction("Permanent is not currently a creature")
         bonus = sum(1 for x in self.battlefield.values()
                     if x.definition.name == "Andúril, Flame of the West" and x.attached_to == p.id)
-        power_bonus = toughness_bonus = 0
+        power_bonus, toughness_bonus = p.temporary_power, p.temporary_toughness
         for source in self.battlefield.values():
             for effect in source.definition.static_effects:
                 if not matches(effect.subject,source,p,True): continue
@@ -191,7 +203,7 @@ class Game:
                 p.definition.toughness + p.counters + bonus + toughness_bonus)
 
     def has(self, p: Permanent, ability: str) -> bool:
-        if ability in p.definition.abilities: return True
+        if ability in p.definition.abilities or ability in p.temporary_abilities: return True
         if any(effect.grant == ability and matches(effect.subject,source,p,self.creature(p))
                for source in self.battlefield.values() for effect in source.definition.static_effects):
             return True
@@ -324,6 +336,14 @@ class Game:
         if not self.has(a,"vigilance"): a.tapped = True
         a.attacking = defending_player
         self.emit("attacks", id=a.id, defending=defending_player)
+        for operation,power,toughness,keyword in a.definition.attack_effects:
+            if operation=='counter':
+                a.counters+=power
+                self.emit('trigger',source=a.id,effect='add +1/+1 counter',target=a.id)
+            elif operation=='saddled_boost' and a.saddled:
+                a.temporary_power+=power;a.temporary_toughness+=toughness
+                a.temporary_abilities=a.temporary_abilities|{keyword}
+                self.emit('trigger',source=a.id,effect=f'+{power}/+{toughness} and {keyword} until end of turn',target=a.id)
         if a.definition.name == "Brightfield Mustang" and a.saddled:
             a.tapped = False
             a.counters += 1
@@ -345,6 +365,8 @@ class Game:
 
     def cleanup(self):
         for p in self.battlefield.values():
+            p.temporary_power=p.temporary_toughness=0
+            p.temporary_abilities=frozenset()
             p.saddled = False
             p.animated = False
             p.attacking = None

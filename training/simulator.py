@@ -207,6 +207,9 @@ class Permanent:
     saddled: bool = False
     animated: bool = False
     counters: int = 0
+    temporary_power: int = 0
+    temporary_toughness: int = 0
+    temporary_abilities: frozenset[str] = frozenset()
 
 
 @dataclass
@@ -414,7 +417,8 @@ class Simulator:
                                                  card.legendary, card.power, card.toughness, keywords,
                                                  colors=frozenset(card.colors))
                 game.battlefield[card.id] = EventPermanent(card.id, definition, seat, item.tapped,
-                    item.fresh, item.saddled, item.animated, counters=item.counters, token=item.card.is_token)
+                    item.fresh, item.saddled, item.animated, counters=item.counters, token=item.card.is_token,temporary_power=item.temporary_power,
+                    temporary_toughness=item.temporary_toughness,temporary_abilities=item.temporary_abilities)
         return game
 
     def sync_events(self, game: EventGame):
@@ -424,6 +428,7 @@ class Simulator:
                 if state:
                     item.tapped, item.fresh = state.tapped, state.fresh
                     item.saddled, item.animated, item.counters = state.saddled, state.animated, state.counters
+                    item.temporary_power,item.temporary_toughness,item.temporary_abilities=state.temporary_power,state.temporary_toughness,state.temporary_abilities
 
     def effective_card(self, item: Permanent) -> Card | None:
         game = self.event_game("combat")
@@ -485,6 +490,13 @@ class Simulator:
                 self.resolve_entry_triggers(pending,card)
                 if self.finished: return
                 continue
+            elif event.get('operation')=='discard':
+                target=self.players[event['target']]
+                if target.hand:
+                    discarded=target.hand.pop()
+                    target.graveyard.append(discarded)
+                    message=f"{event['name']}: Player {event['target']+1} discards {discarded.name}."
+                else: message=f"{event['name']}: damaged player has no cards to discard."
             elif event.get("operation") == "add_counters":
                 game = self.event_game("main")
                 affected = []
@@ -880,12 +892,20 @@ class Simulator:
             if effective_attacker is None: raise RuntimeError("Attacker is no longer a creature")
             d = self.damage(effective_attacker, effective_blocker)
             dead_ids = ([a.card.id] if d["attackerDies"] else []) + ([b.card.id] if b and d["blockerDies"] else [])
+            damage_triggers=[]
+            if d['damage']>0:
+                game=self.event_game('combat')
+                from oracle_abilities import matches
+                for watcher in game.battlefield.values():
+                    for trigger in watcher.definition.triggers:
+                        if trigger.event=='combat_damage' and matches(trigger.subject,watcher,game.battlefield[a.card.id],True):
+                            damage_triggers.append({'controller':watcher.controller,'name':watcher.definition.name,'source':watcher.id,'target':1-self.active})
             death_triggers = self.event_game("combat").death_triggers(dead_ids)
             # The shared combat helper summarizes first/double-strike and regular
             # damage in one result; it cannot interleave these death triggers.
             # Stop rather than falsely treating the two damage steps as simultaneous.
             traits = [effective_attacker.traits, effective_blocker.traits if effective_blocker else ""]
-            if death_triggers and any("first strike" in t or "double strike" in t for t in traits):
+            if (death_triggers or damage_triggers) and any("first strike" in t or "double strike" in t for t in traits):
                 self.pause("Death triggers between first-strike and regular combat damage need priority and separate damage steps.",a.card)
                 return False
             self.log("block", choice.label, actor=1-self.active,
@@ -906,6 +926,7 @@ class Simulator:
             self.pending = None
             self.outcome()
             if not self.finished:
+                death_triggers.extend(dict(t,operation='discard',effect='discard') for t in damage_triggers)
                 # APNAP: triggers of the nonactive player resolve first. Within a
                 # controller's set, discovery order is a deterministic legal choice.
                 for trigger in sorted(death_triggers, key=lambda t: t["controller"] == self.active):
@@ -993,7 +1014,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):

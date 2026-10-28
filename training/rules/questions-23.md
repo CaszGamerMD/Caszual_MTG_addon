@@ -6,8 +6,8 @@ Three resolved through reusable parsing: Honor of the Pure (capitalized color se
 |---|---|
 | Akroma's Memorial | Protection, combined keyword grants, artifact static effects |
 | Basilisk Collar | Equip costs, attachment targets, granted abilities |
-| Brightfield Glider | Saddled attack condition and temporary stats/keywords |
-| Cabal Slaver | Combat-damage event filtering and discard choices |
+| Brightfield Glider | Implemented: generic saddled attack condition and temporary stats/keywords |
+| Cabal Slaver | Implemented: generic subtype combat-damage filtering and deterministic legal discard |
 | Captain's Claws | Equipment and tapped attacking token placement |
 | Cloudspire Coordinator | Turn history, variable activated token creation, crew/saddle contribution replacement |
 | Empty the Warrens | Implemented in diagnostic simulator |
@@ -26,10 +26,14 @@ Three resolved through reusable parsing: Honor of the Pure (capitalized color se
 | Ruinous Ultimatum | Simultaneous destruction, indestructible and full death/SBA processing |
 | Shadowspear | Equipment, activated ability removal and duration |
 | Skyknight Vanguard | Tapped attacking tokens and multiple-attacker combat |
-| Untethered Express | Composable crew plus attack-triggered self counters |
+| Untethered Express | Implemented: composable crew plus generic attack-triggered self counters |
 
 Validation: 114 tests pass. Seed 1142 rerun increased spells cast from 3 to 4 and reduced original encountered unsupported cards from 23 to 20. No runtime questions. See `training/examples/questions-23-after.json`. Remaining cards reject whole-card execution; no partial abilities are silently enabled.
 
 Storm support is limited to fixed-token sorceries without targets or other rules. Copies resolve separately before the original and finish each token batch before entry triggers. Copies are not cast and do not increase later storm counts. Full priority/counterspell interaction remains unavailable.
 
 Reference: https://magic.wizards.com/en/news/feature/modern-horizons-2-release-notes-2021-06-04
+
+Attack follow-up: 116 tests cover these two cards, unfamiliar names and amounts, unsaddled non-triggering, persistent counters, temporary flying/stat cleanup, and simulator state roundtrips. Seventeen original cards remain blocked; this is not complete Magic support.
+
+Combat-damage follow-up: generic subtype watchers discard only after positive player combat damage. The damaged player chooses their last card deterministically, without a hidden-hand observation by the attacking AI. Empty hands do nothing. Damage and death triggers use controller ordering together; first/double-strike interleaving remains a blocking question. 117 tests cover normal damage and zero damage in addition to prior regressions.

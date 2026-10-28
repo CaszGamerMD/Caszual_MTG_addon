@@ -1,0 +1,40 @@
+{
+  "result": "win",
+  "winner": 0,
+  "turnsCompleted": [
+    12,
+    12
+  ],
+  "rulesProgress": {
+    "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+    "cardsPlayableInDiagnostic": [
+      45,
+      47
+    ],
+    "landsPlayed": 14,
+    "spellsCast": 6,
+    "triggerLogEntries": 5,
+    "runtimeQuestions": [],
+    "unsupportedEncountered": [
+      "Akroma's Memorial",
+      "Basilisk Collar",
+      "Cabal Slaver",
+      "Captain's Claws",
+      "Cloudspire Coordinator",
+      "Ephemerate",
+      "Flowering of the White Tree",
+      "Goblin Chainwhirler",
+      "Haazda Marshal",
+      "Heliod, God of the Sun",
+      "Hopeful Eidolon",
+      "Krenko, Tin Street Kingpin",
+      "Lifelink",
+      "Lumen-Class Frigate",
+      "Muxus, Goblin Grandee",
+      "Ruinous Ultimatum",
+      "Shadowspear",
+      "Skyknight Vanguard"
+    ],
+    "unsupportedCommanders": []
+  }
+}

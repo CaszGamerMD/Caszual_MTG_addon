@@ -132,6 +132,10 @@ def compile_abilities(text, name=''):
         static=static_effect(line)
         if static:
             static_effects.append(static); continue
+        combat=re.fullmatch(r'Whenever a ([A-Z][a-z]+) deals combat damage to a player, that player discards a card\.',line)
+        if combat:
+            triggers.append(Trigger('combat_damage',Selector(creature=True,subtype=combat[1]),Effect('discard',1,'damaged player')))
+            continue
         upkeep=re.fullmatch(r'At the beginning of your upkeep, (.+)',line)
         if upkeep:
             clause=upkeep[1]
