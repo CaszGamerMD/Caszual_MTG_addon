@@ -177,3 +177,11 @@ now execute from parsed Oracle text. Unknown remainders reject the whole program
 renamed cards and altered types/amounts are covered by regression tests. More
 specialized legacy handlers remain to be migrated. Review questions now expose
 the parsed nodes, while full-game eligibility remains blocked.
+
+### Seed-242 question-driven play tests
+
+[Question log](rules/questions-242.md) records the six-match batch, 95 encountered
+unsupported cards, the generic anthem grammar added in response, and remaining
+mana, token-event and zone-change work. Before/after summaries are committed in
+`examples/questions-242.json`. Parsing Liege's text does not enable its unsupported
+hybrid cost. There are now 84 regression checks.

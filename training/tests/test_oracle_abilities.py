@@ -8,6 +8,34 @@ from oracle_abilities import compile_abilities
 import simulator as s
 
 class OracleGrammarChecks(unittest.TestCase):
+    def test_real_anthem_import_and_hybrid_liege_boundary(self):
+        import json
+        root=Path(__file__).resolve().parents[1]
+        lookup={c['name']:c for p in (root/'decks').glob('*.json') for c in json.loads(p.read_text())['mainboard']}
+        with s.RulesBridge() as rules:
+            anthem=s.import_diagnostic_card(rules,lookup['Glorious Anthem'],0,'anthem',{'White'})
+            self.assertEqual(anthem.kind,'enchantment')
+            self.assertTrue(parse_card(lookup['Glen Elendra Liege']).supported)
+            liege=s.import_diagnostic_card(rules,lookup['Glen Elendra Liege'],0,'liege',{'Blue','Black'})
+            self.assertEqual(liege.kind,'unsupported')  # Hybrid costs are not implemented.
+
+    def test_color_anthems_stack_for_multicolored_creatures_and_cease(self):
+        lord=self.definition('Flying\nOther blue creatures you control get +1/+1.\nOther black creatures you control get +1/+1.')
+        g=Game();g.enter(Permanent('lord',lord,0))
+        for identifier,colors,controller in [('both',{'Blue','Black'},0),('blue',{'Blue'},0),('red',{'Red'},0),('enemy',{'Blue','Black'},1)]:
+            g.enter(Permanent(identifier,replace(self.definition(''),colors=frozenset(colors)),controller))
+        self.assertEqual(g.stats(g.battlefield['both']),(4,4))
+        self.assertEqual(g.stats(g.battlefield['blue']),(3,3))
+        self.assertEqual(g.stats(g.battlefield['red']),(2,2))
+        self.assertEqual(g.stats(g.battlefield['enemy']),(2,2))
+        self.assertEqual(g.stats(g.battlefield['lord']),(2,2))
+        g.leave('lord');self.assertEqual(g.stats(g.battlefield['both']),(2,2))
+
+    def test_global_creature_bonus_includes_source_when_it_is_a_creature(self):
+        g=Game();g.enter(Permanent('source',self.definition('Creatures you control get +2/+3.'),0))
+        self.assertEqual(g.stats(g.battlefield['source']),(4,5))
+        self.assertFalse(self.definition('Creatures you control get +2/+3.\nThey have ward {2}.').supported)
+
     def test_irregular_type_plurals_and_unknown_inflections(self):
         for plural,singular in [('Allies','Ally'),('Faeries','Faerie'),('Zombies','Zombie'),('Elves','Elf'),('Mice','Mouse')]:
             d=self.definition(f'Other {plural} you control get +1/+1.')

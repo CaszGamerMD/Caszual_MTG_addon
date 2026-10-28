@@ -39,6 +39,9 @@ class Program:
     static_effects: tuple[StaticEffect, ...] = ()
 
 def static_effect(text):
+    m=re.fullmatch(r'(Other )?(?:(white|blue|black|red|green) )?[Cc]reatures you control get \+([0-9]+)/\+([0-9]+)\.',text)
+    if m: return StaticEffect(Selector(relation='controller',other=bool(m[1]),creature=True,
+                                      color=(m[2] or '').title()),int(m[3]),int(m[4]))
     m=re.fullmatch(r'Other ([A-Z][a-z]+) you control get \+([0-9]+)/\+([0-9]+)\.',text)
     if m:
         irregular={'Allies':'Ally','Faeries':'Faerie','Zombies':'Zombie','Harpies':'Harpy',
