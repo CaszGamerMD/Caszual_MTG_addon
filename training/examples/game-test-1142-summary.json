@@ -1,0 +1,70 @@
+{
+  "seed": 1142,
+  "deckNames": [
+    "Garbo Gobbos",
+    "Budget Deck"
+  ],
+  "commanders": [
+    "Zurgo Helmsmasher",
+    "Kolodin, Triumph Caster"
+  ],
+  "result": "win",
+  "winner": 0,
+  "turnsStarted": [
+    13,
+    12
+  ],
+  "turnsCompleted": [
+    12,
+    12
+  ],
+  "rulesProgress": {
+    "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+    "cardsPlayableInDiagnostic": [
+      44,
+      43
+    ],
+    "landsPlayed": 13,
+    "spellsCast": 3,
+    "triggerLogEntries": 0,
+    "runtimeQuestions": [],
+    "unsupportedEncountered": [
+      "Akroma's Memorial",
+      "Basilisk Collar",
+      "Brightfield Glider",
+      "Cabal Slaver",
+      "Captain's Claws",
+      "Cloudspire Coordinator",
+      "Empty the Warrens",
+      "Ephemerate",
+      "Flowering of the White Tree",
+      "Goblin Chainwhirler",
+      "Haazda Marshal",
+      "Heliod, God of the Sun",
+      "Honor of the Pure",
+      "Hopeful Eidolon",
+      "Krenko, Tin Street Kingpin",
+      "Lifelink",
+      "Lumen-Class Frigate",
+      "Muxus, Goblin Grandee",
+      "Radiant Summit",
+      "Ruinous Ultimatum",
+      "Shadowspear",
+      "Skyknight Vanguard",
+      "Untethered Express"
+    ],
+    "unsupportedCommanders": []
+  },
+  "learningEligible": false,
+  "productionEligible": false,
+  "finalLife": [
+    34,
+    16
+  ],
+  "lossReasons": [
+    [],
+    [
+      "21 commander damage"
+    ]
+  ]
+}
