@@ -29,7 +29,8 @@ class CardEventChecks(unittest.TestCase):
         self.assertFalse(any(e.get("effect")=="deal 1 damage to each opponent" for e in g.events))
         g.enter(real("Goblin Instigator","ally"))
         triggers=[e for e in g.events if e.get("effect")=="deal 1 damage to each opponent"]
-        self.assertEqual(len(triggers),2)
+        self.assertEqual(len(triggers),1)  # The token trigger has not resolved yet.
+        self.assertTrue(any(e.get("operation")=="create_tokens" for e in g.events))
         self.assertTrue(all(e["controller"]==0 and e["source"]=="tremors" for e in triggers))
         altered=dict(cards["Impact Tremors"],oracleText=cards["Impact Tremors"]["oracleText"]+"\nDraw a card.")
         self.assertFalse(parse_card(altered).supported)

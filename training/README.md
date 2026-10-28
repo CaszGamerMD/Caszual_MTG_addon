@@ -201,3 +201,11 @@ keywords and tapped status instead of assuming red 1/1 Goblins. Complete-text
 validation keeps additional unsupported abilities blocked. See
 [rules/oracle-grammar.md](rules/oracle-grammar.md) for scope and remaining token
 work. There are 89 regression checks and a new six-pairing seed-342 summary.
+
+### Entry token triggers
+
+Self-entry token triggers now compose generic event filters with TokenSpec.
+Goblin Instigator no longer has a name-specific implementation. Tokens are created
+at resolution, with the trigger's controller and parsed characteristics. There
+are 90 regression checks and a six-pairing seed-442 diagnostic summary. Repeating
+token engines, replacement effects and general stack timing remain flagged.

@@ -8,6 +8,25 @@ from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
 class OracleGrammarChecks(unittest.TestCase):
+    def test_unfamiliar_entry_token_trigger_waits_for_resolution_and_uses_controller(self):
+        raw=dict(name='Unseen summoner',types=['Creature'],power='2',toughness='2',manaCost='{G}',
+                 oracleText='When this creature enters, create two tapped 3/4 blue Drake creature tokens with flying.')
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,1,'summoner',{'Green'})
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0),s.demo_deck(1)+[card]),diagnostic=True)
+            owner=sim.players[1]
+            (owner.hand if card in owner.hand else owner.library).remove(card)
+            triggers=sim.enter_creature(card,owner)
+            self.assertFalse(any(p.card.is_token for p in owner.battlefield))
+            sim.resolve_entry_triggers(triggers,card)
+            tokens=[p for p in owner.battlefield if p.card.is_token]
+            self.assertEqual(len(tokens),2)
+            self.assertTrue(all(p.tapped and p.card.traits=='3;4;flying' for p in tokens))
+            self.assertFalse(sim.players[0].battlefield)
+            sim.invariant()
+        self.assertFalse(self.definition('Whenever a creature you control enters, create a 1/1 green Squirrel creature token.').supported)
+        self.assertFalse(self.definition('When this creature dies, create a 1/1 green Squirrel creature token.').supported)
+
     def test_token_instruction_extracts_all_characteristics(self):
         spec=parse_token_creation('Create three tapped 2/3 blue and black Faerie Rogue creature tokens with flying and lifelink.')
         self.assertEqual((spec.amount,spec.power,spec.toughness,spec.tapped),(3,2,3,True))

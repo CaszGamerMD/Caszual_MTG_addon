@@ -126,10 +126,6 @@ def parse_card(card: dict) -> Definition:
         valid = text == NESTED_SHAMBLER and "Creature" in types
         return Definition(**base, abilities=frozenset(), supported=valid,
                           reason="" if valid else name + " metadata/rules mismatch")
-    if name == "Goblin Instigator":
-        valid = text == INSTIGATOR and "Creature" in types
-        return Definition(**base, abilities=frozenset(), supported=valid,
-                          reason="" if valid else "Goblin Instigator metadata/rules mismatch")
     if name == "Brightfield Mustang":
         valid = text == MUSTANG and "Creature" in types and "Mount" in subtypes
         return Definition(**base, abilities=frozenset(), saddle=1, supported=valid,
@@ -229,13 +225,6 @@ class Game:
             for trigger in watcher.definition.triggers:
                 if trigger.event == "enters" and matches(trigger.subject,watcher,permanent,self.creature(permanent)):
                     self.emit("trigger",**event_data(trigger,watcher,permanent))
-        if permanent.definition.name == "Goblin Instigator":
-            self._next_token += 1
-            token_id = f"goblin-token-{self._next_token}"
-            goblin = Definition("Goblin", frozenset({"Creature"}), frozenset({"Goblin"}),
-                                False, 1, 1, frozenset(), colors=frozenset({"Red"}))
-            self.enter(Permanent(token_id,goblin,permanent.controller,token=True))
-            self.emit("trigger", source=permanent.id, effect="create a 1/1 red Goblin token", token=token_id)
         # These are triggered abilities, modeled as immediate resolutions in this
         # focused prototype. The full engine must provide stack/priority.
         watched = any(x.id != permanent.id and x.controller == permanent.controller

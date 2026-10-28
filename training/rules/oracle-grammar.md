@@ -66,3 +66,19 @@ creation instruction from hiding unimplemented additional abilities.
 blue-black Faerie Rogues with flying. A six-pairing real-deck batch (seed 342) is
 recorded in examples/token-grammar-342.json. Five completed ten turns each; one
 ended earlier under diagnostic rules. No strategic-learning claim is made.
+
+## Entry-triggered token creation
+
+Self-entry triggers now compose with the same TokenSpec used by standalone
+spells. Goblin Instigator's name-specific handler was removed. The event kernel
+queues the ability without creating tokens; resolution creates the entire batch
+under the trigger controller before resolving the tokens' entry triggers. Parsed
+amount, stats, colors, types, keywords and tapped state are preserved. Structured
+review data serializes the token descriptor alongside trigger and subject nodes.
+
+90 checks pass, including an unfamiliar summoner creating two tapped 3/4 blue
+Drakes with flying for the nonactive player. Repeating token-entry engines and
+generic death-token creation remain rejected pending proper stack/loop handling;
+upkeep and last-known-power token handlers still require migration. The six
+seed-442 pairings are recorded in examples/entry-token-442.json. This is continued
+rules implementation, not learned strategy or complete Commander support.

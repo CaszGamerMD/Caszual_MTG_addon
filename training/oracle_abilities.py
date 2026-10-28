@@ -1,5 +1,5 @@
 """Strict, composable Oracle grammar. No card-name dispatch or guessed remainder."""
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import re
 
 @dataclass(frozen=True)
@@ -48,6 +48,7 @@ class Effect:
     amount: int
     recipient: str = 'controller'
     gain: int = 0
+    token: TokenSpec | None = None
 
 @dataclass(frozen=True)
 class Trigger:
@@ -100,6 +101,8 @@ def selector(text):
                     subtype='' if noun=='creature' else noun.split()[0])
 
 def effect(text):
+    token=parse_token_creation(text[:1].upper()+text[1:])
+    if token: return Effect('create_tokens',token.amount,token=token)
     m=re.fullmatch(r'put (a|[1-9][0-9]*) \+1/\+1 counters? on each creature you control\.',text)
     if m: return Effect('add_counters',1 if m[1]=='a' else int(m[1]),'controlled creatures')
     m=re.fullmatch(r'(each opponent|target player) loses ([1-9][0-9]*) life(?: and you gain ([1-9][0-9]*) life)?\.',text)
@@ -132,6 +135,8 @@ def compile_abilities(text, name=''):
         subject=selector(m[1]); action=effect(m[3])
         if subject is None or action is None: return None
         event='dies' if m[2]=='dies' else 'enters'
+        if action.operation=='create_tokens' and (event!='enters' or not subject.self_only):
+            return None  # Repeating token engines need bounded stack/loop handling.
         # Scry on death needs a new resolution implementation, not just parsing.
         if event=='dies' and action.operation in ('scry','add_counters'): return None
         triggers.append(Trigger(event,subject,action))
@@ -149,9 +154,11 @@ def event_data(trigger, source, subject):
     e=trigger.effect
     label={'lose_life':f'{e.recipient} loses {e.amount} life',
            'damage':f'deal {e.amount} damage to each opponent','scry':'scry',
-           'add_counters':f'put {e.amount} +1/+1 counters on each creature you control'}[e.operation]
+           'add_counters':f'put {e.amount} +1/+1 counters on each creature you control',
+           'create_tokens':f'create {e.amount} creature tokens'}[e.operation]
     if e.gain: label+=f'; controller gains {e.gain} life'
     return {'source':source.id,'name':source.definition.name,'controller':source.controller,
             'effect':label,'operation':e.operation,'recipient':e.recipient,
             'amount':e.amount,'gain':e.gain,
+            **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             ('entered' if trigger.event=='enters' else 'dead'):subject.id}

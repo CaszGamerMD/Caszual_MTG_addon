@@ -467,11 +467,12 @@ class SimulatorChecks(unittest.TestCase):
         player=sim.players[0]
         (player.hand if card in player.hand else player.library).remove(card)
         triggers=sim.enter_creature(card,player)
+        sim.resolve_entry_triggers(triggers,card)
         tokens=[x for x in player.battlefield if x.card.is_token]
         self.assertEqual(len(tokens),1)
         self.assertEqual(tokens[0].card.name,"Goblin")
         self.assertEqual(tokens[0].card.event_definition.subtypes,frozenset({"Goblin"}))
-        self.assertTrue(any("Goblin" in e["effect"] for e in triggers))
+        self.assertTrue(any(e.get("operation")=="create_tokens" for e in triggers))
         sim.send_to_destination(player,tokens[0])
         self.assertFalse(any(c.is_token for c in player.graveyard))
         sim.invariant()

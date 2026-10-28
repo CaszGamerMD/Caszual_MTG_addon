@@ -452,7 +452,27 @@ class Simulator:
 
     def resolve_entry_triggers(self, triggers: list[dict], card: Card):
         for event in triggers:
-            if event.get("operation") == "add_counters":
+            if event.get("operation") == "create_tokens":
+                spec=event["tokenSpec"]
+                owner=self.players[event["controller"]]
+                pending=[]
+                for _ in range(spec["amount"]):
+                    self.token_sequence+=1
+                    definition=EventDefinition(" ".join(spec["subtypes"]),frozenset({"Creature"}),frozenset(spec["subtypes"]),
+                        False,spec["power"],spec["toughness"],frozenset(spec["keywords"]),colors=frozenset(spec["colors"]))
+                    token=Card(f"token-{self.token_sequence}",definition.name,"creature",
+                        traits=f"{definition.power};{definition.toughness};"+",".join(sorted(definition.abilities)),
+                        power=definition.power,toughness=definition.toughness,event_definition=definition,is_token=True)
+                    pending.extend(self.enter_creature(token,owner))
+                    next(p for p in owner.battlefield if p.card.id==token.id).tapped=spec["tapped"]
+                self.log("trigger",f"{event['name']} creates {spec['amount']} creature tokens.",actor=event["controller"],
+                         **{k:v for k,v in event.items() if k!="kind"})
+                self.outcome()
+                if self.finished: return
+                self.resolve_entry_triggers(pending,card)
+                if self.finished: return
+                continue
+            elif event.get("operation") == "add_counters":
                 game = self.event_game("main")
                 affected = []
                 for identifier,permanent in game.battlefield.items():
@@ -917,7 +937,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                            uid: str, identity: set[str]) -> Card:
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
-    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Bitterblossom", "Bitterbloom Bearer", "Brightfield Mustang", "Goblin Instigator", "Nested Shambler")
+    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Bitterblossom", "Bitterbloom Bearer", "Brightfield Mustang", "Nested Shambler")
                or bool(event_definition.triggers or event_definition.static_effects) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
@@ -1030,7 +1050,7 @@ def diagnose(rules: RulesBridge, decks: list[dict], seed: int, turns_per_player:
     partially_supported = {c.name for deck_cards in cards for c in deck_cards
                            if c.event_definition is not None or c.kind == "token_spell" or c.land_rule}
     partially_supported.update(c.name for c in commanders if c.event_definition is not None)
-    parsed_abilities = {c.name:([dict(kind="trigger",**asdict(t)) for t in c.event_definition.triggers]
+    parsed_abilities = {c.name:([dict(kind="trigger",**json.loads(json.dumps(asdict(t),default=sorted))) for t in c.event_definition.triggers]
                               + [dict(kind="static",**asdict(e)) for e in c.event_definition.static_effects])
                         for c in [*cards[0],*cards[1],*commanders]
                         if c.event_definition and (c.event_definition.triggers or c.event_definition.static_effects)}
