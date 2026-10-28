@@ -21,3 +21,13 @@ Casting now pays costs and moves the original card from hand/command zone onto t
 Supported untargeted draw/life instants preserve Instant metadata at import. The priority API exposes only the priority holder's own hand, public state, legal affordable instant responses, and passing. Wrong-player and sorcery responses reject before payment. `priority_observation` and `act_priority` expose those choices for a controller; automatic games still pass by default, so this is not a trained instant-response policy. Manual API tests cast an opponent instant over a sorcery and resolve them separately in LIFO order, with correct mana, life, graveyard and card conservation.
 
 Validation: 124 tests pass; seed 1142 replay completed without runtime questions. See `training/examples/spell-stack-1142.json`. Still missing: targeted response spells, counterspell cards, flash casting for all supported permanents, comprehensive state-based actions, and full combat priority windows. Storm copy creation is queued directly at casting rather than through a separately counterable storm trigger. This remains a diagnostic simulator; live Minecraft actions are unchanged.
+
+## Targeted counterspell responses
+
+Whole-text Instant grammars now recognize “Counter target spell.”, “Counter target creature spell.”, and “Counter target noncreature spell.” Each legal response names a stable stack-object ID. Abilities are excluded from spell targets, and unanimated Vehicles are noncreature spells on the stack. Timing, payment and target checks happen before the card moves or mana is spent. Resolution rechecks the same ID; if it is gone, the counterspell has no effect and goes to the graveyard. Countered originals go to their controller/owner's graveyard (ownership changes are not supported); commanders use the diagnostic's automatic command-zone choice. Countered copies cease without adding a physical card. None of the countered spell's effects execute.
+
+Tests cover an ordinary counter, filtered target rejection without payment, target disappearance, strict rejection of additional clauses, and countering a counterspell so the original resolves. Automated games still pass priority by default; this adds legal responses through the existing priority API. Conditional tax counters, exile replacements, uncounterability, ability counters and multi-target spells are not enabled. No partially parsed counterspell is allowed.
+
+Rules references: Wizards Comprehensive Rules, countering and illegal targets:
+https://media.wizards.com/2025/downloads/MagicCompRules%2020250919.pdf
+https://media.wizards.com/2025/downloads/MagicCompRules%2020251114.pdf

@@ -187,6 +187,7 @@ class Card:
     colors: tuple[str, ...] = ()
     legendary: bool = False
     instant: bool = False
+    counter_filter: str = ""
 
 
 
@@ -238,6 +239,7 @@ class Candidate:
     label: str = ""
     tap_ids: tuple[str, ...] = ()
     x_value: int | None = None
+    target_stack: int | None = None
 
 
 @dataclass(frozen=True)
@@ -356,6 +358,8 @@ class Simulator:
                 if self.diagnostic and card.kind == "mana_artifact" and len(card.mana_production)==6:
                     continue
                 if self.diagnostic and card.kind == "x_spell" and card.x_effect in ("tokens","draw","life"):
+                    continue
+                if self.diagnostic and card.kind=="counter_spell" and card.counter_filter in ("any","creature","noncreature"):
                     continue
                 if card.kind not in ("land", "creature", "spell"):
                     self.pause("Unsupported sandbox card kind: " + card.kind, card)
@@ -511,14 +515,25 @@ class Simulator:
 
     def response_choices(self,seat):
         if seat!=self.stack.priority: return ()
-        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','token_spell')
+        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','token_spell','counter_spell')
                      and self.payment(c,seat=seat)['paid'])
+
+    def counter_targets(self,card):
+        if card.kind!='counter_spell': return ()
+        return tuple(frame for frame in self.stack.items if frame.payload[0].get('operation')=='spell'
+                     and (card.counter_filter=='any' or
+                          (frame.payload[1].kind=='creature' and card.counter_filter=='creature') or
+                          (frame.payload[1].kind!='creature' and card.counter_filter=='noncreature')))
 
     def priority_observation(self,seat):
         if seat!=self.stack.priority: raise ValueError('Player lacks priority')
         actions=[Candidate('priority-pass','priority_pass',label='Pass priority')]
-        actions.extend(Candidate(c.id,'respond',c.id,features(draw=c.draw,life=c.life),label='Respond with '+c.name)
-                       for c in self.response_choices(seat))
+        for card in self.response_choices(seat):
+            if card.kind=='counter_spell':
+                actions.extend(Candidate(card.id+':target='+str(frame.id),'respond',card.id,
+                    label='Cast '+card.name+' targeting '+frame.label,target_stack=frame.id)
+                    for frame in self.counter_targets(card))
+            else: actions.append(Candidate(card.id,'respond',card.id,features(draw=card.draw,life=card.life),label='Respond with '+card.name))
         return Observation(seat,self.turn,self.phase,tuple(self.players[seat].hand),
                            json.dumps(self.state(),sort_keys=True),tuple(actions))
 
@@ -526,10 +541,10 @@ class Simulator:
         if choice not in self.priority_observation(seat).legal_actions: raise ValueError('Illegal priority choice')
         if choice.kind=='priority_pass': return self.pass_priority(seat)
         card=next(c for c in self.players[seat].hand if c.id==choice.card_id)
-        self.cast_spell(seat,card)
+        self.cast_spell(seat,card,target=choice.target_stack)
         return 'cast'
 
-    def cast_spell(self,seat,card,x=None,commander=False):
+    def cast_spell(self,seat,card,x=None,commander=False,target=None):
         player=self.players[seat]
         if not card.instant and seat!=self.stack.priority: raise ValueError('Player lacks priority')
         if self.stack.items:
@@ -537,6 +552,8 @@ class Simulator:
         elif seat!=self.active or self.phase not in ('main','second_main'):
             if not card.instant or seat!=self.stack.priority: raise ValueError('Spell timing invalid')
         if not commander and card not in player.hand: raise ValueError('Card not in hand')
+        if card.kind=='counter_spell' and target not in {f.id for f in self.counter_targets(card)}:
+            raise ValueError('Counterspell requires a legal spell target')
         payment=self.payment(card,player.commander_casts if commander else 0,x=x,seat=seat)
         if not payment['paid']: raise ValueError('Cannot pay spell cost')
         for source in player.battlefield:
@@ -546,9 +563,9 @@ class Simulator:
         else:player.hand.remove(card)
         prior=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)
         self.stack.active=self.active
-        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x},card),card.name)
+        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target},card),card.name)
         self.log('cast',f'Player {seat+1} casts {card.name}.',actor=seat,card=card.name,
-                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x)
+                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,targetStack=target)
         self.stack.priority=seat
         self.log('stack_push',f'{card.name} goes on the stack.',stackId=frame.id,controller=seat)
         if card.storm:
@@ -565,6 +582,18 @@ class Simulator:
             self.resolve_entry_triggers(triggers,card)
         elif card.kind=='mana_artifact': p.battlefield.append(Permanent(card))
         elif not event.get('copy'): p.graveyard.append(original)
+        if card.kind=='counter_spell':
+            frame=next((f for f in self.counter_targets(card) if f.id==event['target']),None)
+            if frame is None:
+                self.log('illegal_target',f'{card.name} has no legal target and does not resolve.',targetStack=event['target'])
+                return
+            removed=self.stack.counter(frame.id)
+            if not removed.payload[0].get('copy'):
+                owner=self.players[removed.controller];countered=removed.payload[1]
+                if countered.id==owner.commander_id: owner.command_zone=countered
+                else: owner.graveyard.append(countered)
+            self.log('counter',f'{card.name} counters {frame.label}.',targetStack=frame.id)
+            return
         if card.kind=='x_spell':
             x=event['x']
             card=replace(card,kind='token_spell' if card.x_effect=='tokens' else 'spell',
@@ -1140,6 +1169,10 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             template=EventDefinition(' '.join(spec.subtypes),frozenset({'Land','Creature'} if spec.land else {'Creature'}),
                 frozenset(spec.subtypes),False,spec.power,spec.toughness,spec.keywords,colors=frozenset(spec.colors))
             parsed={'kind':'token_spell','token_count':spec.amount,'token_definition':template,'token_tapped':spec.tapped,'storm':True}
+    counter=re.fullmatch(r'Counter target (?:(creature|noncreature) )?spell\.',rule_text(definition.get('oracleText','')))
+    if (parsed['kind']=='unsupported' and definition.get('types')==['Instant'] and counter
+            and rules.query('cost',cost)['supported']):
+        parsed={'kind':'counter_spell','counter_filter':counter[1] or 'any'}
     variable=x_spells.parse(cost,definition.get('oracleText',''),definition.get('types',[]))
     if parsed['kind']=='unsupported' and variable:
         parsed={'kind':'x_spell','x_effect':variable['effect']}
@@ -1153,7 +1186,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
     return Card(id=uid, name=definition["name"], kind=parsed["kind"],
-        instant="Instant" in definition.get("types",[]), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
+        instant="Instant" in definition.get("types",[]), counter_filter=parsed.get("counter_filter",""), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),
         life=parsed.get("life", 0), land_rule=parsed.get("land_rule", ""),
