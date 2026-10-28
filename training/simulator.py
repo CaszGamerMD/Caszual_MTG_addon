@@ -5,7 +5,7 @@ This is NOT a complete Commander rules engine or a Minecraft entity test.
 """
 from __future__ import annotations
 import argparse
-from card_events import Game as EventGame, Permanent as EventPermanent, Definition as EventDefinition, parse_card as parse_event_card
+from card_events import Game as EventGame, Permanent as EventPermanent, Definition as EventDefinition, parse_card as parse_event_card, rule_text
 import base64
 from oracle_abilities import parse_token_creation
 import mana_pool
@@ -177,6 +177,7 @@ class Card:
     land_subtypes: tuple[str, ...] = ()
     basic_land: bool = False
     event_definition: EventDefinition | None = None
+    storm: bool = False
     x_effect: str = ""
     token_count: int = 0
     token_definition: EventDefinition | None = None
@@ -820,22 +821,26 @@ class Simulator:
                     self.resolve_entry_triggers(triggers, card)
                     if self.finished: return False
                     if card.kind == "token_spell":
-                        token_triggers = []
-                        for _ in range(card.token_count):
-                            self.token_sequence += 1
-                            definition = card.token_definition
-                            if definition is None: raise RuntimeError("Missing parsed token characteristics")
-                            token = Card(f"token-{self.token_sequence}",definition.name,"creature",
-                                         traits=f"{definition.power};{definition.toughness};"+",".join(sorted(definition.abilities)),
-                                         power=definition.power,toughness=definition.toughness,
-                                         event_definition=definition,is_token=True)
-                            token_triggers.extend(self.enter_creature(token,p))
-                            next(x for x in p.battlefield if x.card.id==token.id).tapped = card.token_tapped
-                            self.log("token", f"Creates a {definition.power}/{definition.toughness} {definition.name} creature token.",
-                                     card=definition.name, token=token.id)
-                        # Finish creating the whole batch before any entry trigger resolves.
-                        self.resolve_entry_triggers(token_triggers, card)
-                        if self.finished: return False
+                        copies=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)-1 if card.storm else 0
+                        if card.storm: self.log('storm',f'{card.name} creates {copies} spell copies.',copies=copies)
+                        for resolution in range(copies+1):
+                            if resolution<copies: self.log('spell_copy',f'A copy of {card.name} resolves.',card=card.name)
+                            token_triggers = []
+                            for _ in range(card.token_count):
+                                self.token_sequence += 1
+                                definition = card.token_definition
+                                if definition is None: raise RuntimeError("Missing parsed token characteristics")
+                                token = Card(f"token-{self.token_sequence}",definition.name,"creature",
+                                             traits=f"{definition.power};{definition.toughness};"+",".join(sorted(definition.abilities)),
+                                             power=definition.power,toughness=definition.toughness,
+                                             event_definition=definition,is_token=True)
+                                token_triggers.extend(self.enter_creature(token,p))
+                                next(x for x in p.battlefield if x.card.id==token.id).tapped = card.token_tapped
+                                self.log("token", f"Creates a {definition.power}/{definition.toughness} {definition.name} creature token.",
+                                         card=definition.name, token=token.id)
+                            # Finish creating the whole batch before any entry trigger resolves.
+                            self.resolve_entry_triggers(token_triggers, card)
+                            if self.finished: return False
                     if card.kind == "spell":
                         for _ in range(card.draw): self.draw(self.active)
                         p.life += card.life
@@ -976,10 +981,10 @@ def diagnostic_land(definition: dict, identity: set[str]) -> dict | None:
             typed = re.fullmatch(r"This land enters tapped unless you control a (Plains|Island|Swamp|Mountain|Forest) or a (Plains|Island|Swamp|Mountain|Forest)\.",lines[0])
             if typed:
                 return {"kind":"land","mask":mask,"land_rule":"has_type:"+typed[1]+","+typed[2]}
-        if (lines[0] == "({T}: Add {B} or {R}.)"
-                and lines[1] == "This land enters tapped unless you control two or more basic lands."
-                and set(definition.get("subTypes", [])) == {"Swamp", "Mountain"}):
-            return {"kind":"land","mask":12,"land_rule":"two_basics"}
+        basic=re.fullmatch(r"\(\{T\}: Add \{([WUBRG])\} or \{([WUBRG])\}\.\)",lines[0])
+        if basic and lines[1] == "This land enters tapped unless you control two or more basic lands.":
+            bits={"W":1,"U":2,"B":4,"R":8,"G":16}
+            return {"kind":"land","mask":bits[basic[1]]|bits[basic[2]],"land_rule":"two_basics"}
     return None
 
 
@@ -1008,6 +1013,15 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                       "token_definition":template,"token_tapped":token_spec.tapped}
         else:
             parsed = diagnostic_land(definition, identity) or parsed
+    storm_text=rule_text(definition.get('oracleText',''))
+    storm_lines=storm_text.splitlines()
+    if (parsed['kind']=='unsupported' and definition.get('types')==['Sorcery'] and len(storm_lines)==2
+            and storm_lines[1]=='Storm' and rules.query('cost',cost)['supported']):
+        spec=parse_token_creation(storm_lines[0])
+        if spec:
+            template=EventDefinition(' '.join(spec.subtypes),frozenset({'Land','Creature'} if spec.land else {'Creature'}),
+                frozenset(spec.subtypes),False,spec.power,spec.toughness,spec.keywords,colors=frozenset(spec.colors))
+            parsed={'kind':'token_spell','token_count':spec.amount,'token_definition':template,'token_tapped':spec.tapped,'storm':True}
     variable=x_spells.parse(cost,definition.get('oracleText',''),definition.get('types',[]))
     if parsed['kind']=='unsupported' and variable:
         parsed={'kind':'x_spell','x_effect':variable['effect']}
@@ -1027,7 +1041,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         life=parsed.get("life", 0), land_rule=parsed.get("land_rule", ""),
         land_subtypes=tuple(definition.get("subTypes", [])),
         basic_land="Basic" in definition.get("superTypes", []), event_definition=parsed.get("event"),
-        x_effect=parsed.get("x_effect",""), token_count=parsed.get("token_count",0),
+        storm=parsed.get("storm",False), x_effect=parsed.get("x_effect",""), token_count=parsed.get("token_count",0),
         token_definition=parsed.get("token_definition"),token_tapped=parsed.get("token_tapped",False),
         colors=tuple(definition.get("colors") or []), legendary="Legendary" in (definition.get("superTypes") or []))
 

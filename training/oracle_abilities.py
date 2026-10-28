@@ -67,7 +67,7 @@ class Program:
 def static_effect(text):
     m=re.fullmatch(r'(Other )?(?:([Ww]hite|[Bb]lue|[Bb]lack|[Rr]ed|[Gg]reen) )?[Cc]reatures you control have (flying|first strike|double strike|lifelink|vigilance|trample|haste|defender|reach|deathtouch|indestructible)\.',text)
     if m: return StaticEffect(Selector(relation='controller',other=bool(m[1]),creature=True,color=(m[2] or '').title()),0,0,grant=m[3])
-    m=re.fullmatch(r'(Other )?(?:(white|blue|black|red|green) )?[Cc]reatures you control get \+([0-9]+)/\+([0-9]+)\.',text)
+    m=re.fullmatch(r'(Other )?(?:([Ww]hite|[Bb]lue|[Bb]lack|[Rr]ed|[Gg]reen) )?[Cc]reatures you control get \+([0-9]+)/\+([0-9]+)\.',text)
     if m: return StaticEffect(Selector(relation='controller',other=bool(m[1]),creature=True,
                                       color=(m[2] or '').title()),int(m[3]),int(m[4]))
     m=re.fullmatch(r'Other ([A-Z][a-z]+) you control get \+([0-9]+)/\+([0-9]+)\.',text)
