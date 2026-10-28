@@ -40,7 +40,7 @@ results remain excluded from policy training and live golem deployment.
 
 ## Verification
 
-80 tests pass, including unfamiliar names, altered tribes/colors/amounts,
+81 tests pass, including unfamiliar names, altered tribes/colors/amounts,
 controller and type boundaries, continuous bonuses disappearing when their
 conditions end, and unhandled-text rejection. Six distinct real-deck pairings
 (seeds 142–147) each completed ten turns per player: 61 land plays, 20 casts and

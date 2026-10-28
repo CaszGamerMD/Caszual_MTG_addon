@@ -39,8 +39,17 @@ class Program:
     static_effects: tuple[StaticEffect, ...] = ()
 
 def static_effect(text):
-    m=re.fullmatch(r'Other ([A-Z][a-z]+)s you control get \+([0-9]+)/\+([0-9]+)\.',text)
-    if m: return StaticEffect(Selector(relation='controller',other=True,subtype=m[1]),int(m[2]),int(m[3]))
+    m=re.fullmatch(r'Other ([A-Z][a-z]+) you control get \+([0-9]+)/\+([0-9]+)\.',text)
+    if m:
+        irregular={'Allies':'Ally','Faeries':'Faerie','Zombies':'Zombie','Harpies':'Harpy',
+                   'Mercenaries':'Mercenary','Elves':'Elf','Dwarves':'Dwarf','Wolves':'Wolf',
+                   'Werewolves':'Werewolf','Mice':'Mouse','Oxen':'Ox','Fungi':'Fungus',
+                   'Fish':'Fish','Merfolk':'Merfolk','Sheep':'Sheep'}
+        subtype=irregular.get(m[1])
+        if subtype is None and m[1].endswith('s') and not m[1].endswith(('ies','ves','ses','xes','ches','shes')):
+            subtype=m[1][:-1]
+        if subtype: return StaticEffect(Selector(relation='controller',other=True,subtype=subtype),int(m[2]),int(m[3]))
+        return None  # Unrecognized inflection must not become an invented type.
     m=re.fullmatch(r'This creature gets \+([0-9]+)/\+([0-9]+) for each other ([A-Z][a-z]+) on the battlefield\.',text)
     if m: return StaticEffect(Selector(self_only=True),int(m[1]),int(m[2]),count=Selector(other=True,subtype=m[3]))
     m=re.fullmatch(r'This creature gets \+([0-9]+)/\+([0-9]+) as long as you control another (white|blue|black|red|green) creature\.',text)

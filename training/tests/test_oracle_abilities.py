@@ -8,6 +8,13 @@ from oracle_abilities import compile_abilities
 import simulator as s
 
 class OracleGrammarChecks(unittest.TestCase):
+    def test_irregular_type_plurals_and_unknown_inflections(self):
+        for plural,singular in [('Allies','Ally'),('Faeries','Faerie'),('Zombies','Zombie'),('Elves','Elf'),('Mice','Mouse')]:
+            d=self.definition(f'Other {plural} you control get +1/+1.')
+            self.assertTrue(d.supported)
+            self.assertEqual(d.static_effects[0].subject.subtype,singular)
+        self.assertFalse(self.definition('Other Mysteries you control get +1/+1.').supported)
+
     def definition(self,text,name='Unseen card'):
         return parse_card(dict(name=name,types=['Creature'],subTypes=['Wizard'],power='2',toughness='2',oracleText=text))
 
