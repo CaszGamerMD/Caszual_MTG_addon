@@ -570,7 +570,7 @@ class SimulatorChecks(unittest.TestCase):
         report=s.diagnose(self.rules,decks,3,10)
         self.assertEqual(report["turnsCompleted"],[10,10])
         upkeep=[e for e in report["events"] if e["kind"]=="upkeep" and "Bitterbloom" in e["message"]]
-        triggers=[e for e in report["events"] if e["kind"]=="trigger" and "Obyra triggers" in e["message"]]
+        triggers=[e for e in report["events"] if e["kind"]=="trigger" and "Obyra, Dreaming Duelist triggers" in e["message"]]
         self.assertEqual(len(upkeep),8)
         self.assertEqual(len(triggers),4)
         self.assertTrue(all(e["details"]["amount"]==1 for e in triggers))
@@ -606,7 +606,7 @@ class SimulatorChecks(unittest.TestCase):
         self.assertTrue(any(e["kind"]=="cast" and e["details"].get("card")=="Obyra, Dreaming Duelist" for e in events))
         self.assertTrue(any(e["kind"]=="cast" and e["details"].get("card")=="Briarberry Cohort" for e in events))
         self.assertTrue(any(e["kind"]=="cast" and e["details"].get("card")=="Faerie Seer" for e in events))
-        self.assertEqual(len([e for e in events if e["kind"]=="trigger" and "Obyra triggers" in e["message"]]),2)
+        self.assertEqual(len([e for e in events if e["kind"]=="trigger" and "Obyra, Dreaming Duelist triggers" in e["message"]]),2)
         self.assertTrue(any("scries 2" in e["message"] for e in events))
         self.assertFalse(result["learningEligible"])
         partial={q["card"] for q in result["questions"] if q.get("diagnosticSupport")}

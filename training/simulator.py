@@ -7,7 +7,7 @@ from __future__ import annotations
 import argparse
 from card_events import Game as EventGame, Permanent as EventPermanent, Definition as EventDefinition, parse_card as parse_event_card
 import base64
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field, replace, asdict
 import hashlib
 import itertools
 import json
@@ -448,16 +448,17 @@ class Simulator:
 
     def resolve_entry_triggers(self, triggers: list[dict], card: Card):
         for event in triggers:
-            if event.get("effect") == "deal 1 damage to each opponent":
+            if event.get("operation") == "damage":
                 target = 1-event["controller"]
                 self.players[target].life -= event["amount"]
                 # Noncombat damage: never contributes to commander combat damage.
-                message = f"Impact Tremors deals {event['amount']} damage to Player {target+1}."
-            elif event.get("effect") == "each opponent loses 1 life":
+                message = f"{event['name']} deals {event['amount']} damage to Player {target+1}."
+            elif event.get("operation") == "lose_life":
                 source = event["controller"]
                 target = 1-source  # This diagnostic is explicitly two-player.
                 self.players[target].life -= event["amount"]
-                message = f"Obyra triggers: Player {target+1} loses {event['amount']} life."
+                self.players[source].life += event.get("gain",0)
+                message = f"{event['name']} triggers: Player {target+1} loses {event['amount']} life."
             elif event.get("effect") == "scry":
                 source = event["controller"]
                 count = min(event["amount"],len(self.players[source].library))
@@ -832,9 +833,9 @@ class Simulator:
                         if self.finished: break
                         continue
                     target = 1-controller  # Blood Artist chooses the opponent in this two-player pilot.
-                    self.players[target].life -= 1
-                    self.players[controller].life += 1
-                    self.log("trigger", f"{trigger['name']}: Player {target+1} loses 1 life; Player {controller+1} gains 1 life.",
+                    self.players[target].life -= trigger["amount"]
+                    self.players[controller].life += trigger["gain"]
+                    self.log("trigger", f"{trigger['name']}: Player {target+1} loses {trigger['amount']} life; Player {controller+1} gains {trigger['gain']} life.",
                              actor=controller, **trigger)
                     self.outcome()
                     if self.finished: break
@@ -900,8 +901,8 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                            uid: str, identity: set[str]) -> Card:
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
-    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Obyra, Dreaming Duelist", "Briarberry Cohort", "Faerie Seer", "Bitterblossom", "Bitterbloom Bearer", "Brightfield Mustang", "Goblin Instigator", "Squirrel Mob", "Squirrel Sovereign", "Blood Artist", "Zulaport Cutthroat", "Nested Shambler", "Impact Tremors")
-               or "Vehicle" in definition.get("subTypes", []))
+    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Bitterblossom", "Bitterbloom Bearer", "Brightfield Mustang", "Goblin Instigator", "Nested Shambler")
+               or bool(event_definition.triggers or event_definition.static_effects) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and re.fullmatch(r"(?:\{(?:[WUBRGC]|[0-9]{1,2})\})+", cost)):
@@ -1009,6 +1010,10 @@ def diagnose(rules: RulesBridge, decks: list[dict], seed: int, turns_per_player:
     partially_supported = {c.name for deck_cards in cards for c in deck_cards
                            if c.event_definition is not None or c.kind == "token_spell" or c.land_rule}
     partially_supported.update(c.name for c in commanders if c.event_definition is not None)
+    parsed_abilities = {c.name:([dict(kind="trigger",**asdict(t)) for t in c.event_definition.triggers]
+                              + [dict(kind="static",**asdict(e)) for e in c.event_definition.static_effects])
+                        for c in [*cards[0],*cards[1],*commanders]
+                        if c.event_definition and (c.event_definition.triggers or c.event_definition.static_effects)}
     for seat, deck in enumerate(decks):
         imported = {card.name:card for card in cards[seat]}
         for definition in deck["mainboard"]:
@@ -1019,6 +1024,8 @@ def diagnose(rules: RulesBridge, decks: list[dict], seed: int, turns_per_player:
         if q.get("card") in partially_supported:
             q["diagnosticSupport"] = True
             q["supportNote"] = "Supported in the limited diagnostic; full timing, combat and live game integration remain open."
+            if q["card"] in parsed_abilities:
+                q["parsedAbilities"] = parsed_abilities[q["card"]]
             if q["card"] in DIAGNOSTIC_RULINGS:
                 q["ruleAnswer"] = DIAGNOSTIC_RULINGS[q["card"]]
     result.update(mode="real-deck-diagnostic", learningEligible=False, productionEligible=False,

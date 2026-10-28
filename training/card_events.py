@@ -7,6 +7,7 @@ rules raise NeedsRules rather than being treated as blank.
 from __future__ import annotations
 from dataclasses import dataclass, field
 import re
+from oracle_abilities import Trigger, StaticEffect, compile_abilities, matches, event_data
 
 
 class NeedsRules(ValueError):
@@ -79,6 +80,8 @@ class Definition:
     supported: bool = True
     reason: str = ""
     colors: frozenset[str] = frozenset()
+    triggers: tuple[Trigger, ...] = ()
+    static_effects: tuple[StaticEffect, ...] = ()
 
 
 def parse_card(card: dict) -> Definition:
@@ -96,6 +99,9 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []))
     if ("Creature" in types or "Vehicle" in subtypes) and (power < 0 or toughness <= 0):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    program = compile_abilities(text,name)
+    if program is not None and ("Creature" in types or "Enchantment" in types):
+        return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects)
     if name == "Kolodin, Triumph Caster":
         valid = text == KOLODIN and "Creature" in types
         return Definition(**base, abilities=frozenset(), supported=valid,
@@ -108,39 +114,16 @@ def parse_card(card: dict) -> Definition:
         valid = text == ANDURIL and "Artifact" in types and "Equipment" in subtypes
         return Definition(**base, abilities=frozenset(), supported=valid,
                           reason="" if valid else "Andúril metadata/rules mismatch")
-    if name == "Obyra, Dreaming Duelist":
-        valid = text == OBYRA and "Creature" in types and "Faerie" in subtypes
-        return Definition(**base, abilities=frozenset({"flying","flash"}), supported=valid,
-                          reason="" if valid else "Obyra metadata/rules mismatch")
-    if name == "Briarberry Cohort":
-        valid = text == COHORT and "Creature" in types and "Faerie" in subtypes
-        return Definition(**base, abilities=frozenset({"flying"}), supported=valid,
-                          reason="" if valid else "Briarberry Cohort metadata/rules mismatch")
     if name == "Bitterblossom":
         valid = text == BITTERBLOSSOM and "Enchantment" in types and "Faerie" in subtypes
         return Definition(**base, abilities=frozenset(), supported=valid,
                           reason="" if valid else "Bitterblossom metadata/rules mismatch")
-    if name == "Impact Tremors":
-        valid = text == IMPACT_TREMORS and "Enchantment" in types
-        return Definition(**base, abilities=frozenset(), supported=valid,
-                          reason="" if valid else "Impact Tremors metadata/rules mismatch")
     if name == "Bitterbloom Bearer":
         valid = text == BITTERBLOOM and "Creature" in types and "Faerie" in subtypes
         return Definition(**base, abilities=frozenset({"flying","flash"}), supported=valid,
                           reason="" if valid else "Bitterbloom metadata/rules mismatch")
-    if name == "Faerie Seer":
-        valid = text == SEER and "Creature" in types and "Faerie" in subtypes
-        return Definition(**base, abilities=frozenset({"flying"}), supported=valid,
-                          reason="" if valid else "Faerie Seer metadata/rules mismatch")
-    if name in ("Squirrel Mob", "Squirrel Sovereign"):
-        expected = SQUIRREL_MOB if name == "Squirrel Mob" else SQUIRREL_SOVEREIGN
-        valid = text == expected and "Creature" in types and "Squirrel" in subtypes
-        return Definition(**base, abilities=frozenset(), supported=valid,
-                          reason="" if valid else name + " metadata/rules mismatch")
-    if name in ("Blood Artist", "Zulaport Cutthroat", "Nested Shambler"):
-        expected = {"Blood Artist":BLOOD_ARTIST, "Zulaport Cutthroat":ZULAPORT,
-                    "Nested Shambler":NESTED_SHAMBLER}[name]
-        valid = text == expected and "Creature" in types
+    if name == "Nested Shambler":
+        valid = text == NESTED_SHAMBLER and "Creature" in types
         return Definition(**base, abilities=frozenset(), supported=valid,
                           reason="" if valid else name + " metadata/rules mismatch")
     if name == "Goblin Instigator":
@@ -207,18 +190,17 @@ class Game:
             raise IllegalAction("Permanent is not currently a creature")
         bonus = sum(1 for x in self.battlefield.values()
                     if x.definition.name == "Andúril, Flame of the West" and x.attached_to == p.id)
-        cohort_bonus = int(p.definition.name == "Briarberry Cohort" and
-            any(x.id != p.id and x.controller == p.controller and self.creature(x)
-                and "Blue" in x.definition.colors for x in self.battlefield.values()))
-        mob_bonus = (sum(1 for x in self.battlefield.values()
-                         if x.id != p.id and "Squirrel" in x.definition.subtypes)
-                     if p.definition.name == "Squirrel Mob" else 0)
-        sovereign_bonus = (sum(1 for x in self.battlefield.values()
-                               if x.id != p.id and x.controller == p.controller
-                               and x.definition.name == "Squirrel Sovereign")
-                           if "Squirrel" in p.definition.subtypes else 0)
-        return (p.definition.power + p.counters + 3*bonus + cohort_bonus + mob_bonus + sovereign_bonus,
-                p.definition.toughness + p.counters + bonus + cohort_bonus + mob_bonus + sovereign_bonus)
+        power_bonus = toughness_bonus = 0
+        for source in self.battlefield.values():
+            for effect in source.definition.static_effects:
+                if not matches(effect.subject,source,p,True): continue
+                if effect.condition and not any(matches(effect.condition,source,x,self.creature(x)) for x in self.battlefield.values()): continue
+                multiplier = (sum(matches(effect.count,source,x,self.creature(x)) for x in self.battlefield.values())
+                              if effect.count else 1)
+                power_bonus += effect.power * multiplier
+                toughness_bonus += effect.toughness * multiplier
+        return (p.definition.power + p.counters + 3*bonus + power_bonus,
+                p.definition.toughness + p.counters + bonus + toughness_bonus)
 
     def has(self, p: Permanent, ability: str) -> bool:
         if ability in p.definition.abilities: return True
@@ -240,20 +222,10 @@ class Game:
         self.emit("enters", id=permanent.id, name=permanent.definition.name,
                   controller=permanent.controller, types=sorted(permanent.definition.types),
                   subtypes=sorted(permanent.definition.subtypes))
-        if self.creature(permanent):
-            for watcher in list(self.battlefield.values()):
-                if watcher.controller == permanent.controller and watcher.definition.name == "Impact Tremors":
-                    self.emit("trigger",source=watcher.id,effect="deal 1 damage to each opponent",
-                              controller=watcher.controller,entered=permanent.id,amount=1)
-        if "Faerie" in permanent.definition.subtypes:
-            for watcher in list(self.battlefield.values()):
-                if (watcher.id != permanent.id and watcher.controller == permanent.controller
-                        and watcher.definition.name == "Obyra, Dreaming Duelist"):
-                    self.emit("trigger", source=watcher.id, effect="each opponent loses 1 life",
-                              controller=watcher.controller, entered=permanent.id, amount=1)
-        if permanent.definition.name == "Faerie Seer":
-            self.emit("trigger", source=permanent.id, effect="scry", amount=2,
-                      controller=permanent.controller)
+        for watcher in list(self.battlefield.values()):
+            for trigger in watcher.definition.triggers:
+                if trigger.event == "enters" and matches(trigger.subject,watcher,permanent,self.creature(permanent)):
+                    self.emit("trigger",**event_data(trigger,watcher,permanent))
         if permanent.definition.name == "Goblin Instigator":
             self._next_token += 1
             token_id = f"goblin-token-{self._next_token}"
@@ -304,12 +276,10 @@ class Game:
                                  "dead":creature.id,"effect":"create tapped Squirrels",
                                  "amount":max(0,self.stats(creature)[0])})
         for watcher in self.battlefield.values():
-            name = watcher.definition.name
-            if name not in ("Blood Artist", "Zulaport Cutthroat"): continue
-            for creature in dead:
-                if name == "Zulaport Cutthroat" and creature.controller != watcher.controller: continue
-                triggers.append({"source":watcher.id,"name":name,"controller":watcher.controller,
-                                 "dead":creature.id,"effect":"opponent loses 1 life; controller gains 1 life"})
+            for trigger in watcher.definition.triggers:
+                for creature in dead:
+                    if trigger.event == "dies" and matches(trigger.subject,watcher,creature,True):
+                        triggers.append(event_data(trigger,watcher,creature))
         return triggers
 
     def leave(self, permanent_id: str):

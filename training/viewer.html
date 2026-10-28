@@ -80,6 +80,7 @@ function renderQuestions(){
   if(q.deck)el.append(node("small","Deck: "+q.deck+(q.alsoInDecks?.length?" / "+q.alsoInDecks.join(" / "):"")));
   if(q.diagnosticSupport)el.append(node("small",q.supportNote));
   if(q.ruleAnswer)el.append(node("p","Validated diagnostic ruling: "+q.ruleAnswer));
+  if(q.parsedAbilities)el.append(node("pre",JSON.stringify(q.parsedAbilities,null,2)));
   if(q.oracleText){const details=node("details");details.append(node("summary","Card rules text"),node("pre",q.oracleText));el.append(details)}
   const answer=node("textarea");answer.placeholder="Human review notes / proposed ruling";answer.value=q.answer||"";answer.setAttribute("aria-label","Answer for "+(q.card||q.reason));answer.oninput=()=>q.answer=answer.value;
   el.append(answer,node("small",q.diagnosticSupport ? "Diagnostic subset implemented · Full-game integration still open" : "Open · Blocking · Needs implementation and tests"));$("questionList").append(el);

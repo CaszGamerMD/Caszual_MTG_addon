@@ -168,3 +168,12 @@ The diagnostic supports the exact current imported text for Bitterblossom and Bi
 The upkeep ability creates its token before the loss check. If its controller loses at that point, pending later Obyra triggers do not resolve in this two-player diagnostic. Tests cover that edge case. Trigger resolutions are still automatic, not a priority/stack implementation, and flash is only cast in the AI main phase. The agent currently keeps all cards on top when it scries.
 
 A targeted real-deck seed-3 diagnostic of Faeries versus Kolodin completed ten turns each: Bitterbloom Bearer created eight upkeep Faeries, and Obyra triggered on four of the later entries. See examples/faerie-upkeep-replay.html. All six non-mirror pairings were also rerun; examples/faerie-upkeep-pool-summary.json contains the resulting life totals. These diagnostics are incomplete and do not change any training checkpoints or the live golem.
+
+### Oracle cause-and-effect grammar
+
+[Oracle grammar](rules/oracle-grammar.md) documents the new reusable trigger,
+filter, effect and continuous-bonus nodes. Eight previous card-specific behaviors
+now execute from parsed Oracle text. Unknown remainders reject the whole program;
+renamed cards and altered types/amounts are covered by regression tests. More
+specialized legacy handlers remain to be migrated. Review questions now expose
+the parsed nodes, while full-game eligibility remains blocked.
