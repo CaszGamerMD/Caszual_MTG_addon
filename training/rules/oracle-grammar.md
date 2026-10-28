@@ -82,3 +82,13 @@ generic death-token creation remain rejected pending proper stack/loop handling;
 upkeep and last-known-power token handlers still require migration. The six
 seed-442 pairings are recorded in examples/entry-token-442.json. This is continued
 rules implementation, not learned strategy or complete Commander support.
+
+## Generic upkeep triggers
+
+The parser now recognizes “At the beginning of your upkeep” and composes it with supported effects (fixed token creation, scry, counters, opponent damage/life loss). It also recognizes mandatory “you lose N life and create …” as a single resolving effect with parsed life loss and token characteristics. Only the active controller's permanents trigger; token entry triggers resolve after the parent ability finishes and after checking game loss.
+
+Bitterblossom and Bitterbloom Bearer now use this grammar; their name-specific parsing, upkeep generation, and importer exceptions were removed. Unknown names, token sizes, counts, colors, subtypes, and keywords use the same execution path. Conditions, optional payments, each-player upkeep, and unknown trailing instructions still reject the entire program. This remains a two-player diagnostic without a full response stack.
+
+Validation: 92 tests pass, including unfamiliar upkeep text, opponent-turn exclusion, repeated upkeeps, and existing lethal-life-loss/token-entry timing tests. Seeds 542–547 ran all six distinct deck pairings: four reached ten turns per player; two ended earlier with a winner. Summary: `training/examples/upkeep-542.json`. These runs are not eligible for policy training.
+
+Rules reference: Wizards’ Double Masters 2022 release notes, Bitterblossom: mandatory life loss is not a payment; token creation still occurs. https://media.wizards.com/2022/downloads/2X2_Release_Notes/EN_MTG2X2_Release%20Notes_20220418.pdf

@@ -114,14 +114,6 @@ def parse_card(card: dict) -> Definition:
         valid = text == ANDURIL and "Artifact" in types and "Equipment" in subtypes
         return Definition(**base, abilities=frozenset(), supported=valid,
                           reason="" if valid else "Andúril metadata/rules mismatch")
-    if name == "Bitterblossom":
-        valid = text == BITTERBLOSSOM and "Enchantment" in types and "Faerie" in subtypes
-        return Definition(**base, abilities=frozenset(), supported=valid,
-                          reason="" if valid else "Bitterblossom metadata/rules mismatch")
-    if name == "Bitterbloom Bearer":
-        valid = text == BITTERBLOOM and "Creature" in types and "Faerie" in subtypes
-        return Definition(**base, abilities=frozenset({"flying","flash"}), supported=valid,
-                          reason="" if valid else "Bitterbloom metadata/rules mismatch")
     if name == "Nested Shambler":
         valid = text == NESTED_SHAMBLER and "Creature" in types
         return Definition(**base, abilities=frozenset(), supported=valid,
@@ -242,12 +234,9 @@ class Game:
         triggers = []
         for p in self.battlefield.values():
             if p.controller != self.turn_player: continue
-            if p.definition.name == "Bitterblossom":
-                triggers.append({"source":p.id,"name":p.definition.name,"controller":p.controller,
-                                 "colors":["Black"],"subtypes":["Faerie","Rogue"]})
-            elif p.definition.name == "Bitterbloom Bearer":
-                triggers.append({"source":p.id,"name":p.definition.name,"controller":p.controller,
-                                 "colors":["Blue","Black"],"subtypes":["Faerie"]})
+            for trigger in p.definition.triggers:
+                if trigger.event == "upkeep":
+                    triggers.append(event_data(trigger,p,p))
         return triggers
 
     def death_triggers(self, ids: list[str]) -> list[dict]:

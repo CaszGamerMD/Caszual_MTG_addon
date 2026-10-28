@@ -1,0 +1,374 @@
+{
+  "matches": [
+    {
+      "match": 1,
+      "seed": 542,
+      "deckNames": [
+        "Budget Deck",
+        "squirrels"
+      ],
+      "commanders": [
+        "Kolodin, Triumph Caster",
+        "Chatterfang, Squirrel General"
+      ],
+      "deckIds": [
+        14850373,
+        8321184
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        40,
+        24
+      ],
+      "winner": null,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          42,
+          31
+        ],
+        "landsPlayed": 10,
+        "spellsCast": 1,
+        "triggerLogEntries": 0,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Academy Manufactor",
+          "Batterbone",
+          "Bloodline Pretender",
+          "Bushy Bodyguard",
+          "Camellia, the Seedmiser",
+          "Charismatic Conqueror",
+          "Chatterstorm",
+          "Cloakwood Hermit",
+          "Fortune, Loyal Steed",
+          "Gloryheath Lynx",
+          "Guardian Gladewalker",
+          "Path to Exile",
+          "Radiant Summit",
+          "Recon Craft Theta",
+          "Shadowspear",
+          "Skyknight Vanguard",
+          "Sol Ring",
+          "Squirrel Nest",
+          "Thornvault Forager",
+          "Throne of the God-Pharaoh",
+          "Twitching Doll",
+          "Valor's Flagship",
+          "Woodland Changeling"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "match": 2,
+      "seed": 543,
+      "deckNames": [
+        "Budget Deck",
+        "faeries"
+      ],
+      "commanders": [
+        "Kolodin, Triumph Caster",
+        "Obyra, Dreaming Duelist"
+      ],
+      "deckIds": [
+        14850373,
+        27521806
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        23,
+        30
+      ],
+      "winner": null,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          42,
+          41
+        ],
+        "landsPlayed": 11,
+        "spellsCast": 3,
+        "triggerLogEntries": 0,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Barrow Naughty",
+          "Dragonmaster Outcast",
+          "Exquisite Blood",
+          "Eye Collector",
+          "Faerie Impostor",
+          "Faerie Slumber Party",
+          "Ferocity of the Wilds",
+          "Gloryheath Lynx",
+          "Hopeful Eidolon",
+          "Legion's Landing // Adanto, the First Fort",
+          "Liliana, the Last Hope",
+          "Murder Investigation",
+          "Oona, Queen of the Fae",
+          "Orcrist, Goblin-cleaver",
+          "Path to Exile",
+          "Radiant Summit",
+          "Securitron Squadron",
+          "Sower of Temptation",
+          "Sword of the Animist",
+          "Tainted Remedy",
+          "Vito, Thorn of the Dusk Rose"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "match": 3,
+      "seed": 544,
+      "deckNames": [
+        "Garbo Gobbos",
+        "Budget Deck"
+      ],
+      "commanders": [
+        "Zurgo Helmsmasher",
+        "Kolodin, Triumph Caster"
+      ],
+      "deckIds": [
+        5254666,
+        14850373
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        34,
+        35
+      ],
+      "winner": null,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          42,
+          42
+        ],
+        "landsPlayed": 11,
+        "spellsCast": 3,
+        "triggerLogEntries": 0,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Batterbone",
+          "Bitterthorn, Nissa's Animus",
+          "Boggart Birth Rite",
+          "Bovine Intervention",
+          "Brave the Sands",
+          "Bridled Bighorn",
+          "Chromatic Orrery",
+          "Cloudspire Captain",
+          "Goblin Chainwhirler",
+          "Goblin Chieftain",
+          "Haazda Marshal",
+          "Krenko, Tin Street Kingpin",
+          "Legion Warboss",
+          "Lumen-Class Frigate",
+          "Murder Investigation",
+          "Muxus, Goblin Grandee",
+          "Ocelot Pride",
+          "Skirk Prospector",
+          "Skyknight Vanguard",
+          "Speaker of the Heavens"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "match": 4,
+      "seed": 545,
+      "deckNames": [
+        "faeries",
+        "Garbo Gobbos"
+      ],
+      "commanders": [
+        "Obyra, Dreaming Duelist",
+        "Zurgo Helmsmasher"
+      ],
+      "deckIds": [
+        27521806,
+        5254666
+      ],
+      "result": "win",
+      "turnsCompleted": [
+        10,
+        9
+      ],
+      "life": [
+        12,
+        43
+      ],
+      "winner": 1,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          41,
+          42
+        ],
+        "landsPlayed": 13,
+        "spellsCast": 8,
+        "triggerLogEntries": 4,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Cloud of Faeries",
+          "Ethereal Absolution",
+          "Excalibur II",
+          "Faerie Swarm",
+          "Goblin Warchief",
+          "Heliod, God of the Sun",
+          "Kaito Shizuki",
+          "Maskwood Nexus",
+          "Peppersmoke",
+          "Ruinous Ultimatum",
+          "Skirk Prospector",
+          "Sower of Temptation",
+          "Sword of the Animist",
+          "Tegwyll's Scouring"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "match": 5,
+      "seed": 546,
+      "deckNames": [
+        "Garbo Gobbos",
+        "squirrels"
+      ],
+      "commanders": [
+        "Zurgo Helmsmasher",
+        "Chatterfang, Squirrel General"
+      ],
+      "deckIds": [
+        5254666,
+        8321184
+      ],
+      "result": "win",
+      "turnsCompleted": [
+        6,
+        6
+      ],
+      "life": [
+        40,
+        19
+      ],
+      "winner": 0,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          42,
+          31
+        ],
+        "landsPlayed": 7,
+        "spellsCast": 2,
+        "triggerLogEntries": 0,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Academy Manufactor",
+          "Blood Money",
+          "Citywide Bust",
+          "Deep Forest Hermit",
+          "Ethereal Absolution",
+          "Goblin Chainwhirler",
+          "Goblin Chieftain",
+          "Goblin Rabblemaster",
+          "Hardened Scales",
+          "Honored Dreyleader",
+          "Instruments of War",
+          "Krenko, Tin Street Kingpin",
+          "Nadier's Nightblade",
+          "Overgrown Tomb",
+          "Sporeweb Weaver",
+          "The Mycotyrant",
+          "Tribute to the World Tree",
+          "Valley Rotcaller"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "match": 6,
+      "seed": 547,
+      "deckNames": [
+        "squirrels",
+        "faeries"
+      ],
+      "commanders": [
+        "Chatterfang, Squirrel General",
+        "Obyra, Dreaming Duelist"
+      ],
+      "deckIds": [
+        8321184,
+        27521806
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        33,
+        39
+      ],
+      "winner": null,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          31,
+          41
+        ],
+        "landsPlayed": 8,
+        "spellsCast": 3,
+        "triggerLogEntries": 2,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alpha Status",
+          "Bloodline Pretender",
+          "Drowned Catacomb",
+          "Excalibur II",
+          "Faebloom Trick",
+          "Faerie Slumber Party",
+          "Glen Elendra Liege",
+          "Guildpact Informant",
+          "Hardened Scales",
+          "Honored Dreyleader",
+          "Instruments of War",
+          "Nectar Faerie",
+          "Oran-Rief, the Vastwood",
+          "Orcrist, Goblin-cleaver",
+          "Overgrown Tomb",
+          "Parallel Lives",
+          "Peregrin Took",
+          "Primal Vigor",
+          "Shadowspear",
+          "Sol Ring",
+          "Sprite Noble",
+          "The Mycotyrant"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    }
+  ]
+}

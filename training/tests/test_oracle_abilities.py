@@ -8,6 +8,39 @@ from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
 class OracleGrammarChecks(unittest.TestCase):
+    def test_unfamiliar_upkeep_uses_parsed_amounts_and_only_controller_turn(self):
+        raw=dict(name='Unseen nursery',types=['Enchantment'],manaCost='{G}',
+                 oracleText='At the beginning of your upkeep, you lose 3 life and create two tapped 2/3 blue Drake creature tokens with flying.')
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'nursery',{'Green'})
+            self.assertEqual(card.kind,'enchantment')
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card],s.demo_deck(1)),diagnostic=True)
+            owner=sim.players[0]
+            (owner.hand if card in owner.hand else owner.library).remove(card)
+            sim.enter_creature(card,owner)
+            sim.active=1;sim.phase='untap';sim.step()
+            self.assertEqual(owner.life,40)
+            self.assertFalse(any(p.card.is_token for p in owner.battlefield))
+            for expected in (2,4):
+                sim.active=0;sim.phase='untap';sim.step()
+                tokens=[p for p in owner.battlefield if p.card.is_token]
+                self.assertEqual(len(tokens),expected)
+                self.assertTrue(all(p.tapped and p.card.traits=='2;3;flying' for p in tokens))
+            self.assertEqual(owner.life,34)
+            sim.invariant()
+
+    def test_upkeep_grammar_composes_and_rejects_unimplemented_conditions(self):
+        program=compile_abilities('At the beginning of your upkeep, create a 4/4 colorless Golem creature token.')
+        self.assertEqual(program.triggers[0].effect.token.power,4)
+        self.assertEqual(program.triggers[0].effect.controller_loss,0)
+        self.assertIsNotNone(compile_abilities('At the beginning of your upkeep, scry 2.'))
+        for text in [
+            'At the beginning of each upkeep, create a 1/1 green Squirrel creature token.',
+            'At the beginning of your upkeep, if you control a Faerie, create a 1/1 green Squirrel creature token.',
+            'At the beginning of your upkeep, you may pay 1 life. If you do, create a 1/1 green Squirrel creature token.',
+            'At the beginning of your upkeep, create a 1/1 green Squirrel creature token. Draw a card.']:
+            self.assertIsNone(compile_abilities(text))
+
     def test_unfamiliar_entry_token_trigger_waits_for_resolution_and_uses_controller(self):
         raw=dict(name='Unseen summoner',types=['Creature'],power='2',toughness='2',manaCost='{G}',
                  oracleText='When this creature enters, create two tapped 3/4 blue Drake creature tokens with flying.')

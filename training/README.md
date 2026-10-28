@@ -209,3 +209,7 @@ Goblin Instigator no longer has a name-specific implementation. Tokens are creat
 at resolution, with the trigger's controller and parsed characteristics. There
 are 90 regression checks and a six-pairing seed-442 diagnostic summary. Repeating
 token engines, replacement effects and general stack timing remain flagged.
+
+### Generic upkeep follow-up
+
+Upkeep token engines now compile from Oracle text rather than Bitterblossom/Bitterbloom card names. Parsed mandatory life loss and token creation finish together before game-loss checks; new entry triggers follow afterward. Conditions and optional payments remain unsupported. Validation: 92 tests and six distinct real-deck pairings (seeds 542–547), capped at ten turns per player; four reached the cap and two ended earlier with a winner. See `examples/upkeep-542.json` and `rules/oracle-grammar.md`. This is diagnostic rules coverage, not learned strategy.

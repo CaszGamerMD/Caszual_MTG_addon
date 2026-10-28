@@ -49,6 +49,7 @@ class Effect:
     recipient: str = 'controller'
     gain: int = 0
     token: TokenSpec | None = None
+    controller_loss: int = 0
 
 @dataclass(frozen=True)
 class Trigger:
@@ -130,6 +131,17 @@ def compile_abilities(text, name=''):
         static=static_effect(line)
         if static:
             static_effects.append(static); continue
+        upkeep=re.fullmatch(r'At the beginning of your upkeep, (.+)',line)
+        if upkeep:
+            clause=upkeep[1]
+            loss=re.fullmatch(r'you lose ([1-9][0-9]*) life and (create .+)',clause)
+            action=effect(loss[2] if loss else clause)
+            if action is None: return None
+            if loss:
+                if action.operation!='create_tokens': return None
+                action=Effect(action.operation,action.amount,token=action.token,controller_loss=int(loss[1]))
+            triggers.append(Trigger('upkeep',Selector(self_only=True),action))
+            continue
         m=re.fullmatch(r'(?:When|Whenever) (.+) (enters(?: the battlefield)?|dies), (.+)',line)
         if not m: return None
         subject=selector(m[1]); action=effect(m[3])
@@ -156,9 +168,10 @@ def event_data(trigger, source, subject):
            'damage':f'deal {e.amount} damage to each opponent','scry':'scry',
            'add_counters':f'put {e.amount} +1/+1 counters on each creature you control',
            'create_tokens':f'create {e.amount} creature tokens'}[e.operation]
+    if e.controller_loss: label=f'controller loses {e.controller_loss} life; '+label
     if e.gain: label+=f'; controller gains {e.gain} life'
     return {'source':source.id,'name':source.definition.name,'controller':source.controller,
             'effect':label,'operation':e.operation,'recipient':e.recipient,
-            'amount':e.amount,'gain':e.gain,
+            'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
-            ('entered' if trigger.event=='enters' else 'dead'):subject.id}
+            {'enters':'entered','dies':'dead','upkeep':'permanent'}[trigger.event]:subject.id}

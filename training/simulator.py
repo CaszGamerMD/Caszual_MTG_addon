@@ -456,6 +456,7 @@ class Simulator:
                 spec=event["tokenSpec"]
                 owner=self.players[event["controller"]]
                 pending=[]
+                owner.life -= event.get("controllerLoss",0)
                 for _ in range(spec["amount"]):
                     self.token_sequence+=1
                     definition=EventDefinition(" ".join(spec["subtypes"]),frozenset({"Creature"}),frozenset(spec["subtypes"]),
@@ -465,7 +466,8 @@ class Simulator:
                         power=definition.power,toughness=definition.toughness,event_definition=definition,is_token=True)
                     pending.extend(self.enter_creature(token,owner))
                     next(p for p in owner.battlefield if p.card.id==token.id).tapped=spec["tapped"]
-                self.log("trigger",f"{event['name']} creates {spec['amount']} creature tokens.",actor=event["controller"],
+                self.log("upkeep" if event.get("event")=="upkeep" else "trigger",
+                         f"{event['name']}: controller loses {event.get('controllerLoss',0)} life and creates {spec['amount']} creature tokens.",actor=event["controller"],
                          **{k:v for k,v in event.items() if k!="kind"})
                 self.outcome()
                 if self.finished: return
@@ -699,21 +701,9 @@ class Simulator:
         elif self.phase == "untap":
             self.phase = "upkeep"
             for trigger in self.event_game("upkeep").upkeep_triggers():
-                controller = trigger["controller"]
-                self.players[controller].life -= 1
-                self.token_sequence += 1
-                definition = EventDefinition("Faerie",frozenset({"Creature"}),frozenset(trigger["subtypes"]),
-                    False,1,1,frozenset({"flying"}),colors=frozenset(trigger["colors"]))
-                token = Card(f"token-{self.token_sequence}","Faerie","creature",traits="1;1;flying",
-                             power=1,toughness=1,event_definition=definition,is_token=True)
-                created_triggers = self.enter_creature(token,self.players[controller])
-                self.log("upkeep", f"{trigger['name']}: Player {controller+1} loses 1 life and creates a flying Faerie.",
-                         source=trigger["source"], token=token.id)
-                # The entire upkeep ability resolves before checking losses. If its controller
-                # loses, newly triggered abilities do not resolve in this two-player pilot.
-                self.outcome()
-                if self.finished: return False
-                self.resolve_entry_triggers(created_triggers,token)
+                source = next(p.card for player in self.players for p in player.battlefield
+                              if p.card.id == trigger["source"])
+                self.resolve_entry_triggers([trigger],source)
                 if self.finished: return False
             return True
         elif self.phase == "upkeep":
@@ -937,7 +927,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                            uid: str, identity: set[str]) -> Card:
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
-    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Bitterblossom", "Bitterbloom Bearer", "Brightfield Mustang", "Nested Shambler")
+    allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
                or bool(event_definition.triggers or event_definition.static_effects) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported

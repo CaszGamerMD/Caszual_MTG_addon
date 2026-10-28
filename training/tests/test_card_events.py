@@ -111,7 +111,7 @@ class CardEventChecks(unittest.TestCase):
         self.assertFalse(g.creature(g.battlefield["bb"]))
         self.assertTrue(any(e.get("source")=="o" and e.get("entered")=="bb" for e in g.events))
         upkeep=g.upkeep_triggers()
-        self.assertEqual([(e["name"],e["colors"],e["subtypes"]) for e in upkeep],
+        self.assertEqual([(e["name"],list(e["tokenSpec"]["colors"]),list(e["tokenSpec"]["subtypes"])) for e in upkeep],
                          [("Bitterblossom",["Black"],["Faerie","Rogue"])])
         g.turn_player=1
         self.assertEqual(g.upkeep_triggers(),[])
@@ -121,8 +121,8 @@ class CardEventChecks(unittest.TestCase):
         triggers=g.upkeep_triggers()
         self.assertEqual(len(triggers),2)
         bearer=next(t for t in triggers if t["name"]=="Bitterbloom Bearer")
-        self.assertEqual(bearer["colors"],["Blue","Black"])
-        self.assertEqual(bearer["subtypes"],["Faerie"])
+        self.assertEqual(list(bearer["tokenSpec"]["colors"]),["Blue","Black"])
+        self.assertEqual(list(bearer["tokenSpec"]["subtypes"]),["Faerie"])
 
     def test_cohort_uses_another_blue_creature_you_control(self):
         g=Game();g.enter(real("Briarberry Cohort","c"))
