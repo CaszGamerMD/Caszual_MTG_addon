@@ -314,8 +314,11 @@ function appendCardFace(element,name){
   if(!artEnabled||!art?.faces?.length){element._artPending=null;return}
   const img=make("img",undefined,"cardFace");
   img.decoding="async";img.alt="Scryfall card face: "+name;
+  let painted=false;
   img.onload=()=>{
-   if(element._artPending!==name||!artEnabled||!element.isConnected)return;
+   if(painted||element._artPending!==name||!artEnabled)return;
+   if(!element.isConnected){element._artPending=null;return}
+   painted=true;
    element.querySelector(".cardFace")?.remove();element.append(img)
   };
   img.onerror=()=>{if(element._artPending===name)element._artPending=null};
@@ -370,8 +373,10 @@ function showZoomFace(){
  const url=face.normal||face.small;if(!url)return;
  const ticket=++zoomRequest,image=new Image();
  image.alt=zoomName+" · face "+(zoomFaceIndex+1);
+ let displayed=false;
  image.onload=()=>{
-  if(ticket!==zoomRequest||!zoomHeld||$("hoverZoom").hidden)return;
+  if(displayed||ticket!==zoomRequest||!zoomHeld||$("hoverZoom").hidden)return;
+  displayed=true;
   const previous=$("zoomImage");image.id="zoomImage";image.hidden=false;previous.replaceWith(image);
   $("zoomStatus").textContent=zoomFaces.length>1?"Face "+(zoomFaceIndex+1)+" / "+zoomFaces.length+" · F to flip":"";
   positionCardZoom()
@@ -523,7 +528,6 @@ function renderSpotlight(event){
 function kindOf(c){const k=cardType(c);return k==="land"?"land":k==="creature"?"creature":"other"}
 function syncCardTrack(track,cards,previous,event){
  track._allCards=cards;
- track.querySelector(".overflowTile")?.remove();
  const nodes=track._cardNodes||(track._cardNodes=new Map()),prior=new Map((previous||[]).map(c=>[c.id,c])),used=new Set();
  for(let i=0;i<cards.length;i++){
   const card=cards[i];used.add(card.id);let node=nodes.get(card.id);
@@ -552,10 +556,10 @@ function showCollection(title,cards){
 }
 function fitTrack(track){
  if(!track._allCards||track.clientWidth<30||track.clientHeight<20)return;
- track.querySelector(".overflowTile")?.remove();
+ const overflow=track.querySelector(".overflowTile");
  const cards=Array.from(track.children).filter(n=>n.classList.contains("gameCard"));
  for(const card of cards)card.hidden=false;
- if(!cards.length)return;
+ if(!cards.length){overflow?.remove();return}
  const hand=track.classList.contains("handLine"),gap=3;
  const w=Math.max(0,track.clientWidth-4),h=Math.max(0,track.clientHeight-3);
  const minH=hand?32:34,minW=hand?27:38,maxW=hand?75:69,maxH=hand?74:77;
@@ -573,13 +577,14 @@ function fitTrack(track){
  track.style.setProperty("--compact-card-w",best.width+"px");
  track.style.setProperty("--compact-card-h",best.height+"px");
  if(cards.length>best.capacity){
-   const shown=Math.max(0,best.capacity-1);
-   for(let i=shown;i<cards.length;i++)cards[i].hidden=true;
-   const button=make("button","+"+(cards.length-shown)+" more","overflowTile");
-   button.type="button";button.title="View all "+cards.length+" cards";
-   button.onclick=()=>showCollection(track._collectionName,track._allCards);
-   track.append(button);
- }
+  const shown=Math.max(0,best.capacity-1);
+  for(let i=shown;i<cards.length;i++)cards[i].hidden=true;
+  const button=overflow||make("button",undefined,"overflowTile");
+  button.textContent="+"+(cards.length-shown)+" more";
+  button.type="button";button.title="View all "+cards.length+" cards";
+  button.onclick=()=>showCollection(track._collectionName,track._allCards);
+  if(!overflow)track.append(button)
+ }else overflow?.remove()
 }
 function fitVisibleTracks(){
  if(!document.querySelector(".shell")?.classList.contains("fitMatch"))return;
