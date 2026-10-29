@@ -297,6 +297,7 @@ class AdvancedRules:
    if amount<=0:continue
    if target is None:
     defender=self.players[1-self.active];defender.life-=amount;player_hits.append(source)
+    self.record_player_damage(1-self.active,source,amount)
     card=live[source].card
     if root(card)==self.players[self.active].commander_id:defender.commander_damage[root(card)]=defender.commander_damage.get(root(card),0)+amount
    else:
