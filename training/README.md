@@ -11,7 +11,9 @@ The chosen X value is retained while payment accounts for the reduction.
 Activated abilities and ward payment are not spell costs.
 
 Examples imported by Oracle text: Emerald Medallion, Pearl Medallion,
-Jukai Naturalist, Starnheim Courser and Transcendent Envoy. Their names are
+Jukai Naturalist, Starnheim Courser, Transcendent Envoy and Danitha
+Capashen, Paragon. These include Aura-or-Equipment alternatives and
+multiple independent discounts that disappear when their sources leave. Their names are
 not dispatched in the parser. Unparsed extra instructions reject the full
 card; `training/tests/test_spell_reductions.py` exercises the grammar,
 payment planning, color restrictions and tax behavior. The work remains
