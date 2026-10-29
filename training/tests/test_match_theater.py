@@ -108,6 +108,12 @@ class MatchTheaterChecks(unittest.TestCase):
         self.assertEqual(report["learningEligible"],False)
         self.assertNotRegex(text,r"<script[^>]+src=")
 
+    def test_raw_replay_name_index_and_stack_inspection_exist(self):
+        html=(HERE/"viewer.html").read_text(encoding="utf-8")
+        self.assertIn('for(const event of data?.events||[])',html)
+        self.assertIn('for(const hand of event.spectatorHands||[])',html)
+        self.assertIn('preview.onclick=()=>inspectCard(',html)
+
     def test_both_sample_htmls_share_new_spectator_controls(self):
         for sample in ("examples/match-theater-real-decks.html",
                        "examples/budget-vs-goblins-spectator-20261029.html"):

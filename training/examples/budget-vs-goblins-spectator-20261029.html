@@ -237,8 +237,17 @@ function makeCard(c,previous,combat){const kind=cardType(c);const attackers=comb
 let printedNames=[];
 function indexPrintedNames(){
  const unique=new Map();
- for(const card of data?.cardCatalog||[])if(card?.name)unique.set(card.name.toLocaleLowerCase(),card.name);
- for(const name of data?.commanders||[])if(name)unique.set(name.toLocaleLowerCase(),name);
+ const remember=name=>{if(name)unique.set(name.toLocaleLowerCase(),name)};
+ for(const card of data?.cardCatalog||[])remember(card?.name);
+ for(const name of data?.commanders||[])remember(name);
+ // Raw event replays have no cardCatalog. Index only actually observed cards.
+ for(const event of data?.events||[]){
+  for(const player of event.state?.players||[])
+   for(const zone of ["battlefield","graveyard","exile"])
+    for(const card of player[zone]||[])remember(card?.name);
+  for(const hand of event.spectatorHands||[])
+   for(const card of hand||[])remember(card?.name);
+ }
  printedNames=[...unique.values()].sort((a,b)=>b.length-a.length);
 }
 function printedNameWithin(text){
@@ -305,7 +314,7 @@ function renderStack(state){const items=state.stack;$("stack").replaceChildren()
  $("stackCount").textContent=String(items.length);if(!items.length){$("stack").append(make("div","The stack is empty","emptyStack"));return}
  for(const [index,item] of items.slice().reverse().entries()){
   const node=make("div",undefined,"stackItem"),card=stackPrintedName(item.label);
-  if(card){const preview=make("div",undefined,"stackPreview");appendCardFace(preview,card);preview.title=card;node.append(preview)}
+  if(card){const preview=make("button",undefined,"stackPreview");preview.type="button";preview.style.padding="0";preview.title="Inspect "+card;preview.setAttribute("aria-label","Inspect "+card);appendCardFace(preview,card);preview.onclick=()=>inspectCard({id:"stack-"+item.id,name:card,kind:"stack",tapped:false,fresh:false});node.append(preview)}
   const label=make("div",undefined,"stackDescription");
   label.append(make("strong",(index===0?"↑ Next · ":"")+item.label),make("span","Controlled by "+nameFor(item.controller),"stackOwner"));
   node.append(label);$("stack").append(node);
