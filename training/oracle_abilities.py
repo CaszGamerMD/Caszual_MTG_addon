@@ -214,7 +214,7 @@ def compile_abilities(text, name=''):
         if line=='If you would gain life, you gain twice that much life instead.':
             if life_multiplier!=1:return None
             life_multiplier=2;continue
-        counter=re.fullmatch(r'If one or more \\+1/\\+1 counters would be put on a creature you control, (twice that many|that many plus one) \\+1/\\+1 counters are put on (?:it|that creature) instead\\.',line)
+        counter=re.fullmatch(r'If one or more \+1/\+1 counters would be put on a creature you control, (twice that many|that many plus one) \+1/\+1 counters are put on (?:it|that creature) instead\.',line)
         if counter:
             counter_replacements.append(('double' if counter[1]=='twice that many' else 'plus',2 if counter[1]=='twice that many' else 1,'controlled_creature'))
             continue
