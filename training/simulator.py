@@ -188,6 +188,7 @@ class Card:
     legendary: bool = False
     instant: bool = False
     counter_filter: str = ""
+    removal: str = ""
 
 
 
@@ -240,6 +241,7 @@ class Candidate:
     tap_ids: tuple[str, ...] = ()
     x_value: int | None = None
     target_stack: int | None = None
+    target_permanent: str = ""
 
 
 @dataclass(frozen=True)
@@ -359,6 +361,8 @@ class Simulator:
                 if self.diagnostic and card.kind == "mana_artifact" and len(card.mana_production)==6:
                     continue
                 if self.diagnostic and card.kind == "x_spell" and card.x_effect in ("tokens","draw","life"):
+                    continue
+                if self.diagnostic and card.kind=="removal_spell" and card.removal=="destroy":
                     continue
                 if self.diagnostic and card.kind=="counter_spell" and card.counter_filter in ("any","creature","noncreature"):
                     continue
@@ -506,10 +510,10 @@ class Simulator:
                 choice=self.policies[seat].choose(observation)
                 if choice not in observation.legal_actions: raise RuntimeError('Illegal response decision')
                 self.decisions.append({'seat':seat,'turn':self.turn,'phase':'priority',
-                    'action':choice.kind,'cardId':choice.card_id,'targetStack':choice.target_stack,
+                    'action':choice.kind,'cardId':choice.card_id,'targetStack':choice.target_stack,'targetPermanent':choice.target_permanent,
                     'features':list(choice.features)})
                 self.log('priority_choice',choice.label,actor=seat,action=choice.kind,
-                         cardId=choice.card_id,targetStack=choice.target_stack)
+                         cardId=choice.card_id,targetStack=choice.target_stack,targetPermanent=choice.target_permanent)
                 self.act_priority(seat,choice)
         finally: self._draining_priority=False
 
@@ -532,9 +536,22 @@ class Simulator:
 
     def response_choices(self,seat):
         if seat!=self.stack.priority: return ()
-        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','token_spell','counter_spell')
+        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','token_spell','counter_spell','removal_spell')
                      and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
+
+    def creature_targets(self):
+        game=self.event_game('main')
+        return tuple((seat,item) for seat,player in enumerate(self.players) for item in player.battlefield
+                     if item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id]))
+
+    def removal_choices(self,seat,card,kind):
+        game=self.event_game('main')
+        return tuple(Candidate(card.id+':target='+item.card.id,kind,card.id,
+                    features=features(power=(2 if owner!=seat else -100) if not game.has(game.battlefield[item.card.id],'indestructible') else -100,
+                                      cost=len(self.payment(card,seat=seat).get('sources',[]))),
+                    label='Cast '+card.name+' targeting '+item.card.name,target_permanent=item.card.id)
+                     for owner,item in self.creature_targets())
 
     def counter_targets(self,card):
         if card.kind!='counter_spell': return ()
@@ -547,7 +564,9 @@ class Simulator:
         if seat!=self.stack.priority: raise ValueError('Player lacks priority')
         actions=[Candidate('priority-pass','priority_pass',features=features(),label='Pass priority')]
         for card in self.response_choices(seat):
-            if card.kind=='counter_spell':
+            if card.kind=='removal_spell':
+                actions.extend(self.removal_choices(seat,card,'respond'))
+            elif card.kind=='counter_spell':
                 actions.extend(Candidate(card.id+':target='+str(frame.id),'respond',card.id,
                     features=features(power=2 if frame.controller!=seat else -100,
                                       cost=len(self.payment(card,seat=seat).get('sources',[]))),
@@ -562,7 +581,7 @@ class Simulator:
         if choice not in self.priority_observation(seat).legal_actions: raise ValueError('Illegal priority choice')
         if choice.kind=='priority_pass': return self.pass_priority(seat)
         card=next(c for c in self.players[seat].hand if c.id==choice.card_id)
-        self.cast_spell(seat,card,target=choice.target_stack)
+        self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack)
         return 'cast'
 
     def cast_spell(self,seat,card,x=None,commander=False,target=None):
@@ -573,6 +592,8 @@ class Simulator:
         elif seat!=self.active or self.phase not in ('main','second_main'):
             if not card.instant or seat!=self.stack.priority: raise ValueError('Spell timing invalid')
         if not commander and card not in player.hand: raise ValueError('Card not in hand')
+        if card.kind=='removal_spell' and target not in {item.card.id for _,item in self.creature_targets()}:
+            raise ValueError('Removal requires a legal creature target')
         if card.kind=='counter_spell' and target not in {f.id for f in self.counter_targets(card)}:
             raise ValueError('Counterspell requires a legal spell target')
         payment=self.payment(card,player.commander_casts if commander else 0,x=x,seat=seat)
@@ -586,7 +607,8 @@ class Simulator:
         self.stack.active=self.active
         frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target},card),card.name)
         self.log('cast',f'Player {seat+1} casts {card.name}.',actor=seat,card=card.name,
-                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,targetStack=target)
+                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,targetStack=target if card.kind=='counter_spell' else None,
+                 targetPermanent=target if card.kind=='removal_spell' else None)
         self.stack.priority=seat
         self.log('stack_push',f'{card.name} goes on the stack.',stackId=frame.id,controller=seat)
         if card.storm:
@@ -603,6 +625,26 @@ class Simulator:
             self.resolve_entry_triggers(triggers,card)
         elif card.kind=='mana_artifact': p.battlefield.append(Permanent(card))
         elif not event.get('copy'): p.graveyard.append(original)
+        if card.kind=='removal_spell':
+            target=next(((seat,item) for seat,item in self.creature_targets() if item.card.id==event['target']),None)
+            if target is None:
+                self.log('illegal_target',f'{card.name} has no legal creature target.',targetPermanent=event['target'])
+                return
+            owner,item=target;game=self.event_game('main')
+            if game.has(game.battlefield[item.card.id],'indestructible'):
+                self.log('indestructible',f'{item.card.name} cannot be destroyed.',targetPermanent=item.card.id)
+                return
+            triggers=game.death_triggers([item.card.id])
+            self.send_to_destination(self.players[owner],item)
+            self.log('destroy',f'{card.name} destroys {item.card.name}.',targetPermanent=item.card.id)
+            self.outcome()
+            if self.finished:return
+            for trigger in triggers:
+                if trigger['effect']=='create tapped Squirrels':
+                    trigger.update(operation='create_tokens',tokenSpec=dict(amount=trigger['amount'],power=1,toughness=1,
+                        colors=['Green'],subtypes=['Squirrel'],keywords=[],tapped=True,land=False))
+            self.resolve_entry_triggers(triggers,card)
+            return
         if card.kind=='counter_spell':
             frame=next((f for f in self.counter_targets(card) if f.id==event['target']),None)
             if frame is None:
@@ -845,6 +887,9 @@ class Simulator:
                              cost=len(self.payment(c, p.commander_casts).get("sources", []))),
                     "Cast commander " + c.name))
             for c in p.hand:
+                if c.kind=='removal_spell' and self.payment(c)['paid']:
+                    actions.extend(self.removal_choices(seat,c,'cast'))
+                    continue
                 if c.kind == "x_spell":
                     budget=sum(p.mana_pool)+sum(max(map(sum,options)) for _,options in self.mana_sources(seat))
                     for x in range(budget//c.mana_cost.count('{X}')+1):
@@ -1000,7 +1045,7 @@ class Simulator:
                     if self.phase == "land": self.phase = "main"
                     self.log("land", f"Player {self.active + 1} plays {card.name}.", card=card.name)
                 else:
-                    self.cast_spell(self.active,card,choice.x_value,choice.kind=='cast_commander')
+                    self.cast_spell(self.active,card,choice.x_value,choice.kind=='cast_commander',target=choice.target_permanent or choice.target_stack)
         elif self.phase == "attack":
             choice = self.decide(self.active)
             if choice.kind == "pass":
@@ -1024,6 +1069,10 @@ class Simulator:
                         self.log("trigger", f"{x.card.name}: {event['effect']}.",
                                  **{k:v for k,v in event.items() if k != "kind"})
         elif self.phase == "block":
+            if not any(item.card.id==self.pending for item in p.battlefield):
+                self.pending=None;self.phase='second_main'
+                self.log('combat_skipped','The attacker has left the battlefield.')
+                return True
             defender = self.players[1-self.active]
             choice = self.decide(1-self.active)
             if choice.kind == "crew":
@@ -1190,6 +1239,9 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             template=EventDefinition(' '.join(spec.subtypes),frozenset({'Land','Creature'} if spec.land else {'Creature'}),
                 frozenset(spec.subtypes),False,spec.power,spec.toughness,spec.keywords,colors=frozenset(spec.colors))
             parsed={'kind':'token_spell','token_count':spec.amount,'token_definition':template,'token_tapped':spec.tapped,'storm':True}
+    if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
+            and rule_text(definition.get('oracleText',''))=='Destroy target creature.' and rules.query('cost',cost)['supported']):
+        parsed={'kind':'removal_spell','removal':'destroy'}
     counter=re.fullmatch(r'Counter target (?:(creature|noncreature) )?spell\.',rule_text(definition.get('oracleText','')))
     if (parsed['kind']=='unsupported' and definition.get('types')==['Instant'] and counter
             and rules.query('cost',cost)['supported']):
@@ -1207,7 +1259,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
     return Card(id=uid, name=definition["name"], kind=parsed["kind"],
-        instant="Instant" in definition.get("types",[]), counter_filter=parsed.get("counter_filter",""), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
+        instant="Instant" in definition.get("types",[]), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),
         life=parsed.get("life", 0), land_rule=parsed.get("land_rule", ""),
