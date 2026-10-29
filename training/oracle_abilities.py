@@ -50,6 +50,7 @@ class StaticEffect:
     condition: Selector | None = None
     grant: str = ''
     ward_cost: str = ''
+    life_min: int = 0
 
 @dataclass(frozen=True)
 class Effect:
@@ -78,6 +79,14 @@ class Program:
     devotion: tuple = ()
 
 def static_effect(text):
+    life_conditional=re.fullmatch(r'As long as you have ([1-9][0-9]*) or more life, this creature gets \\+([0-9]+)/\\+([0-9]+) and has (.+)\\.',text)
+    if life_conditional:
+        words={part.strip() for part in re.split(r', | and ',life_conditional[4])}
+        if not words or not words<=KEYWORDS:return None
+        selector=Selector(self_only=True,creature=True)
+        minimum=int(life_conditional[1])
+        return (StaticEffect(selector,int(life_conditional[2]),int(life_conditional[3]),life_min=minimum),)+tuple(
+            StaticEffect(selector,0,0,grant=word,life_min=minimum) for word in sorted(words))
     combined=re.fullmatch(r'(Creatures you control) get \+([0-9]+)/\+([0-9]+) and have (.+)\.',text)
     if combined:
         words=set(re.split(r', | and ',combined[4]))
