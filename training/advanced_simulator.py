@@ -233,7 +233,7 @@ class AdvancedRules:
     if 'Planeswalker' in g.battlefield[target].definition.types and live[target].loyalty is not None:live[target].loyalty=max(0,live[target].loyalty-amount)
     if g.has(source_state,'deathtouch'):touch.add(target)
     damagers.setdefault(target,set()).add(source)
-   if g.has(source_state,'lifelink'):self.players[source_state.controller].life+=amount
+   if g.has(source_state,'lifelink'):self.gain_life(source_state.controller,amount)
    dealt.append(dict(source=source,target=target,amount=amount))
   dead=[]
   for identifier,p in live.items():
