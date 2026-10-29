@@ -215,13 +215,22 @@ body:has(.shell.fitMatch){overflow:hidden}
 .shell.fitMatch .viewTabs,.shell.fitMatch .detailLine{display:none}
 .shell.fitMatch .centerBand{max-height:36px}
 }
+
+.zoomHint{font-size:10px;color:var(--gold);padding:0 5px;white-space:nowrap}
+#hoverZoom{position:fixed;z-index:10000;pointer-events:none;width:min(330px,43vw,calc(100vw - 24px));padding:10px;background:linear-gradient(140deg,#172821,#081310);border:1px solid #e4be77;border-radius:13px;box-shadow:0 20px 70px #000e;max-height:85vh;overflow:hidden}
+#hoverZoom[hidden],#zoomImage[hidden]{display:none!important}
+#zoomTitle{font:700 15px Georgia,serif;color:#ffe6aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
+#zoomImage{display:block;max-width:100%;width:auto;max-height:70vh;margin:auto;object-fit:contain;border:1px solid #b79f66;border-radius:8px}
+#zoomStatus{font-size:11px;text-align:center;color:#c9d7cd;padding:6px}
+#zoomFoot{font-size:10px;text-align:center;color:#d7c7a5;padding-top:6px}
+@media(max-width:700px){#hoverZoom{width:min(260px,calc(100vw - 18px));padding:6px}#zoomImage{max-height:60vh}.zoomHint{display:none}}
 </style>
 </head>
 <body>
 <div class="shell">
 <header>
   <div class="brand"><div class="sigil" aria-hidden="true">M</div><div><div class="eyebrow">Commander Golem · Simulator</div><h1>Match Theater</h1></div></div>
-  <div class="headActions"><button id="toggleHands" type="button" title="Show or hide both players' hands">Hide hands</button><button id="toggleArt" type="button" title="Enable or disable online Scryfall card artwork">Art: On</button><button id="sideToggle" type="button" title="Toggle stack and commentary" aria-expanded="false">☷ Stack / log</button><button id="swapSeats" type="button" title="Swap upper and lower player positions">⇅ Seats</button><button id="fullscreen" type="button" title="Toggle fullscreen">⛶ Fullscreen</button><label class="fileButton">Open replay<input type="file" id="file" accept=".json,application/json"></label></div>
+  <div class="headActions"><button id="toggleHands" type="button" title="Show or hide both players' hands">Hide hands</button><button id="toggleArt" type="button" title="Enable or disable online Scryfall card artwork">Art: On</button><span class="zoomHint">Z + hover = zoom</span><button id="sideToggle" type="button" title="Toggle stack and commentary" aria-expanded="false">☷ Stack / log</button><button id="swapSeats" type="button" title="Swap upper and lower player positions">⇅ Seats</button><button id="fullscreen" type="button" title="Toggle fullscreen">⛶ Fullscreen</button><label class="fileButton">Open replay<input type="file" id="file" accept=".json,application/json"></label></div>
 </header>
 <div id="notice" class="notice" role="status">Saved spectator replays show both hands. Card faces load from Scryfall when online; placeholders work offline.</div>
 <div class="artStatus" id="artStatus">Artwork: Scryfall online lookup enabled · paced requests, cached by card name · viewer only</div>
@@ -252,8 +261,9 @@ body:has(.shell.fitMatch){overflow:hidden}
  </section>
 </main>
 <section id="questions" hidden><div class="sidePanel" style="padding:18px;margin-bottom:14px"><h2 style="font:700 22px Georgia,serif;margin-top:0">Rules questions</h2><p class="muted" style="font-size:13px">Rules-review notes are not game rulings until implemented and tested. Unsupported cards stay unplayable.</p><button id="saveAnswers" type="button">Download review answers</button></div><div id="questionList"></div></section>
-<div class="footer">Diagnostic spectator mode reveals both saved hands, not library order · Card images and data provided by Scryfall (requires internet) · No Scryfall affiliation · Incomplete Commander rules · Keyboard: ← / → / Space</div>
+<div class="footer">Diagnostic spectator mode reveals both saved hands, not library order · Card images and data provided by Scryfall (requires internet) · No Scryfall affiliation · Incomplete Commander rules · Keyboard: ← / → / Space · Hold Z + hover to magnify · F to flip face</div>
 </div>
+<div id="hoverZoom" role="tooltip" aria-hidden="true" hidden><div id="zoomTitle"></div><img id="zoomImage" alt="" hidden><div id="zoomStatus">Loading artwork…</div><div id="zoomFoot">Hold Z and hover · F flips double-faced cards</div></div>
 <dialog id="modal" aria-label="Card and zone details"><h2 id="modalTitle"></h2><div class="modalLabels" id="modalBody"></div><div style="margin-top:16px;text-align:right"><button id="closeModal">Close</button></div></dialog>
 <script>
 "use strict";
@@ -337,6 +347,67 @@ function modalCardImage(name){
    }
  });
 }
+
+let zoomHeld=false,zoomTarget=null,zoomName="",zoomFaces=[],zoomFaceIndex=0,zoomRequest=0,zoomPointer={x:0,y:0};
+function hideCardZoom(){
+ zoomTarget=null;zoomName="";zoomFaces=[];zoomFaceIndex=0;zoomRequest++;
+ $("hoverZoom").hidden=true;$("hoverZoom").setAttribute("aria-hidden","true")
+}
+function zoomCardTarget(element){
+ const card=element?.closest?.(".gameCard,.stackPreview");
+ return card&&(card._card||card._zoomCard||card.dataset.cardName)?card:null
+}
+function positionCardZoom(){
+ const zoom=$("hoverZoom");if(zoom.hidden||!zoomTarget)return;
+ const rect=zoomTarget.getBoundingClientRect(),x=zoomPointer.x||rect.right,y=zoomPointer.y||rect.top;
+ const w=zoom.offsetWidth||300,h=zoom.offsetHeight||420;
+ const left=x+w+20>window.innerWidth?x-w-20:x+20;
+ zoom.style.left=Math.max(6,Math.min(window.innerWidth-w-6,left))+"px";
+ zoom.style.top=Math.max(6,Math.min(window.innerHeight-h-6,y-h/3))+"px"
+}
+function showZoomFace(){
+ const face=zoomFaces[zoomFaceIndex];if(!face)return;
+ const url=face.normal||face.small;if(!url)return;
+ const ticket=++zoomRequest,image=new Image();
+ image.alt=zoomName+" · face "+(zoomFaceIndex+1);
+ image.onload=()=>{
+  if(ticket!==zoomRequest||!zoomHeld||$("hoverZoom").hidden)return;
+  const previous=$("zoomImage");image.id="zoomImage";image.hidden=false;previous.replaceWith(image);
+  $("zoomStatus").textContent=zoomFaces.length>1?"Face "+(zoomFaceIndex+1)+" / "+zoomFaces.length+" · F to flip":"";
+  positionCardZoom()
+ };
+ image.onerror=()=>{if(ticket===zoomRequest)$("zoomStatus").textContent="Artwork unavailable · Click for details"};
+ image.src=url;
+ if(image.complete&&image.naturalWidth)image.onload()
+}
+function showCardZoom(target){
+ if(!zoomHeld||!target?.isConnected||!artEnabled||$("modal").open){hideCardZoom();return}
+ const card=target._card||target._zoomCard||{name:target.dataset.cardName};
+ if(!card?.name){hideCardZoom();return}
+ if(target===zoomTarget&&zoomName===card.name){positionCardZoom();return}
+ zoomTarget=target;zoomName=card.name;zoomFaces=[];zoomFaceIndex=0;
+ const ticket=++zoomRequest;
+ $("zoomTitle").textContent=card.name;$("zoomStatus").textContent="Loading artwork…";
+ $("zoomImage").hidden=true;$("hoverZoom").hidden=false;$("hoverZoom").setAttribute("aria-hidden","false");
+ positionCardZoom();
+ lookupCardImages(card.name).then(art=>{
+  if(ticket!==zoomRequest||!zoomHeld||zoomName!==card.name)return;
+  if(!art?.faces?.length){$("zoomStatus").textContent="Artwork unavailable · Click for details";return}
+  zoomFaces=art.faces;showZoomFace()
+ })
+}
+function refreshCardZoom(){
+ if(!zoomHeld||!zoomTarget||!zoomTarget.isConnected){hideCardZoom();return}
+ showCardZoom(zoomTarget)
+}
+document.addEventListener("pointermove",event=>{
+ zoomPointer={x:event.clientX,y:event.clientY};
+ if(zoomHeld)showCardZoom(zoomCardTarget(event.target))
+});
+document.addEventListener("focusin",event=>{if(zoomHeld)showCardZoom(zoomCardTarget(event.target))});
+document.addEventListener("keyup",event=>{if(event.code==="KeyZ"){zoomHeld=false;hideCardZoom()}});
+window.addEventListener("blur",()=>{zoomHeld=false;hideCardZoom()});
+
 const phases=["untap","upkeep","draw","land","main","attack","block","damage","second_main","end_step","cleanup"];
 const importance=new Set(["opening_hand","mulligan","keep_hand","cast","stack_push","stack_resolve","attack","attackers","block","blockers","damage","combat","combat_damage","destroy","damage_deaths","death","token","trigger","exile","land","result","win","role_created","life_replacement","end_step_life_loss","search_reveal","search_basic","question"]);
 function stop(){if(timer!==null)clearInterval(timer);timer=null;$("play").textContent="▶ Play"}
@@ -358,7 +429,12 @@ function cardSignature(c,combat){
 }
 function updateCard(root,c,previous,combat){
  const signature=cardSignature(c,combat);
- if(root._signature===signature){root._card=c;return root}
+ if(root._signature===signature){
+  root._card=c;
+  if(!artEnabled){root._artPending=null;root.querySelector(".cardFace")?.remove()}
+  else appendCardFace(root,c.name);
+  return root
+ }
  const fresh=!root._signature,old=root._card,type=cardType(c);
  const attackers=combat?.details?.attackers||combat?.details?.attackIds||[];
  const attacking=(combat?.details?.attacker===c.id||(Array.isArray(attackers)&&attackers.includes(c.id)))&&/attack|combat/.test(combat?.kind||"");
@@ -623,7 +699,7 @@ function render(){if(!data)return;const events=data.events||[];$("count").textCo
   if($("opponent").firstElementChild!==top)$("opponent").replaceChildren(top);
   if($("you").firstElementChild!==bottom)$("you").replaceChildren(bottom);
   renderStack(state);renderSpotlight(e)}
- renderLog();setTab(tab);requestFit()}
+ renderLog();setTab(tab);requestFit();refreshCardZoom()}
 function renderQuestions(){const list=$("questionList");list.replaceChildren();for(const q of data.questions||[]){const article=make("article",undefined,"questionCard");article.append(make("h3",q.card||q.reason||"Rules question"),make("p",q.question||q.reason||""));
  if(q.deck)article.append(make("div","Deck: "+q.deck,"muted"));if(q.diagnosticSupport)article.append(make("div",q.supportNote||"Diagnostic subset supported","muted"));
  if(q.ruleAnswer)article.append(make("p","Validated diagnostic ruling: "+q.ruleAnswer));if(q.oracleText){const details=make("details");details.append(make("summary","Oracle text"),make("pre",q.oracleText));article.append(details)}
@@ -642,7 +718,7 @@ function unpack(value){if(value.packedReplay!==1)return value;const catalog=valu
  wardCosts:c.length>14?c[14]:catalog[c[0]].wardCosts,
  bestowed:c.length>15?c[15]:catalog[c[0]].bestowed})),graveyard:p[4].map(c=>({id:catalog[c].id,name:catalog[c].name})),commanderInZone:!!p[5],commanderDamage:p[6]||{},exile:(p[7]||[]).map(c=>({id:catalog[c].id,name:catalog[c].name})),manaPool:p[8]||[]}))}}});return value}
 function load(value){if(!value||value.schemaVersion!==1||!["turn-replay","rules-review"].includes(value.kind))throw Error("Unsupported replay file or version");
- stop();playerViews.clear();data=unpack(value);$("toggleHands").textContent=revealHands?"Hide hands":"Show hands";if(data.events?.length&&!data.events.every(e=>e.state?.players?.length===2))throw Error("This replay has an unsupported player-state format");
+ stop();hideCardZoom();playerViews.clear();data=unpack(value);$("toggleHands").textContent=revealHands?"Hide hands":"Show hands";if(data.events?.length&&!data.events.every(e=>e.state?.players?.length===2))throw Error("This replay has an unsupported player-state format");
  indexPrintedNames();position=0;tab=data.events?.length?"turns":"questions";$("search").value="";renderQuestions();render()}
 async function loadFile(file){if(!file)return;try{load(JSON.parse(await file.text()));$("notice").textContent="Loaded "+file.name}catch(error){$("notice").textContent="Cannot load replay: "+error.message}}
 $("file").addEventListener("change",e=>loadFile(e.target.files[0]));document.addEventListener("dragover",e=>e.preventDefault());
@@ -660,11 +736,23 @@ $("turnTab").onclick=()=>{stop();setTab("turns")};$("questionTab").onclick=()=>{
 $("zones0").onclick=()=>showZones(0);$("zones1").onclick=()=>showZones(1);
 $("sideToggle").onclick=()=>{const opened=$("sidePanel").classList.toggle("open");$("sideToggle").setAttribute("aria-expanded",String(opened))};
 $("toggleHands").onclick=()=>{revealHands=!revealHands;$("toggleHands").textContent=revealHands?"Hide hands":"Show hands";render()};
-$("toggleArt").onclick=()=>{artEnabled=!artEnabled;$("toggleArt").textContent=artEnabled?"Art: On":"Art: Off";
+$("toggleArt").onclick=()=>{artEnabled=!artEnabled;if(!artEnabled)hideCardZoom();$("toggleArt").textContent=artEnabled?"Art: On":"Art: Off";
  $("artStatus").textContent=artEnabled?"Artwork: Scryfall online lookup enabled · unique card names cached":"Artwork disabled · offline card placeholders";render()};
 $("closeModal").onclick=()=>$("modal").close();$("fullscreen").onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen?.()};
 $("saveAnswers").onclick=()=>{if(!data)return;const payload={schemaVersion:1,kind:"rules-review",status:"pending-review",questions:data.questions||[]};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=make("a");a.href=url;a.download="golem-review-answers.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),5000)};
-document.addEventListener("keydown",e=>{if(!data?.events?.length||$("modal").open||/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||""))return;if(e.code==="Space"){e.preventDefault();play()}else if(e.code==="ArrowRight"){e.preventDefault();stop();stepDirection(1)}else if(e.code==="ArrowLeft"){e.preventDefault();stop();stepDirection(-1)}});
+document.addEventListener("keydown",e=>{
+ if(!data?.events?.length||$("modal").open||/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||""))return;
+ if(e.code==="KeyZ"&&!e.ctrlKey&&!e.altKey&&!e.metaKey){
+  e.preventDefault();zoomHeld=true;
+  const focused=zoomCardTarget(document.activeElement);
+  const pointed=zoomCardTarget(document.elementFromPoint(zoomPointer.x,zoomPointer.y));
+  showCardZoom(pointed||focused);return
+ }
+ if(e.code==="KeyF"&&zoomHeld&&zoomFaces.length>1){e.preventDefault();zoomFaceIndex=(zoomFaceIndex+1)%zoomFaces.length;showZoomFace();return}
+ if(e.code==="Space"){e.preventDefault();play()}
+ else if(e.code==="ArrowRight"){e.preventDefault();stop();stepDirection(1)}
+ else if(e.code==="ArrowLeft"){e.preventDefault();stop();stepDirection(-1)}
+});
 if(data){try{load(data)}catch(e){$("notice").textContent="Embedded replay error: "+e.message}}
 </script>
 </body>
