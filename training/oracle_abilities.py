@@ -99,7 +99,7 @@ class Program:
 def static_effect(text):
     # A continuous prohibition is not a temporary timestamped ability loss:
     # the keyword cannot be granted again while this source is present.
-    denial=re.fullmatch(r"Creatures your opponents control lose (.+) and can't have or gain \\1\\.",text)
+    denial=re.fullmatch(r"Creatures your opponents control lose (.+) and can't have or gain \1\.",text)
     if denial:
         if denial[1] not in KEYWORDS:return None
         return StaticEffect(Selector(relation='opponent',creature=True),0,0,suppress=denial[1])
