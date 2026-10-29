@@ -1,3 +1,23 @@
+## Hydra-style Aura counter growth
+
+The reusable attachment-event grammar now also recognizes
+`When this Aura enters, put a +1/+1 counter on enchanted creature.`
+and
+`At the beginning of your upkeep, double the number of +1/+1 counters on
+enchanted creature.`
+The former queues an enter trigger; the latter queues an upkeep trigger
+that reads the attached creature's **actual counter count when the ability
+resolves**, then puts that many counters on it. The new counters are subject
+to active replacement rules (such as Hardened Scales and Branching Evolution),
+so doubling an existing 2 counters with Hardened Scales gives 5 total,
+not 4. Empty and removed Auras cannot apply their pending instructions;
+zero counters cannot become positive via a doubling instruction.
+`training/tests/test_aura_counter_growth.py` covers these scenarios,
+including renamed Oracle-text equivalents and fail-closed extra clauses.
+
+This supports Hydra's Growth in the **standalone diagnostic simulator**
+without adding any code to Minecraft.
+
 ## Attached creature upkeep growth
 
 Forced Adaptation now supplies a reusable Aura-trigger grammar:
