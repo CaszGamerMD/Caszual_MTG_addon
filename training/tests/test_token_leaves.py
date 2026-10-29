@@ -114,6 +114,28 @@ class TokenLeaveChecks(unittest.TestCase):
                              for p in sim.players[0].battlefield))
         sim.invariant()
 
+    def test_life_replacement_modifies_nightblade_gain_but_not_loss(self):
+        sim,cards=self.fixture(["Nadier's Nightblade",'Boon Reflection'])
+        self.put(sim,cards["Nadier's Nightblade"])
+        self.put(sim,cards['Boon Reflection'])
+        target=self.token(sim,'squirrel')
+        sim.sacrifice_token(0,target.card.id)
+        self.drain(sim)
+        self.assertEqual([p.life for p in sim.players],[42,39])
+        self.assertEqual(sim.life_gained_turn[0],2)
+        sim.invariant()
+
+    def test_two_tokens_destroyed_together_queue_separate_triggers(self):
+        sim,cards=self.fixture(["Nadier's Nightblade"])
+        self.put(sim,cards["Nadier's Nightblade"])
+        first=self.token(sim,'first')
+        second=self.token(sim,'second')
+        sim.destroy_batch(((0,first),(0,second)),cards["Nadier's Nightblade"])
+        self.assertEqual(len(sim.stack.items),2)
+        self.drain(sim)
+        self.assertEqual([p.life for p in sim.players],[42,38])
+        sim.invariant()
+
     def test_watcher_leaving_does_not_undo_previously_queued_trigger(self):
         sim,cards=self.fixture(["Nadier's Nightblade"])
         watcher=self.put(sim,cards["Nadier's Nightblade"])
