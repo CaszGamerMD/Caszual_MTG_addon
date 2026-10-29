@@ -23,8 +23,18 @@ class CastTriggerChecks(unittest.TestCase):
         return sim,source
 
     def spell(self,identifier,kind='enchantment',printed=('Enchantment',)):
+        is_creature='Creature' in printed
+        power,toughness=(2,2) if is_creature else (0,0)
+        definition=s.EventDefinition('Unseen '+identifier,frozenset(printed),frozenset(),
+                                     False,power,toughness,frozenset())
         return s.Card(identifier,'Unseen '+identifier,kind,mana_cost='{0}',
-                      printed_types=printed)
+                      printed_types=printed,power=power,toughness=toughness,
+                      event_definition=definition)
+
+    def give(self,sim,seat,card):
+        sim.players[seat].hand.append(card)
+        sim.card_owners[card.id]=seat
+        sim.total_cards=tuple(n+(i==seat) for i,n in enumerate(sim.total_cards))
 
     def test_whole_oracle_text_not_name_based_and_rejects_unknown_clause(self):
         raw=dict(self.lookup[SYTHIS])
@@ -39,7 +49,7 @@ class CastTriggerChecks(unittest.TestCase):
     def test_trigger_waits_on_stack_and_executes_both_effects_in_order(self):
         sim,source=self.setup_sythis()
         spell=self.spell('glow')
-        sim.players[0].hand.append(spell)
+        self.give(sim,0,spell)
         before=len(sim.players[0].hand)
         sim.cast_spell(0,spell)
         self.assertEqual([f.payload[0]['operation'] for f in sim.stack.items],['spell','ordered_effects'])
@@ -58,8 +68,8 @@ class CastTriggerChecks(unittest.TestCase):
         spell=self.spell('aura')
         counter=s.Card('counter','Unseen counter','counter_spell',mana_cost='{0}',instant=True,
                        counter_filter='any',printed_types=('Instant',))
-        sim.players[0].hand.append(spell)
-        sim.players[1].hand.append(counter)
+        self.give(sim,0,spell)
+        self.give(sim,1,counter)
         sim.cast_spell(0,spell)
         target=sim.stack.items[0].id
         before=len(sim.players[0].hand)
@@ -77,7 +87,7 @@ class CastTriggerChecks(unittest.TestCase):
     def test_trigger_survives_source_leaving_before_resolution(self):
         sim,source=self.setup_sythis()
         spell=self.spell('artifact',kind='artifact',printed=('Artifact','Enchantment'))
-        sim.players[0].hand.append(spell)
+        self.give(sim,0,spell)
         sim.cast_spell(0,spell)
         before=len(sim.players[0].hand)
         sim.send_to_destination(sim.players[0],source)
@@ -89,13 +99,13 @@ class CastTriggerChecks(unittest.TestCase):
     def test_type_and_controller_filter_enchantment_creatures_count(self):
         sim,_=self.setup_sythis()
         creature=self.spell('bear',kind='creature',printed=('Creature',))
-        sim.players[0].hand.append(creature)
+        self.give(sim,0,creature)
         sim.cast_spell(0,creature)
         self.assertEqual(len(sim.stack.items),1)
         sim.pass_priority(0);sim.pass_priority(1)
         self.assertEqual(sim.players[0].life,40)
         mixed=self.spell('nymph',kind='creature',printed=('Creature','Enchantment'))
-        sim.players[0].hand.append(mixed)
+        self.give(sim,0,mixed)
         sim.cast_spell(0,mixed)
         self.assertEqual(len(sim.stack.items),2)
         sim.pass_priority(0);sim.pass_priority(1)
@@ -104,7 +114,7 @@ class CastTriggerChecks(unittest.TestCase):
         # Opponent's enchantment is not our cast.
         sim.active=1;sim.stack.active=1;sim.stack.priority=1
         rival=self.spell('rival')
-        sim.players[1].hand.append(rival)
+        self.give(sim,1,rival)
         sim.cast_spell(1,rival)
         self.assertEqual(sum(f.payload[0]['operation']=='ordered_effects' for f in sim.stack.items),0)
 
