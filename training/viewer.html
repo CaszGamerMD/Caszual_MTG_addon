@@ -51,6 +51,16 @@ h1{font:700 clamp(19px,2.4vw,26px)/1.1 Georgia,serif;letter-spacing:.03em;margin
 .glowCombat .eventHeadline{color:#f8b99b;text-shadow:0 0 16px #d4554e55}.glowLife .eventHeadline{color:#cce9b1}.glowCast .eventHeadline{color:#f4dda4}
 .handLine{display:flex;gap:5px;align-items:center;min-height:35px;flex-wrap:wrap;margin-top:7px}.backCard{width:23px;height:33px;border:2px solid #d3ad6f;border-radius:4px;background:radial-gradient(ellipse at center,#b88b4e 0,#5d3e27 40%,#172423 80%);box-shadow:1px 2px 4px #0008;flex:none;transform:rotate(-5deg)}.backCard:nth-child(2n){transform:rotate(5deg)}.hiddenCount{font-size:11px;color:#c7d5cb;margin-left:5px}
 .bottom .handLine{justify-content:center}
+.handLine.revealed{justify-content:flex-start;display:flex;overflow-x:auto;flex-wrap:nowrap;padding:6px 3px 12px;scrollbar-width:thin;gap:8px}
+.handLine.revealed .gameCard{flex:0 0 114px;min-width:114px;height:158px}
+.cardFace{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;border-radius:7px;pointer-events:none;z-index:1;background:#17221e}
+.gameCard .cardMark{z-index:3}.gameCard .cardMeta{z-index:3}
+.artStatus{font-size:11px;color:#d7cbb3;margin:0 0 9px;line-height:1.5}
+.zonesGallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin:10px 0 18px}
+.zonesGallery .gameCard{width:105px;height:143px;min-width:0;max-width:105px}
+.modalArt{max-width:min(295px,75vw);max-height:420px;width:auto;border:1px solid #d4b97d;border-radius:10px;display:block;margin:10px auto}
+.modalFaceRow{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin:8px 0}
+@media(max-width:520px){.handLine.revealed .gameCard{flex-basis:94px;min-width:94px;height:134px}}
 .sidebar{display:flex;flex-direction:column;gap:12px;min-width:0}.sidePanel{background:#16231f;border:1px solid #466457;border-radius:12px;overflow:hidden}.sideHead{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #425b4e;padding:10px 12px;font:700 13px Georgia,serif;color:#f0dfb6}
 .stackCards{display:flex;flex-direction:column;gap:7px;padding:11px;max-height:220px;overflow:auto}.stackItem{padding:9px 11px;border-radius:8px;border:1px solid #8f784e;background:linear-gradient(100deg,#4b3825,#2a2b25);font-size:12px}.stackItem:first-child{border-color:var(--gold);box-shadow:0 0 12px #dbb66e33}.stackOwner{display:block;color:#d6bd81;font-size:10px;margin-top:4px}.emptyStack{color:#a9bdaf;font-size:12px;text-align:center;padding:14px 4px}
 .sideTools{display:flex;gap:7px;padding:9px;flex-wrap:wrap}.logSearch{width:calc(100% - 20px);margin:10px;border:1px solid #5a7668;background:#0e1715;color:#f8eddc;border-radius:8px;padding:9px}.eventFeed{padding:0 7px 10px;max-height:440px;overflow:auto;scrollbar-width:thin}.feedItem{text-align:left;border:0;border-left:2px solid #3a594a;width:100%;background:transparent;padding:8px 8px 8px 12px;border-radius:0;font-size:11px;line-height:1.45}.feedItem:hover{background:#2a3e34}.feedItem.on{border-left-color:var(--gold);background:#364335;color:#fff3cf}.feedMeta{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#b5c5b7;margin-bottom:2px}.feedEmpty{padding:14px;font-size:12px;color:var(--muted)}
@@ -74,9 +84,10 @@ dialog{border:1px solid var(--gold);border-radius:15px;background:#172620;color:
 <div class="shell">
 <header>
   <div class="brand"><div class="sigil" aria-hidden="true">M</div><div><div class="eyebrow">Commander Golem · Simulator</div><h1>Match Theater</h1></div></div>
-  <div class="headActions"><button id="fullscreen" type="button" title="Toggle fullscreen">⛶ Fullscreen</button><label class="fileButton">Open replay<input type="file" id="file" accept=".json,application/json"></label></div>
+  <div class="headActions"><button id="toggleHands" type="button" title="Show or hide both players' hands">Hide hands</button><button id="toggleArt" type="button" title="Enable or disable online Scryfall card artwork">Art: On</button><button id="fullscreen" type="button" title="Toggle fullscreen">⛶ Fullscreen</button><label class="fileButton">Open replay<input type="file" id="file" accept=".json,application/json"></label></div>
 </header>
-<div id="notice" class="notice" role="status">Offline replay theater. Choose a saved replay JSON, or open a generated match HTML with its replay already included. This does not show private hands.</div>
+<div id="notice" class="notice" role="status">Saved spectator replays show both hands. Card faces load from Scryfall when online; placeholders work offline.</div>
+<div class="artStatus" id="artStatus">Artwork: Scryfall online lookup enabled · paced requests, cached by card name · viewer only</div>
 <nav class="viewTabs" aria-label="Viewer pages"><button id="turnTab" class="active">▶ The match</button><button id="questionTab">◇ Rules questions <span id="count">0</span></button></nav>
 <div id="empty"><div class="eyebrow">The table is ready</div><h2>Watch a match unfold</h2><p>Load a replay to follow each turn, see cards enter the battlefield, inspect attacks and life changes, and watch spells move through the public stack. No card images or internet required.</p><p>Drag and drop a replay JSON anywhere on this page.</p></div>
 <main id="turns" hidden>
@@ -104,15 +115,79 @@ dialog{border:1px solid var(--gold);border-radius:15px;background:#172620;color:
  </section>
 </main>
 <section id="questions" hidden><div class="sidePanel" style="padding:18px;margin-bottom:14px"><h2 style="font:700 22px Georgia,serif;margin-top:0">Rules questions</h2><p class="muted" style="font-size:13px">Rules-review notes are not game rulings until implemented and tested. Unsupported cards stay unplayable.</p><button id="saveAnswers" type="button">Download review answers</button></div><div id="questionList"></div></section>
-<div class="footer">Standalone diagnostic replay • Not a complete Commander game • Public zones only • Card faces use offline placeholders rather than invented art • Keyboard: ← / → / Space</div>
+<div class="footer">Diagnostic spectator mode reveals both saved hands, not library order · Card images and data provided by Scryfall (requires internet) · No Scryfall affiliation · Incomplete Commander rules · Keyboard: ← / → / Space</div>
 </div>
 <dialog id="modal" aria-label="Card and zone details"><h2 id="modalTitle"></h2><div class="modalLabels" id="modalBody"></div><div style="margin-top:16px;text-align:right"><button id="closeModal">Close</button></div></dialog>
 <script>
 "use strict";
 let data=/*EMBEDDED_REPLAY*/null;
-let position=0,timer=null,tab="turns",onlyHighlights=false;
+let position=0,timer=null,tab="turns",onlyHighlights=false,revealHands=true,artEnabled=true;
 const $=id=>document.getElementById(id);
 const make=(tag,content,cls)=>{const n=document.createElement(tag);if(content!==undefined&&content!==null)n.textContent=String(content);if(cls)n.className=cls;return n};
+
+const cardImages=new Map();
+let artQueue=Promise.resolve(),lastArtRequest=0;
+const scryfallDelay=600; // One unique-name API request at a time; safely below 10 requests/s.
+function trustedImage(url){try{const u=new URL(url);return u.protocol==="https:"&&(u.hostname==="cards.scryfall.io"||u.hostname.endsWith(".scryfall.io"))?u.href:null}catch(_){return null}}
+function imageFaces(card){
+ const faces=card.image_uris?[card.image_uris]:(card.card_faces||[]).map(f=>f.image_uris).filter(Boolean);
+ return faces.map(f=>({small:trustedImage(f.small||f.normal),normal:trustedImage(f.normal||f.large||f.small)})).filter(f=>f.small);
+}
+function lookupCardImages(name){
+ const key=String(name||"").trim().toLocaleLowerCase();
+ if(!key||!artEnabled)return Promise.resolve(null);
+ if(cardImages.has(key))return cardImages.get(key);
+ const query=String(name).trim();
+ const operation=artQueue.then(async()=>{
+   const pause=Math.max(0,scryfallDelay-(Date.now()-lastArtRequest));
+   if(pause)await new Promise(done=>setTimeout(done,pause));
+   lastArtRequest=Date.now();
+   try{
+     const result=await fetch("https://api.scryfall.com/cards/named?exact="+encodeURIComponent(query),
+       {headers:{"Accept":"application/json"},mode:"cors"});
+     if(!result.ok)return null;
+     const card=await result.json(),faces=imageFaces(card);
+     return faces.length?{faces,url:card.scryfall_uri||""}:null;
+   }catch(_){return null}
+ });
+ artQueue=operation.then(()=>null,()=>null);
+ const safe=operation.catch(()=>null);
+ cardImages.set(key,safe);
+ return safe;
+}
+function appendCardFace(element,name){
+ if(!artEnabled||!name)return;
+ lookupCardImages(name).then(art=>{
+   if(!artEnabled||!art?.faces?.length||!element.isConnected)return;
+   const img=make("img",undefined,"cardFace");
+   img.loading="lazy";img.decoding="async";img.alt="Scryfall card face: "+name;
+   img.onerror=()=>img.remove();img.src=art.faces[0].small;element.append(img);
+ });
+}
+function modalCardImage(name){
+ if(!artEnabled)return;
+ const target=$("modalBody"),container=make("div");
+ target.prepend(container);
+ lookupCardImages(name).then(art=>{
+   if(!artEnabled||!art?.faces?.length||!container.isConnected)return;
+   const picture=make("img",undefined,"modalArt");
+   picture.alt=name+" (Scryfall card face)";picture.loading="lazy";picture.src=art.faces[0].normal;
+   container.append(picture);
+   if(art.faces.length>1){
+     const buttons=make("div",undefined,"modalFaceRow");
+     art.faces.forEach((face,index)=>{
+       const b=make("button","Face "+(index+1),"tiny");
+       b.onclick=()=>{picture.src=face.normal;b.classList.add("active");for(const item of buttons.children)if(item!==b)item.classList.remove("active")};
+       if(index===0)b.classList.add("active");buttons.append(b);
+     });
+     container.append(buttons);
+   }
+   if(/^https:\/\/scryfall\.com\//.test(art.url)){
+     const link=make("a","View printing on Scryfall");link.href=art.url;link.target="_blank";link.rel="noopener noreferrer";
+     link.style.color="#e4be77";container.append(link);
+   }
+ });
+}
 const phases=["untap","upkeep","draw","land","main","attack","block","damage","second_main","end_step","cleanup"];
 const importance=new Set(["cast","stack_push","stack_resolve","attack","attackers","block","blockers","damage","combat","combat_damage","destroy","damage_deaths","death","token","trigger","exile","land","result","win","role_created","life_replacement","end_step_life_loss","search_reveal","search_basic","question"]);
 function stop(){if(timer!==null)clearInterval(timer);timer=null;$("play").textContent="▶ Play"}
@@ -140,7 +215,7 @@ function makeCard(c,previous,combat){const kind=cardType(c);const attackers=comb
  if(c.loyalty!==null&&c.loyalty!==undefined)detail.push("L:"+c.loyalty);if(c.chargeCounters)detail.push("CH:"+c.chargeCounters);
  if(detail.length)root.append(make("span",detail.join(" · "),"cardMeta"));
  if(c.counters)root.append(make("span","+"+c.counters,"cardMark"));
- root.addEventListener("click",()=>inspectCard(c));return root
+ appendCardFace(root,c.name);root.addEventListener("click",()=>inspectCard(c));return root
 }
 function kindOf(c){const k=cardType(c);return k==="land"?"land":k==="creature"?"creature":"other"}
 function groupCards(p,prev,kind,event){const list=make("div",undefined,"cardTrack"+(kind==="land"?" landStack":""));const cards=(p.battlefield||[]).filter(c=>kindOf(c)===kind);const old=new Map((prev?.battlefield||[]).map(c=>[c.id,c]));for(const c of cards)list.append(makeCard(c,old.get(c.id),event));return list}
@@ -155,7 +230,18 @@ function playerPanel(seat,e,prev){const p=e.state.players[seat],past=prev?.state
  panel.append(details);
  const field=make("div",undefined,"field");
  for(const [k,title] of [["creature","Creatures"],["other","Other permanents"],["land","Lands"]]){const zone=make("section",undefined,"zone");const total=(p.battlefield||[]).filter(c=>kindOf(c)===k).length;const label=make("div",undefined,"zoneLabel");label.append(make("span",title),make("span",total));zone.append(label,groupCards(p,past,k,e));field.append(zone)}
- panel.append(field);const backs=make("div",undefined,"handLine");for(let i=0;i<Math.min(p.handCount,10);i++)backs.append(make("span",undefined,"backCard"));backs.append(make("span",p.handCount>10?"+ "+(p.handCount-10)+" more hidden cards":"Hand hidden · "+p.handCount+" cards","hiddenCount"));panel.append(backs);
+ panel.append(field);
+ const snapshot=e.spectatorHands?.[seat],show=revealHands&&Array.isArray(snapshot);
+ const label=make("div",undefined,"zoneLabel");label.append(make("span",show?"Hand · spectator view":"Hand · hidden"),make("span",p.handCount));panel.append(label);
+ const backs=make("div",undefined,"handLine"+(show?" revealed":""));
+ if(show){
+   for(const c of snapshot)backs.append(makeCard({...c,kind:c.kind||"card",tapped:false,fresh:false},null,null));
+   if(!snapshot.length)backs.append(make("span","No cards in hand","hiddenCount"));
+ }else{
+   for(let i=0;i<Math.min(p.handCount,10);i++)backs.append(make("span",undefined,"backCard"));
+   backs.append(make("span",Array.isArray(snapshot)?"Hand concealed · "+p.handCount+" cards":"Older replay · identities not recorded","hiddenCount"));
+ }
+ panel.append(backs);
  return panel
 }
 function renderStack(state){const items=state.stack;$("stack").replaceChildren();if(!Array.isArray(items)){$("stack").append(make("div","Stack not recorded in this older replay.","emptyStack"));$("stackCount").textContent="—";return}
@@ -164,10 +250,16 @@ function renderStack(state){const items=state.stack;$("stack").replaceChildren()
 }
 function inspectCard(c){$("modalTitle").textContent=c.name;const d=$("modalBody");d.replaceChildren();
  const fields=[["Object ID",c.id],["Permanent type",c.kind],["Tapped",c.tapped?"Yes":"No"],["Fresh",c.fresh?"Yes":"No"],["Power / toughness",(c.isCreature||c.kind==="creature")?String(c.power)+" / "+String(c.toughness):"Not a creature"],["Counters",c.counters||0],["Charge counters",c.chargeCounters||0],["Loyalty",c.loyalty??"—"],["Attached to",c.attachedTo||"—"],["Bestowed",c.bestowed?"Yes":"No"],["Hexproof",c.hexproof?"Yes":"No"],["Ward",Array.isArray(c.wardCosts)?c.wardCosts.join(", ")||"None":"Not recorded"],["Traits",c.traits||"Not recorded"]];
- for(const [key,value] of fields){const line=make("div");line.append(make("strong",key+": "),make("span",value));d.append(line)}$("modal").showModal()}
+ for(const [key,value] of fields){const line=make("div");line.append(make("strong",key+": "),make("span",value));d.append(line)}
+ if(!$("modal").open)$("modal").showModal();modalCardImage(c.name)}
 function showZones(seat){if(!data?.events?.length)return;const p=data.events[position].state.players[seat];$("modalTitle").textContent=nameFor(seat)+" · Public zones";const d=$("modalBody");d.replaceChildren();
- for(const [name,items] of [["Graveyard",p.graveyard||[]],["Exile",p.exile||[]]]){d.append(make("strong",name+" ("+items.length+")"));d.append(make("div",items.length?items.map(c=>c.name).join(" · "):"Empty","muted"))}
- d.append(make("p","Hand identities and library order are private and not available in public replay data.","muted"));$("modal").showModal()}
+ for(const [name,items] of [["Graveyard",p.graveyard||[]],["Exile",p.exile||[]]]){
+   d.append(make("strong",name+" ("+items.length+")"));
+   const row=make("div",undefined,"zonesGallery");
+   for(const card of items)row.append(makeCard({...card,kind:"card"},null,null));
+   if(!items.length)row.append(make("span","Empty","muted"));d.append(row);
+ }
+ d.append(make("p","The spectator replay may reveal hands, but it never includes library order.","muted"));$("modal").showModal()}
 function renderLog(){const box=$("log");box.replaceChildren();const events=data?.events||[];if(!events.length)return;const filter=$("search").value.toLocaleLowerCase().trim();
  let selected=[];if(filter){for(let i=0;i<events.length;i++)if((events[i].message+" "+events[i].kind+" "+events[i].phase).toLocaleLowerCase().includes(filter))selected.push(i);if(selected.length>150)selected=selected.slice(0,150)}else{for(let i=Math.max(0,position-13);i<=Math.min(events.length-1,position+13);i++)selected.push(i)}
  if(!selected.length){box.append(make("div","No matching events.","feedEmpty"));return}
@@ -193,6 +285,7 @@ function renderQuestions(){const list=$("questionList");list.replaceChildren();f
  if(!(data.questions||[]).length)list.append(make("div","No open rules questions in this replay.","questionCard"))}
 function unpack(value){if(value.packedReplay!==1)return value;const catalog=value.cardCatalog||[];
  value.events=(value.compactEvents||[]).map(e=>{const snap=e[7];return {index:e[0],turn:e[1],phase:e[2],actor:e[3],kind:e[4],message:e[5],details:e[6],
+ spectatorHands:e.length>8&&Array.isArray(e[8])?e[8].map(hand=>hand.map(id=>({id:catalog[id]?.id,name:catalog[id]?.name}))):undefined,
  state:{active:snap[0],turn:snap[1],phase:snap[2],stack:snap.length>4?snap[4]:undefined,priority:snap.length>5?snap[5]:undefined,players:snap[3].map((p,seat)=>({seat,life:p[0],handCount:p[1],libraryCount:p[2],battlefield:p[3].map(c=>({...catalog[c[0]],tapped:!!c[1],fresh:!!c[2],power:c.length>3?c[3]:catalog[c[0]].power,toughness:c.length>4?c[4]:catalog[c[0]].toughness,traits:c.length>5?c[5]:catalog[c[0]].traits,saddled:!!c[6],counters:c[7]||0,kind:c.length>8&&c[8]?c[8]:catalog[c[0]].kind,
  isCreature:c.length>9&&c[9]!==null?!!c[9]:catalog[c[0]].isCreature,
  loyalty:c.length>10?c[10]:catalog[c[0]].loyalty,
@@ -202,7 +295,7 @@ function unpack(value){if(value.packedReplay!==1)return value;const catalog=valu
  wardCosts:c.length>14?c[14]:catalog[c[0]].wardCosts,
  bestowed:c.length>15?c[15]:catalog[c[0]].bestowed})),graveyard:p[4].map(c=>({id:catalog[c].id,name:catalog[c].name})),commanderInZone:!!p[5],commanderDamage:p[6]||{},exile:(p[7]||[]).map(c=>({id:catalog[c].id,name:catalog[c].name})),manaPool:p[8]||[]}))}}});return value}
 function load(value){if(!value||value.schemaVersion!==1||!["turn-replay","rules-review"].includes(value.kind))throw Error("Unsupported replay file or version");
- stop();data=unpack(value);if(data.events?.length&&!data.events.every(e=>e.state?.players?.length===2))throw Error("This replay has an unsupported player-state format");
+ stop();data=unpack(value);$("toggleHands").textContent=revealHands?"Hide hands":"Show hands";if(data.events?.length&&!data.events.every(e=>e.state?.players?.length===2))throw Error("This replay has an unsupported player-state format");
  position=0;tab=data.events?.length?"turns":"questions";$("search").value="";renderQuestions();render()}
 async function loadFile(file){if(!file)return;try{load(JSON.parse(await file.text()));$("notice").textContent="Loaded "+file.name}catch(error){$("notice").textContent="Cannot load replay: "+error.message}}
 $("file").addEventListener("change",e=>loadFile(e.target.files[0]));document.addEventListener("dragover",e=>e.preventDefault());
@@ -213,6 +306,9 @@ $("slider").oninput=e=>{stop();position=Number(e.target.value);render()};$("spee
 $("highlights").onclick=()=>{onlyHighlights=!onlyHighlights;$("highlights").classList.toggle("active",onlyHighlights);$("highlights").textContent=onlyHighlights?"★ Highlights":"All events"};
 $("turnTab").onclick=()=>{stop();setTab("turns")};$("questionTab").onclick=()=>{stop();setTab("questions")};$("search").oninput=renderLog;
 $("zones0").onclick=()=>showZones(0);$("zones1").onclick=()=>showZones(1);
+$("toggleHands").onclick=()=>{revealHands=!revealHands;$("toggleHands").textContent=revealHands?"Hide hands":"Show hands";render()};
+$("toggleArt").onclick=()=>{artEnabled=!artEnabled;$("toggleArt").textContent=artEnabled?"Art: On":"Art: Off";
+ $("artStatus").textContent=artEnabled?"Artwork: Scryfall online lookup enabled · unique card names cached":"Artwork disabled · offline card placeholders";render()};
 $("closeModal").onclick=()=>$("modal").close();$("fullscreen").onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen?.()};
 $("saveAnswers").onclick=()=>{if(!data)return;const payload={schemaVersion:1,kind:"rules-review",status:"pending-review",questions:data.questions||[]};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=make("a");a.href=url;a.download="golem-review-answers.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),5000)};
 document.addEventListener("keydown",e=>{if(!data?.events?.length||$("modal").open||/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||""))return;if(e.code==="Space"){e.preventDefault();play()}else if(e.code==="ArrowRight"){e.preventDefault();stop();stepDirection(1)}else if(e.code==="ArrowLeft"){e.preventDefault();stop();stepDirection(-1)}});
