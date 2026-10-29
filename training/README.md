@@ -403,6 +403,19 @@ and unrecognized effect clauses remain unsupported.
 
 # Commander self-play deck intake
 
+## Faster question resolution workflow
+
+Sync the experimental branch before choosing the next batch to avoid duplicating concurrent rules work. Refresh current parse coverage without playing games:
+
+```bash
+python training/question_batches.py --decks training/decks/*.json --focal-id 5189995 --out training/reports/question-batches-current.json
+```
+
+The report ranks candidate language families by affected focal cards, all affected cards, then observed card-game encounters when available. Repeated clause templates normalize self references and numeric parameters; recognized Python components are marked separately. Families overlap and do not promise a number of newly supported cards. Inspect full Oracle text and implement composable rules, then exercise unfamiliar combinations and unknown-clause rejection. Use focused tests while implementing, followed by the full suite and one gauntlet for a completed batch. Gauntlets now save `question-batches.json` automatically.
+
+The [synchronized benchmark](examples/enchantments-gauntlet-question-batches/README.md) records current coverage and results. `test_unseen_language_matrix.py` checks 32 filter/effect combinations across seven spell type sets and both controllers.
+
+
 ## Entry lifegain and combined anthem update
 
 Ajani's Welcome and Spidersilk Armor now use shared whole-text rules.

@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 import simulator as s
+from question_batches import build_report
 
 
 def engine_source_hashes():
@@ -129,6 +130,7 @@ def run(rules, focal, opponents, games=10, turns=10, seed=5189995, out=None):
     if out:
         s.write_json(out/'summary.json', summary)
         s.write_json(out/'questions.json', dict(unsupportedCardQuestions=list(questions.values()), runtimeQuestions=summary['runtimeQuestions']))
+        s.write_json(out/'question-batches.json',build_report(list(questions.values()),focal['sourceDeckId']))
         (out/'replays.json.gz').write_bytes(gzip.compress(json.dumps(packed,ensure_ascii=False,separators=(',',':')).encode(),mtime=0))
     return summary
 
