@@ -394,7 +394,7 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.kind == "x_spell" and card.x_effect in ("tokens","draw","life"):
                     continue
-                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment"):
+                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","exile_creature_life"):
                     continue
                 if self.diagnostic and card.blink:continue
                 if self.diagnostic and card.kind=="counter_spell" and card.counter_filter in ("any","creature","noncreature"):
@@ -778,7 +778,7 @@ class Simulator(AdvancedRules):
 
     def removal_targets(self,controller,source):
         """Only legal targets for an explicitly parsed targeted removal spell."""
-        if source.removal=='destroy':return self.creature_targets(controller,source)
+        if source.removal in ('destroy','exile_creature_life'):return self.creature_targets(controller,source)
         if source.removal!='destroy_artifact_enchantment':return ()
         game=self.event_game('main')
         targets=[]
@@ -803,7 +803,7 @@ class Simulator(AdvancedRules):
             state=game.battlefield.get(item.card.id)
             wards=game.ward_costs(state) if state and owner!=seat else ()
             projected=self.payment(replace(card,mana_cost=card.mana_cost+''.join(wards)),seat=seat)
-            useful=owner!=seat and not (state and game.has(state,'indestructible')) and projected['paid']
+            useful=owner!=seat and (card.removal=='exile_creature_life' or not (state and game.has(state,'indestructible'))) and projected['paid']
             choices.append(Candidate(card.id+':target='+item.card.id,kind,card.id,
                 features=features(power=2 if useful else -100,cost=len(projected.get('sources',[]))),
                 label='Cast '+card.name+' targeting '+item.card.name,target_permanent=item.card.id))
@@ -999,6 +999,14 @@ class Simulator(AdvancedRules):
                 return
             owner,item=target;game=self.event_game('main')
             state=game.battlefield.get(item.card.id)
+            if card.removal=='exile_creature_life':
+                power=max(0,game.stats(state)[0])
+                self.send_to_destination(self.players[owner],item,snapshot=game,to_exile=True)
+                self.gain_life(owner,power)
+                self.log('exile',f'{card.name} exiles {item.card.name}; its controller gains {power} life.',
+                         actor=controller,targetPermanent=item.card.id,gained=power,gainController=owner)
+                self.resolve_entry_triggers([],card)
+                return
             if state and game.has(state,'indestructible'):
                 self.log('indestructible',f'{item.card.name} cannot be destroyed.',targetPermanent=item.card.id)
                 return
@@ -1371,7 +1379,7 @@ class Simulator(AdvancedRules):
         if first:self.phase='regular_damage'
         else:self.phase='second_main';self.pending=None;self.combat_context=None
 
-    def send_to_destination(self, player: Player, item: Permanent, snapshot=None):
+    def send_to_destination(self, player: Player, item: Permanent, snapshot=None, to_exile=False):
         for event,_ in [frame.payload for frame in self.stack.items]+self._waiting_triggers:
             if event.get('operation')=='station' and event.get('helper')==item.card.id:
                 game=snapshot or self.event_game('main')
@@ -1400,6 +1408,8 @@ class Simulator(AdvancedRules):
             return  # Tokens cease to exist after leaving the battlefield.
         if root(item.card) == destination.commander_id:
             destination.command_zone = item.card  # This prototype chooses the command-zone option.
+        elif to_exile:
+            destination.exile.append(item.card)
         else:
             destination.graveyard.append(item.card)
 
@@ -1960,6 +1970,10 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
             and rule_text(definition.get('oracleText',''))=='Destroy target creature.' and rules.query('cost',cost)['supported']):
         parsed={'kind':'removal_spell','removal':'destroy'}
+    if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
+            and rule_text(definition.get('oracleText',''))=='Exile target creature. Its controller gains life equal to its power.'
+            and rules.query('cost',cost)['supported']):
+        parsed={'kind':'removal_spell','removal':'exile_creature_life'}
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
             and rule_text(definition.get('oracleText',''))=='Destroy target artifact or enchantment.'
             and rules.query('cost',cost)['supported']):
