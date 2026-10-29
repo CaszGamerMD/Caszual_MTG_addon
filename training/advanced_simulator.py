@@ -2,11 +2,38 @@
 from dataclasses import replace,asdict
 from itertools import combinations
 import sys
+import json
 
 def model(sim):return sys.modules[type(sim).__module__]
 def root(card):return card.physical_id or card.id
 
 class AdvancedRules:
+ def role_targets(self,event):
+  g=self.event_game('main');controller=event['controller']
+  return tuple(p for p in self.players[controller].battlefield
+   if p.card.id!=event['source'] and p.card.id in g.battlefield and g.creature(g.battlefield[p.card.id])
+   and not g.protected(g.battlefield[p.card.id],event.get('sourceColors',())))
+ def resolve_role(self,event):
+  s=model(self);target=next((p for p in self.role_targets(event) if p.card.id==event['target']),None)
+  if target is None:
+   self.log('role_illegal_target','The Role trigger has no remaining legal target.',source=event['source'],target=event['target'])
+   return
+  self.token_sequence+=1
+  d=s.EventDefinition('Virtuous Role',frozenset({'Enchantment'}),frozenset({'Aura','Role'}),False,0,0,frozenset(),
+   attachment=('aura',None,frozenset(),0,0),attachment_scale=(1,1,('Enchantment',)),role='Virtuous')
+  token=s.Card('token-'+str(self.token_sequence),d.name,'aura',event_definition=d,is_token=True,printed_types=('Enchantment',))
+  pending=self.enter_creature(token,self.players[event['controller']],attached_to=target.card.id)
+  self.log('role_created','A Virtuous Role enters attached to another creature.',actor=event['controller'],source=event['source'],target=target.card.id,token=token.id)
+  self.resolve_entry_triggers(pending,token)
+ def choose_optional_draw(self,event):
+  s=model(self);seat=event['controller']
+  choices=(s.Candidate('draw','optional_draw',features=s.features(draw=1,power=0 if self.players[seat].library else -1000),label='Draw a card'),
+           s.Candidate('decline','decline_draw',features=s.features(),label='Decline drawing'))
+  observation=s.Observation(seat,self.turn,self.phase,tuple(self.players[seat].hand),json.dumps(self.state(),sort_keys=True),choices)
+  choice=self.policies[seat].choose(observation)
+  if choice not in choices:raise ValueError('Illegal optional draw choice')
+  self.log('optional_draw_choice',choice.label,actor=seat,source=event['source'],accepted=choice.kind=='optional_draw')
+  return choice.kind=='optional_draw'
  def special_choices(self,seat):
   s=model(self);result=[];g=self.event_game('main')
   for p in self.players[seat].battlefield:
@@ -216,6 +243,7 @@ class AdvancedRules:
   pending=[]
   from oracle_abilities import matches
   for identifier in set(player_hits):
+   pending.extend(g.combat_draw_triggers(identifier))
    for source in g.battlefield.values():
     for trigger in source.definition.triggers:
      if trigger.event=='combat_damage' and matches(trigger.subject,source,g.battlefield[identifier],True):pending.append(dict(operation='discard',effect='discard',controller=source.controller,name=source.definition.name,source=source.id,target=1-self.active))

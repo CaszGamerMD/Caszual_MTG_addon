@@ -511,16 +511,17 @@ class Simulator(AdvancedRules):
         return replace(item.card, kind="creature", power=power, toughness=toughness,
                        traits=f"{power};{toughness};"+",".join(sorted(keywords)))
 
-    def enter_creature(self, card: Card, player: Player):
-        return self.enter_creatures([card],player)
+    def enter_creature(self, card: Card, player: Player, attached_to=None):
+        return self.enter_creatures([card],player,attached_targets={card.id:attached_to} if attached_to else None)
 
-    def enter_creatures(self, cards, player: Player, bestowed_targets=None):
+    def enter_creatures(self, cards, player: Player, bestowed_targets=None, attached_targets=None):
         game=self.event_game('main')
         game._next_token=self.token_sequence
         known=set(game.battlefield)
         controller=next(i for i,candidate in enumerate(self.players) if candidate is player)
         entrants=[]
         bestowed_targets=bestowed_targets or {}
+        attached_targets=dict(attached_targets or {},**bestowed_targets)
         for card in cards:
             definition=card.event_definition
             if definition is None:
@@ -529,10 +530,10 @@ class Simulator(AdvancedRules):
                     colors=frozenset(card.colors))
             if card.id in bestowed_targets:definition=self.bestowed_definition(definition)
             entrants.append(EventPermanent(card.id,replace(definition,mana_cost=card.mana_cost),controller,
-                                           attached_to=bestowed_targets.get(card.id)))
+                                           attached_to=attached_targets.get(card.id)))
         game.enter_batch(entrants)
         self.entry_history.extend(dict(turn=self.turn,controller=controller,subtypes=sorted(p.definition.subtypes)) for p in entrants)
-        player.battlefield.extend(Permanent(card,attached_to=bestowed_targets.get(card.id),bestowed=card.id in bestowed_targets) for card in cards)
+        player.battlefield.extend(Permanent(card,attached_to=attached_targets.get(card.id),bestowed=card.id in bestowed_targets) for card in cards)
         for token_id in game.battlefield.keys()-known-{card.id for card in cards}:
             token_state=game.battlefield[token_id]
             if not token_state.token:raise RuntimeError('Unknown event-created permanent')
@@ -570,6 +571,14 @@ class Simulator(AdvancedRules):
                     if item.bestowed:detached.append(item)
                     elif item.card.kind=='aura':invalid_auras.append((owner,item))
                     elif item.attached_to:detached.append(item)
+            role_groups={}
+            for owner,player in enumerate(self.players):
+                for item in player.battlefield:
+                    if item.attached_to and item.card.event_definition and item.card.event_definition.role:
+                        role_groups.setdefault((owner,item.attached_to),[]).append(item)
+            for (owner,_),roles in role_groups.items():
+                newest=max(roles,key=lambda item:(item.attachment_at,item.entered_at,item.card.id))
+                invalid_auras.extend((owner,item) for item in roles if item is not newest and (owner,item) not in invalid_auras)
             if not dead and not invalid_auras and not detached:break
             for item in detached:item.attached_to=None;item.bestowed=False
             for owner,item in invalid_auras:
@@ -601,6 +610,13 @@ class Simulator(AdvancedRules):
                 if event.get('effect')=='create tapped Squirrels':
                     event=dict(event,operation='create_tokens',tokenSpec=dict(amount=event['amount'],power=1,toughness=1,
                         colors=['Green'],subtypes=['Squirrel'],keywords=[],tapped=True,land=False))
+                if event.get('operation')=='create_role':
+                    targets=self.role_targets(event)
+                    chosen=next((p for p in targets if p.card.id==event.get('target')),None) if event.get('target') else max(targets,key=lambda p:(self.effective_card(p).power,p.card.id),default=None)
+                    if chosen is None:
+                        self.log('role_no_target','No legal other creature for the Role trigger.',source=event['source'])
+                        continue
+                    event=dict(event,target=chosen.card.id)
                 item=self.stack.push(controller,(event,origin),event.get('name',origin.name))
                 self.log('stack_push',f'{item.label} ability goes on the stack.',stackId=item.id,controller=controller)
         self.stack.priority=self.active if priority is None else priority
@@ -923,9 +939,8 @@ class Simulator(AdvancedRules):
                 if not event.get('copy'):p.graveyard.append(card)
                 self.log('illegal_target',f'{card.name} has no legal Aura target.')
                 return
-            self.enter_creature(card,p)
-            attached=next(item for item in p.battlefield if item.card.id==card.id)
-            attached.attached_to=event['target'];self.effect_clock+=1;attached.attachment_at=self.effect_clock
+            pending=self.enter_creature(card,p,attached_to=event['target'])
+            self.resolve_entry_triggers(pending,card)
             self.log('attach',f'{card.name} enchants a creature.',targetPermanent=event['target'])
             return
         if card.kind=='equipment':
@@ -989,6 +1004,16 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='create_role':
+                self.resolve_role(event)
+                continue
+            if event.get('operation')=='draw_cards':
+                if event.get('optional') and not self.choose_optional_draw(event):continue
+                for _ in range(event['amount']):self.draw(event['controller'])
+                self.log('draw_trigger',f"{event['name']}: its controller draws {event['amount']} card(s).",actor=event['controller'],source=event['source'],amount=event['amount'])
+                self.outcome()
+                if self.finished:return
+                continue
             if event.get('operation')=='transport':
                 source=next((p for player in self.players for p in player.battlefield if p.card.id==event['source']),None)
                 if source:
@@ -1236,6 +1261,7 @@ class Simulator(AdvancedRules):
                     dead.append(item)
         triggers=game.death_triggers([item.card.id for item in dead])
         if to_player and attacker:
+            triggers.extend(game.combat_draw_triggers(attacker.card.id))
             from oracle_abilities import matches
             for watcher in game.battlefield.values():
                 for trigger in watcher.definition.triggers:
@@ -1658,9 +1684,10 @@ class Simulator(AdvancedRules):
                 return True
             d = self.damage(effective_attacker, effective_blocker)
             dead_ids = ([a.card.id] if d["attackerDies"] else []) + ([b.card.id] if b and d["blockerDies"] else [])
-            damage_triggers=[]
+            damage_triggers=[];combat_draws=[]
             if d['damage']>0:
                 game=self.event_game('combat')
+                combat_draws=game.combat_draw_triggers(a.card.id)
                 from oracle_abilities import matches
                 for watcher in game.battlefield.values():
                     for trigger in watcher.definition.triggers:
@@ -1693,6 +1720,7 @@ class Simulator(AdvancedRules):
             self.outcome()
             if not self.finished:
                 death_triggers.extend(dict(t,operation='discard',effect='discard') for t in damage_triggers)
+                death_triggers.extend(combat_draws)
                 self.resolve_entry_triggers(death_triggers,a.card)
             if not self.finished: self.phase = "second_main"
         elif self.phase == "cleanup":
@@ -1766,7 +1794,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace"} & event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace"} & event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):

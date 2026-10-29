@@ -96,6 +96,11 @@ class Definition:
     history_activation: tuple = ()
     equipment_attacks: tuple = ()
     pilot_bonus: int = 0
+    attachment_scale: tuple = ()
+    role_events: tuple = ()
+    enchanted_draw: bool = False
+    attachment_draw: bool = False
+    role: str = ""
 
 
 def parse_card(card: dict) -> Definition:
@@ -119,6 +124,15 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from enchantment_abilities import compile as compile_enchantments
+    enchantments=compile_enchantments(text,name,types,subtypes)
+    if enchantments:
+        program=enchantments.base
+        return Definition(**base,abilities=program.keywords,triggers=program.triggers,
+            static_effects=program.static_effects,activations=program.activations,devotion=program.devotion,
+            attachment=enchantments.attachment,attachment_scale=enchantments.scale,
+            role_events=enchantments.role_events,enchanted_draw=enchantments.enchanted_draw,
+            attachment_draw=enchantments.attachment_draw)
     from advanced_abilities import station,history,equipped_attacks
     levels=station(text,types,subtypes)
     if levels:return Definition(**base,abilities=frozenset(),station=levels)
@@ -287,6 +301,10 @@ class Game:
         for source in self.battlefield.values():
             if source.attached_to==p.id and source.definition.attachment:
                 power_bonus+=source.definition.attachment[3];toughness_bonus+=source.definition.attachment[4]
+            if source.attached_to==p.id and source.definition.attachment_scale:
+                power,toughness,types=source.definition.attachment_scale
+                count=sum(x.controller==source.controller and bool(set(types)&x.definition.types) for x in self.battlefield.values())
+                power_bonus+=power*count;toughness_bonus+=toughness*count
             for effect in self.static_effects(source):
                 if not matches(effect.subject,source,p,True): continue
                 if effect.condition and not any(matches(effect.condition,source,x,self.creature(x)) for x in self.battlefield.values()): continue
@@ -318,6 +336,28 @@ class Game:
             grants.extend(x.entered_at for x in self.battlefield.values() if x.controller==p.controller and x.definition.name=='Kolodin, Triumph Caster')
         return bool(grants) and max(grants)>p.lost_abilities.get(ability,-1)
 
+    def enchanted(self, permanent):
+        return any(p.attached_to==permanent.id and 'Enchantment' in p.definition.types
+                   and 'Aura' in p.definition.subtypes for p in self.battlefield.values())
+
+    def role_trigger(self, source):
+        return dict(operation='create_role',effect='create Virtuous Role',role='Virtuous',
+                    source=source.id,name=source.definition.name,controller=source.controller,
+                    sourceColors=sorted(source.definition.colors))
+
+    def combat_draw_triggers(self, identifier):
+        creature=self.battlefield[identifier];result=[]
+        for source in self.battlefield.values():
+            if source.definition.enchanted_draw and source.controller==creature.controller and self.enchanted(creature):
+                result.append(dict(operation='draw_cards',effect='draw a card',amount=1,controller=source.controller,
+                                   source=source.id,name=source.definition.name,optional=False))
+            if source.definition.attachment_draw and source.attached_to==identifier:
+                # This Aura grants an ability to the creature; that creature's
+                # controller controls its trigger, even across control changes.
+                result.append(dict(operation='draw_cards',effect='draw a card',amount=1,controller=creature.controller,
+                                   source=identifier,name=creature.definition.name,optional=True))
+        return result
+
     def enter(self, permanent: Permanent):
         self.enter_batch([permanent])
 
@@ -339,6 +379,8 @@ class Game:
             self.emit("enters", id=permanent.id, name=permanent.definition.name,
                       controller=permanent.controller, types=sorted(permanent.definition.types),
                       subtypes=sorted(permanent.definition.subtypes))
+            if 'enters' in permanent.definition.role_events:
+                self.emit('trigger',**self.role_trigger(permanent))
             for watcher in list(self.battlefield.values()):
                 for trigger in watcher.definition.triggers:
                     if trigger.event == "enters" and matches(trigger.subject,watcher,permanent,self.creature(permanent)):
@@ -453,6 +495,8 @@ class Game:
         if not self.has(a,"vigilance"): a.tapped = True
         a.attacking = defending_player
         self.emit("attacks", id=a.id, defending=defending_player)
+        if 'attacks' in a.definition.role_events:
+            self.emit('trigger',**self.role_trigger(a))
         for operation,power,toughness,keyword in a.definition.attack_effects:
             if operation=='counter' and defer:
                 self.emit('trigger',operation='self_counter',source=a.id,name=a.definition.name,controller=a.controller,effect='add counter',amount=power)

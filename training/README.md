@@ -1,5 +1,20 @@
 # Commander self-play deck intake
 
+## Gauntlet scoring and enchantment rules update
+
+Future `gauntlet.py` runs decide a completed turn-limit game by **remaining
+life total**: higher wins, equal scores tie. Normal wins/draws take precedence;
+blocked games are not scored. Reports retain ties, tie rate, score metric,
+ordinary engine outcome and score adjudication separately. `turnLimit` is a
+reason count overlapping wins/losses/ties, not an extra outcome category.
+
+Ellivere, Sixth Sense, All That Glitters, Ethereal Armor and Helm of the Gods
+now compile through shared enchantment/attachment programs. See
+[`examples/enchantments-gauntlet-roles-life-score/README.md`](examples/enchantments-gauntlet-roles-life-score/README.md)
+for rule boundaries, validation and the retained forty-game batch. The previous
+gauntlet is preserved unchanged with its original unresolved-window semantics.
+
+
 ## Imported deck
 
 - Source: https://archidekt.com/decks/14850373/budget_deck

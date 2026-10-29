@@ -28,9 +28,9 @@ class GauntletChecks(unittest.TestCase):
              patch.object(g.s,'pack_replay',side_effect=lambda r:r), patch('builtins.print'):
             summary=g.run(None,focal,[opponent],games=4)
         row=summary['matchups'][0]
-        self.assertEqual((row['wins'],row['losses'],row['turnLimit'],row['blocked']),(1,1,1,1))
-        self.assertEqual(row['winRateAllGames'],.25)
-        self.assertEqual(row['winRateDecisive'],.5)
+        self.assertEqual((row['wins'],row['losses'],row['ties'],row['turnLimit'],row['blocked']),(2,1,0,1,1))
+        self.assertEqual(row['winRateAllGames'],.5)
+        self.assertEqual(row['winRateDecisive'],2/3)
         self.assertEqual(row['firstPlayerCounts'],dict(focalFirst=2,opponentFirst=2))
         self.assertEqual([call.args[1][0]['name'] for call in diagnose.call_args_list],['Focal','Opponent','Focal','Opponent'])
         self.assertEqual(summary['totals']['games'],4)
@@ -39,3 +39,17 @@ class GauntletChecks(unittest.TestCase):
         focal, opponent=self.deck('Focal',1),self.deck('Opponent',2)
         for opponents, games in (([],2),([opponent],3),([focal],2)):
             with self.assertRaises(ValueError):g.run(None,focal,opponents,games=games)
+
+    def test_equal_scores_are_ties_and_normal_results_precede_score(self):
+        report=dict(result='diagnostic_window_complete',winner=None,
+                    events=[dict(state=dict(players=[dict(life=25),dict(life=25)]))])
+        self.assertEqual(g.adjudicate(report,0)['outcome'],'tie')
+        report['events'][0]['state']['players'][0]['life']=40
+        self.assertEqual(g.adjudicate(report,0)['outcome'],'win')
+        self.assertEqual(g.adjudicate(report,1)['outcome'],'loss')
+        report.update(result='win',winner=1)
+        self.assertEqual(g.adjudicate(report,1)['outcome'],'win')
+        report.update(result='draw',winner=None)
+        self.assertEqual(g.adjudicate(report,0)['outcome'],'tie')
+        report.update(result='blocked')
+        self.assertEqual(g.adjudicate(report,0)['outcome'],'blocked')
