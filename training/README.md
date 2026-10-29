@@ -1,3 +1,26 @@
+## Token-leaves battlefield events
+
+Nadier's Nightblade now compiles its full Oracle wording as a token-leaves
+trigger: `Whenever a token you control leaves the battlefield, each opponent
+loses N life and you gain M life.` This is intentionally independent of
+Mirkwood Bats' "create or sacrifice" rule. Each token exiting produces
+one trigger (including during simultaneous removal), regardless of whether
+it dies, is exiled, is sacrificed to a previously validated cost, or is an
+Aura Role token detached when its host leaves. A non-token permanent does
+not trigger it. Source controller is checked from the pre-leave battlefield;
+once queued, its trigger can resolve even if the Nightblade has left.
+
+Each trigger goes on the normal priority stack and calls the shared life-gain
+handler, so gain replacers and gained-life-this-turn conditions still work.
+A token creature sacrificed as a cost can also trigger other ordinary
+creature-death abilities; simply destroying or exiling it must never count
+as a sacrifice. Normal token graveyard/exile cards cease to exist after
+leaving. See `training/tests/test_token_leaves.py`. This is not a
+general sacrifice-cost parser; arbitrary sacrifice costs and multiplayer
+choices remain pending. The only supported diagnostic match is two-player.
+
+These are experimental standalone rules, not Minecraft integration.
+
 ## Optional basic-land search after exile; per-token triggers
 
 Path to Exile now has a strict complete-text interpretation for
