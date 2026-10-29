@@ -108,6 +108,7 @@ class Definition:
     counter_replacements: tuple = ()
     token_replacements: tuple = ()
     token_action_triggers: tuple = ()
+    token_leave_triggers: tuple = ()
     upkeep_attachment_counters: int = 0
     entry_attachment_counters: int = 0
     double_attachment_counters_upkeep: bool = False
@@ -148,7 +149,7 @@ def parse_card(card: dict) -> Definition:
             opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
             life_addition=program.life_addition,cost_reductions=program.cost_reductions,
             counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
-            token_action_triggers=program.token_action_triggers,
+            token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers,
             upkeep_attachment_counters=enchantments.upkeep_attachment_counters,
             entry_attachment_counters=enchantments.entry_attachment_counters,
             double_attachment_counters_upkeep=enchantments.double_attachment_counters_upkeep)
@@ -187,7 +188,7 @@ def parse_card(card: dict) -> Definition:
                           opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
                           life_addition=program.life_addition,cost_reductions=program.cost_reductions,
                           counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
-                          token_action_triggers=program.token_action_triggers)
+                          token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers)
     attack_text=text.replace(name,'this creature') if name else text
     if ',' in name:
         short=name.split(',')[0]
@@ -582,6 +583,19 @@ class Game:
             equipment.attached_to = target.id
             equipment.attachment_at=self.timestamp()
         self.emit("equip", equipment=equipment_id, target=creature_id, mana=2)
+
+    def token_leave_events(self, controller: int, count: int) -> list[dict]:
+        """Snapshot watchers when controlled tokens leave, by any means."""
+        if count<=0:return []
+        result=[]
+        for source in self.battlefield.values():
+            if source.controller!=controller:continue
+            for kind,loss,gain in source.definition.token_leave_triggers:
+                if kind!='opponent_loss_gain':raise NeedsRules('Unknown token-leaves trigger')
+                result.extend(dict(operation='lose_life',source=source.id,
+                    name=source.definition.name,controller=source.controller,
+                    amount=loss,gain=gain,effect='token leaves battlefield') for _ in range(count))
+        return result
 
     def token_action_events(self, action: str, controller: int, count: int) -> list[dict]:
         """A separate stack trigger for each token actually created or sacrificed.
