@@ -32,6 +32,14 @@ class OpeningHandTests(unittest.TestCase):
                 s.Card("r","Removal","removal_spell","{G}"),
                 creature("One","{G}"),creature("Huge","{8}")])["keep"])
 
+    def test_soft_keep_requires_a_workable_not_perfect_hand(self):
+        good=[land("L1"),land("L2"),creature("Cheap","{G}"),
+              creature("Huge","{7}"),creature("Tall","{8}"),
+              creature("More","{9}"),creature("Another","{7}")]
+        self.assertFalse(h.assess(good)["keep"])
+        self.assertTrue(h.fallback(good))
+        self.assertFalse(h.fallback([land("L1")]+good[2:]))
+
     def test_batch_seven_and_reproducible_free_mulligans(self):
         class Rules:
             def query(self,*args):return {"kind":"creature"}
