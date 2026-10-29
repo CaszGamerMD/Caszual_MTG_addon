@@ -2341,6 +2341,10 @@ class Simulator(AdvancedRules):
                            for state in game.battlefield.values())
                 event=dict(event,operation='create_tokens',tokenSpec=dict(event['tokenSpec'],amount=amount))
             if event.get("operation") == "create_tokens":
+                if event.get('requiresBuffedCreature') and not self.event_game('main').controlled_creature_above_base(event['controller']):
+                    self.log('end_step_condition_failed','Intervening-if condition no longer holds at resolution.',
+                             actor=event['controller'],source=event['source'])
+                    continue
                 if event.get('optional') and not self.choose_optional_token_creation(event):
                     self.log('token_creation_declined','Optional token creation declined.',
                              actor=event['controller'],source=event['source'])

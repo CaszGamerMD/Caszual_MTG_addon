@@ -655,6 +655,11 @@ class Game:
                 for source in self.battlefield.values() if source.controller==self.turn_player
                 for trigger in source.definition.triggers if trigger.event=='begin_combat']
 
+    def controlled_creature_above_base(self, controller: int) -> bool:
+        # Current power includes counters and live continuous effects.
+        return any(p.controller==controller and self.creature(p)
+                   and self.stats(p)[0]>p.definition.power for p in self.battlefield.values())
+
     def end_step_triggers(self, life_gained: int) -> list[dict]:
         """Check gained-life conditions at the beginning of the end step only.
 
@@ -665,8 +670,9 @@ class Game:
         for permanent in self.battlefield.values():
             if permanent.controller!=self.turn_player:continue
             for ability in permanent.definition.triggers:
-                if ability.event=='end_step' and life_gained>=ability.life_gained_at_least:
-                    triggers.append(event_data(ability,permanent,permanent))
+                if ability.event!='end_step' or life_gained<ability.life_gained_at_least:continue
+                if ability.power_above_base_required and not self.controlled_creature_above_base(permanent.controller):continue
+                triggers.append(event_data(ability,permanent,permanent))
         return triggers
 
     def death_triggers(self, ids: list[str]) -> list[dict]:

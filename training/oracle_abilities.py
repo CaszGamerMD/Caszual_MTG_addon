@@ -86,6 +86,7 @@ class Trigger:
     life_gained_at_least: int = 0
     lands_controlled_at_least: int = 0
     min_counters: int = 0
+    power_above_base_required: bool = False
 
 @dataclass(frozen=True)
 class Program:
@@ -505,6 +506,14 @@ def compile_abilities(text, name=''):
             if action is None:return None
             triggers.append(Trigger('end_step',Selector(self_only=True),action,int(endstep[1])))
             continue
+        buffed_endstep=re.fullmatch(
+            r'At the beginning of your end step, if you control a creature with power greater than its base power, (create .+)',line)
+        if buffed_endstep:
+            action=effect(buffed_endstep[1])
+            if action is None or action.operation!='create_tokens':return None
+            triggers.append(Trigger('end_step',Selector(self_only=True),action,
+                                    power_above_base_required=True))
+            continue
         endstep_any=re.fullmatch(r'At the beginning of your end step, (.+)',line)
         if endstep_any:
             action=effect(endstep_any[1])
@@ -627,6 +636,7 @@ def event_data(trigger, source, subject):
             'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
             'optional':e.optional,
             **({'minLands':trigger.lands_controlled_at_least} if trigger.lands_controlled_at_least else {}),
+            **({'requiresBuffedCreature':True} if trigger.power_above_base_required else {}),
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             **({'libraryFilter':e.library_filter} if e.library_filter else {}),
             **({'steps':[{'operation':step.operation,'amount':step.amount,'recipient':step.recipient,'gain':step.gain} for step in e.steps]} if e.steps else {}),
