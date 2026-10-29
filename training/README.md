@@ -1,3 +1,22 @@
+## Generic creature +1/+1 counter replacements
+
+Hardened Scales and Branching Evolution now compile as whole-card Oracle
+replacement rules rather than card-name switches. Positive +1/+1 counter
+events on creatures controlled by the source's controller gain one additional
+counter or receive twice as many counters, respectively. Zero-counter events
+remain zero, opposing creatures are unaffected and live removal of a
+replacement source immediately removes its modifier. Separate replacement
+effects can stack: the current deterministic engine selects a legal
+maximum-counters ordering (additions before doublers).
+
+Shared counter-event handling now covers triggered self-counter placement,
+bulk placement on friendly creatures, counter-then-token attack effects and
+direct attack counters. Coverage checks are under
+`training/tests/test_counter_replacements.py`; generic counter patterns
+beyond those whole clauses, including token doubling and replacement of
+non-creature permanent counters, remain unsupported. The implementation
+is restricted to the offline diagnostic training system, not Minecraft.
+
 ## Generic spell-discount grammar
 
 The diagnostic engine recognizes whole-clause rules of the form `[type or
