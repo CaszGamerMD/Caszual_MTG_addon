@@ -804,6 +804,36 @@ class Simulator(AdvancedRules):
         self.log('search_basic','Player searches their library for a basic land and shuffles.',
                  actor=seat,source=source.name,found=bool(basic),land=basic.name if basic else None)
 
+    def choose_optional_subtype_search(self, seat, subtype):
+        """Default diagnostic player policy; not knowledge available to foe."""
+        return any(subtype in card.land_subtypes or
+                   (card.event_definition and subtype in card.event_definition.subtypes)
+                   for card in self.players[seat].library)
+
+    def search_subtype_card_to_hand(self, seat, source, subtype):
+        """Optional subtype-filtered search. The chosen card is revealed.
+
+        The identity is public only AFTER successful selection. A player can
+        decline and preserve library order, or legally fail to find after
+        choosing to search a hidden zone (still shuffle).
+        """
+        if not self.choose_optional_subtype_search(seat,subtype):
+            self.log('search_declined','Player declines an optional subtype-card search.',
+                     actor=seat,source=source.name,subtype=subtype)
+            return
+        player=self.players[seat]
+        found=next((candidate for candidate in player.library
+                    if subtype in candidate.land_subtypes or
+                       (candidate.event_definition and subtype in candidate.event_definition.subtypes)),None)
+        if found is not None:
+            player.library.remove(found)
+            player.hand.append(found)
+        self.library_random_sequence+=1
+        random.Random(str(self.seed)+':library:'+str(self.library_random_sequence)).shuffle(player.library)
+        self.log('search_reveal','Player reveals a searched subtype card and shuffles.',
+                 actor=seat,source=source.name,subtype=subtype,
+                 revealed=found.name if found else None)
+
     def removal_targets(self,controller,source):
         """Only legal targets for an explicitly parsed targeted removal spell."""
         if source.removal in ('destroy','exile_creature_life','exile_creature_basic_land'):return self.creature_targets(controller,source)
@@ -1103,6 +1133,12 @@ class Simulator(AdvancedRules):
                 self.log('draw_trigger',f"{event['name']}: its controller draws {event['amount']} card(s).",actor=event['controller'],source=event['source'],amount=event['amount'])
                 self.outcome()
                 if self.finished:return
+                continue
+            if event.get('operation')=='optional_subtype_search_hand':
+                search=event.get('libraryFilter',())
+                if len(search)!=2 or search[0]!='subtype':
+                    raise RuntimeError('Unsupported subtype library-search filter')
+                self.search_subtype_card_to_hand(event['controller'],card,search[1])
                 continue
             if event.get('operation')=='opponent_optional_basic_search':
                 # Ability controller does not search; only opponents do.
