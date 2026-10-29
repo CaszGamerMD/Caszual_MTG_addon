@@ -1,3 +1,13 @@
+## Reusable sacrifice and land-activation rules (October 29, 2026)
+
+Three verified, standalone diagnostic rule-learning increments now recognize complete Oracle programs rather than card names:
+
+- **Sacrifice a subtype for mana:** `Sacrifice a Goblin: Add {R}.` and unseen subtype/color equivalents. A controlled matching creature, including the ability source itself, is sacrificed as a cost without tapping or using the stack. Token sacrifice, death and leaves triggers are collected from the pre-sacrifice battlefield; the mana is available immediately. Skirk Prospector is the saved-deck example.
+- **Sacrifice a subtype to boost a target:** `Sacrifice a Goblin: Target creature gets +1/+1 until end of turn.` and variable bonuses. The target is selected legally before paying the sacrifice cost, the boost goes on the stack, and legality is checked again at resolution. It can fizzle after the cost is paid. Goblin Sledder is the saved-deck example.
+- **Land tap + mana for team counters:** `{T}: Add {C}.` composed with `{2}{G}{W}, {T}: Put a +1/+1 counter on each creature you control.` and other validated mana costs. The land cannot pay its own separate tap cost, the activation goes on the stack, and controlled creatures are counted at resolution with existing counter replacements. Gavony Township is the saved-deck example.
+
+The three new regression files contain **12 focused tests** covering unfamiliar names, parameter changes, unknown-clause rejection, mana costs, targeting, zone changes, and stack timing. The five-deck diagnostic parser audit changed from **161 unique unsupported names / 164 unsupported copies** to **158 unique names / 161 copies**; Garbo Gobbos changed from 13 to 11 unsupported, Getting Wild With Enchantments from 18 to 17. These are diagnostic parse metrics only, not certification of complete Commander legality or strategic learning. A standalone simulator remains the only target; no Minecraft migration occurred.
+
 ## New generic card groups: life-gain events, creature sweeps and compound removal
 
 - **Life gain as a separate triggered event.** Whole-text
