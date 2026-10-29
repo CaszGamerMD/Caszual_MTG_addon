@@ -1172,14 +1172,16 @@ class Simulator(AdvancedRules):
                         source.attached_to=event['target']
                         self.effect_clock+=1;source.attachment_at=self.effect_clock
                 message=f"{event['name']}: equip ability resolves."
-            elif event.get('operation')=='enchanted_counters':
+            elif event.get('operation') in ('enchanted_counters','enchanted_double_counters'):
                 aura=next((item for player in self.players for item in player.battlefield
                            if item.card.id==event['source']),None)
                 game=self.event_game('main')
                 target_id=aura.attached_to if aura else None
                 if target_id and target_id in game.battlefield and game.creature(game.battlefield[target_id]):
                     target=next(item for player in self.players for item in player.battlefield if item.card.id==target_id)
-                    target.counters+=game.counter_amount(target_id,event['amount'])
+                    amount=(target.counters if event['operation']=='enchanted_double_counters'
+                            else event['amount'])
+                    target.counters+=game.counter_amount(target_id,amount)
                     message=f"{event['name']}: enchanted creature receives counters."
                 else:
                     message=f"{event['name']}: no currently enchanted creature."
