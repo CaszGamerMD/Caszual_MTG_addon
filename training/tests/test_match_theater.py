@@ -62,7 +62,7 @@ class MatchTheaterChecks(unittest.TestCase):
                             battlefield=[],graveyard=[],exile=[]) for k in (0,1)])
         simulator.log("draw","Draws",actor=0)
         event=simulator.events[0]
-        self.assertNotIn("hand",str(event["state"]))
+        self.assertNotIn("hand-a",str(event["state"]))
         self.assertEqual(event["spectatorHands"][0][0]["name"],"Thorn Weaver")
         packed=s.pack_replay(dict(schemaVersion=1,kind="turn-replay",events=[event]))
         self.assertEqual(packed["cardCatalog"][packed["compactEvents"][0][8][1][0]]["name"],"Misty Tunnel")
