@@ -18,6 +18,7 @@ class EnchantmentProgram:
     entry_attachment_counters: int = 0
     double_attachment_counters_upkeep: bool = False
     aura_graveyard_draw: bool = False
+    living_weapon: bool = False
 
 
 def compile(text, name, types, subtypes):
@@ -28,9 +29,14 @@ def compile(text, name, types, subtypes):
             text=re.sub(r'\b'+re.escape(short)+r'(?= enters| attacks)', 'this creature',text)
     rest=[];scale=();role_events=();enchanted_draw=False;attachment_draw=False;damage_events=[];upkeep_attachment_counters=0;entry_attachment_counters=0;double_attachment_counters_upkeep=False;aura_graveyard_draw=False;entry_token_lines=[]
     mode='equipment' if 'Artifact' in types and 'Equipment' in subtypes else 'aura' if 'Enchantment' in types and 'Aura' in subtypes else ''
+    living_weapon=False
     for line in text.splitlines():
         line=line.strip()
         if not line:continue
+        if line=='Living weapon':
+            if mode!='equipment' or living_weapon:return None
+            living_weapon=True
+            continue
         if mode=='aura' and line.startswith('When this Aura enters, create '):
             # Aura ETB is a normal triggered ability: the token is created
             # only after the trigger resolves, even if the Aura has left.
@@ -78,7 +84,7 @@ def compile(text, name, types, subtypes):
             if m[5]:rest.append(m[1]+' creature has '+m[5]+'.')
             continue
         rest.append(line)
-    if not (scale or role_events or enchanted_draw or attachment_draw or damage_events or upkeep_attachment_counters or entry_attachment_counters or double_attachment_counters_upkeep or aura_graveyard_draw or entry_token_lines):return None
+    if not (scale or role_events or enchanted_draw or attachment_draw or damage_events or upkeep_attachment_counters or entry_attachment_counters or double_attachment_counters_upkeep or aura_graveyard_draw or entry_token_lines or living_weapon):return None
     if mode:
         # A temporary +1/+1 instruction lets the existing strict attachment
         # parser validate every remaining line, even a zero-static-bonus Aura.
@@ -89,7 +95,8 @@ def compile(text, name, types, subtypes):
         base=compile_abilities('\n'.join(entry_token_lines)) if entry_token_lines else Program((),frozenset())
         if base is None:return None
         return EnchantmentProgram(base,attachment,scale,attachment_draw=attachment_draw,damage_events=tuple(damage_events),upkeep_attachment_counters=upkeep_attachment_counters,entry_attachment_counters=entry_attachment_counters,
-                                  double_attachment_counters_upkeep=double_attachment_counters_upkeep,aura_graveyard_draw=aura_graveyard_draw)
+                                  double_attachment_counters_upkeep=double_attachment_counters_upkeep,aura_graveyard_draw=aura_graveyard_draw,
+                                  living_weapon=living_weapon)
     base=compile_abilities('\n'.join(rest)) if rest else Program((),frozenset())
     if base is None:return None
     return EnchantmentProgram(base,role_events=role_events,enchanted_draw=enchanted_draw)

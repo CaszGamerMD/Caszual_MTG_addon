@@ -1304,7 +1304,8 @@ class Simulator(AdvancedRules):
             self.log('attach',f'{card.name} enchants a creature.',targetPermanent=event['target'])
             return
         if card.kind=='equipment':
-            self.enter_creature(card,p)
+            pending=self.enter_creature(card,p)
+            self.resolve_entry_triggers(pending,card)
             return
         if card.kind in ('creature','vehicle','enchantment','planeswalker','station','artifact'):
             triggers=self.enter_creature(card,p)
@@ -1414,6 +1415,34 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='living_weapon':
+                # Create tokens first, attach one while state-based actions
+                # are not checked, then let any unattached 0/0 Germs die.
+                controller=event['controller'];owner=self.players[controller]
+                source=next((p for p in owner.battlefield
+                             if p.card.id==event['source'] and p.card.kind=='equipment'
+                             and p.entered_at==event['sourceEntry']),None)
+                created=self.event_game('main').token_amount(controller,1)
+                pending=[];germs=[]
+                for _ in range(created):
+                    self.token_sequence+=1
+                    definition=EventDefinition('Phyrexian Germ',frozenset({'Creature'}),
+                        frozenset({'Phyrexian','Germ'}),False,0,0,frozenset(),
+                        colors=frozenset({'Black'}))
+                    token=Card('token-'+str(self.token_sequence),'Phyrexian Germ','creature',
+                               traits='0;0;',power=0,toughness=0,
+                               event_definition=definition,is_token=True,colors=('Black',))
+                    pending.extend(self.enter_creature(token,owner))
+                    germs.append(token)
+                if source and germs:
+                    source.attached_to=germs[0].id
+                    self.effect_clock+=1;source.attachment_at=self.effect_clock
+                pending.extend(self.event_game('main').token_action_events('create',controller,created))
+                self.log('living_weapon','Living weapon creates Germ tokens and attaches Equipment when present.',
+                         actor=controller,source=event['source'],created=created,
+                         attachedTo=germs[0].id if source and germs else None)
+                self.resolve_entry_triggers(pending,card)
+                continue
             if event.get('operation')=='exile_until_aura_leaves':
                 # The delayed return belongs to this specific Aura instance.
                 # If it left before the ETB trigger resolved, nothing is exiled.

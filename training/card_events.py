@@ -119,6 +119,7 @@ class Definition:
     attack_watchers: tuple = ()
     chosen_type_entry: bool = False
     aura_exile: bool = False  # Targeted ETB exile lasting until this Aura leaves.
+    living_weapon: bool = False  # ETB create 0/0 Phyrexian Germ, then attach.
 
 
 def parse_card(card: dict) -> Definition:
@@ -160,7 +161,8 @@ def parse_card(card: dict) -> Definition:
             attack_watchers=program.attack_watchers,chosen_type_entry=program.chosen_type_entry,
             upkeep_attachment_counters=enchantments.upkeep_attachment_counters,
             entry_attachment_counters=enchantments.entry_attachment_counters,
-            double_attachment_counters_upkeep=enchantments.double_attachment_counters_upkeep)
+            double_attachment_counters_upkeep=enchantments.double_attachment_counters_upkeep,
+            living_weapon=enchantments.living_weapon)
     from land_aura_exile import parse as parse_land_aura_exile
     land_exile=parse_land_aura_exile(text,types,subtypes)
     if land_exile:
@@ -493,6 +495,10 @@ class Game:
                           source=permanent.id,name=permanent.definition.name,
                           controller=permanent.controller,sourceEntry=permanent.entered_at,
                           sourceColors=sorted(permanent.definition.colors))
+            if permanent.definition.living_weapon:
+                self.emit('trigger',operation='living_weapon',
+                          source=permanent.id,name=permanent.definition.name,
+                          controller=permanent.controller,sourceEntry=permanent.entered_at)
             if permanent.definition.entry_attachment_counters and permanent.attached_to:
                 self.emit('trigger',operation='enchanted_counters',effect='put counters on enchanted creature',
                           source=permanent.id,name=permanent.definition.name,controller=permanent.controller,
