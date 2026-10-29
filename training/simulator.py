@@ -1826,11 +1826,23 @@ class Simulator(AdvancedRules):
         if card.kind == "token_spell":
             for resolution in range(1):
                 token_triggers = []
-                created=self.event_game('main').token_amount(controller,card.token_count)
+                game=self.event_game('main')
+                created=game.token_amount(controller,card.token_count)
+                template=card.token_definition
+                if template is None: raise RuntimeError("Missing parsed token characteristics")
+                spec=game.replace_creature_token_spec(controller,dict(
+                    power=template.power,toughness=template.toughness,
+                    colors=tuple(template.colors),subtypes=tuple(template.subtypes),
+                    keywords=tuple(template.abilities),
+                    land='Land' in template.types,enchantment='Enchantment' in template.types))
+                definition=replace(template,name=' '.join(spec['subtypes']),
+                    types=frozenset({'Creature'}|({'Land'} if spec.get('land') else set())|
+                                    ({'Enchantment'} if spec.get('enchantment') else set())),
+                    subtypes=frozenset(spec['subtypes']),power=spec['power'],
+                    toughness=spec['toughness'],abilities=frozenset(spec['keywords']),
+                    colors=frozenset(spec['colors']))
                 for _ in range(created):
                     self.token_sequence += 1
-                    definition = card.token_definition
-                    if definition is None: raise RuntimeError("Missing parsed token characteristics")
                     token = Card(f"token-{self.token_sequence}",definition.name,"creature",
                                  traits=f"{definition.power};{definition.toughness};"+",".join(sorted(definition.abilities)),
                                  power=definition.power,toughness=definition.toughness,
@@ -2350,11 +2362,12 @@ class Simulator(AdvancedRules):
                     self.log('token_creation_declined','Optional token creation declined.',
                              actor=event['controller'],source=event['source'])
                     continue
-                spec=event["tokenSpec"]
+                game=self.event_game('main')
+                spec=game.replace_creature_token_spec(event['controller'],event["tokenSpec"])
                 owner=self.players[event["controller"]]
                 pending=[]
                 owner.life -= event.get("controllerLoss",0)
-                created=self.event_game('main').token_amount(event['controller'],spec['amount'])
+                created=game.token_amount(event['controller'],spec['amount'])
                 event=dict(event,tokenSpec=dict(spec,amount=created))
                 for _ in range(created):
                     self.token_sequence+=1
