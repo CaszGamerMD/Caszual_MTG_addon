@@ -1,5 +1,6 @@
 """Whole-text composition of simple land mana, entry conditions and triggers."""
 import re
+import mana_pool
 from oracle_abilities import compile_abilities, Program
 
 BITS={c:1<<i for i,c in enumerate('WUBRGC')}
@@ -12,7 +13,7 @@ def compile_land(raw, clean_text):
     reminder=re.match(r'^\(\{T\}: Add (\{[WUBRGC]\}(?: or \{[WUBRGC]\})*)\.\)',raw.get('oracleText',''))
     lines=[line.strip() for line in text.splitlines() if line.strip()]
     if reminder:lines.append('{T}: Add '+reminder[1]+'.')
-    mask=0;production=();entry='';tapped=False;rest=[]
+    mask=0;production=();entry='';tapped=False;rest=[];counter_ability=''
     for line in lines:
         fixed=re.fullmatch(r'\{T\}: Add ((?:\{[WUBRGC]\}){2,})\.',line)
         if fixed:
@@ -36,6 +37,12 @@ def compile_land(raw, clean_text):
             elif pay:entry='pay_life:'+pay[1]
             else:entry='has_type:'+check[1]+','+check[2]
             continue
+        team_counters=re.fullmatch(
+            r'((?:\{(?:[0-9]+|[WUBRGC])\})+), \{T\}: Put a \+1/\+1 counter on each creature you control\.',line)
+        if team_counters:
+            if counter_ability or mana_pool.requirements(team_counters[1]) is None:return None
+            counter_ability=team_counters[1]
+            continue
         rest.append(line)
     if not mask and not production:return None
     program=compile_abilities('\n'.join(rest)) if rest else Program((),frozenset())
@@ -43,4 +50,4 @@ def compile_land(raw, clean_text):
     # rule families must be wired into land handling before accepting them.
     if program is None or (rest and (not program.triggers or any(t.event!='enters' or not t.subject.self_only for t in program.triggers))):return None
     if rest and any(not re.fullmatch(r'(?:When|Whenever) this land enters(?: the battlefield)?, .+',line) for line in rest):return None
-    return dict(kind='land',mask=mask,tapped=tapped,land_rule=entry,land_program=program,mana_production=production)
+    return dict(kind='land',mask=mask,tapped=tapped,land_rule=entry,land_program=program,mana_production=production,land_counter_ability=counter_ability)

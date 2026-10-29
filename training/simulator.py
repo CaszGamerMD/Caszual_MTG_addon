@@ -920,6 +920,42 @@ class Simulator(AdvancedRules):
             self.stack.push(ward['controller'],(ward,source.card),ward['name'])
         self.resolve_entry_triggers(triggers,source.card)
 
+    def land_counter_choices(self,seat):
+        choices=[];player=self.players[seat]
+        for source in player.battlefield:
+            definition=source.card.event_definition
+            if source.tapped or not definition or not definition.land_counter_ability:continue
+            # The land's tap is a separate cost; it cannot also pay the mana.
+            options=[entry for entry in self.mana_sources(seat) if entry[0]!=source.card.id]
+            payment=mana_pool.plan(definition.land_counter_ability,player.mana_pool,options)
+            if not payment['paid']:continue
+            game=self.event_game('main')
+            count=sum(p.controller==seat and game.creature(p) for p in game.battlefield.values())
+            choices.append(Candidate(source.card.id+':team-counters','activate_land_counters',source.card.id,
+                features=features(power=count,cost=len(payment['sources'])),
+                label='Activate '+source.card.name+' to strengthen your creatures'))
+        return choices
+
+    def activate_land_counters(self,seat,source_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        player=self.players[seat]
+        source=next((p for p in player.battlefield if p.card.id==source_id),None)
+        definition=source.card.event_definition if source else None
+        if not definition or not definition.land_counter_ability or source.tapped:
+            raise ValueError('Illegal land counter activation')
+        payment=mana_pool.plan(definition.land_counter_ability,player.mana_pool,
+                               [entry for entry in self.mana_sources(seat) if entry[0]!=source_id])
+        if not payment['paid']:raise ValueError('Cannot pay land counter activation')
+        for permanent in player.battlefield:
+            if permanent.card.id in payment['sources']:permanent.tapped=True
+        player.mana_pool=list(payment['pool']);source.tapped=True
+        event=dict(operation='land_team_counters',effect='put counters on controlled creatures',
+                   source=source_id,controller=seat,name=source.card.name)
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.log('activate_land_counters','Land activation pays mana and taps the source.',
+                 actor=seat,source=source_id,manaSources=payment['sources'],stackId=frame.id)
+        self.resolve_entry_triggers([],source.card)
+
     def scaled_mana_choices(self,seat):
         choices=[]
         sources=dict(self.mana_sources(seat))
@@ -1316,6 +1352,7 @@ class Simulator(AdvancedRules):
         actions.extend(self.token_ability_choices(seat))
         actions.extend(self.scaled_mana_choices(seat))
         actions.extend(self.sacrifice_choices(seat))
+        actions.extend(self.land_counter_choices(seat))
         actions.extend(self.strip_ability_choices(seat))
         for card in self.response_choices(seat):
             if card.blink:
@@ -1357,6 +1394,9 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_sacrifice_boost':
             self.activate_sacrifice_boost(seat,choice.card_id,choice.tap_ids[0],choice.target_permanent)
+            return 'activate'
+        if choice.kind=='activate_land_counters':
+            self.activate_land_counters(seat,choice.card_id)
             return 'activate'
         card=next(c for c in self.players[seat].hand if c.id==choice.card_id)
         self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack)
@@ -1561,6 +1601,17 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='land_team_counters':
+                game=self.event_game('main');seat=event['controller'];affected=[]
+                for target in game.battlefield.values():
+                    if target.controller==seat and game.creature(target):
+                        amount=game.counter_amount(target.id,1)
+                        target.counters+=amount;affected.append((target.id,amount))
+                self.sync_events(game)
+                self.log('land_team_counters','Counters placed on all creatures controlled at resolution.',
+                         actor=seat,source=event['source'],affected=affected)
+                self.resolve_entry_triggers(self.state_based_actions(),card)
+                continue
             if event.get('operation')=='sacrifice_target_boost':
                 game=self.event_game('main');target=game.battlefield.get(event['target'])
                 legal=bool(target and game.creature(target) and not game.has(target,'shroud')
@@ -2438,6 +2489,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.token_ability_choices(seat))
             actions.extend(self.scaled_mana_choices(seat))
             actions.extend(self.sacrifice_choices(seat))
+            actions.extend(self.land_counter_choices(seat))
             actions.extend(self.strip_ability_choices(seat))
             if (self.diagnostic and p.command_zone and p.command_zone.kind == "creature"
                     and self.payment(p.command_zone, p.commander_casts)["paid"]):
@@ -2560,7 +2612,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
-                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana","activate_sacrifice_boost"):
+                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana","activate_sacrifice_boost","activate_land_counters"):
             self.turn_development[seat]=True
         return choice
 
@@ -2649,6 +2701,8 @@ class Simulator(AdvancedRules):
                 self.activate_sacrifice_mana(self.active,choice.card_id,choice.tap_ids[0])
             elif choice.kind=='activate_sacrifice_boost':
                 self.activate_sacrifice_boost(self.active,choice.card_id,choice.tap_ids[0],choice.target_permanent)
+            elif choice.kind=='activate_land_counters':
+                self.activate_land_counters(self.active,choice.card_id)
             elif choice.kind=='equip':
                 self.activate_equip(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind in ('crew','saddle'):
@@ -2842,8 +2896,10 @@ def diagnostic_land(definition: dict, identity: set[str]) -> dict | None:
     composed=compile_land(definition,rule_text(definition.get('oracleText','')))
     if composed:
         program=composed.pop('land_program')
+        counter_ability=composed.pop('land_counter_ability','')
         composed['event']=EventDefinition(definition['name'],frozenset({'Land'}),frozenset(definition.get('subTypes',[])),
-            'Legendary' in definition.get('superTypes',[]),0,0,program.keywords,triggers=program.triggers)
+            'Legendary' in definition.get('superTypes',[]),0,0,program.keywords,triggers=program.triggers,
+            land_counter_ability=counter_ability)
         return composed
     text = definition.get("oracleText", "")
     names = {"White": 1, "Blue": 2, "Black": 4, "Red": 8, "Green": 16}

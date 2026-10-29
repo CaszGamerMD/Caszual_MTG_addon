@@ -124,6 +124,7 @@ class Definition:
     scaled_mana_tap: str = ''  # Tap for X mana of one chosen color, based on permanents.
     living_weapon: bool = False  # ETB create 0/0 Phyrexian Germ, then attach.
     sacrifice_ability: tuple = ()  # (effect, sacrificed subtype, effect parameter).
+    land_counter_ability: str = ''  # Mana cost for tap-to-counter-each-controlled-creature.
 
 
 def parse_card(card: dict) -> Definition:
