@@ -403,6 +403,14 @@ and unrecognized effect clauses remain unsupported.
 
 # Commander self-play deck intake
 
+## Land and attachment language batch
+
+Ten more queued cards now resolve through shared land-entry, mana, and attachment grammar.
+The [retained forty-game benchmark](examples/enchantments-gauntlet-land-equipment/README.md)
+records 26 wins, 14 losses, and 0 ties, with no runtime questions. All-deck unique
+unsupported cards fall from 209 to 199; the enchantment deck has 31 remaining.
+
+
 ## Faster question resolution workflow
 
 Sync the experimental branch before choosing the next batch to avoid duplicating concurrent rules work. Refresh current parse coverage without playing games:

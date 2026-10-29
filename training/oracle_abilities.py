@@ -163,6 +163,7 @@ KEYWORDS = {'flash','flying','first strike','double strike','lifelink','vigilanc
 
 def selector(text):
     if text == 'this creature': return Selector(self_only=True,creature=True)
+    if text in ('this land','this artifact','this enchantment','this permanent'):return Selector(self_only=True)
     if text in ('this creature or another creature','this creature or another creature you control'):
         return Selector(relation='controller' if text.endswith('you control') else 'any',creature=True)
     m=re.fullmatch(r'(a|another) (creature|[A-Z][a-z]+(?: creature)?) you control',text)
@@ -187,6 +188,7 @@ def effect(text):
         return Effect('optional_subtype_search_hand',0,library_filter=('subtype',tutor[1]))
     if text=='each opponent may search their library for a basic land card, put it onto the battlefield tapped, then shuffle.':
         return Effect('opponent_optional_basic_search',0,'each opponent')
+    if text=="return a land you control to its owner's hand.":return Effect('return_controlled_land',1)
     gain=re.fullmatch(r'you gain ([1-9][0-9]*) life\.',text)
     if gain:return Effect('gain_life',int(gain[1]))
     drawn=re.fullmatch(r'(?:you )?draw (a|one|two|three|[1-9][0-9]*) cards?\.',text)
@@ -382,7 +384,7 @@ def cast_matches(trigger, source, spell, controller):
 
 def event_data(trigger, source, subject):
     e=trigger.effect
-    labels={'gain_life':f'controller gains {e.amount} life','draw_cards':f'controller draws {e.amount} cards',
+    labels={'return_controlled_land':'return a controlled land to its owner hand','gain_life':f'controller gains {e.amount} life','draw_cards':f'controller draws {e.amount} cards',
             'reveal_creatures':f'reveal {e.amount} cards and put matching creatures onto the battlefield',
             'damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
             'damage':f'deal {e.amount} damage to each opponent','scry':'scry',

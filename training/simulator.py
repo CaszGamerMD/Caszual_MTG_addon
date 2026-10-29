@@ -494,12 +494,11 @@ class Simulator(AdvancedRules):
         for seat, player in enumerate(self.players):
             for item in player.battlefield:
                 card = item.card
-                if card.kind == "land": continue
                 definition = card.event_definition
                 if definition is None:
-                    if card.kind not in ("creature","mana_artifact"): continue
+                    if card.kind not in ("creature","mana_artifact","land"): continue
                     keywords = frozenset(k for k in card.traits.split(";")[-1].split(",") if k)
-                    definition = EventDefinition(card.name, frozenset({"Artifact"} if card.kind=="mana_artifact" else {"Creature"}), frozenset(card.land_subtypes),
+                    definition = EventDefinition(card.name, frozenset({"Land"} if card.kind=="land" else {"Artifact"} if card.kind=="mana_artifact" else {"Creature"}), frozenset(card.land_subtypes),
                                                  card.legendary, card.power, card.toughness, keywords,
                                                  colors=frozenset(card.colors))
                 if item.bestowed:definition=self.bestowed_definition(definition)
@@ -538,6 +537,25 @@ class Simulator(AdvancedRules):
         return replace(item.card, kind="creature", power=power, toughness=toughness,
                        traits=f"{power};{toughness};"+",".join(sorted(keywords)))
 
+    def land_entry_tapped(self,card,seat,entry_logs):
+        player=self.players[seat]
+        if card.land_rule.startswith('reveal_types:'):
+            required=set(card.land_rule.split(':',1)[1].split(','))
+            chosen=next((c for c in player.hand if c.id!=card.id and required.intersection(c.land_subtypes)),None)
+            # Deterministic legal choice: reveal the first matching card, if any.
+            if chosen:entry_logs.append(('reveal_land_entry',f'Player {seat+1} reveals {chosen.name}.',dict(actor=seat,card=chosen.name,source=card.name)))
+            return chosen is None
+        if card.land_rule.startswith('pay_life:'):
+            amount=int(card.land_rule.split(':',1)[1])
+            # Decline when paying would leave zero life; payment is not damage.
+            paid=player.life>amount
+            if paid:player.life-=amount
+            entry_logs.append(('land_entry_payment',f'Player {seat+1} '+('pays' if paid else 'declines to pay')+f' {amount} life.',dict(actor=seat,amount=amount,paid=paid,source=card.name)))
+            return not paid
+        lands=[replace(p.card,land_subtypes=tuple(p.card.event_definition.subtypes)) if p.card.event_definition else p.card
+               for p in player.battlefield if p.card.kind=='land' or p.card.event_definition and 'Land' in p.card.event_definition.types]
+        return land_enters_tapped(card,lands)
+
     def enter_creature(self, card: Card, player: Player, attached_to=None):
         return self.enter_creatures([card],player,attached_targets={card.id:attached_to} if attached_to else None)
 
@@ -546,18 +564,20 @@ class Simulator(AdvancedRules):
         game._next_token=self.token_sequence
         known=set(game.battlefield)
         controller=next(i for i,candidate in enumerate(self.players) if candidate is player)
-        entrants=[]
+        entrants=[];entry_logs=[]
         bestowed_targets=bestowed_targets or {}
         attached_targets=dict(attached_targets or {},**bestowed_targets)
         for card in cards:
             definition=card.event_definition
             if definition is None:
-                definition=EventDefinition(card.name,frozenset({'Creature'}),frozenset(card.land_subtypes),card.legendary,
+                definition=EventDefinition(card.name,frozenset(card.printed_types or (('Land',) if card.kind=='land' else ('Creature',))),frozenset(card.land_subtypes),card.legendary,
                     card.power,card.toughness,frozenset(k for k in card.traits.split(';')[-1].split(',') if k),
                     colors=frozenset(card.colors))
             if card.id in bestowed_targets:definition=self.bestowed_definition(definition)
-            entrants.append(EventPermanent(card.id,replace(definition,mana_cost=card.mana_cost),controller,
+            enters_tapped=self.land_entry_tapped(card,controller,entry_logs) if card.kind=='land' else card.enters_tapped
+            entrants.append(EventPermanent(card.id,replace(definition,mana_cost=card.mana_cost),controller,tapped=enters_tapped,
                                            attached_to=attached_targets.get(card.id)))
+        game.life_totals={seat:p.life for seat,p in enumerate(self.players)}
         game.enter_batch(entrants)
         self.entry_history.extend(dict(turn=self.turn,controller=controller,subtypes=sorted(p.definition.subtypes)) for p in entrants)
         player.battlefield.extend(Permanent(card,attached_to=attached_targets.get(card.id),bestowed=card.id in bestowed_targets) for card in cards)
@@ -570,6 +590,7 @@ class Simulator(AdvancedRules):
             player.battlefield.append(Permanent(token))
         self.token_sequence=game._next_token
         self.sync_events(game)
+        for kind,message,details in entry_logs:self.log(kind,message,**details)
         return [event for event in game.events if event['kind']=='trigger']
 
     def state_based_actions(self):
@@ -1181,6 +1202,16 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='return_controlled_land':
+                player=self.players[event['controller']]
+                lands=[p for p in player.battlefield if p.card.kind=='land' or p.card.event_definition and 'Land' in p.card.event_definition.types]
+                # This instruction does not target. Choose only on resolution,
+                # preferring another tapped land over the returning source.
+                chosen=min(lands,key=lambda p:(p.card.id==event['source'],not p.tapped,p.card.id),default=None)
+                if chosen:
+                    self.send_to_destination(player,chosen,to_hand=True)
+                    self.log('return_land',f'{chosen.card.name} returns to its owner hand.',actor=event['controller'],card=chosen.card.name)
+                continue
             minimum=event.get('minLands',0)
             if minimum and self.controlled_land_count(event['controller'])<minimum:
                 self.log('condition_failed','Intervening upkeep land threshold no longer holds.',
@@ -1564,7 +1595,7 @@ class Simulator(AdvancedRules):
         self.log('token_sacrifice','A token is sacrificed as an ability cost.',actor=seat,token=token_id)
         self.resolve_entry_triggers(events,token.card)
 
-    def send_to_destination(self, player: Player, item: Permanent, snapshot=None, to_exile=False):
+    def send_to_destination(self, player: Player, item: Permanent, snapshot=None, to_exile=False, to_hand=False):
         if item.card.is_token:
             game=snapshot or self.event_game('main')
             controller=next(i for i,p in enumerate(self.players) if item in p.battlefield)
@@ -1607,6 +1638,8 @@ class Simulator(AdvancedRules):
             return  # Tokens cease to exist after leaving the battlefield.
         if root(item.card) == destination.commander_id:
             destination.command_zone = item.card  # This prototype chooses the command-zone option.
+        elif to_hand:
+            destination.hand.append(item.card)
         elif to_exile:
             destination.exile.append(item.card)
         else:
@@ -1656,12 +1689,14 @@ class Simulator(AdvancedRules):
             definition=item.card.event_definition
             mask=item.card.mask if item.card.kind=='land' else 0
             if definition and 'Land' in definition.types:
-                mask=sum(bit for subtype,bit in {'Plains':1,'Island':2,'Swamp':4,'Mountain':8,'Forest':16}.items()
+                mask|=sum(bit for subtype,bit in {'Plains':1,'Island':2,'Swamp':4,'Mountain':8,'Forest':16}.items()
                          if subtype in definition.subtypes)
                 if 'Creature' in definition.types and item.fresh:
                     effective=self.effective_card(item)
                     if effective is None or 'haste' not in effective.traits.split(';')[-1].split(','): continue
-            if mask:
+            if item.card.kind=='land' and item.card.mana_production:
+                options=(item.card.mana_production,)
+            elif mask:
                 options=tuple(tuple(int(i==color) for i in range(6)) for color in range(6) if mask&(1<<color))
             elif item.card.kind=='mana_artifact': options=(item.card.mana_production,)
             else: continue
@@ -1927,14 +1962,11 @@ class Simulator(AdvancedRules):
                 if card is None: raise RuntimeError("Commander is no longer in command zone")
                 if choice.kind == "land":
                     p.hand.remove(card)
-                    lands = [replace(x.card,land_subtypes=tuple(x.card.event_definition.subtypes))
-                             if x.card.event_definition else x.card
-                             for x in p.battlefield if x.card.kind == "land" or
-                             (x.card.event_definition and "Land" in x.card.event_definition.types)]
-                    p.battlefield.append(Permanent(card, land_enters_tapped(card, lands)))
+                    pending=self.enter_creature(card,p)
                     self.land_played = True
                     if self.phase == "land": self.phase = "main"
                     self.log("land", f"Player {self.active + 1} plays {card.name}.", card=card.name)
+                    self.resolve_entry_triggers(pending,card)
                 else:
                     self.cast_spell(self.active,card,choice.x_value,choice.kind=='cast_commander',target=choice.target_permanent or choice.target_stack,bestow=choice.kind=='bestow')
         elif self.phase == "attack":
@@ -2106,6 +2138,13 @@ class Simulator(AdvancedRules):
 
 def diagnostic_land(definition: dict, identity: set[str]) -> dict | None:
     """Explicit land patterns in the submitted decks; no generalized Oracle guessing."""
+    from land_abilities import compile_land
+    composed=compile_land(definition,rule_text(definition.get('oracleText','')))
+    if composed:
+        program=composed.pop('land_program')
+        composed['event']=EventDefinition(definition['name'],frozenset({'Land'}),frozenset(definition.get('subTypes',[])),
+            'Legendary' in definition.get('superTypes',[]),0,0,program.keywords,triggers=program.triggers)
+        return composed
     text = definition.get("oracleText", "")
     names = {"White": 1, "Blue": 2, "Black": 4, "Red": 8, "Green": 16}
     if text == "{T}: Add one mana of any color in your commander's color identity.":

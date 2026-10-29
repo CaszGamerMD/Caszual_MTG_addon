@@ -7,7 +7,7 @@ rules raise NeedsRules rather than being treated as blank.
 from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 import re
-from attachments import parse as parse_attachment, parse_bestow, parse_equipment_removals
+from attachments import parse as parse_attachment, parse_bestow, parse_equipment_removals, parse_with_intrinsic
 from attack_abilities import compile as compile_attacks
 from oracle_abilities import Trigger, StaticEffect, compile_abilities, matches, event_data, cast_matches
 
@@ -166,8 +166,8 @@ def parse_card(card: dict) -> Definition:
     if bestow:return Definition(**base,abilities=bestow[1],bestow=bestow)
     removal_program=parse_equipment_removals(text,types,subtypes)
     if removal_program:return Definition(**base,abilities=frozenset(),attachment=removal_program[0],ability_removals=removal_program[1])
-    attachment=parse_attachment(text,types,subtypes)
-    if attachment:return Definition(**base,abilities=frozenset(),attachment=attachment)
+    attachment=parse_with_intrinsic(text,types,subtypes)
+    if attachment:return Definition(**base,abilities=attachment[0],attachment=attachment[1])
     normalized=text.replace(name,'this creature') if name else text
     if ',' in name:
         normalized=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= enters| attacks| isn't a creature|\'s power)",'this creature',normalized)

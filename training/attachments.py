@@ -15,12 +15,12 @@ def parse(text,types,subtypes):
         if m and mode=='equipment':cost=m[1];continue
         m=re.fullmatch(prefix+r' creature has (.+)\.',line)
         if m:
-            keywords=set(re.split(r', | and ',m[1]))
+            keywords=set(re.split(r', | and ',m[1].replace(', and ', ', ')))
             if not keywords<=KEYWORDS:return None
             abilities.update(keywords);continue
         m=re.fullmatch(prefix+r' creature gets \+([0-9]+)/\+([0-9]+)(?: and has (.+))?\.',line)
         if m:
-            keywords=set(re.split(r', | and ',m[3] or ''))-{''}
+            keywords=set(re.split(r', | and ',(m[3] or '').replace(', and ', ', ')))-{''}
             if not keywords<=KEYWORDS:return None
             abilities.update(keywords);power+=int(m[1]);toughness+=int(m[2]);continue
         return None
@@ -58,3 +58,18 @@ def parse_equipment_removals(text,types,subtypes):
         removals.append((m[1],abilities))
     attachment=parse('\n'.join(lines),types,subtypes)
     return (attachment,tuple(removals)) if attachment and removals else None
+
+
+def parse_with_intrinsic(text,types,subtypes):
+    """Compose source protection keywords with a complete attachment program.
+
+    Source abilities and equipped-creature grants remain distinct; unsupported
+    intrinsic keywords are rejected until their timing/activation is modeled.
+    """
+    intrinsic=set();rest=[]
+    for line in text.splitlines():
+        words={word.strip().lower() for word in re.split(r', | and ',line.replace(', and ', ', '))}
+        if words and words<={'indestructible','hexproof'}:intrinsic.update(words)
+        else:rest.append(line)
+    attachment=parse('\n'.join(rest),types,subtypes)
+    return (frozenset(intrinsic),attachment) if attachment else None

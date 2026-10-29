@@ -1,0 +1,2600 @@
+{
+  "schemaVersion": 1,
+  "focalDeck": "Getting Wild with Enchantments *fix land count",
+  "focalDeckId": 5189995,
+  "engineCommit": "13d8f2d165b4155113dd54967aff5d228b3c0d99",
+  "engineWorkingTreeDirty": true,
+  "engineSourceHashes": {
+    "src/main/java/dev/casz/caszualmtg/CommanderMana.java": "8cc158a721ef6e72be8a06208a598159726244899b8623cde49f1e5999e437b6",
+    "src/main/java/dev/casz/caszualmtg/CommanderOracle.java": "b9b13b71286b71c11ab7ab7d2e4b230733557949eb07cbf1fabe84c490a82125",
+    "src/main/java/dev/casz/caszualmtg/CommanderSimpleCards.java": "7926dd453d79499b6d0076bc7f8dd21b19a6dcfe633cd47eb42ecbcbaa899ce3",
+    "src/main/java/dev/casz/caszualmtg/CommanderSimpleSpells.java": "9550a56309a576f9b2d9a69a2345b820d3f490b4aea2b03d1588838a78874079",
+    "training/advanced_abilities.py": "b23dbea7ac90debd1201b64dd34b981d1391288fed426bf915b2052e74f07d19",
+    "training/advanced_simulator.py": "c0d382ed1d5c106572b4ca060267fea396f3caa015921be93d744e075631fa33",
+    "training/attachments.py": "388e42a67bee2100ba03aa01141fa837f471dad58b59b50092863e0eb378d154",
+    "training/attack_abilities.py": "322b55c7ccfd6a727b9bf67746ce0dbc7a6fbcf0527515a96486f237465baa85",
+    "training/card_events.py": "12c4da399336aae9911f055d7f518d42a35599ac0e3d174832cde02e10871428",
+    "training/diagnostic_coverage.py": "276eb4c422988169ce9f97ee8bff3205e927b2dec8a52a269d3d1db9f6ab7299",
+    "training/enchantment_abilities.py": "03c3485a08514a4c429cdd7db6c02b916817048c3644e0b6da9fc4ee6af72f27",
+    "training/gauntlet.py": "7edca7762084cbf551130af6777dcf2802a0f9e1890222837367e92ebc9516e5",
+    "training/java/RulesBridge.java": "9fa09123527b14351426bc9e3cf6b7e45e49a684b2c16e532c6e3fe0283f80fd",
+    "training/land_abilities.py": "3c04a3776ad1f2062165a67c7f0f17795871857d8d15c1b65f85544c2329b742",
+    "training/library_effects.py": "c29a0566223bec92eee930458e22fa272a897b1a5e8053140dcd32419d27ee54",
+    "training/mana_pool.py": "8cc6da77bf1d532efcbc203ef676b91420ad3d44d38c57b745fa2b0b50880188",
+    "training/oracle_abilities.py": "e538ab00714b9a4ad8288249400d279cb63e29b6c4321f72f526cdbb9a0ac238",
+    "training/priority_stack.py": "f491d37aab6f0fb7559d84cb323d8022b4fc69f3d572f99b1ce762efc89725f1",
+    "training/question_batches.py": "2546d872ed0275b8a245f5e817566c7dd31cc0be259cbeb3fcb3b980649d588d",
+    "training/simulator.py": "a000ba2840cd7a5f5652dab55fbbefafcdf8a88b42a7eb14e5c192d7a859e339",
+    "training/x_spells.py": "6345548f87cecfb02320e64cc0ddc4d8d1252c459f650f732d008f166a848605"
+  },
+  "gamesPerOpponent": 10,
+  "turnsPerPlayer": 10,
+  "baseSeed": 5189995,
+  "scoring": {
+    "metric": "remaining_life",
+    "atTurnLimit": "higher_score_wins",
+    "equalScores": "tie",
+    "normalResultsTakePrecedence": true
+  },
+  "learningEligible": false,
+  "productionEligible": false,
+  "coverage": [
+    {
+      "deckId": 5189995,
+      "deck": "Getting Wild with Enchantments *fix land count",
+      "playableOf100": 69,
+      "unsupportedCards": [
+        "Alseid of Life's Bounty",
+        "Archetype of Courage",
+        "Audacity",
+        "Calix, Guided by Fate",
+        "Cartouche of Solidarity",
+        "Destiny Spinner",
+        "Dryad of the Ilysian Grove",
+        "Gavony Township",
+        "Ghalta and Mavren",
+        "Gravity Well",
+        "Gylwain, Casting Director",
+        "Halvar, God of Battle // Sword of the Realms",
+        "Hyena Umbra",
+        "Journey to Nowhere",
+        "Lathiel, the Bounteous Dawn",
+        "Luxior, Giada's Gift",
+        "Michiko's Reign of Truth // Portrait of Michiko",
+        "Mirkwood Spider",
+        "Mirri, Weatherlight Duelist",
+        "Nettlecyst",
+        "Nyx Herald",
+        "On Thin Ice",
+        "Oxidize",
+        "Paladin Class",
+        "Raking Canopy",
+        "Reciprocate",
+        "Sanctum Weaver",
+        "Sigarda, Host of Herons",
+        "Starfield Mystic",
+        "Strength of the Harvest // Haven of the Harvest",
+        "Weaver of Harmony"
+      ],
+      "commanderSupported": true
+    },
+    {
+      "deckId": 14850373,
+      "deck": "Budget Deck",
+      "playableOf100": 67,
+      "unsupportedCards": [
+        "Andúril, Flame of the West",
+        "Arcbound Mouser",
+        "Archetype of Courage",
+        "Baird, Argivian Recruiter",
+        "Batterbone",
+        "Bitterthorn, Nissa's Animus",
+        "Brave the Sands",
+        "Bulwark Ox",
+        "Charismatic Conqueror",
+        "Cloudspire Captain",
+        "Dawnsire, Sunstar Dreadnought",
+        "Dolmen Gate",
+        "Dynamite Diver",
+        "Elenda's Hierophant",
+        "Ferocity of the Wilds",
+        "Fortune, Loyal Steed",
+        "Gilded Ghoda",
+        "Gloryheath Lynx",
+        "Guidelight Matrix",
+        "Hanweir Militia Captain // Westvale Cult Leader",
+        "Interface Ace",
+        "Legion's Landing // Adanto, the First Fort",
+        "Murder Investigation",
+        "Needleverge Pathway // Pillarverge Pathway",
+        "Ocelot Pride",
+        "Recon Craft Theta",
+        "Roadside Assistance",
+        "Securitron Squadron",
+        "Speaker of the Heavens",
+        "Sword of Hearth and Home",
+        "Sword of the Animist",
+        "The Eternity Elevator",
+        "Valor's Flagship"
+      ],
+      "commanderSupported": true
+    },
+    {
+      "deckId": 27521806,
+      "deck": "faeries",
+      "playableOf100": 49,
+      "unsupportedCards": [
+        "Alchemist's Gift",
+        "Barrow Naughty",
+        "Bitterthorn, Nissa's Animus",
+        "Boot Nipper",
+        "Citizen V, Helmut Zemo",
+        "Clearwater Pathway // Murkwater Pathway",
+        "Cloud of Faeries",
+        "Dawn-Blessed Pennant",
+        "Dino DNA",
+        "Endless Evil",
+        "Endless Ranks of the Dead",
+        "Enduring Tenacity",
+        "Excalibur II",
+        "Exquisite Blood",
+        "Eye Collector",
+        "Faebloom Trick",
+        "Faerie Bladecrafter",
+        "Faerie Dreamthief",
+        "Faerie Impostor",
+        "Faerie Slumber Party",
+        "Faerie Swarm",
+        "Feywild Visitor",
+        "Followed Footsteps",
+        "Guildpact Informant",
+        "Indulgent Aristocrat",
+        "Kaito Shizuki",
+        "Liliana, Heretical Healer // Liliana, Defiant Necromancer",
+        "Liliana, the Last Hope",
+        "Maskwood Nexus",
+        "Nectar Faerie",
+        "Notorious Throng",
+        "Oona's Blackguard",
+        "Oona, Queen of the Fae",
+        "Orcrist, Goblin-cleaver",
+        "Peppersmoke",
+        "Scion of Oona",
+        "Shadow Puppeteers",
+        "Sower of Temptation",
+        "Spell Stutter",
+        "Sprite Noble",
+        "Starscape Cleric",
+        "Stonecoil Serpent",
+        "Sword of the Animist",
+        "Tainted Remedy",
+        "Talion, the Kindly Lord",
+        "Team Pennant",
+        "Tegwyll's Scouring",
+        "Tegwyll, Duke of Splendor",
+        "The Book of Vile Darkness",
+        "Urborg, Tomb of Yawgmoth",
+        "Vito, Thorn of the Dusk Rose"
+      ],
+      "commanderSupported": true
+    },
+    {
+      "deckId": 5254666,
+      "deck": "Garbo Gobbos",
+      "playableOf100": 67,
+      "unsupportedCards": [
+        "Ankle Shanker",
+        "Austere Command",
+        "Beloved Princess",
+        "Blood Money",
+        "Blood Moon",
+        "Boggart Birth Rite",
+        "Caterwauling Boggart",
+        "Chained to the Rocks",
+        "Chivalric Alliance",
+        "Chromatic Orrery",
+        "Cloudshift",
+        "Coat of Arms",
+        "Divine Visitation",
+        "Ethereal Absolution",
+        "Goblin Arsonist",
+        "Goblin Assault",
+        "Goblin King",
+        "Goblin Lackey",
+        "Goblin Rabblemaster",
+        "Goblin Sledder",
+        "Knucklebone Witch",
+        "Krenko, Mob Boss",
+        "Legion Warboss",
+        "Mad Auntie",
+        "Mardu Ascendancy",
+        "Mauhúr, Uruk-hai Captain",
+        "Orcish Siegemaster",
+        "Rally the Ranks",
+        "Rundvelt Hordemaster",
+        "Skirk Prospector",
+        "Uglúk of the White Hand",
+        "Warren Instigator",
+        "Wort, Boggart Auntie"
+      ],
+      "commanderSupported": true
+    },
+    {
+      "deckId": 8321184,
+      "deck": "squirrels",
+      "playableOf100": 44,
+      "unsupportedCards": [
+        "Chatterfang, Squirrel General",
+        "Academy Manufactor",
+        "Adaptive Automaton",
+        "Alpha Status",
+        "Animal Friend",
+        "Blasting Station",
+        "Bloodline Pretender",
+        "Broodhatch Nantuko",
+        "Bushy Bodyguard",
+        "Camellia, the Seedmiser",
+        "Chatter of the Squirrel",
+        "Chitterspitter",
+        "Cloakwood Hermit",
+        "Coat of Arms",
+        "Darkbore Pathway // Slitherbore Pathway",
+        "Deep Forest Hermit",
+        "Deranged Hermit",
+        "Dreampod Druid",
+        "Druid's Call",
+        "Experimental Confectioner",
+        "Guardian Gladewalker",
+        "Hazel of the Rootbloom",
+        "Herald's Horn",
+        "Herd Baloth",
+        "Honored Dreyleader",
+        "Hornet Nest",
+        "Icon of Ancestry",
+        "Instruments of War",
+        "Ivy Lane Denizen",
+        "Kami of Whispered Hopes",
+        "Maskwood Nexus",
+        "Metallic Mimic",
+        "Mycoloth",
+        "Nuka-Cola Vending Machine",
+        "Nut Collector",
+        "Oran-Rief, the Vastwood",
+        "Peregrin Took",
+        "Pitiless Plunderer",
+        "Ravenous Squirrel",
+        "Scurry Oak",
+        "Sporeweb Weaver",
+        "Squirrel Nest",
+        "Squirrel Sanctuary",
+        "The Mycotyrant",
+        "Thornvault Forager",
+        "Tribute to the World Tree",
+        "Twitching Doll",
+        "Umbral Mantle",
+        "Universal Automaton",
+        "Urza's Incubator",
+        "Valley Rotcaller",
+        "Verdant Command",
+        "Vinereap Mentor",
+        "Wildwood Scourge",
+        "Woodland Changeling",
+        "Ygra, Eater of All"
+      ],
+      "commanderSupported": false
+    }
+  ],
+  "notice": "Incomplete-rules diagnostic only. Unsupported cards remain unplayable; these rates do not measure actual Commander deck strength. Completed turn windows are decided by remaining life total; equal scores are ties.",
+  "matchups": [
+    {
+      "opponent": "Budget Deck",
+      "opponentId": 14850373,
+      "games": 10,
+      "wins": 4,
+      "losses": 6,
+      "ties": 0,
+      "turnLimit": 5,
+      "blocked": 0,
+      "winRateAllGames": 0.4,
+      "tieRate": 0.0,
+      "winRateDecisive": 0.4,
+      "firstPlayerCounts": {
+        "focalFirst": 5,
+        "opponentFirst": 5
+      },
+      "unsupportedEncountered": [
+        "Alseid of Life's Bounty",
+        "Andúril, Flame of the West",
+        "Arcbound Mouser",
+        "Archetype of Courage",
+        "Audacity",
+        "Batterbone",
+        "Brave the Sands",
+        "Bulwark Ox",
+        "Calix, Guided by Fate",
+        "Cartouche of Solidarity",
+        "Charismatic Conqueror",
+        "Cloudspire Captain",
+        "Destiny Spinner",
+        "Dolmen Gate",
+        "Dryad of the Ilysian Grove",
+        "Dynamite Diver",
+        "Elenda's Hierophant",
+        "Ferocity of the Wilds",
+        "Fortune, Loyal Steed",
+        "Gavony Township",
+        "Ghalta and Mavren",
+        "Gilded Ghoda",
+        "Gloryheath Lynx",
+        "Guidelight Matrix",
+        "Gylwain, Casting Director",
+        "Halvar, God of Battle // Sword of the Realms",
+        "Hyena Umbra",
+        "Interface Ace",
+        "Lathiel, the Bounteous Dawn",
+        "Michiko's Reign of Truth // Portrait of Michiko",
+        "Mirkwood Spider",
+        "Murder Investigation",
+        "Needleverge Pathway // Pillarverge Pathway",
+        "Nettlecyst",
+        "Nyx Herald",
+        "Ocelot Pride",
+        "On Thin Ice",
+        "Oxidize",
+        "Paladin Class",
+        "Raking Canopy",
+        "Reciprocate",
+        "Recon Craft Theta",
+        "Roadside Assistance",
+        "Sanctum Weaver",
+        "Securitron Squadron",
+        "Starfield Mystic",
+        "Strength of the Harvest // Haven of the Harvest",
+        "Sword of the Animist",
+        "The Eternity Elevator",
+        "Valor's Flagship",
+        "Weaver of Harmony"
+      ]
+    },
+    {
+      "opponent": "faeries",
+      "opponentId": 27521806,
+      "games": 10,
+      "wins": 7,
+      "losses": 3,
+      "ties": 0,
+      "turnLimit": 4,
+      "blocked": 0,
+      "winRateAllGames": 0.7,
+      "tieRate": 0.0,
+      "winRateDecisive": 0.7,
+      "firstPlayerCounts": {
+        "focalFirst": 5,
+        "opponentFirst": 5
+      },
+      "unsupportedEncountered": [
+        "Alchemist's Gift",
+        "Alseid of Life's Bounty",
+        "Archetype of Courage",
+        "Boot Nipper",
+        "Cartouche of Solidarity",
+        "Citizen V, Helmut Zemo",
+        "Clearwater Pathway // Murkwater Pathway",
+        "Cloud of Faeries",
+        "Dawn-Blessed Pennant",
+        "Destiny Spinner",
+        "Dino DNA",
+        "Endless Evil",
+        "Endless Ranks of the Dead",
+        "Exquisite Blood",
+        "Eye Collector",
+        "Faerie Bladecrafter",
+        "Faerie Dreamthief",
+        "Faerie Slumber Party",
+        "Faerie Swarm",
+        "Followed Footsteps",
+        "Gavony Township",
+        "Gravity Well",
+        "Guildpact Informant",
+        "Gylwain, Casting Director",
+        "Halvar, God of Battle // Sword of the Realms",
+        "Hyena Umbra",
+        "Indulgent Aristocrat",
+        "Kaito Shizuki",
+        "Lathiel, the Bounteous Dawn",
+        "Liliana, Heretical Healer // Liliana, Defiant Necromancer",
+        "Liliana, the Last Hope",
+        "Luxior, Giada's Gift",
+        "Michiko's Reign of Truth // Portrait of Michiko",
+        "Mirkwood Spider",
+        "Mirri, Weatherlight Duelist",
+        "Nectar Faerie",
+        "Nettlecyst",
+        "Notorious Throng",
+        "Nyx Herald",
+        "On Thin Ice",
+        "Oona's Blackguard",
+        "Oona, Queen of the Fae",
+        "Orcrist, Goblin-cleaver",
+        "Oxidize",
+        "Paladin Class",
+        "Peppersmoke",
+        "Raking Canopy",
+        "Reciprocate",
+        "Sanctum Weaver",
+        "Scion of Oona",
+        "Shadow Puppeteers",
+        "Sigarda, Host of Herons",
+        "Sower of Temptation",
+        "Spell Stutter",
+        "Sprite Noble",
+        "Starfield Mystic",
+        "Stonecoil Serpent",
+        "Strength of the Harvest // Haven of the Harvest",
+        "Sword of the Animist",
+        "Tainted Remedy",
+        "Talion, the Kindly Lord",
+        "Team Pennant",
+        "Tegwyll, Duke of Splendor",
+        "The Book of Vile Darkness",
+        "Urborg, Tomb of Yawgmoth",
+        "Vito, Thorn of the Dusk Rose",
+        "Weaver of Harmony"
+      ]
+    },
+    {
+      "opponent": "Garbo Gobbos",
+      "opponentId": 5254666,
+      "games": 10,
+      "wins": 5,
+      "losses": 5,
+      "ties": 0,
+      "turnLimit": 2,
+      "blocked": 0,
+      "winRateAllGames": 0.5,
+      "tieRate": 0.0,
+      "winRateDecisive": 0.5,
+      "firstPlayerCounts": {
+        "focalFirst": 5,
+        "opponentFirst": 5
+      },
+      "unsupportedEncountered": [
+        "Alseid of Life's Bounty",
+        "Ankle Shanker",
+        "Archetype of Courage",
+        "Audacity",
+        "Austere Command",
+        "Beloved Princess",
+        "Blood Moon",
+        "Calix, Guided by Fate",
+        "Cartouche of Solidarity",
+        "Caterwauling Boggart",
+        "Chromatic Orrery",
+        "Cloudshift",
+        "Destiny Spinner",
+        "Divine Visitation",
+        "Dryad of the Ilysian Grove",
+        "Ethereal Absolution",
+        "Gavony Township",
+        "Ghalta and Mavren",
+        "Goblin Assault",
+        "Goblin King",
+        "Goblin Lackey",
+        "Goblin Rabblemaster",
+        "Goblin Sledder",
+        "Gravity Well",
+        "Gylwain, Casting Director",
+        "Halvar, God of Battle // Sword of the Realms",
+        "Hyena Umbra",
+        "Journey to Nowhere",
+        "Knucklebone Witch",
+        "Krenko, Mob Boss",
+        "Lathiel, the Bounteous Dawn",
+        "Legion Warboss",
+        "Luxior, Giada's Gift",
+        "Mad Auntie",
+        "Michiko's Reign of Truth // Portrait of Michiko",
+        "Mirkwood Spider",
+        "Mirri, Weatherlight Duelist",
+        "Nettlecyst",
+        "Nyx Herald",
+        "On Thin Ice",
+        "Paladin Class",
+        "Rally the Ranks",
+        "Reciprocate",
+        "Rundvelt Hordemaster",
+        "Sanctum Weaver",
+        "Sigarda, Host of Herons",
+        "Starfield Mystic",
+        "Strength of the Harvest // Haven of the Harvest",
+        "Uglúk of the White Hand",
+        "Warren Instigator",
+        "Weaver of Harmony",
+        "Wort, Boggart Auntie"
+      ]
+    },
+    {
+      "opponent": "squirrels",
+      "opponentId": 8321184,
+      "games": 10,
+      "wins": 10,
+      "losses": 0,
+      "ties": 0,
+      "turnLimit": 2,
+      "blocked": 0,
+      "winRateAllGames": 1.0,
+      "tieRate": 0.0,
+      "winRateDecisive": 1.0,
+      "firstPlayerCounts": {
+        "focalFirst": 5,
+        "opponentFirst": 5
+      },
+      "unsupportedEncountered": [
+        "Academy Manufactor",
+        "Adaptive Automaton",
+        "Alpha Status",
+        "Audacity",
+        "Blasting Station",
+        "Bloodline Pretender",
+        "Broodhatch Nantuko",
+        "Camellia, the Seedmiser",
+        "Cartouche of Solidarity",
+        "Chatter of the Squirrel",
+        "Chitterspitter",
+        "Cloakwood Hermit",
+        "Coat of Arms",
+        "Darkbore Pathway // Slitherbore Pathway",
+        "Deep Forest Hermit",
+        "Deranged Hermit",
+        "Destiny Spinner",
+        "Dreampod Druid",
+        "Dryad of the Ilysian Grove",
+        "Gavony Township",
+        "Ghalta and Mavren",
+        "Gravity Well",
+        "Guardian Gladewalker",
+        "Gylwain, Casting Director",
+        "Hazel of the Rootbloom",
+        "Herd Baloth",
+        "Honored Dreyleader",
+        "Hornet Nest",
+        "Hyena Umbra",
+        "Icon of Ancestry",
+        "Instruments of War",
+        "Ivy Lane Denizen",
+        "Journey to Nowhere",
+        "Kami of Whispered Hopes",
+        "Lathiel, the Bounteous Dawn",
+        "Luxior, Giada's Gift",
+        "Maskwood Nexus",
+        "Michiko's Reign of Truth // Portrait of Michiko",
+        "Mirkwood Spider",
+        "Mirri, Weatherlight Duelist",
+        "Mycoloth",
+        "Nuka-Cola Vending Machine",
+        "Nut Collector",
+        "Nyx Herald",
+        "On Thin Ice",
+        "Oran-Rief, the Vastwood",
+        "Oxidize",
+        "Paladin Class",
+        "Peregrin Took",
+        "Pitiless Plunderer",
+        "Raking Canopy",
+        "Reciprocate",
+        "Scurry Oak",
+        "Sigarda, Host of Herons",
+        "Sporeweb Weaver",
+        "Squirrel Nest",
+        "Squirrel Sanctuary",
+        "Starfield Mystic",
+        "Strength of the Harvest // Haven of the Harvest",
+        "The Mycotyrant",
+        "Thornvault Forager",
+        "Tribute to the World Tree",
+        "Twitching Doll",
+        "Universal Automaton",
+        "Urza's Incubator",
+        "Valley Rotcaller",
+        "Verdant Command",
+        "Vinereap Mentor",
+        "Woodland Changeling",
+        "Ygra, Eater of All"
+      ]
+    }
+  ],
+  "matches": [
+    {
+      "id": "14850373-1",
+      "opponent": "Budget Deck",
+      "seed": 5189995,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "loss",
+      "result": "win",
+      "winner": 1,
+      "engineWinner": 1,
+      "adjudication": "game_rules",
+      "scores": [
+        -9,
+        40
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        8,
+        7
+      ],
+      "focalLife": -9,
+      "opponentLife": 40,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          67
+        ],
+        "landsPlayed": 9,
+        "spellsCast": 12,
+        "triggerLogEntries": 11,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Andúril, Flame of the West",
+          "Archetype of Courage",
+          "Gavony Township",
+          "Gloryheath Lynx",
+          "Halvar, God of Battle // Sword of the Realms",
+          "Interface Ace",
+          "Mirkwood Spider",
+          "Reciprocate",
+          "The Eternity Elevator"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "14850373-2",
+      "opponent": "Budget Deck",
+      "seed": 5189996,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "loss",
+      "result": "diagnostic_window_complete",
+      "winner": 0,
+      "engineWinner": null,
+      "adjudication": "turn_limit_life_score",
+      "scores": [
+        35,
+        24
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "focalLife": 24,
+      "opponentLife": 35,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          67,
+          69
+        ],
+        "landsPlayed": 9,
+        "spellsCast": 10,
+        "triggerLogEntries": 6,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alseid of Life's Bounty",
+          "Archetype of Courage",
+          "Brave the Sands",
+          "Calix, Guided by Fate",
+          "Cloudspire Captain",
+          "Destiny Spinner",
+          "Fortune, Loyal Steed",
+          "Ghalta and Mavren",
+          "Gylwain, Casting Director",
+          "Hyena Umbra",
+          "Interface Ace",
+          "Nyx Herald",
+          "On Thin Ice",
+          "Strength of the Harvest // Haven of the Harvest"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "14850373-3",
+      "opponent": "Budget Deck",
+      "seed": 5189997,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "win",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        45,
+        -4
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        7,
+        7
+      ],
+      "focalLife": 45,
+      "opponentLife": -4,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          67
+        ],
+        "landsPlayed": 7,
+        "spellsCast": 9,
+        "triggerLogEntries": 4,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Bulwark Ox",
+          "Charismatic Conqueror",
+          "Dolmen Gate",
+          "Ferocity of the Wilds",
+          "Ghalta and Mavren",
+          "Gloryheath Lynx",
+          "Interface Ace",
+          "Needleverge Pathway // Pillarverge Pathway",
+          "Nyx Herald",
+          "Roadside Assistance",
+          "Starfield Mystic"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "14850373-4",
+      "opponent": "Budget Deck",
+      "seed": 5189998,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "win",
+      "result": "win",
+      "winner": 1,
+      "engineWinner": 1,
+      "adjudication": "game_rules",
+      "scores": [
+        -1,
+        96
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        6,
+        5
+      ],
+      "focalLife": 96,
+      "opponentLife": -1,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          67,
+          69
+        ],
+        "landsPlayed": 6,
+        "spellsCast": 10,
+        "triggerLogEntries": 5,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Cloudspire Captain",
+          "Dryad of the Ilysian Grove",
+          "Fortune, Loyal Steed",
+          "Hyena Umbra",
+          "Reciprocate",
+          "Recon Craft Theta",
+          "Valor's Flagship"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "14850373-5",
+      "opponent": "Budget Deck",
+      "seed": 5189999,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "loss",
+      "result": "diagnostic_window_complete",
+      "winner": 1,
+      "engineWinner": null,
+      "adjudication": "turn_limit_life_score",
+      "scores": [
+        6,
+        29
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "focalLife": 6,
+      "opponentLife": 29,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          67
+        ],
+        "landsPlayed": 14,
+        "spellsCast": 13,
+        "triggerLogEntries": 1,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alseid of Life's Bounty",
+          "Audacity",
+          "Bulwark Ox",
+          "Cartouche of Solidarity",
+          "Dynamite Diver",
+          "Elenda's Hierophant",
+          "Ghalta and Mavren",
+          "Gilded Ghoda",
+          "Guidelight Matrix",
+          "Gylwain, Casting Director",
+          "Michiko's Reign of Truth // Portrait of Michiko",
+          "Paladin Class",
+          "Strength of the Harvest // Haven of the Harvest"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "14850373-6",
+      "opponent": "Budget Deck",
+      "seed": 5190000,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "loss",
+      "result": "diagnostic_window_complete",
+      "winner": 0,
+      "engineWinner": null,
+      "adjudication": "turn_limit_life_score",
+      "scores": [
+        47,
+        25
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "focalLife": 25,
+      "opponentLife": 47,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          67,
+          69
+        ],
+        "landsPlayed": 10,
+        "spellsCast": 6,
+        "triggerLogEntries": 2,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alseid of Life's Bounty",
+          "Arcbound Mouser",
+          "Audacity",
+          "Dolmen Gate",
+          "Ferocity of the Wilds",
+          "Fortune, Loyal Steed",
+          "Hyena Umbra",
+          "Needleverge Pathway // Pillarverge Pathway",
+          "Nettlecyst"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "14850373-7",
+      "opponent": "Budget Deck",
+      "seed": 5190001,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "loss",
+      "result": "diagnostic_window_complete",
+      "winner": 1,
+      "engineWinner": null,
+      "adjudication": "turn_limit_life_score",
+      "scores": [
+        9,
+        20
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "focalLife": 9,
+      "opponentLife": 20,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          67
+        ],
+        "landsPlayed": 7,
+        "spellsCast": 15,
+        "triggerLogEntries": 3,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Andúril, Flame of the West",
+          "Batterbone",
+          "Calix, Guided by Fate",
+          "Cartouche of Solidarity",
+          "Gavony Township",
+          "Guidelight Matrix",
+          "Gylwain, Casting Director",
+          "Halvar, God of Battle // Sword of the Realms",
+          "Murder Investigation",
+          "Needleverge Pathway // Pillarverge Pathway",
+          "Oxidize",
+          "Strength of the Harvest // Haven of the Harvest",
+          "Valor's Flagship"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "14850373-8",
+      "opponent": "Budget Deck",
+      "seed": 5190002,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "win",
+      "result": "diagnostic_window_complete",
+      "winner": 1,
+      "engineWinner": null,
+      "adjudication": "turn_limit_life_score",
+      "scores": [
+        19,
+        44
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "focalLife": 44,
+      "opponentLife": 19,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          67,
+          69
+        ],
+        "landsPlayed": 13,
+        "spellsCast": 13,
+        "triggerLogEntries": 6,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Archetype of Courage",
+          "Brave the Sands",
+          "Elenda's Hierophant",
+          "Michiko's Reign of Truth // Portrait of Michiko",
+          "Mirkwood Spider",
+          "Murder Investigation",
+          "Nyx Herald",
+          "Raking Canopy",
+          "Valor's Flagship",
+          "Weaver of Harmony"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "14850373-9",
+      "opponent": "Budget Deck",
+      "seed": 5190003,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "win",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        48,
+        19
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        5,
+        5
+      ],
+      "focalLife": 48,
+      "opponentLife": 19,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          67
+        ],
+        "landsPlayed": 9,
+        "spellsCast": 12,
+        "triggerLogEntries": 3,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Elenda's Hierophant",
+          "Lathiel, the Bounteous Dawn",
+          "Nyx Herald",
+          "Sword of the Animist"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "14850373-10",
+      "opponent": "Budget Deck",
+      "seed": 5190004,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "loss",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        72,
+        -4
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        9,
+        9
+      ],
+      "focalLife": -4,
+      "opponentLife": 72,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          67,
+          69
+        ],
+        "landsPlayed": 8,
+        "spellsCast": 9,
+        "triggerLogEntries": 2,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Cartouche of Solidarity",
+          "Dynamite Diver",
+          "Elenda's Hierophant",
+          "Gloryheath Lynx",
+          "Gylwain, Casting Director",
+          "Ocelot Pride",
+          "Oxidize",
+          "Raking Canopy",
+          "Sanctum Weaver",
+          "Securitron Squadron",
+          "Weaver of Harmony"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "27521806-1",
+      "opponent": "faeries",
+      "seed": 5190005,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "loss",
+      "result": "win",
+      "winner": 1,
+      "engineWinner": 1,
+      "adjudication": "game_rules",
+      "scores": [
+        5,
+        35
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        9,
+        8
+      ],
+      "focalLife": 5,
+      "opponentLife": 35,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          49
+        ],
+        "landsPlayed": 10,
+        "spellsCast": 8,
+        "triggerLogEntries": 7,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Endless Ranks of the Dead",
+          "Faerie Bladecrafter",
+          "Followed Footsteps",
+          "Gavony Township",
+          "Gravity Well",
+          "Mirkwood Spider",
+          "Nyx Herald",
+          "Oona, Queen of the Fae",
+          "Sanctum Weaver",
+          "Shadow Puppeteers",
+          "Stonecoil Serpent",
+          "Strength of the Harvest // Haven of the Harvest",
+          "Weaver of Harmony"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "27521806-2",
+      "opponent": "faeries",
+      "seed": 5190006,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "win",
+      "result": "win",
+      "winner": 1,
+      "engineWinner": 1,
+      "adjudication": "game_rules",
+      "scores": [
+        -10,
+        141
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        10,
+        9
+      ],
+      "focalLife": 141,
+      "opponentLife": -10,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          49,
+          69
+        ],
+        "landsPlayed": 12,
+        "spellsCast": 16,
+        "triggerLogEntries": 4,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alchemist's Gift",
+          "Cartouche of Solidarity",
+          "Citizen V, Helmut Zemo",
+          "Destiny Spinner",
+          "Luxior, Giada's Gift",
+          "Nyx Herald",
+          "Oona, Queen of the Fae",
+          "Raking Canopy",
+          "Reciprocate",
+          "Scion of Oona",
+          "Starfield Mystic",
+          "Tainted Remedy",
+          "Vito, Thorn of the Dusk Rose"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "27521806-3",
+      "opponent": "faeries",
+      "seed": 5190007,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "win",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        40,
+        13
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        9,
+        9
+      ],
+      "focalLife": 40,
+      "opponentLife": 13,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          49
+        ],
+        "landsPlayed": 14,
+        "spellsCast": 13,
+        "triggerLogEntries": 4,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alseid of Life's Bounty",
+          "Destiny Spinner",
+          "Dino DNA",
+          "Endless Ranks of the Dead",
+          "Exquisite Blood",
+          "Faerie Dreamthief",
+          "Gavony Township",
+          "Gylwain, Casting Director",
+          "Michiko's Reign of Truth // Portrait of Michiko",
+          "Nettlecyst",
+          "Oona's Blackguard",
+          "Paladin Class",
+          "Sigarda, Host of Herons",
+          "Strength of the Harvest // Haven of the Harvest",
+          "Team Pennant"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "27521806-4",
+      "opponent": "faeries",
+      "seed": 5190008,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "win",
+      "result": "diagnostic_window_complete",
+      "winner": 1,
+      "engineWinner": null,
+      "adjudication": "turn_limit_life_score",
+      "scores": [
+        1,
+        33
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "focalLife": 33,
+      "opponentLife": 1,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          49,
+          69
+        ],
+        "landsPlayed": 13,
+        "spellsCast": 19,
+        "triggerLogEntries": 7,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alseid of Life's Bounty",
+          "Citizen V, Helmut Zemo",
+          "Gylwain, Casting Director",
+          "Liliana, the Last Hope",
+          "Luxior, Giada's Gift",
+          "Mirri, Weatherlight Duelist",
+          "Nectar Faerie",
+          "Orcrist, Goblin-cleaver",
+          "Spell Stutter",
+          "Starfield Mystic",
+          "Urborg, Tomb of Yawgmoth"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "27521806-5",
+      "opponent": "faeries",
+      "seed": 5190009,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "win",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        82,
+        -9
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        8,
+        8
+      ],
+      "focalLife": 82,
+      "opponentLife": -9,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          49
+        ],
+        "landsPlayed": 11,
+        "spellsCast": 14,
+        "triggerLogEntries": 8,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alchemist's Gift",
+          "Cartouche of Solidarity",
+          "Destiny Spinner",
+          "Eye Collector",
+          "Faerie Slumber Party",
+          "Gravity Well",
+          "Indulgent Aristocrat",
+          "Lathiel, the Bounteous Dawn",
+          "Liliana, Heretical Healer // Liliana, Defiant Necromancer",
+          "Sower of Temptation",
+          "Tegwyll, Duke of Splendor",
+          "The Book of Vile Darkness"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "27521806-6",
+      "opponent": "faeries",
+      "seed": 5190010,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "loss",
+      "result": "diagnostic_window_complete",
+      "winner": 0,
+      "engineWinner": null,
+      "adjudication": "turn_limit_life_score",
+      "scores": [
+        36,
+        16
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "focalLife": 16,
+      "opponentLife": 36,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          49,
+          69
+        ],
+        "landsPlayed": 8,
+        "spellsCast": 7,
+        "triggerLogEntries": 1,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Archetype of Courage",
+          "Exquisite Blood",
+          "Eye Collector",
+          "Faerie Dreamthief",
+          "Faerie Swarm",
+          "Guildpact Informant",
+          "Gylwain, Casting Director",
+          "Halvar, God of Battle // Sword of the Realms",
+          "Indulgent Aristocrat",
+          "Kaito Shizuki",
+          "Oona, Queen of the Fae",
+          "Paladin Class",
+          "Peppersmoke",
+          "Tainted Remedy"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "27521806-7",
+      "opponent": "faeries",
+      "seed": 5190011,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "win",
+      "result": "diagnostic_window_complete",
+      "winner": 0,
+      "engineWinner": null,
+      "adjudication": "turn_limit_life_score",
+      "scores": [
+        68,
+        40
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "focalLife": 68,
+      "opponentLife": 40,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          49
+        ],
+        "landsPlayed": 10,
+        "spellsCast": 9,
+        "triggerLogEntries": 10,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Boot Nipper",
+          "Endless Evil",
+          "Faerie Slumber Party",
+          "Gavony Township",
+          "Hyena Umbra",
+          "Indulgent Aristocrat",
+          "Kaito Shizuki",
+          "Notorious Throng",
+          "Nyx Herald",
+          "Orcrist, Goblin-cleaver",
+          "Shadow Puppeteers",
+          "Sigarda, Host of Herons",
+          "Sprite Noble",
+          "Strength of the Harvest // Haven of the Harvest"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "27521806-8",
+      "opponent": "faeries",
+      "seed": 5190012,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "win",
+      "result": "win",
+      "winner": 1,
+      "engineWinner": 1,
+      "adjudication": "game_rules",
+      "scores": [
+        -14,
+        73
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        8,
+        7
+      ],
+      "focalLife": 73,
+      "opponentLife": -14,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          49,
+          69
+        ],
+        "landsPlayed": 9,
+        "spellsCast": 17,
+        "triggerLogEntries": 6,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Clearwater Pathway // Murkwater Pathway",
+          "Cloud of Faeries",
+          "Eye Collector",
+          "Guildpact Informant",
+          "Gylwain, Casting Director",
+          "Lathiel, the Bounteous Dawn",
+          "Scion of Oona",
+          "Sigarda, Host of Herons"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "27521806-9",
+      "opponent": "faeries",
+      "seed": 5190013,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "loss",
+      "result": "diagnostic_window_complete",
+      "winner": 1,
+      "engineWinner": null,
+      "adjudication": "turn_limit_life_score",
+      "scores": [
+        28,
+        38
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "focalLife": 28,
+      "opponentLife": 38,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          49
+        ],
+        "landsPlayed": 9,
+        "spellsCast": 9,
+        "triggerLogEntries": 5,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alseid of Life's Bounty",
+          "Cartouche of Solidarity",
+          "Dino DNA",
+          "Eye Collector",
+          "Faerie Slumber Party",
+          "Gravity Well",
+          "Gylwain, Casting Director",
+          "Halvar, God of Battle // Sword of the Realms",
+          "Hyena Umbra",
+          "Indulgent Aristocrat",
+          "Kaito Shizuki",
+          "Nyx Herald",
+          "Oona's Blackguard",
+          "Oxidize",
+          "Reciprocate",
+          "Shadow Puppeteers",
+          "Spell Stutter",
+          "Sword of the Animist"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "27521806-10",
+      "opponent": "faeries",
+      "seed": 5190014,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "win",
+      "result": "win",
+      "winner": 1,
+      "engineWinner": 1,
+      "adjudication": "game_rules",
+      "scores": [
+        -3,
+        43
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        9,
+        8
+      ],
+      "focalLife": 43,
+      "opponentLife": -3,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          49,
+          69
+        ],
+        "landsPlayed": 14,
+        "spellsCast": 13,
+        "triggerLogEntries": 2,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alseid of Life's Bounty",
+          "Boot Nipper",
+          "Dawn-Blessed Pennant",
+          "Exquisite Blood",
+          "Hyena Umbra",
+          "On Thin Ice",
+          "Sprite Noble",
+          "Starfield Mystic",
+          "Stonecoil Serpent",
+          "Talion, the Kindly Lord",
+          "Weaver of Harmony"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "5254666-1",
+      "opponent": "Garbo Gobbos",
+      "seed": 5190015,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "win",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        33,
+        -3
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        7,
+        7
+      ],
+      "focalLife": 33,
+      "opponentLife": -3,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          67
+        ],
+        "landsPlayed": 13,
+        "spellsCast": 6,
+        "triggerLogEntries": 0,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alseid of Life's Bounty",
+          "Ankle Shanker",
+          "Audacity",
+          "Beloved Princess",
+          "Cartouche of Solidarity",
+          "Ethereal Absolution",
+          "Ghalta and Mavren",
+          "Goblin Sledder",
+          "Journey to Nowhere",
+          "Mirri, Weatherlight Duelist",
+          "Nyx Herald",
+          "On Thin Ice",
+          "Weaver of Harmony"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "5254666-2",
+      "opponent": "Garbo Gobbos",
+      "seed": 5190016,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "loss",
+      "result": "diagnostic_window_complete",
+      "winner": 0,
+      "engineWinner": null,
+      "adjudication": "turn_limit_life_score",
+      "scores": [
+        43,
+        5
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "focalLife": 5,
+      "opponentLife": 43,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          67,
+          69
+        ],
+        "landsPlayed": 11,
+        "spellsCast": 15,
+        "triggerLogEntries": 4,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Ankle Shanker",
+          "Chromatic Orrery",
+          "Goblin Sledder",
+          "Lathiel, the Bounteous Dawn",
+          "Luxior, Giada's Gift",
+          "Uglúk of the White Hand"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "5254666-3",
+      "opponent": "Garbo Gobbos",
+      "seed": 5190017,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "win",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        73,
+        -6
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        7,
+        7
+      ],
+      "focalLife": 73,
+      "opponentLife": -6,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          67
+        ],
+        "landsPlayed": 11,
+        "spellsCast": 12,
+        "triggerLogEntries": 2,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alseid of Life's Bounty",
+          "Divine Visitation",
+          "Ghalta and Mavren",
+          "Krenko, Mob Boss",
+          "Luxior, Giada's Gift",
+          "Mad Auntie",
+          "Mirri, Weatherlight Duelist",
+          "Paladin Class",
+          "Rally the Ranks"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "5254666-4",
+      "opponent": "Garbo Gobbos",
+      "seed": 5190018,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "win",
+      "result": "win",
+      "winner": 1,
+      "engineWinner": 1,
+      "adjudication": "game_rules",
+      "scores": [
+        -26,
+        83
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        7,
+        6
+      ],
+      "focalLife": 83,
+      "opponentLife": -26,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          67,
+          69
+        ],
+        "landsPlayed": 8,
+        "spellsCast": 13,
+        "triggerLogEntries": 9,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Austere Command",
+          "Blood Moon",
+          "Caterwauling Boggart",
+          "Chromatic Orrery",
+          "Ghalta and Mavren",
+          "Gravity Well",
+          "Lathiel, the Bounteous Dawn",
+          "Michiko's Reign of Truth // Portrait of Michiko",
+          "On Thin Ice",
+          "Rally the Ranks",
+          "Wort, Boggart Auntie"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "5254666-5",
+      "opponent": "Garbo Gobbos",
+      "seed": 5190019,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "win",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        50,
+        -15
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        9,
+        9
+      ],
+      "focalLife": 50,
+      "opponentLife": -15,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          67
+        ],
+        "landsPlayed": 12,
+        "spellsCast": 18,
+        "triggerLogEntries": 12,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Goblin Lackey",
+          "Goblin Rabblemaster",
+          "Goblin Sledder",
+          "Gravity Well",
+          "Halvar, God of Battle // Sword of the Realms",
+          "Journey to Nowhere",
+          "Krenko, Mob Boss",
+          "Lathiel, the Bounteous Dawn",
+          "Nettlecyst",
+          "Rally the Ranks",
+          "Rundvelt Hordemaster"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "5254666-6",
+      "opponent": "Garbo Gobbos",
+      "seed": 5190020,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "loss",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        61,
+        -1
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        4,
+        4
+      ],
+      "focalLife": -1,
+      "opponentLife": 61,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          67,
+          69
+        ],
+        "landsPlayed": 8,
+        "spellsCast": 8,
+        "triggerLogEntries": 2,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Dryad of the Ilysian Grove",
+          "Goblin Assault",
+          "Halvar, God of Battle // Sword of the Realms",
+          "Luxior, Giada's Gift",
+          "Nettlecyst",
+          "Sanctum Weaver"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "5254666-7",
+      "opponent": "Garbo Gobbos",
+      "seed": 5190021,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "loss",
+      "result": "win",
+      "winner": 1,
+      "engineWinner": 1,
+      "adjudication": "game_rules",
+      "scores": [
+        -4,
+        46
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        8,
+        7
+      ],
+      "focalLife": -4,
+      "opponentLife": 46,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          67
+        ],
+        "landsPlayed": 13,
+        "spellsCast": 7,
+        "triggerLogEntries": 8,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Calix, Guided by Fate",
+          "Destiny Spinner",
+          "Gavony Township",
+          "Goblin Sledder",
+          "Michiko's Reign of Truth // Portrait of Michiko"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "5254666-8",
+      "opponent": "Garbo Gobbos",
+      "seed": 5190022,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "loss",
+      "result": "diagnostic_window_complete",
+      "winner": 0,
+      "engineWinner": null,
+      "adjudication": "turn_limit_life_score",
+      "scores": [
+        58,
+        15
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "focalLife": 15,
+      "opponentLife": 58,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          67,
+          69
+        ],
+        "landsPlayed": 11,
+        "spellsCast": 8,
+        "triggerLogEntries": 3,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Audacity",
+          "Blood Moon",
+          "Destiny Spinner",
+          "Divine Visitation",
+          "Halvar, God of Battle // Sword of the Realms",
+          "Hyena Umbra",
+          "Journey to Nowhere",
+          "Knucklebone Witch",
+          "Lathiel, the Bounteous Dawn",
+          "Legion Warboss",
+          "Nyx Herald",
+          "Uglúk of the White Hand",
+          "Wort, Boggart Auntie"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "5254666-9",
+      "opponent": "Garbo Gobbos",
+      "seed": 5190023,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "win",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        62,
+        -17
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        7,
+        7
+      ],
+      "focalLife": 62,
+      "opponentLife": -17,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          67
+        ],
+        "landsPlayed": 7,
+        "spellsCast": 12,
+        "triggerLogEntries": 11,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Archetype of Courage",
+          "Cartouche of Solidarity",
+          "Divine Visitation",
+          "Dryad of the Ilysian Grove",
+          "Goblin Assault",
+          "Gylwain, Casting Director",
+          "Knucklebone Witch",
+          "Lathiel, the Bounteous Dawn",
+          "Mirkwood Spider",
+          "On Thin Ice",
+          "Rally the Ranks",
+          "Reciprocate",
+          "Starfield Mystic",
+          "Strength of the Harvest // Haven of the Harvest",
+          "Uglúk of the White Hand"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "5254666-10",
+      "opponent": "Garbo Gobbos",
+      "seed": 5190024,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "loss",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        47,
+        0
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        8,
+        8
+      ],
+      "focalLife": 0,
+      "opponentLife": 47,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          67,
+          69
+        ],
+        "landsPlayed": 9,
+        "spellsCast": 10,
+        "triggerLogEntries": 4,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Austere Command",
+          "Beloved Princess",
+          "Cloudshift",
+          "Gavony Township",
+          "Goblin King",
+          "Goblin Lackey",
+          "Nettlecyst",
+          "Reciprocate",
+          "Sanctum Weaver",
+          "Sigarda, Host of Herons",
+          "Warren Instigator"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "id": "8321184-1",
+      "opponent": "squirrels",
+      "seed": 5190025,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "win",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        64,
+        1
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        8,
+        8
+      ],
+      "focalLife": 64,
+      "opponentLife": 1,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          44
+        ],
+        "landsPlayed": 10,
+        "spellsCast": 12,
+        "triggerLogEntries": 4,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alpha Status",
+          "Cartouche of Solidarity",
+          "Deep Forest Hermit",
+          "Gavony Township",
+          "Ghalta and Mavren",
+          "Gravity Well",
+          "Journey to Nowhere",
+          "Michiko's Reign of Truth // Portrait of Michiko",
+          "Raking Canopy",
+          "Squirrel Nest",
+          "Strength of the Harvest // Haven of the Harvest",
+          "Twitching Doll",
+          "Universal Automaton",
+          "Ygra, Eater of All"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "id": "8321184-2",
+      "opponent": "squirrels",
+      "seed": 5190026,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "win",
+      "result": "win",
+      "winner": 1,
+      "engineWinner": 1,
+      "adjudication": "game_rules",
+      "scores": [
+        4,
+        65
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        8,
+        7
+      ],
+      "focalLife": 65,
+      "opponentLife": 4,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          44,
+          69
+        ],
+        "landsPlayed": 6,
+        "spellsCast": 10,
+        "triggerLogEntries": 6,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Camellia, the Seedmiser",
+          "Cartouche of Solidarity",
+          "Cloakwood Hermit",
+          "Deep Forest Hermit",
+          "Dryad of the Ilysian Grove",
+          "Gavony Township",
+          "Honored Dreyleader",
+          "Hornet Nest",
+          "Luxior, Giada's Gift",
+          "Mirkwood Spider",
+          "Mirri, Weatherlight Duelist",
+          "Nut Collector",
+          "Strength of the Harvest // Haven of the Harvest",
+          "The Mycotyrant",
+          "Thornvault Forager",
+          "Vinereap Mentor"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "id": "8321184-3",
+      "opponent": "squirrels",
+      "seed": 5190027,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "win",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        70,
+        -11
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        9,
+        9
+      ],
+      "focalLife": 70,
+      "opponentLife": -11,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          44
+        ],
+        "landsPlayed": 10,
+        "spellsCast": 13,
+        "triggerLogEntries": 6,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Academy Manufactor",
+          "Adaptive Automaton",
+          "Blasting Station",
+          "Broodhatch Nantuko",
+          "Chitterspitter",
+          "Dryad of the Ilysian Grove",
+          "Hornet Nest",
+          "Ivy Lane Denizen",
+          "Michiko's Reign of Truth // Portrait of Michiko",
+          "Mirkwood Spider",
+          "Nyx Herald",
+          "Oxidize",
+          "Raking Canopy",
+          "Tribute to the World Tree",
+          "Universal Automaton",
+          "Verdant Command"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "id": "8321184-4",
+      "opponent": "squirrels",
+      "seed": 5190028,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "win",
+      "result": "win",
+      "winner": 1,
+      "engineWinner": 1,
+      "adjudication": "game_rules",
+      "scores": [
+        -1,
+        39
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        6,
+        5
+      ],
+      "focalLife": 39,
+      "opponentLife": -1,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          44,
+          69
+        ],
+        "landsPlayed": 9,
+        "spellsCast": 7,
+        "triggerLogEntries": 5,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Coat of Arms",
+          "Ghalta and Mavren",
+          "Guardian Gladewalker",
+          "Ivy Lane Denizen",
+          "Kami of Whispered Hopes",
+          "Luxior, Giada's Gift",
+          "Mycoloth",
+          "Paladin Class",
+          "Thornvault Forager",
+          "Tribute to the World Tree",
+          "Universal Automaton"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "id": "8321184-5",
+      "opponent": "squirrels",
+      "seed": 5190029,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "win",
+      "result": "diagnostic_window_complete",
+      "winner": 0,
+      "engineWinner": null,
+      "adjudication": "turn_limit_life_score",
+      "scores": [
+        44,
+        7
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "focalLife": 44,
+      "opponentLife": 7,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          44
+        ],
+        "landsPlayed": 9,
+        "spellsCast": 10,
+        "triggerLogEntries": 2,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Audacity",
+          "Darkbore Pathway // Slitherbore Pathway",
+          "Deranged Hermit",
+          "Gravity Well",
+          "Honored Dreyleader",
+          "Hyena Umbra",
+          "Icon of Ancestry",
+          "Kami of Whispered Hopes",
+          "Mycoloth",
+          "On Thin Ice",
+          "Oxidize",
+          "Pitiless Plunderer",
+          "Starfield Mystic",
+          "Strength of the Harvest // Haven of the Harvest",
+          "Universal Automaton",
+          "Valley Rotcaller"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "id": "8321184-6",
+      "opponent": "squirrels",
+      "seed": 5190030,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "win",
+      "result": "win",
+      "winner": 1,
+      "engineWinner": 1,
+      "adjudication": "game_rules",
+      "scores": [
+        -13,
+        68
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        8,
+        7
+      ],
+      "focalLife": 68,
+      "opponentLife": -13,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          44,
+          69
+        ],
+        "landsPlayed": 8,
+        "spellsCast": 9,
+        "triggerLogEntries": 7,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Audacity",
+          "Bloodline Pretender",
+          "Chitterspitter",
+          "Cloakwood Hermit",
+          "Coat of Arms",
+          "Dryad of the Ilysian Grove",
+          "Guardian Gladewalker",
+          "Gylwain, Casting Director",
+          "Hazel of the Rootbloom",
+          "Instruments of War",
+          "Maskwood Nexus",
+          "Sigarda, Host of Herons",
+          "Woodland Changeling"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "id": "8321184-7",
+      "opponent": "squirrels",
+      "seed": 5190031,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "win",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        99,
+        -1
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        7,
+        7
+      ],
+      "focalLife": 99,
+      "opponentLife": -1,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          44
+        ],
+        "landsPlayed": 10,
+        "spellsCast": 7,
+        "triggerLogEntries": 0,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Broodhatch Nantuko",
+          "Dreampod Druid",
+          "Ghalta and Mavren",
+          "Hazel of the Rootbloom",
+          "Instruments of War",
+          "Lathiel, the Bounteous Dawn",
+          "Oxidize",
+          "Peregrin Took",
+          "Pitiless Plunderer",
+          "Reciprocate",
+          "Scurry Oak",
+          "Strength of the Harvest // Haven of the Harvest",
+          "Woodland Changeling"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "id": "8321184-8",
+      "opponent": "squirrels",
+      "seed": 5190032,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "win",
+      "result": "win",
+      "winner": 1,
+      "engineWinner": 1,
+      "adjudication": "game_rules",
+      "scores": [
+        -5,
+        45
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        9,
+        8
+      ],
+      "focalLife": 45,
+      "opponentLife": -5,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          44,
+          69
+        ],
+        "landsPlayed": 10,
+        "spellsCast": 9,
+        "triggerLogEntries": 1,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Adaptive Automaton",
+          "Audacity",
+          "Bloodline Pretender",
+          "Cartouche of Solidarity",
+          "Chitterspitter",
+          "Dryad of the Ilysian Grove",
+          "Hyena Umbra",
+          "Icon of Ancestry",
+          "Lathiel, the Bounteous Dawn",
+          "Oxidize",
+          "Paladin Class",
+          "Strength of the Harvest // Haven of the Harvest",
+          "Twitching Doll",
+          "Vinereap Mentor",
+          "Woodland Changeling"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "id": "8321184-9",
+      "opponent": "squirrels",
+      "seed": 5190033,
+      "focalSeat": 0,
+      "focalPlayedFirst": true,
+      "outcome": "win",
+      "result": "win",
+      "winner": 0,
+      "engineWinner": 0,
+      "adjudication": "game_rules",
+      "scores": [
+        39,
+        19
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        9,
+        9
+      ],
+      "focalLife": 39,
+      "opponentLife": 19,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          69,
+          44
+        ],
+        "landsPlayed": 11,
+        "spellsCast": 7,
+        "triggerLogEntries": 2,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alpha Status",
+          "Dryad of the Ilysian Grove",
+          "Mirri, Weatherlight Duelist",
+          "Nuka-Cola Vending Machine",
+          "Oran-Rief, the Vastwood",
+          "Paladin Class",
+          "Reciprocate",
+          "Sigarda, Host of Herons",
+          "Sporeweb Weaver",
+          "Squirrel Nest",
+          "Squirrel Sanctuary",
+          "The Mycotyrant",
+          "Twitching Doll",
+          "Urza's Incubator"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "id": "8321184-10",
+      "opponent": "squirrels",
+      "seed": 5190034,
+      "focalSeat": 1,
+      "focalPlayedFirst": false,
+      "outcome": "win",
+      "result": "diagnostic_window_complete",
+      "winner": 1,
+      "engineWinner": null,
+      "adjudication": "turn_limit_life_score",
+      "scores": [
+        25,
+        40
+      ],
+      "scoreMetric": "remaining_life",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "focalLife": 40,
+      "opponentLife": 25,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          44,
+          69
+        ],
+        "landsPlayed": 9,
+        "spellsCast": 3,
+        "triggerLogEntries": 0,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Bloodline Pretender",
+          "Broodhatch Nantuko",
+          "Chatter of the Squirrel",
+          "Darkbore Pathway // Slitherbore Pathway",
+          "Deranged Hermit",
+          "Destiny Spinner",
+          "Dreampod Druid",
+          "Gavony Township",
+          "Herd Baloth",
+          "Lathiel, the Bounteous Dawn",
+          "Maskwood Nexus",
+          "Mirri, Weatherlight Duelist",
+          "Oxidize",
+          "Raking Canopy",
+          "Reciprocate",
+          "Scurry Oak",
+          "Sporeweb Weaver",
+          "Verdant Command"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    }
+  ],
+  "runtimeQuestions": [],
+  "totals": {
+    "games": 40,
+    "wins": 26,
+    "losses": 14,
+    "ties": 0,
+    "turnLimit": 13,
+    "blocked": 0,
+    "tieRate": 0.0,
+    "winRateAllGames": 0.65
+  },
+  "questionCounts": {
+    "unsupportedCards": 199,
+    "focalUnsupportedCards": 31,
+    "runtime": 0
+  }
+}

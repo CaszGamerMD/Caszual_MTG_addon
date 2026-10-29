@@ -1,0 +1,3012 @@
+{
+  "schemaVersion": 1,
+  "notice": "Heuristic work planning only. Families overlap; matching a family does not resolve a card. Component recognition is partial (Python grammar only); false does not prove a missing rule. Recognized components may still need composition support. Full Oracle parsing and behavioral tests remain required.",
+  "unresolvedCards": 199,
+  "families": [
+    {
+      "family": "attachments and roles",
+      "affectedCards": 28,
+      "focalCards": 9,
+      "cardGameEncounters": 89,
+      "cards": [
+        "Alpha Status",
+        "Andúril, Flame of the West",
+        "Animal Friend",
+        "Audacity",
+        "Batterbone",
+        "Bitterthorn, Nissa's Animus",
+        "Calix, Guided by Fate",
+        "Cartouche of Solidarity",
+        "Chained to the Rocks",
+        "Dreampod Druid",
+        "Druid's Call",
+        "Endless Evil",
+        "Excalibur II",
+        "Followed Footsteps",
+        "Gylwain, Casting Director",
+        "Hyena Umbra",
+        "Luxior, Giada's Gift",
+        "Murder Investigation",
+        "Nettlecyst",
+        "Nyx Herald",
+        "On Thin Ice",
+        "Orcrist, Goblin-cleaver",
+        "Roadside Assistance",
+        "Squirrel Nest",
+        "Sword of Hearth and Home",
+        "Sword of the Animist",
+        "Team Pennant",
+        "Umbral Mantle"
+      ],
+      "cardsWithOtherCandidateFamilies": 22
+    },
+    {
+      "family": "combat restrictions and triggers",
+      "affectedCards": 41,
+      "focalCards": 8,
+      "cardGameEncounters": 102,
+      "cards": [
+        "Andúril, Flame of the West",
+        "Animal Friend",
+        "Ankle Shanker",
+        "Bitterthorn, Nissa's Animus",
+        "Brave the Sands",
+        "Bulwark Ox",
+        "Calix, Guided by Fate",
+        "Chivalric Alliance",
+        "Dawnsire, Sunstar Dreadnought",
+        "Dolmen Gate",
+        "Experimental Confectioner",
+        "Eye Collector",
+        "Faerie Bladecrafter",
+        "Faerie Slumber Party",
+        "Feywild Visitor",
+        "Fortune, Loyal Steed",
+        "Ghalta and Mavren",
+        "Gilded Ghoda",
+        "Gloryheath Lynx",
+        "Goblin Assault",
+        "Goblin Rabblemaster",
+        "Gravity Well",
+        "Guildpact Informant",
+        "Kaito Shizuki",
+        "Legion Warboss",
+        "Mardu Ascendancy",
+        "Mirkwood Spider",
+        "Mirri, Weatherlight Duelist",
+        "Nyx Herald",
+        "Oona's Blackguard",
+        "Orcish Siegemaster",
+        "Orcrist, Goblin-cleaver",
+        "Paladin Class",
+        "Raking Canopy",
+        "Recon Craft Theta",
+        "Shadow Puppeteers",
+        "Starscape Cleric",
+        "Sword of Hearth and Home",
+        "Sword of the Animist",
+        "The Mycotyrant",
+        "Valley Rotcaller"
+      ],
+      "cardsWithOtherCandidateFamilies": 30
+    },
+    {
+      "family": "activated abilities",
+      "affectedCards": 47,
+      "focalCards": 6,
+      "cardGameEncounters": 112,
+      "cards": [
+        "Alseid of Life's Bounty",
+        "Barrow Naughty",
+        "Blasting Station",
+        "Bulwark Ox",
+        "Camellia, the Seedmiser",
+        "Chatterfang, Squirrel General",
+        "Chitterspitter",
+        "Chivalric Alliance",
+        "Chromatic Orrery",
+        "Dawn-Blessed Pennant",
+        "Destiny Spinner",
+        "Dino DNA",
+        "Ethereal Absolution",
+        "Faerie Dreamthief",
+        "Gavony Township",
+        "Goblin Sledder",
+        "Guidelight Matrix",
+        "Hazel of the Rootbloom",
+        "Icon of Ancestry",
+        "Indulgent Aristocrat",
+        "Kaito Shizuki",
+        "Kami of Whispered Hopes",
+        "Krenko, Mob Boss",
+        "Liliana, the Last Hope",
+        "Mad Auntie",
+        "Mardu Ascendancy",
+        "Maskwood Nexus",
+        "Nectar Faerie",
+        "Nuka-Cola Vending Machine",
+        "Oona, Queen of the Fae",
+        "Oran-Rief, the Vastwood",
+        "Paladin Class",
+        "Peregrin Took",
+        "Ravenous Squirrel",
+        "Sanctum Weaver",
+        "Skirk Prospector",
+        "Speaker of the Heavens",
+        "Sprite Noble",
+        "Squirrel Nest",
+        "The Book of Vile Darkness",
+        "The Eternity Elevator",
+        "Thornvault Forager",
+        "Twitching Doll",
+        "Umbral Mantle",
+        "Vito, Thorn of the Dusk Rose",
+        "Weaver of Harmony",
+        "Ygra, Eater of All"
+      ],
+      "cardsWithOtherCandidateFamilies": 40
+    },
+    {
+      "family": "token creation and copying",
+      "affectedCards": 65,
+      "focalCards": 5,
+      "cardGameEncounters": 129,
+      "cards": [
+        "Academy Manufactor",
+        "Andúril, Flame of the West",
+        "Animal Friend",
+        "Baird, Argivian Recruiter",
+        "Blood Money",
+        "Broodhatch Nantuko",
+        "Calix, Guided by Fate",
+        "Camellia, the Seedmiser",
+        "Cartouche of Solidarity",
+        "Charismatic Conqueror",
+        "Chatter of the Squirrel",
+        "Chitterspitter",
+        "Chivalric Alliance",
+        "Cloakwood Hermit",
+        "Deep Forest Hermit",
+        "Deranged Hermit",
+        "Dino DNA",
+        "Dreampod Druid",
+        "Elenda's Hierophant",
+        "Endless Evil",
+        "Endless Ranks of the Dead",
+        "Ethereal Absolution",
+        "Experimental Confectioner",
+        "Faebloom Trick",
+        "Faerie Slumber Party",
+        "Feywild Visitor",
+        "Followed Footsteps",
+        "Ghalta and Mavren",
+        "Gilded Ghoda",
+        "Goblin Assault",
+        "Goblin Rabblemaster",
+        "Gylwain, Casting Director",
+        "Hazel of the Rootbloom",
+        "Herd Baloth",
+        "Hornet Nest",
+        "Kaito Shizuki",
+        "Krenko, Mob Boss",
+        "Legion Warboss",
+        "Liliana, the Last Hope",
+        "Mardu Ascendancy",
+        "Maskwood Nexus",
+        "Murder Investigation",
+        "Mycoloth",
+        "Notorious Throng",
+        "Nuka-Cola Vending Machine",
+        "Nut Collector",
+        "Ocelot Pride",
+        "Oona, Queen of the Fae",
+        "Orcrist, Goblin-cleaver",
+        "Pitiless Plunderer",
+        "Recon Craft Theta",
+        "Roadside Assistance",
+        "Scurry Oak",
+        "Shadow Puppeteers",
+        "Speaker of the Heavens",
+        "Sporeweb Weaver",
+        "Squirrel Nest",
+        "Squirrel Sanctuary",
+        "Tegwyll's Scouring",
+        "The Book of Vile Darkness",
+        "The Mycotyrant",
+        "Twitching Doll",
+        "Valor's Flagship",
+        "Vinereap Mentor",
+        "Weaver of Harmony"
+      ],
+      "cardsWithOtherCandidateFamilies": 47
+    },
+    {
+      "family": "counters",
+      "affectedCards": 41,
+      "focalCards": 5,
+      "cardGameEncounters": 95,
+      "cards": [
+        "Animal Friend",
+        "Bloodline Pretender",
+        "Boot Nipper",
+        "Bulwark Ox",
+        "Bushy Bodyguard",
+        "Calix, Guided by Fate",
+        "Camellia, the Seedmiser",
+        "Chitterspitter",
+        "Citizen V, Helmut Zemo",
+        "Elenda's Hierophant",
+        "Excalibur II",
+        "Faerie Bladecrafter",
+        "Gavony Township",
+        "Guardian Gladewalker",
+        "Herd Baloth",
+        "Honored Dreyleader",
+        "Indulgent Aristocrat",
+        "Ivy Lane Denizen",
+        "Kami of Whispered Hopes",
+        "Knucklebone Witch",
+        "Lathiel, the Bounteous Dawn",
+        "Luxior, Giada's Gift",
+        "Mauhúr, Uruk-hai Captain",
+        "Metallic Mimic",
+        "Mycoloth",
+        "Oona's Blackguard",
+        "Oran-Rief, the Vastwood",
+        "Ravenous Squirrel",
+        "Recon Craft Theta",
+        "Scurry Oak",
+        "Securitron Squadron",
+        "Spell Stutter",
+        "Starfield Mystic",
+        "Stonecoil Serpent",
+        "The Eternity Elevator",
+        "Tribute to the World Tree",
+        "Twitching Doll",
+        "Uglúk of the White Hand",
+        "Verdant Command",
+        "Wildwood Scourge",
+        "Ygra, Eater of All"
+      ],
+      "cardsWithOtherCandidateFamilies": 29
+    },
+    {
+      "family": "mana and land rules",
+      "affectedCards": 18,
+      "focalCards": 5,
+      "cardGameEncounters": 53,
+      "cards": [
+        "Bitterthorn, Nissa's Animus",
+        "Chromatic Orrery",
+        "Destiny Spinner",
+        "Dryad of the Ilysian Grove",
+        "Gavony Township",
+        "Hazel of the Rootbloom",
+        "Kami of Whispered Hopes",
+        "On Thin Ice",
+        "Oran-Rief, the Vastwood",
+        "Sanctum Weaver",
+        "Skirk Prospector",
+        "Squirrel Nest",
+        "Sword of Hearth and Home",
+        "Sword of the Animist",
+        "The Eternity Elevator",
+        "Thornvault Forager",
+        "Twitching Doll",
+        "Urborg, Tomb of Yawgmoth"
+      ],
+      "cardsWithOtherCandidateFamilies": 16
+    },
+    {
+      "family": "targeted removal and return",
+      "affectedCards": 11,
+      "focalCards": 4,
+      "cardGameEncounters": 36,
+      "cards": [
+        "Chained to the Rocks",
+        "Cloudshift",
+        "Dino DNA",
+        "Enduring Tenacity",
+        "Ethereal Absolution",
+        "Fortune, Loyal Steed",
+        "Journey to Nowhere",
+        "On Thin Ice",
+        "Oxidize",
+        "Reciprocate",
+        "Verdant Command"
+      ],
+      "cardsWithOtherCandidateFamilies": 7
+    },
+    {
+      "family": "multiple faces or missing Oracle text",
+      "affectedCards": 9,
+      "focalCards": 3,
+      "cardGameEncounters": 33,
+      "cards": [
+        "Clearwater Pathway // Murkwater Pathway",
+        "Darkbore Pathway // Slitherbore Pathway",
+        "Halvar, God of Battle // Sword of the Realms",
+        "Hanweir Militia Captain // Westvale Cult Leader",
+        "Legion's Landing // Adanto, the First Fort",
+        "Liliana, Heretical Healer // Liliana, Defiant Necromancer",
+        "Michiko's Reign of Truth // Portrait of Michiko",
+        "Needleverge Pathway // Pillarverge Pathway",
+        "Strength of the Harvest // Haven of the Harvest"
+      ],
+      "cardsWithOtherCandidateFamilies": 0
+    },
+    {
+      "family": "other unsupported language",
+      "affectedCards": 29,
+      "focalCards": 2,
+      "cardGameEncounters": 58,
+      "cards": [
+        "Adaptive Automaton",
+        "Alchemist's Gift",
+        "Arcbound Mouser",
+        "Archetype of Courage",
+        "Austere Command",
+        "Beloved Princess",
+        "Blood Moon",
+        "Boggart Birth Rite",
+        "Caterwauling Boggart",
+        "Cloud of Faeries",
+        "Cloudspire Captain",
+        "Coat of Arms",
+        "Dynamite Diver",
+        "Faerie Impostor",
+        "Faerie Swarm",
+        "Ferocity of the Wilds",
+        "Goblin Arsonist",
+        "Goblin King",
+        "Goblin Lackey",
+        "Instruments of War",
+        "Interface Ace",
+        "Rally the Ranks",
+        "Scion of Oona",
+        "Sigarda, Host of Herons",
+        "Sower of Temptation",
+        "Universal Automaton",
+        "Warren Instigator",
+        "Woodland Changeling",
+        "Wort, Boggart Auntie"
+      ],
+      "cardsWithOtherCandidateFamilies": 0
+    },
+    {
+      "family": "cost changes",
+      "affectedCards": 4,
+      "focalCards": 2,
+      "cardGameEncounters": 14,
+      "cards": [
+        "Herald's Horn",
+        "Paladin Class",
+        "Starfield Mystic",
+        "Urza's Incubator"
+      ],
+      "cardsWithOtherCandidateFamilies": 3
+    },
+    {
+      "family": "draw and library operations",
+      "affectedCards": 22,
+      "focalCards": 1,
+      "cardGameEncounters": 38,
+      "cards": [
+        "Audacity",
+        "Bitterthorn, Nissa's Animus",
+        "Chivalric Alliance",
+        "Chromatic Orrery",
+        "Faerie Dreamthief",
+        "Fortune, Loyal Steed",
+        "Gloryheath Lynx",
+        "Guidelight Matrix",
+        "Herald's Horn",
+        "Icon of Ancestry",
+        "Kaito Shizuki",
+        "Oona, Queen of the Fae",
+        "Peppersmoke",
+        "Peregrin Took",
+        "Ravenous Squirrel",
+        "Rundvelt Hordemaster",
+        "Sword of Hearth and Home",
+        "Sword of the Animist",
+        "Talion, the Kindly Lord",
+        "Tegwyll, Duke of Splendor",
+        "Thornvault Forager",
+        "Tribute to the World Tree"
+      ],
+      "cardsWithOtherCandidateFamilies": 20
+    },
+    {
+      "family": "lifegain",
+      "affectedCards": 17,
+      "focalCards": 1,
+      "cardGameEncounters": 32,
+      "cards": [
+        "Citizen V, Helmut Zemo",
+        "Dawn-Blessed Pennant",
+        "Elenda's Hierophant",
+        "Enduring Tenacity",
+        "Excalibur II",
+        "Exquisite Blood",
+        "Faerie Bladecrafter",
+        "Lathiel, the Bounteous Dawn",
+        "Ocelot Pride",
+        "Ravenous Squirrel",
+        "Sporeweb Weaver",
+        "Starscape Cleric",
+        "Tainted Remedy",
+        "Valley Rotcaller",
+        "Verdant Command",
+        "Vito, Thorn of the Dusk Rose",
+        "Ygra, Eater of All"
+      ],
+      "cardsWithOtherCandidateFamilies": 16
+    },
+    {
+      "family": "replacement effects",
+      "affectedCards": 10,
+      "focalCards": 0,
+      "cardGameEncounters": 26,
+      "cards": [
+        "Academy Manufactor",
+        "Andúril, Flame of the West",
+        "Chatterfang, Squirrel General",
+        "Divine Visitation",
+        "Hazel of the Rootbloom",
+        "Kami of Whispered Hopes",
+        "Mauhúr, Uruk-hai Captain",
+        "Peregrin Took",
+        "Tainted Remedy",
+        "Uglúk of the White Hand"
+      ],
+      "cardsWithOtherCandidateFamilies": 9
+    },
+    {
+      "family": "cast triggers",
+      "affectedCards": 2,
+      "focalCards": 0,
+      "cardGameEncounters": 2,
+      "cards": [
+        "Rundvelt Hordemaster",
+        "Talion, the Kindly Lord"
+      ],
+      "cardsWithOtherCandidateFamilies": 2
+    }
+  ],
+  "repeatedClauseTemplates": [
+    {
+      "template": "Enchant creature you control",
+      "affectedCards": 3,
+      "focalCards": 1,
+      "cardGameEncounters": 14,
+      "cards": [
+        "Cartouche of Solidarity",
+        "Endless Evil",
+        "Murder Investigation"
+      ],
+      "cardsWithOtherCandidateFamilies": 3,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "Living weapon",
+      "affectedCards": 3,
+      "focalCards": 1,
+      "cardGameEncounters": 6,
+      "cards": [
+        "Batterbone",
+        "Bitterthorn, Nissa's Animus",
+        "Nettlecyst"
+      ],
+      "cardsWithOtherCandidateFamilies": 1,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "When this Aura enters, exile target creature an opponent controls until this Aura leaves the battlefield.",
+      "affectedCards": 2,
+      "focalCards": 1,
+      "cardGameEncounters": 6,
+      "cards": [
+        "Chained to the Rocks",
+        "On Thin Ice"
+      ],
+      "cardsWithOtherCandidateFamilies": 2,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "Changeling",
+      "affectedCards": 4,
+      "focalCards": 0,
+      "cardGameEncounters": 12,
+      "cards": [
+        "Bloodline Pretender",
+        "Guardian Gladewalker",
+        "Universal Automaton",
+        "Woodland Changeling"
+      ],
+      "cardsWithOtherCandidateFamilies": 0,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "Saddle N",
+      "affectedCards": 4,
+      "focalCards": 0,
+      "cardGameEncounters": 9,
+      "cards": [
+        "Bulwark Ox",
+        "Fortune, Loyal Steed",
+        "Gilded Ghoda",
+        "Gloryheath Lynx"
+      ],
+      "cardsWithOtherCandidateFamilies": 4,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "As this artifact enters, choose a creature type.",
+      "affectedCards": 4,
+      "focalCards": 0,
+      "cardGameEncounters": 5,
+      "cards": [
+        "Herald's Horn",
+        "Icon of Ancestry",
+        "Instruments of War",
+        "Urza's Incubator"
+      ],
+      "cardsWithOtherCandidateFamilies": 2,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "Creatures you control of the chosen type get +N/+N.",
+      "affectedCards": 3,
+      "focalCards": 0,
+      "cardGameEncounters": 8,
+      "cards": [
+        "Icon of Ancestry",
+        "Instruments of War",
+        "Rally the Ranks"
+      ],
+      "cardsWithOtherCandidateFamilies": 1,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "As this creature enters, choose a creature type.",
+      "affectedCards": 3,
+      "focalCards": 0,
+      "cardGameEncounters": 5,
+      "cards": [
+        "Adaptive Automaton",
+        "Bloodline Pretender",
+        "Metallic Mimic"
+      ],
+      "cardsWithOtherCandidateFamilies": 0,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "Equipped creature gets +N/+N.",
+      "affectedCards": 3,
+      "focalCards": 0,
+      "cardGameEncounters": 4,
+      "cards": [
+        "Andúril, Flame of the West",
+        "Bitterthorn, Nissa's Animus",
+        "Sword of the Animist"
+      ],
+      "cardsWithOtherCandidateFamilies": 3,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "Choose two —",
+      "affectedCards": 2,
+      "focalCards": 0,
+      "cardGameEncounters": 4,
+      "cards": [
+        "Austere Command",
+        "Verdant Command"
+      ],
+      "cardsWithOtherCandidateFamilies": 1,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "Crew N",
+      "affectedCards": 2,
+      "focalCards": 0,
+      "cardGameEncounters": 4,
+      "cards": [
+        "Recon Craft Theta",
+        "Valor's Flagship"
+      ],
+      "cardsWithOtherCandidateFamilies": 1,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "This creature saddles Mounts and crews Vehicles as though its power were N greater.",
+      "affectedCards": 2,
+      "focalCards": 0,
+      "cardGameEncounters": 4,
+      "cards": [
+        "Cloudspire Captain",
+        "Dynamite Diver"
+      ],
+      "cardsWithOtherCandidateFamilies": 0,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "This creature enters with X +N/+N counters on it.",
+      "affectedCards": 2,
+      "focalCards": 0,
+      "cardGameEncounters": 2,
+      "cards": [
+        "Stonecoil Serpent",
+        "Wildwood Scourge"
+      ],
+      "cardsWithOtherCandidateFamilies": 0,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "This creature is the chosen type in addition to its other types.",
+      "affectedCards": 2,
+      "focalCards": 0,
+      "cardGameEncounters": 2,
+      "cards": [
+        "Adaptive Automaton",
+        "Metallic Mimic"
+      ],
+      "cardsWithOtherCandidateFamilies": 0,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "Whenever equipped creature attacks, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+      "affectedCards": 2,
+      "focalCards": 0,
+      "cardGameEncounters": 2,
+      "cards": [
+        "Bitterthorn, Nissa's Animus",
+        "Sword of the Animist"
+      ],
+      "cardsWithOtherCandidateFamilies": 2,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "Station",
+      "affectedCards": 2,
+      "focalCards": 0,
+      "cardGameEncounters": 1,
+      "cards": [
+        "Dawnsire, Sunstar Dreadnought",
+        "The Eternity Elevator"
+      ],
+      "cardsWithOtherCandidateFamilies": 1,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "Whenever you gain life, target opponent loses that much life.",
+      "affectedCards": 2,
+      "focalCards": 0,
+      "cardGameEncounters": 1,
+      "cards": [
+        "Enduring Tenacity",
+        "Vito, Thorn of the Dusk Rose"
+      ],
+      "cardsWithOtherCandidateFamilies": 2,
+      "componentRecognizedByPythonGrammar": false
+    },
+    {
+      "template": "Equip {N}",
+      "affectedCards": 11,
+      "focalCards": 2,
+      "cardGameEncounters": 20,
+      "cards": [
+        "Andúril, Flame of the West",
+        "Batterbone",
+        "Bitterthorn, Nissa's Animus",
+        "Excalibur II",
+        "Luxior, Giada's Gift",
+        "Nettlecyst",
+        "Orcrist, Goblin-cleaver",
+        "Sword of Hearth and Home",
+        "Sword of the Animist",
+        "Team Pennant",
+        "Umbral Mantle"
+      ],
+      "cardsWithOtherCandidateFamilies": 8,
+      "componentRecognizedByPythonGrammar": true
+    },
+    {
+      "template": "Lifelink",
+      "affectedCards": 7,
+      "focalCards": 2,
+      "cardGameEncounters": 32,
+      "cards": [
+        "Alseid of Life's Bounty",
+        "Arcbound Mouser",
+        "Beloved Princess",
+        "Citizen V, Helmut Zemo",
+        "Gloryheath Lynx",
+        "Indulgent Aristocrat",
+        "Lathiel, the Bounteous Dawn"
+      ],
+      "cardsWithOtherCandidateFamilies": 4,
+      "componentRecognizedByPythonGrammar": true
+    },
+    {
+      "template": "Enchant creature",
+      "affectedCards": 6,
+      "focalCards": 2,
+      "cardGameEncounters": 19,
+      "cards": [
+        "Alpha Status",
+        "Animal Friend",
+        "Audacity",
+        "Druid's Call",
+        "Followed Footsteps",
+        "Hyena Umbra"
+      ],
+      "cardsWithOtherCandidateFamilies": 3,
+      "componentRecognizedByPythonGrammar": true
+    },
+    {
+      "template": "Enchanted creature gets +N/+N and has first strike.",
+      "affectedCards": 2,
+      "focalCards": 2,
+      "cardGameEncounters": 20,
+      "cards": [
+        "Cartouche of Solidarity",
+        "Hyena Umbra"
+      ],
+      "cardsWithOtherCandidateFamilies": 1,
+      "componentRecognizedByPythonGrammar": true
+    },
+    {
+      "template": "Trample",
+      "affectedCards": 4,
+      "focalCards": 1,
+      "cardGameEncounters": 13,
+      "cards": [
+        "Ghalta and Mavren",
+        "Honored Dreyleader",
+        "Orcish Siegemaster",
+        "The Mycotyrant"
+      ],
+      "cardsWithOtherCandidateFamilies": 2,
+      "componentRecognizedByPythonGrammar": true
+    },
+    {
+      "template": "Creatures you control get +N/+N.",
+      "affectedCards": 2,
+      "focalCards": 1,
+      "cardGameEncounters": 8,
+      "cards": [
+        "Ethereal Absolution",
+        "Paladin Class"
+      ],
+      "cardsWithOtherCandidateFamilies": 2,
+      "componentRecognizedByPythonGrammar": true
+    },
+    {
+      "template": "Flying",
+      "affectedCards": 18,
+      "focalCards": 0,
+      "cardGameEncounters": 28,
+      "cards": [
+        "Barrow Naughty",
+        "Cloud of Faeries",
+        "Elenda's Hierophant",
+        "Eye Collector",
+        "Faerie Bladecrafter",
+        "Faerie Dreamthief",
+        "Faerie Impostor",
+        "Faerie Swarm",
+        "Guildpact Informant",
+        "Nectar Faerie",
+        "Oona's Blackguard",
+        "Oona, Queen of the Fae",
+        "Recon Craft Theta",
+        "Scion of Oona",
+        "Sower of Temptation",
+        "Sprite Noble",
+        "Starscape Cleric",
+        "Talion, the Kindly Lord"
+      ],
+      "cardsWithOtherCandidateFamilies": 8,
+      "componentRecognizedByPythonGrammar": true
+    },
+    {
+      "template": "Menace",
+      "affectedCards": 3,
+      "focalCards": 0,
+      "cardGameEncounters": 2,
+      "cards": [
+        "Camellia, the Seedmiser",
+        "Mauhúr, Uruk-hai Captain",
+        "Valley Rotcaller"
+      ],
+      "cardsWithOtherCandidateFamilies": 3,
+      "componentRecognizedByPythonGrammar": true
+    },
+    {
+      "template": "Flash",
+      "affectedCards": 2,
+      "focalCards": 0,
+      "cardGameEncounters": 4,
+      "cards": [
+        "Instruments of War",
+        "Scion of Oona"
+      ],
+      "cardsWithOtherCandidateFamilies": 0,
+      "componentRecognizedByPythonGrammar": true
+    },
+    {
+      "template": "When this creature enters, create four N/N green Squirrel creature tokens.",
+      "affectedCards": 2,
+      "focalCards": 0,
+      "cardGameEncounters": 4,
+      "cards": [
+        "Deep Forest Hermit",
+        "Deranged Hermit"
+      ],
+      "cardsWithOtherCandidateFamilies": 0,
+      "componentRecognizedByPythonGrammar": true
+    },
+    {
+      "template": "{T}: Add {G}.",
+      "affectedCards": 2,
+      "focalCards": 0,
+      "cardGameEncounters": 3,
+      "cards": [
+        "Oran-Rief, the Vastwood",
+        "Thornvault Forager"
+      ],
+      "cardsWithOtherCandidateFamilies": 2,
+      "componentRecognizedByPythonGrammar": true
+    },
+    {
+      "template": "Vigilance",
+      "affectedCards": 2,
+      "focalCards": 0,
+      "cardGameEncounters": 2,
+      "cards": [
+        "Charismatic Conqueror",
+        "Securitron Squadron"
+      ],
+      "cardsWithOtherCandidateFamilies": 0,
+      "componentRecognizedByPythonGrammar": true
+    }
+  ],
+  "cards": [
+    {
+      "card": "Alseid of Life's Bounty",
+      "questionId": "5ee286e250c4e007",
+      "requiredFamilyCandidates": [
+        "activated abilities"
+      ],
+      "focal": true,
+      "encounters": 9,
+      "copies": 1
+    },
+    {
+      "card": "Archetype of Courage",
+      "questionId": "0f7103aa36dc3d80",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": true,
+      "encounters": 5,
+      "copies": 2
+    },
+    {
+      "card": "Audacity",
+      "questionId": "ed16a82f7bd5805b",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "attachments and roles"
+      ],
+      "focal": true,
+      "encounters": 7,
+      "copies": 1
+    },
+    {
+      "card": "Calix, Guided by Fate",
+      "questionId": "3f18b70ce2274d10",
+      "requiredFamilyCandidates": [
+        "counters",
+        "attachments and roles",
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": true,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Cartouche of Solidarity",
+      "questionId": "bb0b82454b7bce2b",
+      "requiredFamilyCandidates": [
+        "attachments and roles",
+        "token creation and copying"
+      ],
+      "focal": true,
+      "encounters": 11,
+      "copies": 1
+    },
+    {
+      "card": "Destiny Spinner",
+      "questionId": "2740e3970876ccc5",
+      "requiredFamilyCandidates": [
+        "mana and land rules",
+        "activated abilities"
+      ],
+      "focal": true,
+      "encounters": 7,
+      "copies": 1
+    },
+    {
+      "card": "Dryad of the Ilysian Grove",
+      "questionId": "62b94f413ed005fb",
+      "requiredFamilyCandidates": [
+        "mana and land rules"
+      ],
+      "focal": true,
+      "encounters": 8,
+      "copies": 1
+    },
+    {
+      "card": "Gavony Township",
+      "questionId": "17a1e9a81e43620d",
+      "requiredFamilyCandidates": [
+        "counters",
+        "mana and land rules",
+        "activated abilities"
+      ],
+      "focal": true,
+      "encounters": 10,
+      "copies": 1
+    },
+    {
+      "card": "Ghalta and Mavren",
+      "questionId": "7a7d5021d48e0c37",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": true,
+      "encounters": 9,
+      "copies": 1
+    },
+    {
+      "card": "Gravity Well",
+      "questionId": "679033b5faa26ab8",
+      "requiredFamilyCandidates": [
+        "combat restrictions and triggers"
+      ],
+      "focal": true,
+      "encounters": 7,
+      "copies": 1
+    },
+    {
+      "card": "Gylwain, Casting Director",
+      "questionId": "5655a97e3dbff363",
+      "requiredFamilyCandidates": [
+        "attachments and roles",
+        "token creation and copying"
+      ],
+      "focal": true,
+      "encounters": 11,
+      "copies": 1
+    },
+    {
+      "card": "Halvar, God of Battle // Sword of the Realms",
+      "questionId": "17dc8a33bb029fd9",
+      "requiredFamilyCandidates": [
+        "multiple faces or missing Oracle text"
+      ],
+      "focal": true,
+      "encounters": 7,
+      "copies": 1
+    },
+    {
+      "card": "Hyena Umbra",
+      "questionId": "d624ee4d5d277aab",
+      "requiredFamilyCandidates": [
+        "attachments and roles"
+      ],
+      "focal": true,
+      "encounters": 9,
+      "copies": 1
+    },
+    {
+      "card": "Journey to Nowhere",
+      "questionId": "d256db9f5826153d",
+      "requiredFamilyCandidates": [
+        "targeted removal and return"
+      ],
+      "focal": true,
+      "encounters": 4,
+      "copies": 1
+    },
+    {
+      "card": "Lathiel, the Bounteous Dawn",
+      "questionId": "77440dfbcc8b7947",
+      "requiredFamilyCandidates": [
+        "counters",
+        "lifegain"
+      ],
+      "focal": true,
+      "encounters": 11,
+      "copies": 1
+    },
+    {
+      "card": "Luxior, Giada's Gift",
+      "questionId": "b5c7a82449d980fb",
+      "requiredFamilyCandidates": [
+        "counters",
+        "attachments and roles"
+      ],
+      "focal": true,
+      "encounters": 7,
+      "copies": 1
+    },
+    {
+      "card": "Michiko's Reign of Truth // Portrait of Michiko",
+      "questionId": "8f550cd696324da6",
+      "requiredFamilyCandidates": [
+        "multiple faces or missing Oracle text"
+      ],
+      "focal": true,
+      "encounters": 7,
+      "copies": 1
+    },
+    {
+      "card": "Mirkwood Spider",
+      "questionId": "7b483fa228326c2f",
+      "requiredFamilyCandidates": [
+        "combat restrictions and triggers"
+      ],
+      "focal": true,
+      "encounters": 6,
+      "copies": 1
+    },
+    {
+      "card": "Mirri, Weatherlight Duelist",
+      "questionId": "da6df679302214ad",
+      "requiredFamilyCandidates": [
+        "combat restrictions and triggers"
+      ],
+      "focal": true,
+      "encounters": 6,
+      "copies": 1
+    },
+    {
+      "card": "Nettlecyst",
+      "questionId": "5a4865add7465e95",
+      "requiredFamilyCandidates": [
+        "attachments and roles"
+      ],
+      "focal": true,
+      "encounters": 5,
+      "copies": 1
+    },
+    {
+      "card": "Nyx Herald",
+      "questionId": "01cb44572d2c17eb",
+      "requiredFamilyCandidates": [
+        "attachments and roles",
+        "combat restrictions and triggers"
+      ],
+      "focal": true,
+      "encounters": 11,
+      "copies": 1
+    },
+    {
+      "card": "On Thin Ice",
+      "questionId": "9e7cb5f17bd60c66",
+      "requiredFamilyCandidates": [
+        "attachments and roles",
+        "targeted removal and return",
+        "mana and land rules"
+      ],
+      "focal": true,
+      "encounters": 6,
+      "copies": 1
+    },
+    {
+      "card": "Oxidize",
+      "questionId": "5d64a174c63df092",
+      "requiredFamilyCandidates": [
+        "targeted removal and return"
+      ],
+      "focal": true,
+      "encounters": 8,
+      "copies": 1
+    },
+    {
+      "card": "Paladin Class",
+      "questionId": "f79d5baddb232b9f",
+      "requiredFamilyCandidates": [
+        "cost changes",
+        "combat restrictions and triggers",
+        "activated abilities"
+      ],
+      "focal": true,
+      "encounters": 7,
+      "copies": 1
+    },
+    {
+      "card": "Raking Canopy",
+      "questionId": "20041c904eda1de1",
+      "requiredFamilyCandidates": [
+        "combat restrictions and triggers"
+      ],
+      "focal": true,
+      "encounters": 6,
+      "copies": 1
+    },
+    {
+      "card": "Reciprocate",
+      "questionId": "0d885a7c447b5c9d",
+      "requiredFamilyCandidates": [
+        "targeted removal and return"
+      ],
+      "focal": true,
+      "encounters": 9,
+      "copies": 1
+    },
+    {
+      "card": "Sanctum Weaver",
+      "questionId": "461b65ceb37b9acd",
+      "requiredFamilyCandidates": [
+        "mana and land rules",
+        "activated abilities"
+      ],
+      "focal": true,
+      "encounters": 4,
+      "copies": 1
+    },
+    {
+      "card": "Sigarda, Host of Herons",
+      "questionId": "491d7eba17588345",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": true,
+      "encounters": 6,
+      "copies": 1
+    },
+    {
+      "card": "Starfield Mystic",
+      "questionId": "21e2ef681011557f",
+      "requiredFamilyCandidates": [
+        "cost changes",
+        "counters"
+      ],
+      "focal": true,
+      "encounters": 6,
+      "copies": 1
+    },
+    {
+      "card": "Strength of the Harvest // Haven of the Harvest",
+      "questionId": "6d767315a7b3775e",
+      "requiredFamilyCandidates": [
+        "multiple faces or missing Oracle text"
+      ],
+      "focal": true,
+      "encounters": 12,
+      "copies": 1
+    },
+    {
+      "card": "Weaver of Harmony",
+      "questionId": "be6eeed06d4d630e",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "activated abilities"
+      ],
+      "focal": true,
+      "encounters": 5,
+      "copies": 1
+    },
+    {
+      "card": "Andúril, Flame of the West",
+      "questionId": "b7be170bb6fdcf8a",
+      "requiredFamilyCandidates": [
+        "replacement effects",
+        "attachments and roles",
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Arcbound Mouser",
+      "questionId": "219b0c8ea6e93f1a",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Baird, Argivian Recruiter",
+      "questionId": "3dcacb46db4d9dd0",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Batterbone",
+      "questionId": "66973020f8a9f4e4",
+      "requiredFamilyCandidates": [
+        "attachments and roles"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Bitterthorn, Nissa's Animus",
+      "questionId": "2492ba38b57788fe",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "attachments and roles",
+        "mana and land rules",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 2
+    },
+    {
+      "card": "Brave the Sands",
+      "questionId": "da31f3ee5f00635f",
+      "requiredFamilyCandidates": [
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Bulwark Ox",
+      "questionId": "b9e4a0fc8118b01b",
+      "requiredFamilyCandidates": [
+        "counters",
+        "combat restrictions and triggers",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Charismatic Conqueror",
+      "questionId": "1d1333fd4dd39250",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Cloudspire Captain",
+      "questionId": "f6ad1b5b9d8e8b0e",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Dawnsire, Sunstar Dreadnought",
+      "questionId": "dd1294350954ddc1",
+      "requiredFamilyCandidates": [
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Dolmen Gate",
+      "questionId": "c611c2eca42512c5",
+      "requiredFamilyCandidates": [
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Dynamite Diver",
+      "questionId": "786c0b569c8a88aa",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Elenda's Hierophant",
+      "questionId": "8749acb9afff3146",
+      "requiredFamilyCandidates": [
+        "counters",
+        "lifegain",
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 4,
+      "copies": 1
+    },
+    {
+      "card": "Ferocity of the Wilds",
+      "questionId": "ae8358850b942d5f",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Fortune, Loyal Steed",
+      "questionId": "40ea99b75bcb1da2",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "targeted removal and return",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Gilded Ghoda",
+      "questionId": "24a31edd8b7d4551",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Gloryheath Lynx",
+      "questionId": "14373717265d9556",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Guidelight Matrix",
+      "questionId": "85a1ca2e8482b2df",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Hanweir Militia Captain // Westvale Cult Leader",
+      "questionId": "2315dff7b4f5fe3f",
+      "requiredFamilyCandidates": [
+        "multiple faces or missing Oracle text"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Interface Ace",
+      "questionId": "a4c39b1c22446268",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Legion's Landing // Adanto, the First Fort",
+      "questionId": "9d3ca0d7122b8eb9",
+      "requiredFamilyCandidates": [
+        "multiple faces or missing Oracle text"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Murder Investigation",
+      "questionId": "1e15d8f96505ce86",
+      "requiredFamilyCandidates": [
+        "attachments and roles",
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Needleverge Pathway // Pillarverge Pathway",
+      "questionId": "8b6280ccbc280b12",
+      "requiredFamilyCandidates": [
+        "multiple faces or missing Oracle text"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Ocelot Pride",
+      "questionId": "f0777d29af84b2a4",
+      "requiredFamilyCandidates": [
+        "lifegain",
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Recon Craft Theta",
+      "questionId": "6a3703b6d7d36bb9",
+      "requiredFamilyCandidates": [
+        "counters",
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Roadside Assistance",
+      "questionId": "c2b63858d2dd92f8",
+      "requiredFamilyCandidates": [
+        "attachments and roles",
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Securitron Squadron",
+      "questionId": "0550c2e6f566cd6e",
+      "requiredFamilyCandidates": [
+        "counters"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Speaker of the Heavens",
+      "questionId": "cf82088a183616a7",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Sword of Hearth and Home",
+      "questionId": "992ff3686d750ecc",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "attachments and roles",
+        "mana and land rules",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Sword of the Animist",
+      "questionId": "bd05f18240aaf3d5",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "attachments and roles",
+        "mana and land rules",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 2
+    },
+    {
+      "card": "The Eternity Elevator",
+      "questionId": "c97abff1e9012622",
+      "requiredFamilyCandidates": [
+        "counters",
+        "mana and land rules",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Valor's Flagship",
+      "questionId": "b683460b3eb9e38b",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Alchemist's Gift",
+      "questionId": "203df43dd3cd2260",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Barrow Naughty",
+      "questionId": "e03026e7d5f4825d",
+      "requiredFamilyCandidates": [
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Boot Nipper",
+      "questionId": "631f389075c47865",
+      "requiredFamilyCandidates": [
+        "counters"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Citizen V, Helmut Zemo",
+      "questionId": "82ec57f35ed80b62",
+      "requiredFamilyCandidates": [
+        "counters",
+        "lifegain"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Clearwater Pathway // Murkwater Pathway",
+      "questionId": "3be0b2e5f5c3a4c5",
+      "requiredFamilyCandidates": [
+        "multiple faces or missing Oracle text"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Cloud of Faeries",
+      "questionId": "27e32c0e34cee6f6",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Dawn-Blessed Pennant",
+      "questionId": "a8b03105b1e784af",
+      "requiredFamilyCandidates": [
+        "lifegain",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Dino DNA",
+      "questionId": "6c42288f0661816b",
+      "requiredFamilyCandidates": [
+        "targeted removal and return",
+        "token creation and copying",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Endless Evil",
+      "questionId": "a9f9e61383a1b998",
+      "requiredFamilyCandidates": [
+        "attachments and roles",
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Endless Ranks of the Dead",
+      "questionId": "3fc29ef03c71d93f",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Enduring Tenacity",
+      "questionId": "ab5fdd257d141c4f",
+      "requiredFamilyCandidates": [
+        "lifegain",
+        "targeted removal and return"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Excalibur II",
+      "questionId": "560d451f4f879685",
+      "requiredFamilyCandidates": [
+        "counters",
+        "lifegain",
+        "attachments and roles"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Exquisite Blood",
+      "questionId": "aa9b37bb50ececf6",
+      "requiredFamilyCandidates": [
+        "lifegain"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Eye Collector",
+      "questionId": "861a33c5286b96a3",
+      "requiredFamilyCandidates": [
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 4,
+      "copies": 1
+    },
+    {
+      "card": "Faebloom Trick",
+      "questionId": "1df3f93151823ee4",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Faerie Bladecrafter",
+      "questionId": "365861b7c9158521",
+      "requiredFamilyCandidates": [
+        "counters",
+        "lifegain",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Faerie Dreamthief",
+      "questionId": "07b7593d0ac97d53",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Faerie Impostor",
+      "questionId": "260375348e1eb067",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Faerie Slumber Party",
+      "questionId": "3fb1b8335cf88216",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Faerie Swarm",
+      "questionId": "88c3423cca1c0f37",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Feywild Visitor",
+      "questionId": "e49bed8d45916ff3",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Followed Footsteps",
+      "questionId": "e57fc81c64f67736",
+      "requiredFamilyCandidates": [
+        "attachments and roles",
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Guildpact Informant",
+      "questionId": "6f95f373b0fef7b0",
+      "requiredFamilyCandidates": [
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Indulgent Aristocrat",
+      "questionId": "76590b81b0ef5e93",
+      "requiredFamilyCandidates": [
+        "counters",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 4,
+      "copies": 1
+    },
+    {
+      "card": "Kaito Shizuki",
+      "questionId": "93dc95d8449af1ea",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "token creation and copying",
+        "combat restrictions and triggers",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Liliana, Heretical Healer // Liliana, Defiant Necromancer",
+      "questionId": "4fd164e3d84c3f07",
+      "requiredFamilyCandidates": [
+        "multiple faces or missing Oracle text"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Liliana, the Last Hope",
+      "questionId": "27c29e96c05cfa06",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Maskwood Nexus",
+      "questionId": "8ed64f54098864bd",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 2
+    },
+    {
+      "card": "Nectar Faerie",
+      "questionId": "465defccb1942490",
+      "requiredFamilyCandidates": [
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Notorious Throng",
+      "questionId": "99a99a96acc08209",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Oona's Blackguard",
+      "questionId": "b765ba475906e98f",
+      "requiredFamilyCandidates": [
+        "counters",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Oona, Queen of the Fae",
+      "questionId": "40ed90a5f51d0d12",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "token creation and copying",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Orcrist, Goblin-cleaver",
+      "questionId": "9fdbc408f928eacf",
+      "requiredFamilyCandidates": [
+        "attachments and roles",
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Peppersmoke",
+      "questionId": "df5bce1855dfa004",
+      "requiredFamilyCandidates": [
+        "draw and library operations"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Scion of Oona",
+      "questionId": "baa63ae7a4575459",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Shadow Puppeteers",
+      "questionId": "cd9db9d968f3c5f6",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Sower of Temptation",
+      "questionId": "d6386363563c17ce",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Spell Stutter",
+      "questionId": "24235845747629a0",
+      "requiredFamilyCandidates": [
+        "counters"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Sprite Noble",
+      "questionId": "a355cad84ab278b0",
+      "requiredFamilyCandidates": [
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Starscape Cleric",
+      "questionId": "9edadb8d3acf2e33",
+      "requiredFamilyCandidates": [
+        "lifegain",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Stonecoil Serpent",
+      "questionId": "9f0200a1d0155726",
+      "requiredFamilyCandidates": [
+        "counters"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Tainted Remedy",
+      "questionId": "9facf0fe9599ced3",
+      "requiredFamilyCandidates": [
+        "replacement effects",
+        "lifegain"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Talion, the Kindly Lord",
+      "questionId": "2442dec046e72b5d",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "cast triggers"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Team Pennant",
+      "questionId": "79e5c7715557ed47",
+      "requiredFamilyCandidates": [
+        "attachments and roles"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Tegwyll's Scouring",
+      "questionId": "b4f4a9e3b1b97a65",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Tegwyll, Duke of Splendor",
+      "questionId": "7795c3771994d347",
+      "requiredFamilyCandidates": [
+        "draw and library operations"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "The Book of Vile Darkness",
+      "questionId": "fd59ff29e5d4a6cf",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Urborg, Tomb of Yawgmoth",
+      "questionId": "b97f8c409b0480ce",
+      "requiredFamilyCandidates": [
+        "mana and land rules"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Vito, Thorn of the Dusk Rose",
+      "questionId": "b855bffbc7d999a8",
+      "requiredFamilyCandidates": [
+        "lifegain",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Ankle Shanker",
+      "questionId": "9209e8b838b9e35d",
+      "requiredFamilyCandidates": [
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Austere Command",
+      "questionId": "4c344b08d350984b",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Beloved Princess",
+      "questionId": "47d5c1ec69b5c5a8",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Blood Money",
+      "questionId": "c74367899c103e51",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Blood Moon",
+      "questionId": "d73dcdf53af44fcb",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Boggart Birth Rite",
+      "questionId": "a6450751d3b4b53d",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Caterwauling Boggart",
+      "questionId": "22a932761099fbf8",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Chained to the Rocks",
+      "questionId": "d20678c37bc22b91",
+      "requiredFamilyCandidates": [
+        "attachments and roles",
+        "targeted removal and return"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Chivalric Alliance",
+      "questionId": "9fa49d992a0c9c67",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "token creation and copying",
+        "combat restrictions and triggers",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Chromatic Orrery",
+      "questionId": "da766fbc72edff82",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "mana and land rules",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Cloudshift",
+      "questionId": "99f97d118107c034",
+      "requiredFamilyCandidates": [
+        "targeted removal and return"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Coat of Arms",
+      "questionId": "8361caf51966dd93",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 2
+    },
+    {
+      "card": "Divine Visitation",
+      "questionId": "17f6c8e897dc8ef2",
+      "requiredFamilyCandidates": [
+        "replacement effects"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Ethereal Absolution",
+      "questionId": "df57a9b342bc7d20",
+      "requiredFamilyCandidates": [
+        "targeted removal and return",
+        "token creation and copying",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Goblin Arsonist",
+      "questionId": "9add4e9efded74d2",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Goblin Assault",
+      "questionId": "9638bb7ca3230e6b",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Goblin King",
+      "questionId": "dcf723a9d26fa3ba",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Goblin Lackey",
+      "questionId": "3ee83a73d962e41f",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Goblin Rabblemaster",
+      "questionId": "28518fc499ce4271",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Goblin Sledder",
+      "questionId": "396ac94ddfffffd1",
+      "requiredFamilyCandidates": [
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 4,
+      "copies": 1
+    },
+    {
+      "card": "Knucklebone Witch",
+      "questionId": "0d7ae2c153486e02",
+      "requiredFamilyCandidates": [
+        "counters"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Krenko, Mob Boss",
+      "questionId": "84e632cfc8a52f8d",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Legion Warboss",
+      "questionId": "480ce1cda4b1f0f7",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Mad Auntie",
+      "questionId": "52e85c5d0f8dee50",
+      "requiredFamilyCandidates": [
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Mardu Ascendancy",
+      "questionId": "796b0622bb98d6ed",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "combat restrictions and triggers",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Mauhúr, Uruk-hai Captain",
+      "questionId": "7c3c174bef03c048",
+      "requiredFamilyCandidates": [
+        "replacement effects",
+        "counters"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Orcish Siegemaster",
+      "questionId": "5f2ed940d6eb6d4e",
+      "requiredFamilyCandidates": [
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Rally the Ranks",
+      "questionId": "04ad8aa2a1cdc2d4",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 4,
+      "copies": 1
+    },
+    {
+      "card": "Rundvelt Hordemaster",
+      "questionId": "5bdc7c8687049705",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "cast triggers"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Skirk Prospector",
+      "questionId": "6d7117d8aae4ab42",
+      "requiredFamilyCandidates": [
+        "mana and land rules",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Uglúk of the White Hand",
+      "questionId": "483954f8b760e32c",
+      "requiredFamilyCandidates": [
+        "replacement effects",
+        "counters"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Warren Instigator",
+      "questionId": "ad87db036b04bc83",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Wort, Boggart Auntie",
+      "questionId": "c40753c3dfe3319f",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Chatterfang, Squirrel General",
+      "questionId": "4beeb924ea691cb3",
+      "requiredFamilyCandidates": [
+        "replacement effects",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 10,
+      "copies": 1
+    },
+    {
+      "card": "Academy Manufactor",
+      "questionId": "49162925d0927812",
+      "requiredFamilyCandidates": [
+        "replacement effects",
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Adaptive Automaton",
+      "questionId": "0acb16c2fb094faa",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Alpha Status",
+      "questionId": "4b4bd5b17d95aee2",
+      "requiredFamilyCandidates": [
+        "attachments and roles"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Animal Friend",
+      "questionId": "3a3a1f21cd9c05c5",
+      "requiredFamilyCandidates": [
+        "counters",
+        "attachments and roles",
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Blasting Station",
+      "questionId": "61ddeed744c58ebd",
+      "requiredFamilyCandidates": [
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Bloodline Pretender",
+      "questionId": "df3b38a726aae677",
+      "requiredFamilyCandidates": [
+        "counters"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Broodhatch Nantuko",
+      "questionId": "778b1ebbf60ca85b",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Bushy Bodyguard",
+      "questionId": "f9f82fc204ad4170",
+      "requiredFamilyCandidates": [
+        "counters"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Camellia, the Seedmiser",
+      "questionId": "e119870cf7d9068d",
+      "requiredFamilyCandidates": [
+        "counters",
+        "token creation and copying",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Chatter of the Squirrel",
+      "questionId": "ebc900ef4c8ef82a",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Chitterspitter",
+      "questionId": "63685f3c9d1e37ef",
+      "requiredFamilyCandidates": [
+        "counters",
+        "token creation and copying",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Cloakwood Hermit",
+      "questionId": "63216c00dfed9b37",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Darkbore Pathway // Slitherbore Pathway",
+      "questionId": "30b77d53ab4fa7eb",
+      "requiredFamilyCandidates": [
+        "multiple faces or missing Oracle text"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Deep Forest Hermit",
+      "questionId": "4a1fd0fed4b3fabf",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Deranged Hermit",
+      "questionId": "13dd297f49a1e26c",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Dreampod Druid",
+      "questionId": "dea42d22a4993d9a",
+      "requiredFamilyCandidates": [
+        "attachments and roles",
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Druid's Call",
+      "questionId": "ebc5700b828b4bed",
+      "requiredFamilyCandidates": [
+        "attachments and roles"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Experimental Confectioner",
+      "questionId": "6bbc71fc4bf3c11b",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Guardian Gladewalker",
+      "questionId": "efdeafe38e018d14",
+      "requiredFamilyCandidates": [
+        "counters"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Hazel of the Rootbloom",
+      "questionId": "21912a90d1ed8529",
+      "requiredFamilyCandidates": [
+        "replacement effects",
+        "token creation and copying",
+        "mana and land rules",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Herald's Horn",
+      "questionId": "a750ec0026d5d59a",
+      "requiredFamilyCandidates": [
+        "cost changes",
+        "draw and library operations"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Herd Baloth",
+      "questionId": "177c952486ffd788",
+      "requiredFamilyCandidates": [
+        "counters",
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Honored Dreyleader",
+      "questionId": "aa09a8ee6aa1dd55",
+      "requiredFamilyCandidates": [
+        "counters"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Hornet Nest",
+      "questionId": "14c4a7d0b395319b",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Icon of Ancestry",
+      "questionId": "e343d11b22c13065",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Instruments of War",
+      "questionId": "86987af2c977f65b",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Ivy Lane Denizen",
+      "questionId": "818eeb31e51cda59",
+      "requiredFamilyCandidates": [
+        "counters"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Kami of Whispered Hopes",
+      "questionId": "41976c14e2e2cc5f",
+      "requiredFamilyCandidates": [
+        "replacement effects",
+        "counters",
+        "mana and land rules",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Metallic Mimic",
+      "questionId": "da655e4ee22b526f",
+      "requiredFamilyCandidates": [
+        "counters"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Mycoloth",
+      "questionId": "6b0b91b6e02042f8",
+      "requiredFamilyCandidates": [
+        "counters",
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Nuka-Cola Vending Machine",
+      "questionId": "d2f90202e94a805e",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Nut Collector",
+      "questionId": "57fa73a8d746f1df",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Oran-Rief, the Vastwood",
+      "questionId": "0118eedf5aa99105",
+      "requiredFamilyCandidates": [
+        "counters",
+        "mana and land rules",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Peregrin Took",
+      "questionId": "f50302a4cd879a41",
+      "requiredFamilyCandidates": [
+        "replacement effects",
+        "draw and library operations",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Pitiless Plunderer",
+      "questionId": "e117c55b1fb95339",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Ravenous Squirrel",
+      "questionId": "c0f68ecb87dbab5e",
+      "requiredFamilyCandidates": [
+        "counters",
+        "lifegain",
+        "draw and library operations",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Scurry Oak",
+      "questionId": "56b49efd947f2ff0",
+      "requiredFamilyCandidates": [
+        "counters",
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Sporeweb Weaver",
+      "questionId": "45ec2eadfe4d6f33",
+      "requiredFamilyCandidates": [
+        "lifegain",
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Squirrel Nest",
+      "questionId": "097d71e7d8c0d554",
+      "requiredFamilyCandidates": [
+        "attachments and roles",
+        "token creation and copying",
+        "mana and land rules",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Squirrel Sanctuary",
+      "questionId": "dea0cf96523366d0",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "The Mycotyrant",
+      "questionId": "e66c2e3068892e75",
+      "requiredFamilyCandidates": [
+        "token creation and copying",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Thornvault Forager",
+      "questionId": "dfe57f66fd97ecea",
+      "requiredFamilyCandidates": [
+        "draw and library operations",
+        "mana and land rules",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Tribute to the World Tree",
+      "questionId": "d8d0fda5f25960bb",
+      "requiredFamilyCandidates": [
+        "counters",
+        "draw and library operations"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Twitching Doll",
+      "questionId": "24b833a054d3ee04",
+      "requiredFamilyCandidates": [
+        "counters",
+        "token creation and copying",
+        "mana and land rules",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Umbral Mantle",
+      "questionId": "526db67cecccfd21",
+      "requiredFamilyCandidates": [
+        "attachments and roles",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Universal Automaton",
+      "questionId": "e99436945a207fe0",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 4,
+      "copies": 1
+    },
+    {
+      "card": "Urza's Incubator",
+      "questionId": "6a6d4fd23d561df8",
+      "requiredFamilyCandidates": [
+        "cost changes"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Valley Rotcaller",
+      "questionId": "cf2ff01569ca9902",
+      "requiredFamilyCandidates": [
+        "lifegain",
+        "combat restrictions and triggers"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    },
+    {
+      "card": "Verdant Command",
+      "questionId": "725751fe29b02add",
+      "requiredFamilyCandidates": [
+        "counters",
+        "lifegain",
+        "targeted removal and return"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Vinereap Mentor",
+      "questionId": "c7a9df574c7c7b57",
+      "requiredFamilyCandidates": [
+        "token creation and copying"
+      ],
+      "focal": false,
+      "encounters": 2,
+      "copies": 1
+    },
+    {
+      "card": "Wildwood Scourge",
+      "questionId": "0aab2e2b5bfb9b01",
+      "requiredFamilyCandidates": [
+        "counters"
+      ],
+      "focal": false,
+      "encounters": 0,
+      "copies": 1
+    },
+    {
+      "card": "Woodland Changeling",
+      "questionId": "9551a30c5b104083",
+      "requiredFamilyCandidates": [
+        "other unsupported language"
+      ],
+      "focal": false,
+      "encounters": 3,
+      "copies": 1
+    },
+    {
+      "card": "Ygra, Eater of All",
+      "questionId": "083da1f4c8be9c8f",
+      "requiredFamilyCandidates": [
+        "counters",
+        "lifegain",
+        "activated abilities"
+      ],
+      "focal": false,
+      "encounters": 1,
+      "copies": 1
+    }
+  ]
+}
