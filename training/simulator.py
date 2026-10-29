@@ -394,7 +394,7 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.kind == "x_spell" and card.x_effect in ("tokens","draw","life"):
                     continue
-                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","exile_creature_life","exile_creature_basic_land","destroy_all_creatures","destroy_toughness_4"):
+                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_artifact_creature_token","exile_creature_life","exile_creature_basic_land","destroy_all_creatures","destroy_toughness_4"):
                     continue
                 if self.diagnostic and card.blink:continue
                 if self.diagnostic and card.kind=="counter_spell" and card.counter_filter in ("any","creature","noncreature"):
@@ -859,14 +859,16 @@ class Simulator(AdvancedRules):
     def removal_targets(self,controller,source):
         """Only legal targets for an explicitly parsed targeted removal spell."""
         if source.removal in ('destroy','exile_creature_life','exile_creature_basic_land'):return self.creature_targets(controller,source)
-        if source.removal!='destroy_artifact_enchantment':return ()
+        if source.removal not in ('destroy_artifact_enchantment','destroy_artifact_creature_token'):return ()
         game=self.event_game('main')
         targets=[]
         for seat,player in enumerate(self.players):
             for item in player.battlefield:
                 types=set(item.card.printed_types)
                 if item.card.event_definition:types.update(item.card.event_definition.types)
-                if not types.intersection({'Artifact','Enchantment'}):continue
+                allowed={'Artifact','Enchantment'} if source.removal=='destroy_artifact_enchantment' else {'Artifact','Creature'}
+                if not types.intersection(allowed) and not (source.removal=='destroy_artifact_creature_token' and
+                        item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id])):continue
                 state=game.battlefield.get(item.card.id)
                 if state and seat!=controller and game.has(state,'hexproof'):continue
                 if state and game.protected(state,source.colors):continue
@@ -1099,6 +1101,23 @@ class Simulator(AdvancedRules):
                 return
             owner,item=target;game=self.event_game('main')
             state=game.battlefield.get(item.card.id)
+            if card.removal=='destroy_artifact_creature_token':
+                indestructible=bool(state and game.has(state,'indestructible'))
+                if indestructible:
+                    self.log('indestructible','Target cannot be destroyed, but the remaining spell instruction still resolves.',
+                             targetPermanent=item.card.id)
+                else:
+                    self.destroy_batch(((owner,item),),card)
+                if card.token_definition is None or card.token_count<1:
+                    raise RuntimeError('Missing replacement token characteristics')
+                d=card.token_definition
+                spec=dict(amount=card.token_count,power=d.power,toughness=d.toughness,
+                          subtypes=sorted(d.subtypes),colors=sorted(d.colors),
+                          keywords=sorted(d.abilities),tapped=card.token_tapped)
+                self._resolve_entry_effects([dict(operation='create_tokens',
+                    effect='the target controller creates creature tokens',
+                    source=card.id,controller=owner,name=card.name,tokenSpec=spec)],card)
+                return
             if card.removal=='exile_creature_basic_land':
                 self.send_to_destination(self.players[owner],item,snapshot=game,to_exile=True)
                 self.log('exile',f'{card.name} exiles {item.card.name}.',
@@ -2168,6 +2187,18 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             and rule_text(definition.get('oracleText',''))=='Exile target creature. Its controller gains life equal to its power.'
             and rules.query('cost',cost)['supported']):
         parsed={'kind':'removal_spell','removal':'exile_creature_life'}
+    ox= re.fullmatch(r'Destroy target (artifact or creature|creature or artifact)\. Its controller creates (.+)\.',destruction)
+    if parsed['kind']=='unsupported' and ox and definition.get('types') in (['Instant'],['Sorcery']) and rules.query('cost',cost)['supported']:
+        spec=parse_token_creation('Create '+ox[2]+'.')
+        if spec is not None:
+            template=EventDefinition(' '.join(spec.subtypes),
+                frozenset({'Creature'}|({'Land'} if spec.land else set())|
+                          ({'Enchantment'} if spec.enchantment else set())),
+                frozenset(spec.subtypes),False,spec.power,spec.toughness,
+                spec.keywords,colors=frozenset(spec.colors))
+            parsed={'kind':'removal_spell','removal':'destroy_artifact_creature_token',
+                    'token_count':spec.amount,'token_definition':template,
+                    'token_tapped':spec.tapped}
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
             and rule_text(definition.get('oracleText',''))=='Destroy target artifact or enchantment.'
             and rules.query('cost',cost)['supported']):
