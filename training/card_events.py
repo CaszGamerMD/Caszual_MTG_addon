@@ -106,6 +106,7 @@ class Definition:
     life_addition: int = 0
     cost_reductions: tuple = ()
     counter_replacements: tuple = ()
+    token_replacements: tuple = ()
     upkeep_attachment_counters: int = 0
     entry_attachment_counters: int = 0
     double_attachment_counters_upkeep: bool = False
@@ -145,7 +146,7 @@ def parse_card(card: dict) -> Definition:
             life_multiplier=program.life_multiplier,
             opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
             life_addition=program.life_addition,cost_reductions=program.cost_reductions,
-            counter_replacements=program.counter_replacements,
+            counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
             upkeep_attachment_counters=enchantments.upkeep_attachment_counters,
             entry_attachment_counters=enchantments.entry_attachment_counters,
             double_attachment_counters_upkeep=enchantments.double_attachment_counters_upkeep)
@@ -183,7 +184,7 @@ def parse_card(card: dict) -> Definition:
                           activations=program.activations,devotion=program.devotion,life_multiplier=program.life_multiplier,
                           opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
                           life_addition=program.life_addition,cost_reductions=program.cost_reductions,
-                          counter_replacements=program.counter_replacements)
+                          counter_replacements=program.counter_replacements,token_replacements=program.token_replacements)
     attack_text=text.replace(name,'this creature') if name else text
     if ',' in name:
         short=name.split(',')[0]
@@ -579,20 +580,43 @@ class Game:
             equipment.attachment_at=self.timestamp()
         self.emit("equip", equipment=equipment_id, target=creature_id, mana=2)
 
-    def counter_amount(self, target_id: str, amount: int) -> int:
-        """Apply supported +1/+1 counter replacements to a positive event.
+    def token_amount(self, controller: int, amount: int, *, by_effect: bool = True) -> int:
+        """Apply token replacements to one positive token-creation event.
 
-        The affected controller chooses the legal maximal result here:
-        additive effects before doubling effects. A separate choice policy
-        may select another ordering later.
+        The number is calculated once per event before tokens are created.
+        Doubling Season is effect-only and controller-scoped; Primal Vigor
+        applies regardless of which player would create the tokens.
+        """
+        if amount<=0:return max(0,amount)
+        for source in self.battlefield.values():
+            for kind,value,scope,condition in source.definition.token_replacements:
+                if scope=='controlled' and source.controller!=controller:continue
+                if condition=='effect' and not by_effect:continue
+                if kind!='double':raise NeedsRules('Unknown token replacement')
+                amount*=value
+        return amount
+
+    def counter_amount(self, target_id: str, amount: int, *,
+                       counter_type: str = '+1/+1', by_effect: bool = True) -> int:
+        """Apply counters replacement effects to a single counter-placement event.
+
+        +1/+1 counters and all-counter permanent effects have different
+        scopes. Additional counters apply before doubling in the diagnostic
+        policy; an agent can later choose another legal ordering.
         """
         if amount<=0:return max(0,amount)
         target=self.battlefield[target_id]
-        if not self.creature(target):return amount
+        creature=self.creature(target)
         additions=[];multipliers=[]
         for source in self.battlefield.values():
-            for kind,value,scope in source.definition.counter_replacements:
-                if scope!='controlled_creature' or source.controller!=target.controller:continue
+            for replacement in source.definition.counter_replacements:
+                kind,value,scope=replacement[:3]
+                condition=replacement[3] if len(replacement)>3 else 'any'
+                if condition=='effect' and not by_effect:continue
+                if scope in ('controlled_creature','controlled_permanent') and source.controller!=target.controller:continue
+                if scope in ('controlled_creature','any_creature') and not creature:continue
+                if scope!='controlled_permanent' and counter_type!='+1/+1':continue
+                if kind not in ('plus','double'):raise NeedsRules('Unknown counter replacement')
                 (additions if kind=='plus' else multipliers).append(value)
         for value in additions:amount+=value
         for value in multipliers:amount*=value
