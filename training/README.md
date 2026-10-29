@@ -1,3 +1,38 @@
+## Optional basic-land search after exile; per-token triggers
+
+Path to Exile now has a strict complete-text interpretation for
+`Exile target creature. Its controller may search their library for a
+basic land card, put that card onto the battlefield tapped, then shuffle.`
+Target legality is checked at casting and resolution; exiling does not count
+as destroying or dying and works on indestructible creatures. The **target
+creature's controller** chooses whether to search, independent of who cast the
+spell. The default diagnostic policy searches if a basic is available; it can
+be overridden by a future agent decision policy. An accepted search uses
+the affected player's **private** library, chooses a genuine basic land,
+places it tapped without spending their land play, and shuffles that library
+deterministically. It can legally find nothing; a declined search does not
+shuffle. A target that has become illegal gets no exile or land search.
+`training/tests/test_exile_basic_search.py` covers these cases and fails
+closed on extra unknown instructions. This adds only the *specific* optional
+search instruction, not general library search/land tutoring.
+
+Mirkwood Bats introduces a reusable token-action trigger rule:
+`Whenever you create or sacrifice a token, each opponent loses N life.`
+Each **actual** token created (after doubling/replacement) independently
+triggers; each token sacrificed after paying a validated cost independently
+triggers. A destroyed or exiled token is **not** a sacrifice. The live
+battlefield sources are snapshotted at trigger time; their triggers resolve
+on the existing stack even if the source leaves. Normal created creature
+and Aura Role tokens use the shared event. An internal
+`sacrifice_token` helper executes a previously validated token-sacrifice
+cost, including creature-death triggers, but is **not a free player action**;
+legal sacrifice ability/cost grammars still need implementing. The diagnostic
+two-player backend models each opponent as the other seat and does not
+claim full multiplayer coverage. See
+`training/tests/test_token_action_triggers.py`.
+
+The experimental training rules still have not been migrated to Minecraft.
+
 ## Creature exile with last-known-power life gain
 
 The Swords to Plowshares Oracle-language pattern
