@@ -475,8 +475,13 @@ class Game:
                     result.append(event_data(trigger,watcher,spell))
         return result
 
-    def upkeep_triggers(self) -> list[dict]:
-        """One trigger per supported permanent controlled by the active player."""
+    def upkeep_triggers(self, land_counts=None) -> list[dict]:
+        """One trigger per eligible controlled permanent at upkeep start.
+
+        Lands represented by the simulator's separate mana-permanent layer
+        must be supplied by its controller, not inferred from this kernel.
+        """
+        land_counts=land_counts or {}
         triggers = []
         for p in self.battlefield.values():
             if p.controller != self.turn_player: continue
@@ -489,6 +494,9 @@ class Game:
                     source=p.id,name=p.definition.name,controller=p.controller))
             for trigger in p.definition.triggers:
                 if trigger.event == "upkeep":
+                    if (trigger.lands_controlled_at_least and
+                            land_counts.get(p.controller,0)<trigger.lands_controlled_at_least):
+                        continue
                     triggers.append(event_data(trigger,p,p))
         return triggers
 
