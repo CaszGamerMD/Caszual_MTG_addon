@@ -134,10 +134,21 @@ class AdvancedRules:
           and other.controller!=state.controller for other in g.battlefield.values()):
     return True
   return False
+ def blocker_power_forbidden(self,attacker,blocker,game=None):
+  g=game or self.event_game('combat')
+  a=g.battlefield.get(attacker.card.id);b=g.battlefield.get(blocker.card.id)
+  if a is None or b is None:return False
+  blocker_power=g.stats(b)[0]
+  for ability in a.definition.abilities:
+   if not ability.startswith('block_power_below_'):continue
+   limit=int(ability.removeprefix('block_power_below_'))
+   if blocker_power>=limit and g.has(a,ability):return True
+  return False
  def can_block(self,attacker,blocker):
   g=self.event_game('combat');a=g.battlefield.get(attacker.card.id);b=g.battlefield.get(blocker.card.id)
   return bool(a and b and g.creature(a) and g.creature(b) and not blocker.tapped
    and not self.landwalk_unblockable(attacker,g)
+   and not self.blocker_power_forbidden(attacker,blocker,g)
    and (not g.has(a,'flying') or g.has(b,'flying') or g.has(b,'reach'))
    and not g.protected(a,b.definition.colors))
  def attackable(self,seat):

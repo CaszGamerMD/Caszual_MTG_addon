@@ -343,6 +343,13 @@ def compile_abilities(text, name=''):
             spec=parse_token_creation(activated[2])
             if not spec or all(part=='0' for part in re.findall(r'\{([^}]+)\}',activated[1])):return None
             activations.append((activated[1],spec));continue
+        blocking_limit=re.fullmatch(
+            r"This creature can't be blocked by creatures with power ([1-9][0-9]*) or greater\.",
+            line)
+        if blocking_limit:
+            # This marker has no meaning outside block declaration. Its
+            # numeric threshold is tested against current blocker power.
+            keywords.add('block_power_below_'+blocking_limit[1]);continue
         words=[w.strip().lower() for w in line.split(',')]
         if all(w in KEYWORDS for w in words):
             keywords.update(words); continue

@@ -197,3 +197,18 @@ both grants, so later targets become legal. This remains the
 diagnostic rules subset, not blanket support for all target kinds.
 
 Regression: `training/tests/test_shroud_grants.py`.
+
+
+## Blocker-power evasion (2026-10-29)
+
+Full-text “This creature can't be blocked by creatures with power N or
+greater” now compiles as a numeric block-declaration restriction.
+The existing group-combat legality routine compares the defender's
+**current** power at declaration, including active buffs and debuffs,
+not printed power. It updates the agent's block options and rejects
+illegal manual assignments. Beloved Princess is the real-deck fixture;
+unfamiliar card names and different thresholds use the same grammar.
+
+This is deliberately limited to power-threshold blocking; it is not
+protection, hexproof, shroud, or an arbitrary evasion parser. Focused
+tests: `training/tests/test_blocker_power.py`.
