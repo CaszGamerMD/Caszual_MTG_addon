@@ -1,3 +1,51 @@
+## Further generic parsing: optional search, upkeep and end-step rules
+
+The strict Oracle parser now recognizes three further reusable trigger patterns.
+All are represented as normal priority-stack events and must consume their
+entire Oracle instructions; unrecognized extra clauses fail closed.
+
+- **Opponent basic-land ETB search**: `When this creature enters, each opponent
+  may search their library for a basic land card, put it onto the battlefield
+  tapped, then shuffle.` The opponent chooses whether to search; the active
+  library stays private. Accepted searches put a real basic land onto the
+  battlefield tapped without using a land play and shuffle even if the
+  player finds nothing. The ability can resolve if its source leaves.
+  This supports Old-Growth Dryads and is tested in
+  `training/tests/test_opponent_basic_entry.py`.
+- **Optional subtype tutor to hand**: `When this creature enters, you may
+  search your library for a [subtype] card, reveal that card, put it into
+  your hand, then shuffle.` Subtypes are compared to printed and parsed
+  creature/card subtypes, not the card's name. A successful search moves
+  the selected physical card from the controller's own library into
+  their hand, reveals it and shuffles; declining neither searches nor
+  shuffles. This supports Goblin Matron and other wording equivalents.
+  See `training/tests/test_subtype_tutor.py`.
+- **Optional token creation**: `At the beginning of your upkeep, you may
+  create ...` now includes a choice at trigger resolution. When accepted,
+  the complete token specification goes through replacement effects,
+  enters and token-action triggers. The Creakwood Liege example combines
+  this with independent black and green static anthems, each affecting the
+  actual created Worms. See `training/tests/test_optional_upkeep_tokens.py`.
+- **Land-count intervening-if upkeep**: `At the beginning of your upkeep,
+  if you control N or more lands, create ...` checks the land threshold
+  both when the ability would trigger and again when it resolves.
+  Lands from the simulator's separate mana-battlefield representation are
+  included, without counting tapped nonland artifacts. This handles
+  Dragonmaster Outcast and combines with token doublers. See
+  `training/tests/test_land_threshold_upkeep.py`.
+- **Tapped-creature end-step life loss**: `At the beginning of your end
+  step, each opponent loses life equal to the number of tapped creatures
+  you control.` counts only controlled *creatures*, using their tapped
+  status at trigger resolution rather than at trigger time. This handles
+  Throne of the God-Pharaoh with the ordinary once-per-end-step stack
+  rules. See `training/tests/test_tapped_end_step.py`.
+
+These are **two-player diagnostic rules**, not multiplayer certification.
+The default optional-search/token decisions are deterministic prototype
+policies, not an oracle for perfect play. The full card coverage audit must
+be rerun after these changes before claiming updated totals.
+No Minecraft migration has taken place.
+
 ## Token-leaves battlefield events
 
 Nadier's Nightblade now compiles its full Oracle wording as a token-leaves
