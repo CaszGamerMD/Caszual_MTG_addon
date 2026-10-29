@@ -87,7 +87,7 @@ class MatchTheaterChecks(unittest.TestCase):
             html=dest.with_suffix(".html").read_text(encoding="utf-8")
             self.assertNotIn("</script><script>alert",html)
             self.assertIn("\\u003c/script>",html)
-            self.assertIn("/*EMBEDDED_REPLAY*/",html)
+            self.assertNotIn("/*EMBEDDED_REPLAY*/null",html)
             self.assertIn("let data=",html)
 
     def test_viewer_script_syntax_is_valid_if_node_is_available(self):
