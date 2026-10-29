@@ -30,7 +30,7 @@ class LandwalkLordChecks(unittest.TestCase):
 
     def prepare(self):
         sim,cards=self.fixture(['Goblin King'])
-        lord=next(p for p in sim.players[0].battlefield if p.card.id==cards['Goblin King'].id)
+        lord=self.put(sim,cards['Goblin King'])
         friend=self.token(sim,'friendly',subtypes=('Goblin',),power=2,toughness=2)
         opponent=self.token(sim,'enemy',seat=1,subtypes=('Goblin',),power=2,toughness=2)
         blocker=self.token(sim,'blocker',seat=1,power=2,toughness=2)
