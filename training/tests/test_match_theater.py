@@ -1,0 +1,102 @@
+"""Regression checks for the offline match-theater viewer and compact public replay."""
+import json
+import re
+import shutil
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+import sys
+HERE = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(HERE))
+import simulator as s
+
+
+class MatchTheaterChecks(unittest.TestCase):
+    def test_public_stack_priority_exile_mana_survive_replay_packing(self):
+        card = dict(id="c-1", name="Unknown scout", kind="creature",
+                    power=2, toughness=3, traits="2;3;flying", tapped=True, fresh=False,
+                    counters=1, isCreature=True, attachedTo=None, wardCosts=[])
+        p0 = dict(seat=0, life=38, handCount=3, libraryCount=42, manaPool=[0, 1, 0, 0, 0, 2],
+                  battlefield=[card], graveyard=[dict(id="g-1",name="Lost spell")],
+                  exile=[dict(id="x-1",name="Exiled spell")],commanderInZone=True,
+                  commanderDamage={"enemy":4})
+        p1 = dict(seat=1, life=31, handCount=5, libraryCount=47, manaPool=[0]*6,
+                  battlefield=[], graveyard=[],exile=[],commanderInZone=False,commanderDamage={})
+        state=dict(active=0,turn=4,phase="main",priority=1,
+                   stack=[dict(id=3,controller=0,label="Unknown scout"),
+                          dict(id=4,controller=1,label="Responding spell")],
+                   players=[p0,p1])
+        report=dict(schemaVersion=1,kind="turn-replay",events=[
+            dict(index=0,turn=4,phase="main",actor=0,kind="stack_push",
+                 message="A spell goes on the stack.",details={},state=state)])
+        packed=s.pack_replay(report)
+        self.assertEqual(packed["packedReplay"],1)
+        self.assertEqual(len(packed["compactEvents"]),1)
+        event=packed["compactEvents"][0]
+        self.assertEqual(event[7][4],state["stack"])
+        self.assertEqual(event[7][5],1)
+        self.assertEqual(event[7][3][0][8],p0["manaPool"])
+        self.assertEqual(len(event[7][3][0][7]),1)
+        self.assertEqual(packed["cardCatalog"][event[7][3][0][7][0]]["name"],"Exiled spell")
+        self.assertEqual(packed["cardCatalog"][event[7][3][0][3][0][0]]["name"],"Unknown scout")
+        self.assertTrue(event[7][3][0][3][0][1])
+        self.assertEqual(event[7][3][0][3][0][7],1)
+        # Hidden hand identities and library order must not be serialized.
+        self.assertNotIn("hand", event[7][3][0])
+        self.assertNotIn("handCards", json.dumps(packed))
+        self.assertEqual(s.pack_replay(report),packed)
+
+    def test_original_viewer_uses_only_local_css_and_javascript(self):
+        html=(HERE/"viewer.html").read_text(encoding="utf-8")
+        self.assertEqual(html.count("/*EMBEDDED_REPLAY*/null"),1)
+        self.assertEqual(html.count("<script>"),1)
+        self.assertNotRegex(html,r"<script[^>]+src=")
+        self.assertNotRegex(html,r"<link[^>]+href=")
+        for required in ("class=\"arena\"","id=\"stack\"","id=\"speed\"",
+                         "id=\"highlights\"","id=\"slider\"","id=\"questionList\"",
+                         "function unpack(value)","function showZones(seat)",
+                         "function renderPhase(phase)"):
+            self.assertIn(required,html)
+        self.assertIn("p[7]||[]",html)
+        self.assertIn("p[8]||[]",html)
+
+    def test_embedded_real_deck_sample_has_actual_nonempty_replay(self):
+        text=(HERE/"examples/match-theater-real-decks.html").read_text(encoding="utf-8")
+        self.assertNotIn("/*EMBEDDED_REPLAY*/null",text)
+        start=text.index("let data=")+len("let data=")
+        end=text.index(";\nlet position=",start)
+        report=json.loads(text[start:end])
+        self.assertEqual(report["schemaVersion"],1)
+        self.assertEqual(report["kind"],"turn-replay")
+        self.assertTrue(report.get("packedReplay")==1)
+        self.assertGreater(len(report.get("compactEvents",[])),20)
+        self.assertEqual(len(report["deckNames"]),2)
+        self.assertEqual(report["learningEligible"],False)
+        self.assertNotRegex(text,r"<script[^>]+src=")
+
+    def test_html_export_still_embeds_without_script_injection(self):
+        report=dict(schemaVersion=1,kind="rules-review",
+                    notice="Cards: </script><script>alert('x')</script>",
+                    status="blocked",questions=[dict(id="unknown",card="<danger>",
+                                                     question="What happens?",answer=None)])
+        with tempfile.TemporaryDirectory() as td:
+            dest=Path(td)/"review.json"
+            s.export_review(dest,report)
+            html=dest.with_suffix(".html").read_text(encoding="utf-8")
+            self.assertNotIn("</script><script>alert",html)
+            self.assertIn("\\u003c/script>",html)
+            self.assertIn("/*EMBEDDED_REPLAY*/",html)
+            self.assertIn("let data=",html)
+
+    def test_viewer_script_syntax_is_valid_if_node_is_available(self):
+        node=shutil.which("node")
+        if node is None:self.skipTest("Node.js unavailable")
+        html=(HERE/"viewer.html").read_text(encoding="utf-8")
+        script=html.split("<script>",1)[1].split("</script>",1)[0]
+        with tempfile.TemporaryDirectory() as td:
+            path=Path(td)/"viewer.js"
+            path.write_text(script,encoding="utf-8")
+            result=subprocess.run([node,"--check",str(path)],capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stderr)
