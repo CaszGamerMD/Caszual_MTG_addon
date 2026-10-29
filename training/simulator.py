@@ -903,9 +903,12 @@ class Simulator(AdvancedRules):
         if card.storm:
             self.log('storm',f'{card.name} creates {prior} spell copies.',copies=prior)
             for _ in range(prior):self.stack.push(seat,({'operation':'spell','controller':seat,'copy':True,'x':x},card),card.name+' copy')
+        # Casting is the event: place its abilities above the spell itself.
+        # Countering the spell later cannot undo a triggered ability.
+        cast_triggers=self.event_game('main').cast_triggers(card,seat)
         wards=self.target_triggers(frame,target)
-        if wards:
-            self.resolve_entry_triggers(wards,card,priority=seat)
+        if cast_triggers or wards:
+            self.resolve_entry_triggers(cast_triggers+wards,card,priority=seat)
         elif not self.manual_priority and not self._resolving_stack:
             self.drain_priority()
 
@@ -1006,6 +1009,11 @@ class Simulator(AdvancedRules):
         for event in triggers:
             if event.get('operation')=='create_role':
                 self.resolve_role(event)
+                continue
+            if event.get('operation')=='ordered_effects':
+                for part in event['steps']:
+                    self._resolve_entry_effects([{**event,**part}],card)
+                    if self.finished:return
                 continue
             if event.get('operation')=='draw_cards':
                 if event.get('optional') and not self.choose_optional_draw(event):continue
