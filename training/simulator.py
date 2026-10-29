@@ -2453,7 +2453,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     return_subtype=re.fullmatch(
         r'Return target ([A-Z][a-z]+) card from your graveyard to your hand\.',
         rule_text(definition.get('oracleText','')))
-    if parsed['kind']=='unsupported' and definition.get('types')==['Sorcery'] and return_subtype and rules.query('cost',cost)['supported']:
+    if (parsed['kind']=='unsupported' and 'Sorcery' in definition.get('types',[]) and return_subtype and rules.query('cost',cost)['supported']):
         parsed={'kind':'graveyard_return_spell','graveyard_return_subtype':return_subtype[1]}
     output=mana_pool.production(definition.get("oracleText", ""))
     if (parsed["kind"]=="unsupported" and definition.get("types")==["Artifact"]
