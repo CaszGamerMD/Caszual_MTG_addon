@@ -107,6 +107,7 @@ class Definition:
     cost_reductions: tuple = ()
     counter_replacements: tuple = ()
     token_replacements: tuple = ()
+    token_action_triggers: tuple = ()
     upkeep_attachment_counters: int = 0
     entry_attachment_counters: int = 0
     double_attachment_counters_upkeep: bool = False
@@ -147,6 +148,7 @@ def parse_card(card: dict) -> Definition:
             opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
             life_addition=program.life_addition,cost_reductions=program.cost_reductions,
             counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
+            token_action_triggers=program.token_action_triggers,
             upkeep_attachment_counters=enchantments.upkeep_attachment_counters,
             entry_attachment_counters=enchantments.entry_attachment_counters,
             double_attachment_counters_upkeep=enchantments.double_attachment_counters_upkeep)
@@ -184,7 +186,8 @@ def parse_card(card: dict) -> Definition:
                           activations=program.activations,devotion=program.devotion,life_multiplier=program.life_multiplier,
                           opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
                           life_addition=program.life_addition,cost_reductions=program.cost_reductions,
-                          counter_replacements=program.counter_replacements,token_replacements=program.token_replacements)
+                          counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
+                          token_action_triggers=program.token_action_triggers)
     attack_text=text.replace(name,'this creature') if name else text
     if ',' in name:
         short=name.split(',')[0]
@@ -579,6 +582,26 @@ class Game:
             equipment.attached_to = target.id
             equipment.attachment_at=self.timestamp()
         self.emit("equip", equipment=equipment_id, target=creature_id, mana=2)
+
+    def token_action_events(self, action: str, controller: int, count: int) -> list[dict]:
+        """A separate stack trigger for each token actually created or sacrificed.
+
+        Snapshot live sources now, so their queued abilities survive a later
+        departure from the battlefield. Mere token death/exile is not a
+        sacrifice, and replacement effects are counted before this event.
+        """
+        if action not in ('create','sacrifice') or count<=0:return []
+        result=[]
+        for source in self.battlefield.values():
+            if source.controller!=controller:continue
+            for watched,kind,amount in source.definition.token_action_triggers:
+                if watched!=action:continue
+                if kind!='opponent_loss':raise NeedsRules('Unsupported token-action trigger')
+                result.extend(dict(operation='lose_life',source=source.id,
+                    name=source.definition.name,controller=source.controller,amount=amount,
+                    effect='opponent loses life from token action',tokenAction=action)
+                    for _ in range(count))
+        return result
 
     def token_amount(self, controller: int, amount: int, *, by_effect: bool = True) -> int:
         """Apply token replacements to one positive token-creation event.
