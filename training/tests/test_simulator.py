@@ -153,13 +153,18 @@ class SimulatorChecks(unittest.TestCase):
         self.assertEqual(sim.players[1].life,0)
         self.assertFalse(any(e["kind"]=="trigger" and e["details"].get("dead") for e in sim.events))
 
-    def test_first_strike_death_timing_is_flagged_before_mutation(self):
-        sim,actual=self.death_fixture("1;1;first strike")
-        before=sim.state()
+    def test_first_strike_death_timing_uses_separate_steps(self):
+        sim,actual=self.death_fixture('1;1;first strike')
         self.resolve_fixture_combat(sim,actual)
-        self.assertEqual(sim.result,"blocked")
-        self.assertIn("separate damage steps",sim.questions[-1]["reason"])
-        self.assertEqual(before,sim.state())
+        self.assertEqual(sim.phase,'first_damage')
+        sim.step()
+        self.assertEqual(sim.phase,'regular_damage')
+        self.assertIn(actual[1][0],sim.players[1].graveyard)
+        self.assertTrue(any(p.card.is_token for p in sim.players[1].battlefield))
+        sim.step()
+        self.assertEqual(sim.phase,'second_main')
+        self.assertFalse(sim.questions)
+        sim.invariant()
 
     def test_real_deck_report_keeps_runtime_questions(self):
         decks=[json.loads((HERE/"decks"/name).read_text()) for name in

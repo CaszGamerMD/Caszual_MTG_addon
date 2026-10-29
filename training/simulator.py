@@ -211,6 +211,7 @@ class Permanent:
     saddled: bool = False
     animated: bool = False
     counters: int = 0
+    marked_damage: int = 0
     temporary_power: int = 0
     temporary_toughness: int = 0
     temporary_abilities: frozenset[str] = frozenset()
@@ -340,6 +341,7 @@ class Simulator:
         self.finished = False
         self.winner: int | None = None
         self.result = "running"
+        self.combat_context=None
         self.pending: str | None = None
         self.land_played = False
         self.main_return = ""
@@ -500,11 +502,11 @@ class Simulator:
         if not self.manual_priority and not self._resolving_stack:
             self.drain_priority()
 
-    def drain_priority(self):
+    def drain_priority(self,empty_window=False):
         if self._draining_priority: return
         self._draining_priority=True
         try:
-            while self.stack.items and not self.finished:
+            while (self.stack.items or empty_window) and not self.finished:
                 seat=self.stack.priority
                 observation=self.priority_observation(seat)
                 choice=self.policies[seat].choose(observation)
@@ -514,7 +516,8 @@ class Simulator:
                     'features':list(choice.features)})
                 self.log('priority_choice',choice.label,actor=seat,action=choice.kind,
                          cardId=choice.card_id,targetStack=choice.target_stack,targetPermanent=choice.target_permanent)
-                self.act_priority(seat,choice)
+                status=self.act_priority(seat,choice)
+                if status=='advance': break
         finally: self._draining_priority=False
 
     def pass_priority(self, actor):
@@ -719,6 +722,10 @@ class Simulator:
                 self.resolve_entry_triggers(pending,card)
                 if self.finished: return
                 continue
+            elif event.get('operation')=='self_counter':
+                source=next((item for player in self.players for item in player.battlefield if item.card.id==event['source']),None)
+                if source:source.counters+=event['amount']
+                message=f"{event['name']}: its surviving source receives a counter."
             elif event.get('operation')=='discard':
                 target=self.players[event['target']]
                 if target.hand:
@@ -759,6 +766,69 @@ class Simulator:
                      **{k:v for k,v in event.items() if k != "kind"})
             self.outcome()
             if self.finished: return
+
+    def strike_damage_step(self,first):
+        context=self.combat_context
+        def find(identifier):
+            return next((p for player in self.players for p in player.battlefield if p.card.id==identifier),None)
+        attacker=find(context['attacker']);blocker=find(context['blocker'])
+        a=self.effective_card(attacker) if attacker else None
+        b=self.effective_card(blocker) if blocker else None
+        def has(card,keyword):return card is not None and keyword in card.traits.split(';')[-1].split(',')
+        def eligible(card,identifier):
+            return card is not None and (identifier in context['early'] if first else identifier not in context['early'] or has(card,'double strike'))
+        hit_a=eligible(a,context['attacker']);hit_b=eligible(b,context['blocker'])
+        to_blocker=to_attacker=to_player=0
+        if hit_a:
+            power=max(0,a.power)
+            if b:
+                lethal=1 if has(a,'deathtouch') else max(0,b.toughness-blocker.marked_damage)
+                to_blocker=min(power,lethal) if has(a,'trample') else power
+                if has(a,'trample'):to_player=power-to_blocker
+            elif not context['blocked'] or has(a,'trample'):to_player=power
+        if hit_b and a:to_attacker=max(0,b.power)
+        if attacker:attacker.marked_damage+=to_attacker
+        if blocker:blocker.marked_damage+=to_blocker
+        active=self.players[self.active];defender=self.players[1-self.active]
+        if has(a,'lifelink'):active.life+=to_blocker+to_player
+        if has(b,'lifelink'):defender.life+=to_attacker
+        defender.life-=to_player
+        if attacker and attacker.card.id==active.commander_id and to_player:
+            defender.commander_damage[attacker.card.id]=defender.commander_damage.get(attacker.card.id,0)+to_player
+        game=self.event_game('combat');dead=[]
+        for player in self.players:
+            for item in player.battlefield:
+                effective=self.effective_card(item)
+                if effective is None:continue
+                touch=(item is attacker and to_attacker>0 and has(b,'deathtouch')) or (item is blocker and to_blocker>0 and has(a,'deathtouch'))
+                if effective.toughness<=0 or ((item.marked_damage>=effective.toughness or touch) and not game.has(game.battlefield[item.card.id],'indestructible')):
+                    dead.append(item)
+        triggers=game.death_triggers([item.card.id for item in dead])
+        if to_player and attacker:
+            from oracle_abilities import matches
+            for watcher in game.battlefield.values():
+                for trigger in watcher.definition.triggers:
+                    if trigger.event=='combat_damage' and matches(trigger.subject,watcher,game.battlefield[attacker.card.id],True):
+                        triggers.append(dict(operation='discard',effect='discard',controller=watcher.controller,name=watcher.definition.name,source=watcher.id,target=1-self.active))
+        if attacker and attacker.card.name=='Zurgo Helmsmasher' and blocker in dead and to_blocker>0:
+            triggers.append(dict(operation='self_counter',effect='add +1/+1 counter',amount=1,
+                                 source=attacker.card.id,name=attacker.card.name,controller=self.active))
+        for item in dead:
+            owner=next(player for player in self.players if item in player.battlefield)
+            self.send_to_destination(owner,item)
+        self.log('combat_damage_step','First-strike damage resolves.' if first else 'Regular damage resolves.',
+                 firstStrike=first,playerDamage=to_player,attackerDamage=to_attacker,blockerDamage=to_blocker,deaths=[item.card.id for item in dead])
+        self.outcome()
+        if not self.finished:
+            for trigger in triggers:
+                if trigger['effect']=='create tapped Squirrels':
+                    trigger.update(operation='create_tokens',tokenSpec=dict(amount=trigger['amount'],power=1,toughness=1,colors=['Green'],subtypes=['Squirrel'],keywords=[],tapped=True,land=False))
+            self.resolve_entry_triggers(triggers,attacker.card if attacker else Card('combat','Combat','spell'))
+        if not self.finished and not self.manual_priority:
+            self.stack.active=self.active;self.stack.priority=self.active
+            self.drain_priority(empty_window=True)
+        if first:self.phase='regular_damage'
+        else:self.phase='second_main';self.pending=None;self.combat_context=None
 
     def send_to_destination(self, player: Player, item: Permanent):
         for frame in self.stack.items:
@@ -1068,6 +1138,8 @@ class Simulator:
                             continue
                         self.log("trigger", f"{x.card.name}: {event['effect']}.",
                                  **{k:v for k,v in event.items() if k != "kind"})
+        elif self.phase in ('first_damage','regular_damage'):
+            self.strike_damage_step(self.phase=='first_damage')
         elif self.phase == "block":
             if not any(item.card.id==self.pending for item in p.battlefield):
                 self.pending=None;self.phase='second_main'
@@ -1086,6 +1158,12 @@ class Simulator:
             effective_attacker = self.effective_card(a)
             effective_blocker = self.effective_card(b) if b else None
             if effective_attacker is None: raise RuntimeError("Attacker is no longer a creature")
+            early={item.card.id for item,card in ((a,effective_attacker),(b,effective_blocker)) if item and card and any(k in card.traits.split(';')[-1].split(',') for k in ('first strike','double strike'))}
+            if early:
+                self.combat_context=dict(attacker=a.card.id,blocker=b.card.id if b else None,blocked=b is not None,early=early)
+                self.log('block',choice.label,actor=1-self.active,blocker=b.card.id if b else None)
+                self.phase='first_damage'
+                return True
             d = self.damage(effective_attacker, effective_blocker)
             dead_ids = ([a.card.id] if d["attackerDies"] else []) + ([b.card.id] if b and d["blockerDies"] else [])
             damage_triggers=[]
@@ -1097,13 +1175,6 @@ class Simulator:
                         if trigger.event=='combat_damage' and matches(trigger.subject,watcher,game.battlefield[a.card.id],True):
                             damage_triggers.append({'controller':watcher.controller,'name':watcher.definition.name,'source':watcher.id,'target':1-self.active})
             death_triggers = self.event_game("combat").death_triggers(dead_ids)
-            # The shared combat helper summarizes first/double-strike and regular
-            # damage in one result; it cannot interleave these death triggers.
-            # Stop rather than falsely treating the two damage steps as simultaneous.
-            traits = [effective_attacker.traits, effective_blocker.traits if effective_blocker else ""]
-            if (death_triggers or damage_triggers) and any("first strike" in t or "double strike" in t for t in traits):
-                self.pause("Death triggers between first-strike and regular combat damage need priority and separate damage steps.",a.card)
-                return False
             self.log("block", choice.label, actor=1-self.active,
                      blocker=b.card.id if b else None)
             p.life += d["gainA"]
@@ -1154,6 +1225,8 @@ class Simulator:
                 c = p.hand.pop()
                 p.graveyard.append(c)
                 self.log("discard", f"Player {self.active+1} discards {c.name}.", card=c.name)
+            for player in self.players:
+                for item in player.battlefield:item.marked_damage=0
             game = self.event_game("cleanup")
             game.cleanup()
             self.sync_events(game)
