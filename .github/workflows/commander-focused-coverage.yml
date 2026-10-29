@@ -1,0 +1,30 @@
+name: Focused Commander card coverage
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - 'training/**'
+      - '.github/workflows/commander-focused-coverage.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Count parsed cards and list focused unresolved card names
+        run: python training/diagnostic_coverage.py
+      - name: Publish focused coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: focused-diagnostic-coverage
+          path: training/reports/diagnostic-coverage.json
+          retention-days: 14
