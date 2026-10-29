@@ -1,0 +1,24 @@
+name: MTG training source snapshot
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - '.github/workflows/mtg-source-snapshot.yml'
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Export standalone rules sources for offline validation
+        uses: actions/upload-artifact@v4
+        with:
+          name: mtg-training-source
+          path: |
+            training/
+            src/main/java/dev/casz/caszualmtg/CommanderOracle.java
+            src/main/java/dev/casz/caszualmtg/CommanderMana.java
+            src/main/java/dev/casz/caszualmtg/CommanderSimpleCards.java
+            src/main/java/dev/casz/caszualmtg/CommanderSimpleSpells.java
+          retention-days: 1
