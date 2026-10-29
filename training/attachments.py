@@ -6,8 +6,12 @@ def parse(text,types,subtypes):
     mode='equipment' if 'Artifact' in types and 'Equipment' in subtypes else 'aura' if 'Enchantment' in types and 'Aura' in subtypes else ''
     if not mode:return None
     lines=text.splitlines();cost=None;abilities=set();power=toughness=0
+    restriction=''
     if mode=='aura':
-        if not lines or lines.pop(0)!='Enchant creature':return None
+        if not lines:return None
+        enchant=lines.pop(0)
+        if enchant not in ('Enchant creature','Enchant creature you control'):return None
+        restriction='controller' if enchant=='Enchant creature you control' else ''
     prefix='Equipped' if mode=='equipment' else 'Enchanted'
     for line in lines:
         line=line.strip()
@@ -26,7 +30,9 @@ def parse(text,types,subtypes):
         return None
     if not abilities and not power and not toughness:return None
     if mode=='equipment' and cost is None:return None
-    return mode,cost,frozenset(abilities),power,toughness
+    result=(mode,cost,frozenset(abilities),power,toughness)
+    # Optional sixth element preserves the legacy five-field attachment layout.
+    return result+(('controller',) if restriction else ())
 
 def parse_bestow(text,types):
     """Keyword-only enchantment creatures with fixed enchanted-creature grants."""

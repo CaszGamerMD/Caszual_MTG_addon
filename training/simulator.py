@@ -672,7 +672,12 @@ class Simulator(AdvancedRules):
                 for item in player.battlefield:
                     if item.card.kind not in ('aura','equipment') and not item.bestowed:continue
                     target=game.battlefield.get(item.attached_to)
-                    if target and game.creature(target) and not game.protected(target,item.card.colors):continue
+                    attachment=item.card.event_definition.attachment if item.card.event_definition else ()
+                    restriction=attachment[5] if len(attachment)>5 else ''
+                    legal=bool(target and game.creature(target) and not game.protected(target,item.card.colors)
+                               and (restriction!='controller' or
+                                    target.controller==game.battlefield[item.card.id].controller))
+                    if legal:continue
                     if item.bestowed:detached.append(item)
                     elif item.card.kind=='aura':invalid_auras.append((owner,item))
                     elif item.attached_to:detached.append(item)
@@ -889,7 +894,11 @@ class Simulator(AdvancedRules):
                      if item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id])
                      and not game.has(game.battlefield[item.card.id],'shroud')
                      and (controller is None or seat==controller or not game.has(game.battlefield[item.card.id],'hexproof'))
-                     and (source is None or not game.protected(game.battlefield[item.card.id],source.colors)))
+                     and (source is None or not game.protected(game.battlefield[item.card.id],source.colors))
+                     and (source is None or source.kind!='aura' or not source.event_definition
+                          or len(source.event_definition.attachment)<6
+                          or source.event_definition.attachment[5]!='controller'
+                          or game.battlefield[item.card.id].controller==controller))
 
     def damage_trigger_targets(self,event):
         """Legal any-target choices: players, creatures and planeswalkers in this sandbox."""
