@@ -173,6 +173,9 @@ def selector(text):
                     subtype='' if noun=='creature' else noun.split()[0])
 
 def effect(text):
+    tutor=re.fullmatch(r'you may search your library for a ([A-Z][a-z]+) card, reveal that card, put it into your hand, then shuffle\.',text)
+    if tutor:
+        return Effect('optional_subtype_search_hand',0,library_filter=('subtype',tutor[1]))
     if text=='each opponent may search their library for a basic land card, put it onto the battlefield tapped, then shuffle.':
         return Effect('opponent_optional_basic_search',0,'each opponent')
     gain=re.fullmatch(r'you gain ([1-9][0-9]*) life\.',text)
@@ -353,7 +356,8 @@ def event_data(trigger, source, subject):
             'damage':f'deal {e.amount} damage to each opponent','scry':'scry',
             'add_counters':f'put {e.amount} +1/+1 counters on each creature you control',
             'create_tokens':f'create {e.amount} creature tokens',
-            'opponent_optional_basic_search':'each opponent may find a tapped basic land and shuffle'}
+            'opponent_optional_basic_search':'each opponent may find a tapped basic land and shuffle',
+            'optional_subtype_search_hand':'controller may tutor a subtype card to hand and shuffle'}
     label='; then '.join(f'{part.operation} {part.amount}' for part in e.steps) if e.operation=='ordered_effects' else labels[e.operation]
     if e.controller_loss: label=f'controller loses {e.controller_loss} life; '+label
     if e.gain: label+=f'; controller gains {e.gain} life'
