@@ -1,3 +1,22 @@
+## Cast-trigger grammar (Sythis and unfamiliar matching cards)
+
+The Oracle compiler now recognizes `Whenever you cast a/an [type] spell, ...`
+for spell-type filters (any spell, creature, noncreature, artifact, enchantment,
+instant, sorcery and planeswalker). The event is checked against the **printed
+spell types** at the time of casting and against the trigger source's controller.
+Cards need not be identified by name. Trigger instances enter the existing
+priority stack above the spell and remain there if the spell is countered or
+the triggering permanent leaves. Trigger effects may compose supported ordered
+instructions such as `you gain 1 life and draw a card`; resolution and
+failed-draw checks occur in written order.
+
+`Sythis, Harvest's Hand` is the first imported regression example. The
+test suite also covers unknown names and rejects unknown trailing Oracle
+instructions rather than granting partial support. These are **diagnostic
+simulator rules**, not live golem behavior or a claim that other unresolved
+cards are playable. Complex cast restrictions, cost reduction, modal choices
+and unrecognized effect clauses remain unsupported.
+
 # Commander self-play deck intake
 
 ## Entry lifegain and combined anthem update
