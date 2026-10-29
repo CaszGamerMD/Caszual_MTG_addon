@@ -64,6 +64,14 @@ def main():
         data = report(rules, decks)
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    # Name-level blocker inventory for the two focused decks, emitted in CI
+    # so each remaining rule family can be resolved without guessing.
+    for item in data["decks"]:
+        if item["deckId"] in (5254666, 5189995):
+            print("FOCUSED_UNRESOLVED " + json.dumps({
+                "deckId":item["deckId"],"deck":item["deck"],
+                "unresolved":item["unsupportedCards"],"count":item["unsupported"]
+            },ensure_ascii=False))
     print(json.dumps({
         "kind": data["kind"], "uniqueUnsupportedNames": data["uniqueUnsupportedNames"],
         "decks": [{k: deck[k] for k in ("deckId","deck","cardCount","playable","unsupported","commanderPlayable")}
