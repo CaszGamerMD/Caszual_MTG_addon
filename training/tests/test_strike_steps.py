@@ -44,6 +44,24 @@ class StrikeChecks(unittest.TestCase):
   self.assertIn(instant,sim.players[1].graveyard)
   self.assertEqual(sim.players[1].life,42)
   self.assertEqual(sim.phase,'regular_damage');sim.invariant()
+ def test_deathtouch_trample_and_zero_power(self):
+  damage=self.rules.query('combat','5;5;deathtouch,trample','6;6;',40,40)
+  self.assertEqual(damage['damage'],4)
+  self.assertTrue(damage['blockerDies'])
+  zero=self.rules.query('combat','0;5;deathtouch,trample','6;6;',40,40)
+  self.assertEqual(zero['damage'],0);self.assertFalse(zero['blockerDies'])
+ def test_deathtouch_trample_double_strike_indestructible_marks(self):
+  from dataclasses import replace
+  sim,cards=self.fixture('5;5;double strike,deathtouch,trample')
+  blocker=sim.players[1].battlefield[0]
+  blocker.card=replace(blocker.card,event_definition=replace(blocker.card.event_definition,abilities=frozenset({'indestructible'})))
+  sim.step()
+  self.assertEqual(sim.players[1].life,36)
+  self.assertEqual(blocker.marked_damage,1)
+  sim.step()
+  self.assertEqual(sim.players[1].life,31)
+  self.assertIn(blocker,sim.players[1].battlefield)
+  sim.invariant()
  def test_damage_marks_persist_until_cleanup(self):
   sim,cards=self.fixture('1;5;double strike')
   # Make the blocker survive both damage steps.

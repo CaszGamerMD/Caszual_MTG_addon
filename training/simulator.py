@@ -782,7 +782,8 @@ class Simulator:
         if hit_a:
             power=max(0,a.power)
             if b:
-                lethal=1 if has(a,'deathtouch') else max(0,b.toughness-blocker.marked_damage)
+                lethal=max(0,b.toughness-blocker.marked_damage)
+                if has(a,'deathtouch') and lethal>0:lethal=1
                 to_blocker=min(power,lethal) if has(a,'trample') else power
                 if has(a,'trample'):to_player=power-to_blocker
             elif not context['blocked'] or has(a,'trample'):to_player=power

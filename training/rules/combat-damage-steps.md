@@ -11,3 +11,11 @@ Focused coverage includes: first-strike blocker death and token triggers before 
 Rules reference: Wizards glossary, first strike and double strike: https://magic.wizards.com/en/keyword-glossary and Comprehensive Rules 510.4.
 
 Validation: 141 tests pass, including an automatic instant response in an empty-stack damage window. All six pairings at seeds 1342–1347 reached ten turns per player without runtime questions; seed 1346 previously stopped after three turns per player on the first-strike question.
+
+## Deathtouch with trample
+
+For trample assignment, any positive amount assigned by a deathtouch source counts as lethal. A 5/5 with both abilities blocked by a 6/6 can assign one to the blocker and four to the defending player. Zero damage never destroys through deathtouch. Indestructible does not require assigning full toughness; it prevents the resulting destruction. In a later damage step, a blocker already marked with lethal damage needs zero additional assigned damage, even if indestructible kept it alive. The staged path now preserves that zero requirement instead of unconditionally requiring another one for deathtouch.
+
+Regression tests cover ordinary 5/5-versus-6/6 assignment, zero power, and a double-striking 5/5 against an indestructible 1/1: four damage tramples over in the first step and five in the second. Multiple blockers remain outside the simulator's current combat model.
+
+Official ruling: https://magic.wizards.com/en/news/feature/foundations-release-notes
