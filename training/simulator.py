@@ -194,6 +194,7 @@ class Card:
     counter_filter: str = ""
     removal: str = ""
     removal_min_toughness: int = 0
+    removal_no_regenerate: bool = False
     printed_types: tuple[str, ...] = ()
     printed_mana_value: int | None = None
     physical_id: str = ""
@@ -677,7 +678,8 @@ class Simulator(AdvancedRules):
             replaced=[]
             for owner,item in dead:
                 state=game.battlefield.get(item.card.id)
-                if state and game.creature(state) and game.stats(state)[1]>0 and self.replace_umbra_destruction(owner,item,game):
+                if state and game.creature(state) and game.stats(state)[1]>0 and (
+                        self.replace_umbra_destruction(owner,item,game) or self.replace_regeneration(owner,item,game)):
                     replaced.append((owner,item))
             if replaced:dead=[entry for entry in dead if entry not in replaced]
             invalid_auras=[];detached=[]
@@ -1521,7 +1523,8 @@ class Simulator(AdvancedRules):
     def destroy_batch(self,targets,card,reason="destroy"):
         game=self.event_game('main')
         targets=[(owner,item) for owner,item in targets
-                 if not self.replace_umbra_destruction(owner,item,game)]
+                 if not self.replace_umbra_destruction(owner,item,game)
+                 and (card.removal_no_regenerate or not self.replace_regeneration(owner,item,game))]
         creatures=[item.card.id for _,item in targets if item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id])]
         triggers=game.death_triggers(creatures)
         for owner,item in targets:
@@ -1887,6 +1890,20 @@ class Simulator(AdvancedRules):
                 self.log('mentor_counter' if legal else 'mentor_fizzle',
                          'Mentor places a counter on a lesser-power attacker.' if legal else 'Mentor target is no longer legal.',
                          source=event['source'],targetPermanent=event['target'],actor=event['controller'])
+                continue
+            if event.get('operation')=='regenerate_shield':
+                game=self.event_game('main');target=game.battlefield.get(event['target'])
+                legal=bool(target and game.creature(target) and
+                           event['subtype'] in target.definition.subtypes and
+                           target.id!=event['source'] and not game.has(target,'shroud') and
+                           (target.controller==event['controller'] or not game.has(target,'hexproof')) and
+                           not game.protected(target,event.get('sourceColors',())))
+                if legal:
+                    item=next(p for player in self.players for p in player.battlefield if p.card.id==target.id)
+                    item.regeneration_shields+=1
+                self.log('regeneration_shield' if legal else 'regeneration_fizzle',
+                         'Regeneration shield created.' if legal else 'Regeneration target is illegal.',
+                         actor=event['controller'],targetPermanent=event['target'])
                 continue
             if event.get('operation')=='land_team_counters':
                 game=self.event_game('main');seat=event['controller'];affected=[]
@@ -2519,8 +2536,9 @@ class Simulator(AdvancedRules):
         if attacker and to_player:dealt.append(dict(source=attacker.card.id,target=None,amount=to_player))
         if attacker and blocker and to_blocker:dealt.append(dict(source=attacker.card.id,target=blocker.card.id,amount=to_blocker))
         if blocker and attacker and to_attacker:dealt.append(dict(source=blocker.card.id,target=attacker.card.id,amount=to_attacker))
-        dead=[item for item in dead if not self.replace_umbra_destruction(
-            next(seat for seat,p in enumerate(self.players) if item in p.battlefield),item,game)]
+        dead=[item for item in dead if not (
+            self.replace_umbra_destruction(next(seat for seat,p in enumerate(self.players) if item in p.battlefield),item,game)
+            or self.replace_regeneration(next(seat for seat,p in enumerate(self.players) if item in p.battlefield),item,game))]
         triggers=game.death_triggers([item.card.id for item in dead])
         triggers.extend(game.aura_damage_triggers(dealt,1-self.active))
         if to_player and attacker:
@@ -3100,6 +3118,11 @@ class Simulator(AdvancedRules):
                 self.phase='first_damage' if early else 'regular_damage'
                 return True
             d = self.damage(effective_attacker, effective_blocker)
+            regenerated=[]
+            game=self.event_game('combat')
+            for item,owner,key in ((a,self.active,'attackerDies'),(b,1-self.active,'blockerDies')):
+                if item and d[key] and self.replace_regeneration(owner,item,game):
+                    d[key]=False;regenerated.append(item)
             dead_ids = ([a.card.id] if d["attackerDies"] else []) + ([b.card.id] if b and d["blockerDies"] else [])
             damage_triggers=[];combat_draws=[]
             if d['damage']>0:
@@ -3131,6 +3154,7 @@ class Simulator(AdvancedRules):
                 if 'trample' in abilities:
                     dealt=min(dealt,1 if 'deathtouch' in abilities else max(0,effective_blocker.toughness))
                 b.marked_damage+=dealt
+            for item in regenerated:item.marked_damage=0
             self.gain_life(self.active,d["gainA"])
             self.gain_life(1-self.active,d["gainB"])
             defender.life -= d["damage"]
@@ -3175,7 +3199,8 @@ class Simulator(AdvancedRules):
                 p.graveyard.append(c)
                 self.log("discard", f"Player {self.active+1} discards {c.name}.", card=c.name)
             for player in self.players:
-                for item in player.battlefield:item.marked_damage=0
+                for item in player.battlefield:
+                    item.marked_damage=0;item.regeneration_shields=0
             game = self.event_game("cleanup")
             game.cleanup()
             self.sync_events(game)
@@ -3302,7 +3327,8 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         # by the current sandbox's lack of regeneration effects.
         if destruction in ('Destroy all creatures.',
                            "Destroy all creatures. They can't be regenerated."):
-            parsed={'kind':'removal_spell','removal':'destroy_all_creatures'}
+            parsed={'kind':'removal_spell','removal':'destroy_all_creatures',
+                        'removal_no_regenerate':"can't be regenerated" in destruction}
         else:
             minimum=re.fullmatch(r'Destroy all creatures with toughness ([1-9][0-9]*) or greater\.',destruction)
             if minimum:
@@ -3381,7 +3407,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
     return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),blink_to_controller=parsed.get("blink_to_controller",False),flashback_cost=parsed.get("flashback_cost",""),graveyard_return_subtype=parsed.get("graveyard_return_subtype",""),
-        instant="Instant" in definition.get("types",[]), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
+        instant="Instant" in definition.get("types",[]), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),
         life=parsed.get("life", 0), land_rule=parsed.get("land_rule", ""),
