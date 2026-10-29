@@ -11,22 +11,23 @@
   ],
   "turnLimitPerPlayer": 10,
   "turnsCompleted": [
-    4,
-    4
+    8,
+    8
   ],
   "result": "win",
   "winner": 0,
   "lifeTotals": [
-    40,
-    16
+    5,
+    11
   ],
-  "eventCount": 217,
+  "eventCount": 486,
   "flaggedQuestions": 133,
   "openingMulligans": [
-    11,
-    16
+    6,
+    6
   ],
-  "openingDrawEvents": 29,
+  "openingDrawEvents": 14,
+  "openingStrategy": "Ideal: three lands and two early spells; after six free mulligans accept a playable backup hand",
   "spectatorHands": true,
   "scryfallImages": true,
   "learningEligible": false,
