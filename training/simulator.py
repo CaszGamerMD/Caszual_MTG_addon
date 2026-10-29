@@ -776,6 +776,14 @@ class Simulator(AdvancedRules):
                      and (controller is None or seat==controller or not game.has(game.battlefield[item.card.id],'hexproof'))
                      and (source is None or not game.protected(game.battlefield[item.card.id],source.colors)))
 
+    def choose_optional_token_creation(self, event):
+        """Diagnostic deterministic accept policy for a legal may-create clause.
+
+        Gameplay agents may later provide a per-trigger policy. The choice is
+        made when the triggered ability resolves, never at parse time.
+        """
+        return True
+
     def choose_optional_basic_search(self, seat, source):
         """Deterministic diagnostic decision: take the optional search when useful.
 
@@ -1255,6 +1263,10 @@ class Simulator(AdvancedRules):
                 else: amount=max(0,event['lastPower'])
                 event=dict(event,operation='create_tokens',tokenSpec=dict(event['tokenSpec'],amount=amount))
             if event.get("operation") == "create_tokens":
+                if event.get('optional') and not self.choose_optional_token_creation(event):
+                    self.log('token_creation_declined','Optional token creation declined.',
+                             actor=event['controller'],source=event['source'])
+                    continue
                 spec=event["tokenSpec"]
                 owner=self.players[event["controller"]]
                 pending=[]
