@@ -2272,7 +2272,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             and rules.query('cost',cost)['supported']):
         # Flashback is an alternate graveyard-casting permission, not a second
         # token effect. Require the full two-line Oracle program to be known.
-        flashback=re.fullmatch(r'Flashback ((?:\\{[^{}]+\\})+)',storm_lines[1])
+        flashback=re.fullmatch(r'Flashback ((?:\{[^{}]+\})+)',storm_lines[1])
         spec=parse_token_creation(storm_lines[0]) if flashback else None
         if flashback and spec and rules.query('cost',flashback[1])['supported']:
             template=EventDefinition(' '.join(spec.subtypes),
@@ -2349,7 +2349,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         # The zone-change instruction, object reference and return controller are
         # parsed separately. A new printing/name with the same words still works.
         blink_rule=re.fullmatch(
-            r"Exile target creature you control, then return (?:it|that card) to the battlefield under (its owner's|your) control\\.",
+            r"Exile target creature you control, then return (?:it|that card) to the battlefield under (its owner's|your) control\.",
             blink_lines[0])
         if blink_rule and rules.query('cost',cost)['supported']:
             parsed={'kind':'blink_spell','blink':True,'rebound':len(blink_lines)==2,
