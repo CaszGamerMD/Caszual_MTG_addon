@@ -335,3 +335,28 @@ The trigger survives removal of the source.
 Ankle Shanker is the saved-deck fixture. Renaming the card or changing
 recognized keywords uses the same grammar. Regression:
 `training/tests/test_attack_team_keywords.py`.
+
+
+## Dying creatures and permanents entering the graveyard
+
+The engine now distinguishes **dies** (creature from battlefield to
+graveyard) from a general permanent-to-graveyard event. Trigger
+matching snapshots current controller, creature subtype and permanent
+type before any move, with the ordinary priority stack resolving the
+effects later.
+
+“Whenever another creature you control dies, put ... . If that creature
+was a [type] or [type], put two ... instead” chooses the correct amount
+from the dead creature's subtype snapshot. “Whenever a [type] you
+control is put into a graveyard from the battlefield, [you may] put a
++1/+1 counter on this creature” supports optional choices, including
+noncreature enchantments. Source disappearance before resolution
+means it cannot receive a counter; the trigger still occurs.
+
+Blink is now an actual exile/return sequence, so it no longer
+spuriously causes graveyard-departure triggers. Attached Auras use
+the same common zone-change engine when their host leaves.
+This supports Uglúk, Knucklebone Witch, and Starfield Mystic with
+one generalized implementation.
+
+Tests: `training/tests/test_graveyard_event_watchers.py`.

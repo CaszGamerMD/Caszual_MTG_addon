@@ -108,12 +108,12 @@ class AdvancedRules:
   card_owner=self.card_owners.get(physical,owner)
   destination=card_owner if return_controller is None else return_controller
   if destination not in (0,1):raise ValueError('Invalid blink return controller')
-  self.send_to_destination(self.players[owner],item)
+  self.send_to_destination(self.players[owner],item,to_exile=True)
   if old.is_token:
    self.log('blink_token','An exiled token cannot return.',actor=owner,oldObject=old.id);return
   # The physical owner's zone and the new object's controller can differ.
   owner_zone=self.players[card_owner]
-  if old in owner_zone.graveyard:owner_zone.graveyard.remove(old)
+  if old in owner_zone.exile:owner_zone.exile.remove(old)
   p=self.players[destination]
   if p.command_zone and root(p.command_zone)==physical:p.command_zone=None
   self.object_sequence+=1

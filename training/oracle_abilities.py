@@ -40,6 +40,7 @@ class Selector:
     color: str = ''
     legendary: bool | None = None
     spell_type: str = ''
+    permanent_type: str = ''
 
 @dataclass(frozen=True)
 class StaticEffect:
@@ -64,6 +65,8 @@ class Effect:
     steps: tuple = ()
     optional: bool = False
     counter_subtype: str = ""
+    counter_subtypes: tuple = ()
+    alternate_amount: int = 0
 
 @dataclass(frozen=True)
 class Trigger:
@@ -458,6 +461,23 @@ def compile_abilities(text, name=''):
                 action=Effect(action.operation,action.amount,token=action.token,controller_loss=int(loss[1]))
             triggers.append(Trigger('upkeep',Selector(self_only=True),action))
             continue
+        conditional_death=re.fullmatch(
+            r'Whenever another creature you control dies, put a \+1/\+1 counter on this creature\. If that creature was an? ([A-Z][a-z]+) or ([A-Z][a-z]+), put two \+1/\+1 counters on this creature instead\.',
+            line)
+        if conditional_death:
+            triggers.append(Trigger('dies',Selector(relation='controller',other=True,creature=True),
+                Effect('self_counter',1,counter_subtypes=(conditional_death[1],conditional_death[2]),
+                       alternate_amount=2)))
+            continue
+        to_graveyard=re.fullmatch(
+            r'Whenever an? ([A-Z][a-z]+|enchantment) you control is put into a graveyard from the battlefield, (you may )?put a \+1/\+1 counter on this creature\.',
+            line)
+        if to_graveyard:
+            scope=to_graveyard[1]
+            selector=Selector(relation='controller',permanent_type='Enchantment') if scope=='enchantment' else Selector(relation='controller',subtype=scope)
+            triggers.append(Trigger('graveyard',selector,
+                                    Effect('self_counter',1,optional=bool(to_graveyard[2]))))
+            continue
         m=re.fullmatch(r'(?:When|Whenever) (.+) (enters(?: the battlefield)?|dies), (.+)',line)
         if not m: return None
         subject=selector(m[1])
@@ -479,7 +499,8 @@ def matches(subject, source, entered, is_creature):
         and (not subject.creature or is_creature)
         and (subject.legendary is None or subject.legendary==entered.definition.legendary)
         and (not subject.color or subject.color in entered.definition.colors)
-        and (not subject.subtype or subject.subtype in entered.definition.subtypes))
+        and (not subject.subtype or subject.subtype in entered.definition.subtypes)
+        and (not subject.permanent_type or subject.permanent_type in entered.definition.types))
 
 def cast_matches(trigger, source, spell, controller):
     if trigger.event!='cast' or source.controller!=controller:return False
@@ -500,6 +521,7 @@ def event_data(trigger, source, subject):
             'opponent_optional_basic_search':'each opponent may find a tapped basic land and shuffle',
             'optional_subtype_search_hand':'controller may tutor a subtype card to hand and shuffle',
             'return_graveyard':'controller may return target subtype card from graveyard to hand',
+            'self_counter':'put +1/+1 counters on the source',
             'optional_put_hand_permanent':'controller may put a matching permanent card from hand onto the battlefield',
             'opponent_loss_tapped_creatures':'each opponent loses life equal to controlled tapped creatures'}
     label='; then '.join(f'{part.operation} {part.amount}' for part in e.steps) if e.operation=='ordered_effects' else labels[e.operation]
@@ -507,10 +529,12 @@ def event_data(trigger, source, subject):
     if e.gain: label+=f'; controller gains {e.gain} life'
     return {'source':source.id,'name':source.definition.name,'controller':source.controller,
             'effect':label,'operation':e.operation,'recipient':e.recipient,'sourceColors':sorted(source.definition.colors),
-            'counterSubtype':e.counter_subtype,'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
+            'counterSubtype':e.counter_subtype,'counterSubtypes':e.counter_subtypes,'alternateAmount':e.alternate_amount,
+            **({'deadSubtypes':sorted(subject.definition.subtypes)} if trigger.event in ('dies','graveyard') else {}),
+            'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
             'optional':e.optional,
             **({'minLands':trigger.lands_controlled_at_least} if trigger.lands_controlled_at_least else {}),
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             **({'libraryFilter':e.library_filter} if e.library_filter else {}),
             **({'steps':[{'operation':step.operation,'amount':step.amount,'recipient':step.recipient,'gain':step.gain} for step in e.steps]} if e.steps else {}),
-            {'enters':'entered','dies':'dead','upkeep':'permanent','end_step':'permanent','cast':'spell','gain_life':'permanent','deals_player_damage':'damageSource'}[trigger.event]:subject.id}
+            {'enters':'entered','dies':'dead','upkeep':'permanent','end_step':'permanent','cast':'spell','gain_life':'permanent','deals_player_damage':'damageSource','graveyard':'dead'}[trigger.event]:subject.id}

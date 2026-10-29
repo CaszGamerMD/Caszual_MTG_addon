@@ -860,6 +860,10 @@ class Simulator(AdvancedRules):
         return tuple(c for c in self.players[seat].graveyard
                      if subtype in (c.event_definition.subtypes if c.event_definition else c.land_subtypes))
 
+    def choose_optional_self_counter(self,event):
+        """Optional choice made at resolution, never by treating 'may' as mandatory."""
+        return True
+
     def choose_optional_graveyard_return(self,seat,subtype,targets):
         """Deterministic acceptance at resolution; can be replaced by a policy."""
         return bool(targets)
@@ -1588,11 +1592,16 @@ class Simulator(AdvancedRules):
                 else:
                     message=f"{event['name']}: no currently enchanted creature."
             elif event.get('operation')=='self_counter':
+                if event.get('optional') and not self.choose_optional_self_counter(event):
+                    message=f"{event['name']}: its controller declines the counter."
+                    self.log('counter_declined',message,actor=event['controller'],source=event['source'])
+                    continue
+                amount=(event.get('alternateAmount') or event['amount']) if set(event.get('counterSubtypes',())).intersection(event.get('deadSubtypes',())) else event['amount']
                 source=next((item for player in self.players for item in player.battlefield if item.card.id==event['source']),None)
                 if source:
                     game=self.event_game('main')
-                    source.counters+=game.counter_amount(source.card.id,event['amount'])
-                message=f"{event['name']}: its surviving source receives a counter."
+                    source.counters+=game.counter_amount(source.card.id,amount)
+                message=f"{event['name']}: its surviving source receives {amount} counter(s)."
             elif event.get('operation')=='discard':
                 target=self.players[event['target']]
                 if target.hand:
@@ -1767,6 +1776,21 @@ class Simulator(AdvancedRules):
         self.resolve_entry_triggers(events,token.card)
 
     def send_to_destination(self, player: Player, item: Permanent, snapshot=None, to_exile=False, to_hand=False):
+        # A card enters the graveyard only if its zone move actually says so.
+        # Damage, blink/exile, return-to-hand, and the command-zone option
+        # must never be confused with one another.
+        destination=self.players[self.card_owners.get(root(item.card),
+            next(i for i,p in enumerate(self.players) if p is player))]
+        to_graveyard=not (to_exile or to_hand or root(item.card)==destination.commander_id)
+        if to_graveyard:
+            from oracle_abilities import matches,event_data
+            before=snapshot or self.event_game('main')
+            moved=before.battlefield.get(item.card.id)
+            if moved:
+                for watcher in before.battlefield.values():
+                    for trigger in watcher.definition.triggers:
+                        if trigger.event=='graveyard' and matches(trigger.subject,watcher,moved,before.creature(moved)):
+                            self._waiting_triggers.append((event_data(trigger,watcher,moved),item.card))
         if item.card.is_token:
             game=snapshot or self.event_game('main')
             controller=next(i for i,p in enumerate(self.players) if item in p.battlefield)
@@ -1793,17 +1817,10 @@ class Simulator(AdvancedRules):
                     attached.attached_to=None
                     attached.bestowed=False
                     if attached.card.kind=='aura':
-                        if attached.card.is_token:
-                            # An Aura Role token also leaves when its host
-                            # disappears; this is another real token-leave
-                            # event, not a sacrifice. Snapshot before either
-                            # permanent is removed from the battlefield.
-                            game=snapshot or self.event_game('main')
-                            self._waiting_triggers.extend((event,attached.card)
-                                for event in game.token_leave_events(owner_index,1))
-                        owner.battlefield.remove(attached)
-                        if not attached.card.is_token:owner.graveyard.append(attached.card)
-        destination=self.players[self.card_owners.get(root(item.card),next(i for i,p in enumerate(self.players) if p is player))]
+                        # Move the attached Aura through the same zone-change
+                        # machinery so all graveyard and token-leave watchers
+                        # see its departure exactly once.
+                        self.send_to_destination(owner,attached,snapshot=snapshot)
         player.battlefield.remove(item)
         if item.card.is_token:
             return  # Tokens cease to exist after leaving the battlefield.
