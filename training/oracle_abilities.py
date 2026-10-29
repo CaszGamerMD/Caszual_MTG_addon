@@ -83,6 +83,7 @@ class Program:
     cost_reductions: tuple = ()
     counter_replacements: tuple = ()
     token_replacements: tuple = ()
+    token_action_triggers: tuple = ()
 
 def static_effect(text):
     subtype_anthem=re.fullmatch(r'Other ([A-Z][a-z]+) creatures you control get \+([0-9]+)/\+([0-9]+) and have (.+)\.',text)
@@ -210,7 +211,7 @@ def compile_abilities(text, name=''):
         text=text.replace(name,'this creature')
         if ',' in name:
             text=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= isn't a creature| enters| attacks|\'s power)",'this creature',text)
-    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0;cost_reductions=[];counter_replacements=[];token_replacements=[]
+    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0;cost_reductions=[];counter_replacements=[];token_replacements=[];token_action_triggers=[]
     for line in text.splitlines():
         line=line.strip()
         if not line: continue
@@ -230,6 +231,10 @@ def compile_abilities(text, name=''):
         if line=='If you would gain life, you gain twice that much life instead.':
             if life_multiplier!=1:return None
             life_multiplier=2;continue
+        token_action=re.fullmatch(r'Whenever you create or sacrifice a token, each opponent loses ([1-9][0-9]*) life\.',line)
+        if token_action:
+            token_action_triggers.extend((action,'opponent_loss',int(token_action[1])) for action in ('create','sacrifice'))
+            continue
         token_controller=re.fullmatch(r'If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead\.',line)
         if token_controller:
             token_replacements.append(('double',2,'controlled','effect'))
@@ -313,7 +318,7 @@ def compile_abilities(text, name=''):
         if action.operation=='create_tokens' and not subject.self_only:
             return None  # Repeating token engines need bounded stack/loop handling.
         triggers.append(Trigger(event,subject,action))
-    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements)) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements else None
+    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers)) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers else None
 
 def matches(subject, source, entered, is_creature):
     return ((not subject.self_only or source.id==entered.id)
