@@ -1,3 +1,23 @@
+## Creature exile with last-known-power life gain
+
+The Swords to Plowshares Oracle-language pattern
+`Exile target creature. Its controller gains life equal to its power.`
+is now a targeted-removal operation distinct from destruction.
+It checks legal creature targets on cast and again at resolution;
+indestructibility does **not** prevent exile, while opposing hexproof
+still restricts targeting. The creature's power is read at resolution
+before it leaves the battlefield, including live buffs. After exile,
+its controller receives a genuine life-gain event, including active
+life-gain replacement effects and gained-life-this-turn tracking.
+Real non-token cards move to their owner's exile zone; tokens cease
+to exist when leaving the battlefield. The prototype still chooses the
+command-zone option for an exiled commander. Exiling does not emit a
+"dies" event. See `training/tests/test_exile_creature_life.py`.
+
+This strict instruction does not imply support for Path to Exile's
+optional land search or other arbitrary exile replacements. No work
+has been moved into Minecraft.
+
 ## Typed instant removal: artifacts and enchantments
 
 Naturalize and Nature's Chant use the same strict instruction,
