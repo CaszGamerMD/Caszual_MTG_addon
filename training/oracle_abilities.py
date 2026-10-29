@@ -77,6 +77,7 @@ class Program:
     static_effects: tuple[StaticEffect, ...] = ()
     activations: tuple = ()
     devotion: tuple = ()
+    life_multiplier: int = 1
 
 def static_effect(text):
     life_conditional=re.fullmatch(r'As long as you have ([1-9][0-9]*) or more life, this creature gets \+([0-9]+)/\+([0-9]+) and has (.+)\.',text)
@@ -184,7 +185,7 @@ def compile_abilities(text, name=''):
         text=text.replace(name,'this creature')
         if ',' in name:
             text=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= isn't a creature| enters| attacks|\'s power)",'this creature',text)
-    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=()
+    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1
     for line in text.splitlines():
         line=line.strip()
         if not line: continue
@@ -194,6 +195,9 @@ def compile_abilities(text, name=''):
             threshold={'one':1,'two':2,'three':3,'four':4,'five':5,'six':6,'seven':7,'eight':8,'nine':9}.get(condition[2])
             devotion=({'white':'W','blue':'U','black':'B','red':'R','green':'G'}[condition[1]],threshold or int(condition[2]))
             continue
+        if line=='If you would gain life, you gain twice that much life instead.':
+            if life_multiplier!=1:return None
+            life_multiplier=2;continue
         activated=re.fullmatch(r'((?:\{(?:[0-9]+|[WUBRGC])\})+): (Create .+)',line)
         if activated:
             spec=parse_token_creation(activated[2])
@@ -243,7 +247,7 @@ def compile_abilities(text, name=''):
         if action.operation=='create_tokens' and not subject.self_only:
             return None  # Repeating token engines need bounded stack/loop handling.
         triggers.append(Trigger(event,subject,action))
-    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion) if triggers or static_effects or activations or devotion else None
+    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier) if triggers or static_effects or activations or devotion or life_multiplier!=1 else None
 
 def matches(subject, source, entered, is_creature):
     return ((not subject.self_only or source.id==entered.id)
