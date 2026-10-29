@@ -89,11 +89,12 @@ class OpponentBasicEntryChecks(unittest.TestCase):
         sim.total_cards=tuple(n+(i==0) for i,n in enumerate(sim.total_cards))
         self.put(sim,cards['Old-Growth Dryads'])
         sim.players[0].library.remove(other)
-        sim.enter_creature(other,sim.players[0])
-        # The two independent triggered abilities remain on the stack.
-        self.assertEqual(len(sim.stack.items),1)
+        pending=sim.enter_creature(other,sim.players[0])
+        sim.resolve_entry_triggers(pending,other)
+        self.assertEqual(len(sim.stack.items),2)
         self.drain(sim)
-        # One direct enter did not auto-queue; queue its event explicitly.
-        # Both searches should happen through the same generic effect.
-        self.assertTrue(any(p.card.id in (first.id,second.id) for p in sim.players[1].battlefield))
+        self.assertTrue(all(any(p.card.id==basic.id and p.tapped
+                                for p in sim.players[1].battlefield)
+                            for basic in (first,second)))
+        self.assertEqual(sim.library_random_sequence,2)
         sim.invariant()
