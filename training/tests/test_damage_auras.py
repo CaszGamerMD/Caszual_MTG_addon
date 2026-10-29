@@ -129,3 +129,31 @@ class AuraDamageChecks(unittest.TestCase):
         sim.group_damage_step();self.drain(sim)
         self.assertEqual(sim.players[0].life,44)
         sim.invariant()
+
+    def test_noncombat_damage_by_enchanted_creature_queues_life_gain(self):
+        sim,cards=self.fixture(['Spirit Link'])
+        source=self.token(sim,'burner',power=2,toughness=3)
+        self.put(sim,cards['Spirit Link'],source.card.id)
+        event=dict(operation='damage',effect='damage',source=source.card.id,
+                   name=source.card.name,controller=0,amount=2)
+        sim._resolve_entry_effects([event],source.card)
+        self.assertEqual(sim.players[1].life,38)
+        self.assertEqual(sim.players[0].life,40)
+        self.assertEqual(len(sim.stack.items),1)
+        self.drain(sim)
+        self.assertEqual(sim.players[0].life,42)
+        sim.invariant()
+
+    def test_noncombat_board_damage_counts_player_and_each_creature(self):
+        sim,cards=self.fixture(['Spirit Link'])
+        source=self.token(sim,'board-burner',power=2,toughness=3)
+        enemy=self.token(sim,'enemy',seat=1,power=1,toughness=2)
+        self.put(sim,cards['Spirit Link'],source.card.id)
+        event=dict(operation='damage_board',effect='damage board',source=source.card.id,
+                   name=source.card.name,controller=0,amount=2,sourceColors=[])
+        sim._resolve_entry_effects([event],source.card)
+        self.assertEqual(sim.players[1].life,38)
+        self.drain(sim)
+        self.assertEqual(sim.players[0].life,44)
+        self.assertFalse(any(p.card.id==enemy.card.id for p in sim.players[1].battlefield))
+        sim.invariant()
