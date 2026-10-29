@@ -31,7 +31,7 @@ def compile(text, name, types, subtypes):
     for line in text.splitlines():
         line=line.strip()
         if not line:continue
-        if mode=='aura' and line.startswith('When this Aura enters, '):
+        if mode=='aura' and line.startswith('When this Aura enters, create '):
             # Aura ETB is a normal triggered ability: the token is created
             # only after the trigger resolves, even if the Aura has left.
             normalized='When this enchantment enters, '+line[len('When this Aura enters, '):]
