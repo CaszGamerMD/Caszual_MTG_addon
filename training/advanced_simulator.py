@@ -24,6 +24,7 @@ class AdvancedRules:
   token=s.Card('token-'+str(self.token_sequence),d.name,'aura',event_definition=d,is_token=True,printed_types=('Enchantment',))
   pending=self.enter_creature(token,self.players[event['controller']],attached_to=target.card.id)
   self.log('role_created','A Virtuous Role enters attached to another creature.',actor=event['controller'],source=event['source'],target=target.card.id,token=token.id)
+  pending.extend(self.event_game('main').token_action_events('create',event['controller'],1))
   self.resolve_entry_triggers(pending,token)
  def choose_optional_draw(self,event):
   s=model(self);seat=event['controller']
