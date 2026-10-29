@@ -345,7 +345,8 @@ def compile_abilities(text, name=''):
     for line in text.splitlines():
         line=line.strip()
         if not line: continue
-        if line=='As this enchantment enters, choose a creature type.':
+        if line in ('As this enchantment enters, choose a creature type.',
+                    'As this artifact enters, choose a creature type.'):
             if chosen_type_entry:return None
             chosen_type_entry=True
             continue

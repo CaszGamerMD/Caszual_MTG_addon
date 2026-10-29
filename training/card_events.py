@@ -260,6 +260,11 @@ def parse_card(card: dict) -> Definition:
             static_effects=entry_program.static_effects,activations=entry_program.activations,devotion=entry_program.devotion,
             crew=attacks[1],saddle=attacks[2],attack_effects=attacks[3])
     program = compile_abilities(text,name)
+    # The entry-time choice grammar must match the permanent type named by Oracle.
+    if program and program.chosen_type_entry and not any(
+        f"As this {kind.lower()} enters, choose a creature type." in text
+        for kind in ("Artifact", "Enchantment") if kind in types):
+        program = None
     if program is not None and ("Creature" in types or "Enchantment" in types or "Artifact" in types):
         if program.devotion and not {'Creature','Enchantment'}<=types:
             return Definition(**base,abilities=frozenset(),supported=False,reason='Unsupported devotion type transition')
