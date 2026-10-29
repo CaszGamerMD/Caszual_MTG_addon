@@ -13,9 +13,13 @@ class TokenSpec:
     tapped: bool = False
     land: bool = False
     enchantment: bool = False
+    attacking: bool = False
+    contribution_bonus: int = 0
 
 def parse_token_creation(text):
     """A whole standalone instruction, not a substring stripped of extra rules."""
+    attacking="that's tapped and attacking" in text
+    if attacking:text=text.replace(" creature token that's tapped and attacking."," creature token.").replace(" creature tokens that are tapped and attacking."," creature tokens.")
     m=re.fullmatch(r'Create (a|an|one|two|three|four|[1-9][0-9]*) (tapped )?([0-9]+)/([1-9][0-9]*) (white|blue|black|red|green|colorless)(?: and (white|blue|black|red|green))? ([A-Z][a-z]+(?: [A-Z][a-z]+)*) (land |enchantment )?creature tokens?(?: with (.+))?\.',text)
     if not m: return None
     abilities=frozenset(re.split(r', | and ',m[9] or ''))-{''}
@@ -24,7 +28,7 @@ def parse_token_creation(text):
     amount={'a':1,'an':1,'one':1,'two':2,'three':3,'four':4}.get(m[1])
     if amount is None: amount=int(m[1])
     return TokenSpec(amount,int(m[3]),int(m[4]),tuple(c.title() for c in (m[5],m[6]) if c and c!='colorless'),
-                     tuple(m[7].split()),abilities,bool(m[2]),m[8]=='land ',m[8]=='enchantment ')
+                     tuple(m[7].split()),abilities,bool(m[2]) or attacking,m[8]=='land ',m[8]=='enchantment ',attacking)
 
 @dataclass(frozen=True)
 class Selector:
@@ -71,6 +75,14 @@ class Program:
     devotion: tuple = ()
 
 def static_effect(text):
+    multi=re.fullmatch(r'Creatures you control have (.+)\.',text)
+    if multi and (',' in multi[1] or 'protection from ' in multi[1]):
+        clause=multi[1].replace(' and from ',', protection from ').replace(', and ',', ').replace(' and ',', ')
+        words=[w.strip() for w in clause.split(',')]
+        allowed=KEYWORDS|{'protection from '+c for c in ('white','blue','black','red','green')}
+        if all(w in allowed for w in words):
+            return tuple(StaticEffect(Selector(relation='controller',creature=True),0,0,grant=w) for w in words)
+        return None
     cost=r'((?:\{(?:[0-9]{1,2}|[WUBRGC])\})+)'
     intrinsic=re.fullmatch(r'Ward '+cost,text)
     if intrinsic:return StaticEffect(Selector(self_only=True),0,0,ward_cost=intrinsic[1])
@@ -162,7 +174,7 @@ def compile_abilities(text, name=''):
             keywords.update(words); continue
         static=static_effect(line)
         if static:
-            static_effects.append(static); continue
+            static_effects.extend(static if isinstance(static,tuple) else (static,)); continue
         combat=re.fullmatch(r'Whenever a ([A-Z][a-z]+) deals combat damage to a player, that player discards a card\.',line)
         if combat:
             triggers.append(Trigger('combat_damage',Selector(creature=True,subtype=combat[1]),Effect('discard',1,'damaged player')))
@@ -209,7 +221,7 @@ def event_data(trigger, source, subject):
     if e.controller_loss: label=f'controller loses {e.controller_loss} life; '+label
     if e.gain: label+=f'; controller gains {e.gain} life'
     return {'source':source.id,'name':source.definition.name,'controller':source.controller,
-            'effect':label,'operation':e.operation,'recipient':e.recipient,
+            'effect':label,'operation':e.operation,'recipient':e.recipient,'sourceColors':sorted(source.definition.colors),
             'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             **({'libraryFilter':e.library_filter} if e.library_filter else {}),

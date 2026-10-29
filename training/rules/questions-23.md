@@ -1,31 +1,33 @@
 # Original 23-card work queue
 
+Current status: **23/23 original card programs supported in the diagnostic simulator; zero remain blocked in this queue.** Other cards and global rules remain unfinished. See `final-seven.md` for scope and validation. Older progress notes below describe earlier checkpoints.
+
 Three resolved through reusable parsing: Honor of the Pure (capitalized color selector), Radiant Summit (generic two-basic-land condition and printed mana pair), Empty the Warrens (whole-text fixed-token sorcery plus storm).
 
 | Card | Status / required mechanics |
 |---|---|
-| Akroma's Memorial | Protection, combined keyword grants, artifact static effects |
+| Akroma's Memorial | Implemented: combined artifact keyword grants and color protection for damage/blocking/targeting/attachments |
 | Basilisk Collar | Implemented in diagnostic: equip costs, stack targeting, deathtouch/lifelink grants |
 | Brightfield Glider | Implemented: generic saddled attack condition and temporary stats/keywords |
 | Cabal Slaver | Implemented: generic subtype combat-damage filtering and deterministic legal discard |
-| Captain's Claws | Equipment and tapped attacking token placement |
-| Cloudspire Coordinator | Turn history, variable activated token creation, crew/saddle contribution replacement |
+| Captain's Claws | Implemented: equip, bonuses, attack trigger and tapped attacking token |
+| Cloudspire Coordinator | Implemented: scry, tap/entry-history token activation and separate Pilot crew/saddle contribution |
 | Empty the Warrens | Implemented in diagnostic simulator |
-| Ephemerate | Instant priority, exile/return object identity, rebound |
+| Ephemerate | Implemented: own-creature blink, new object identity, physical ownership, exile and one-shot rebound |
 | Flowering of the White Tree | Implemented in diagnostic: disjoint legendary/nonlegendary bonuses, separate stack-based mana ward payments and countering |
 | Goblin Chainwhirler | Implemented in diagnostic: simultaneous player/creature/planeswalker damage, loyalty loss and state-based deaths |
-| Haazda Marshal | Multiple attackers and attack-group conditions |
+| Haazda Marshal | Implemented: declared attack-group threshold and ordinary lifelink token |
 | Heliod, God of the Sun | Implemented in diagnostic: generic devotion, conditional creature type, vigilance, paid enchantment-creature token activation |
 | Honor of the Pure | Implemented in diagnostic simulator |
 | Hopeful Eidolon | Implemented in diagnostic: alternate Bestow cost, Aura stack type, grants, target-loss fallback and same-object creature transition |
 | Krenko, Tin Street Kingpin | Implemented in diagnostic: counter then current-power token creation |
 | Lifelink | Implemented in diagnostic: Aura targeting, lifelink grant and cleanup |
-| Lumen-Class Frigate | Station activation and counter thresholds |
+| Lumen-Class Frigate | Implemented: station stack/cost, charge counters, last-known power and threshold effects |
 | Muxus, Goblin Grandee | Implemented in diagnostic: generic reveal/filter by printed type/mana value, simultaneous entry, random bottom order, resolving subtype-count attack bonus |
 | Radiant Summit | Implemented in diagnostic simulator |
 | Ruinous Ultimatum | Implemented in diagnostic: opponent nonland sweep, indestructible and simultaneous death-trigger discovery |
 | Shadowspear | Implemented in diagnostic: equipment, mana activation, opposing hexproof/indestructible loss, timestamps and cleanup |
-| Skyknight Vanguard | Tapped attacking tokens and multiple-attacker combat |
+| Skyknight Vanguard | Implemented: flying, stack-based attack trigger and attacking token combat membership |
 | Untethered Express | Implemented: composable crew plus generic attack-triggered self counters |
 
 Validation: 114 tests pass. Seed 1142 rerun increased spells cast from 3 to 4 and reduced original encountered unsupported cards from 23 to 20. No runtime questions. See `training/examples/questions-23-after.json`. Remaining cards reject whole-card execution; no partial abilities are silently enabled.
@@ -57,3 +59,7 @@ Heliod, Muxus and Hopeful Eidolon now compile all printed instructions using reu
 ## Ward, temporary ability loss and loyalty damage
 
 Flowering and Shadowspear now compile their printed instructions, and Chainwhirler's pending planeswalker damage is handled for represented planeswalker objects. Seven original cards remain completely blocked: Akroma's Memorial, Captain's Claws, Cloudspire Coordinator, Ephemerate, Haazda Marshal, Lumen-Class Frigate and Skyknight Vanguard. General planeswalker abilities, multi-attacker combat and other global limitations remain unfinished. See `ward-ability-loss-loyalty.md` for test evidence and exact scope.
+
+## Final seven complete
+
+All seven remaining original cards now compile and execute through shared rule handling. The original 23-card queue has zero blocked cards. Validation includes 227 passing tests and twelve no-mirror real-deck diagnostics without runtime questions. These remain partial diagnostics, not valid full Commander training or live Minecraft integration. See `final-seven.md` and the saved review report.

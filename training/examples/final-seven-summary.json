@@ -1,0 +1,644 @@
+{
+  "originalQueueSize": 23,
+  "originalCardsCompletelyBlocked": 0,
+  "newlyImplemented": [
+    {
+      "name": "Akroma's Memorial",
+      "handling": "Artifact keyword grants and color protection for damage, blockers, targeting and attachments.",
+      "randomGameCasts": 1,
+      "focusedTests": true
+    },
+    {
+      "name": "Captain's Claws",
+      "handling": "Equip, +1/+0, equipped attack trigger and a tapped attacking Kor Ally token.",
+      "randomGameCasts": 1,
+      "focusedTests": true
+    },
+    {
+      "name": "Cloudspire Coordinator",
+      "handling": "Entry scry, resolution-time Mount/Vehicle history and Pilot crew/saddle contribution.",
+      "randomGameCasts": 2,
+      "focusedTests": true
+    },
+    {
+      "name": "Ephemerate",
+      "handling": "Own-creature blink with new object identity, owner return, exile and one-shot rebound.",
+      "randomGameCasts": 0,
+      "focusedTests": true
+    },
+    {
+      "name": "Haazda Marshal",
+      "handling": "Declare this creature with at least two others; create a normal lifelink Soldier.",
+      "randomGameCasts": 3,
+      "focusedTests": true
+    },
+    {
+      "name": "Lumen-Class Frigate",
+      "handling": "Station costs/stack, charge counters, power at resolution, anthem at 2 and creature/keywords at 12.",
+      "randomGameCasts": 1,
+      "focusedTests": true
+    },
+    {
+      "name": "Skyknight Vanguard",
+      "handling": "Flying and a stack-based attack trigger creating a tapped attacking Soldier.",
+      "randomGameCasts": 1,
+      "focusedTests": true
+    }
+  ],
+  "testsPassed": 227,
+  "focusedTests": 25,
+  "matches": [
+    {
+      "batch": "short",
+      "seed": 1342,
+      "decks": [
+        "faeries",
+        "squirrels"
+      ],
+      "deckIds": [
+        27521806,
+        8321184
+      ],
+      "result": "diagnostic_window_complete",
+      "winner": null,
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "runtimeQuestions": [],
+      "newCardCasts": {},
+      "spellsCast": 4,
+      "life": [
+        38,
+        21
+      ],
+      "mechanicCounts": {
+        "attack_group": 9,
+        "group_damage": 9,
+        "station_activate": 0,
+        "station": 0,
+        "history_activate": 0,
+        "blink": 0,
+        "transport_resolve": 0
+      },
+      "learningEligible": false
+    },
+    {
+      "batch": "short",
+      "seed": 1343,
+      "decks": [
+        "squirrels",
+        "Garbo Gobbos"
+      ],
+      "deckIds": [
+        8321184,
+        5254666
+      ],
+      "result": "diagnostic_window_complete",
+      "winner": null,
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "runtimeQuestions": [],
+      "newCardCasts": {},
+      "spellsCast": 3,
+      "life": [
+        23,
+        34
+      ],
+      "mechanicCounts": {
+        "attack_group": 7,
+        "group_damage": 7,
+        "station_activate": 0,
+        "station": 0,
+        "history_activate": 0,
+        "blink": 0,
+        "transport_resolve": 0
+      },
+      "learningEligible": false
+    },
+    {
+      "batch": "short",
+      "seed": 1344,
+      "decks": [
+        "squirrels",
+        "Budget Deck"
+      ],
+      "deckIds": [
+        8321184,
+        14850373
+      ],
+      "result": "win",
+      "winner": 1,
+      "turnsCompleted": [
+        8,
+        7
+      ],
+      "runtimeQuestions": [],
+      "newCardCasts": {
+        "Skyknight Vanguard": 1,
+        "Captain's Claws": 1
+      },
+      "spellsCast": 5,
+      "life": [
+        -19,
+        52
+      ],
+      "mechanicCounts": {
+        "attack_group": 6,
+        "group_damage": 6,
+        "station_activate": 0,
+        "station": 0,
+        "history_activate": 0,
+        "blink": 0,
+        "transport_resolve": 0
+      },
+      "learningEligible": false
+    },
+    {
+      "batch": "short",
+      "seed": 1345,
+      "decks": [
+        "Garbo Gobbos",
+        "Budget Deck"
+      ],
+      "deckIds": [
+        5254666,
+        14850373
+      ],
+      "result": "win",
+      "winner": 1,
+      "turnsCompleted": [
+        8,
+        7
+      ],
+      "runtimeQuestions": [],
+      "newCardCasts": {
+        "Haazda Marshal": 2,
+        "Lumen-Class Frigate": 1,
+        "Cloudspire Coordinator": 1
+      },
+      "spellsCast": 12,
+      "life": [
+        -3,
+        47
+      ],
+      "mechanicCounts": {
+        "attack_group": 5,
+        "group_damage": 5,
+        "station_activate": 4,
+        "station": 4,
+        "history_activate": 0,
+        "blink": 0,
+        "transport_resolve": 0
+      },
+      "learningEligible": false
+    },
+    {
+      "batch": "short",
+      "seed": 1346,
+      "decks": [
+        "Budget Deck",
+        "faeries"
+      ],
+      "deckIds": [
+        14850373,
+        27521806
+      ],
+      "result": "diagnostic_window_complete",
+      "winner": null,
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "runtimeQuestions": [],
+      "newCardCasts": {
+        "Cloudspire Coordinator": 1
+      },
+      "spellsCast": 8,
+      "life": [
+        40,
+        22
+      ],
+      "mechanicCounts": {
+        "attack_group": 9,
+        "group_damage": 16,
+        "station_activate": 0,
+        "station": 0,
+        "history_activate": 1,
+        "blink": 0,
+        "transport_resolve": 6
+      },
+      "learningEligible": false
+    },
+    {
+      "batch": "short",
+      "seed": 1347,
+      "decks": [
+        "Garbo Gobbos",
+        "faeries"
+      ],
+      "deckIds": [
+        5254666,
+        27521806
+      ],
+      "result": "win",
+      "winner": 0,
+      "turnsCompleted": [
+        9,
+        9
+      ],
+      "runtimeQuestions": [],
+      "newCardCasts": {},
+      "spellsCast": 4,
+      "life": [
+        22,
+        17
+      ],
+      "mechanicCounts": {
+        "attack_group": 10,
+        "group_damage": 10,
+        "station_activate": 0,
+        "station": 0,
+        "history_activate": 0,
+        "blink": 0,
+        "transport_resolve": 0
+      },
+      "learningEligible": false
+    },
+    {
+      "batch": "long",
+      "seed": 2360,
+      "decks": [
+        "Garbo Gobbos",
+        "Budget Deck"
+      ],
+      "deckIds": [
+        5254666,
+        14850373
+      ],
+      "result": "win",
+      "winner": 0,
+      "turnsCompleted": [
+        11,
+        11
+      ],
+      "runtimeQuestions": [],
+      "newCardCasts": {},
+      "spellsCast": 10,
+      "life": [
+        44,
+        24
+      ],
+      "mechanicCounts": {
+        "attack_group": 13,
+        "group_damage": 13,
+        "station_activate": 0,
+        "station": 0,
+        "history_activate": 0,
+        "blink": 0,
+        "transport_resolve": 5
+      },
+      "learningEligible": false
+    },
+    {
+      "batch": "long",
+      "seed": 2361,
+      "decks": [
+        "squirrels",
+        "Garbo Gobbos"
+      ],
+      "deckIds": [
+        8321184,
+        5254666
+      ],
+      "result": "win",
+      "winner": 1,
+      "turnsCompleted": [
+        9,
+        8
+      ],
+      "runtimeQuestions": [],
+      "newCardCasts": {
+        "Akroma's Memorial": 1
+      },
+      "spellsCast": 7,
+      "life": [
+        -3,
+        40
+      ],
+      "mechanicCounts": {
+        "attack_group": 7,
+        "group_damage": 11,
+        "station_activate": 0,
+        "station": 0,
+        "history_activate": 0,
+        "blink": 0,
+        "transport_resolve": 0
+      },
+      "learningEligible": false
+    },
+    {
+      "batch": "long",
+      "seed": 2362,
+      "decks": [
+        "Garbo Gobbos",
+        "faeries"
+      ],
+      "deckIds": [
+        5254666,
+        27521806
+      ],
+      "result": "win",
+      "winner": 1,
+      "turnsCompleted": [
+        16,
+        15
+      ],
+      "runtimeQuestions": [],
+      "newCardCasts": {
+        "Haazda Marshal": 1
+      },
+      "spellsCast": 7,
+      "life": [
+        4,
+        50
+      ],
+      "mechanicCounts": {
+        "attack_group": 14,
+        "group_damage": 14,
+        "station_activate": 0,
+        "station": 0,
+        "history_activate": 0,
+        "blink": 0,
+        "transport_resolve": 0
+      },
+      "learningEligible": false
+    },
+    {
+      "batch": "long",
+      "seed": 2363,
+      "decks": [
+        "faeries",
+        "Budget Deck"
+      ],
+      "deckIds": [
+        27521806,
+        14850373
+      ],
+      "result": "win",
+      "winner": 0,
+      "turnsCompleted": [
+        12,
+        12
+      ],
+      "runtimeQuestions": [],
+      "newCardCasts": {},
+      "spellsCast": 7,
+      "life": [
+        11,
+        29
+      ],
+      "mechanicCounts": {
+        "attack_group": 20,
+        "group_damage": 26,
+        "station_activate": 0,
+        "station": 0,
+        "history_activate": 0,
+        "blink": 0,
+        "transport_resolve": 5
+      },
+      "learningEligible": false
+    },
+    {
+      "batch": "long",
+      "seed": 2364,
+      "decks": [
+        "faeries",
+        "squirrels"
+      ],
+      "deckIds": [
+        27521806,
+        8321184
+      ],
+      "result": "diagnostic_window_complete",
+      "winner": null,
+      "turnsCompleted": [
+        20,
+        20
+      ],
+      "runtimeQuestions": [],
+      "newCardCasts": {},
+      "spellsCast": 6,
+      "life": [
+        48,
+        18
+      ],
+      "mechanicCounts": {
+        "attack_group": 8,
+        "group_damage": 8,
+        "station_activate": 0,
+        "station": 0,
+        "history_activate": 0,
+        "blink": 0,
+        "transport_resolve": 0
+      },
+      "learningEligible": false
+    },
+    {
+      "batch": "long",
+      "seed": 2365,
+      "decks": [
+        "squirrels",
+        "Budget Deck"
+      ],
+      "deckIds": [
+        8321184,
+        14850373
+      ],
+      "result": "win",
+      "winner": 1,
+      "turnsCompleted": [
+        12,
+        11
+      ],
+      "runtimeQuestions": [],
+      "newCardCasts": {},
+      "spellsCast": 6,
+      "life": [
+        -2,
+        39
+      ],
+      "mechanicCounts": {
+        "attack_group": 10,
+        "group_damage": 10,
+        "station_activate": 0,
+        "station": 0,
+        "history_activate": 0,
+        "blink": 0,
+        "transport_resolve": 16
+      },
+      "learningEligible": false
+    }
+  ],
+  "runtimeQuestionCount": 0,
+  "newCardCastTotals": {
+    "Skyknight Vanguard": 1,
+    "Captain's Claws": 1,
+    "Haazda Marshal": 3,
+    "Lumen-Class Frigate": 1,
+    "Cloudspire Coordinator": 2,
+    "Akroma's Memorial": 1
+  },
+  "newMechanicTotals": {
+    "attack_group": 118,
+    "group_damage": 135,
+    "station_activate": 4,
+    "station": 4,
+    "history_activate": 1,
+    "blink": 0,
+    "transport_resolve": 32
+  },
+  "coverageNote": "All seven have focused real-Oracle tests and unfamiliar-name/remainder tests. Random games cast six of the seven; Ephemerate blink/rebound is covered by focused fixtures rather than these games.",
+  "limits": "Partial two-player diagnostic. Other unsupported deck cards, full Magic dependencies/replacements/prevention and live Minecraft integration remain unfinished. Frozen policies; not strategy training.",
+  "otherUnsupportedCardsEncountered": [
+    "Adaptive Automaton",
+    "Alchemist's Gift",
+    "Alpha Status",
+    "Animal Friend",
+    "Arcbound Mouser",
+    "Archetype of Courage",
+    "Auntie's Hovel",
+    "Baird, Argivian Recruiter",
+    "Beloved Princess",
+    "Blood Money",
+    "Blood Moon",
+    "Bloodline Pretender",
+    "Boggart Birth Rite",
+    "Boot Nipper",
+    "Bovine Intervention",
+    "Brave the Sands",
+    "Broodhatch Nantuko",
+    "Bulwark Ox",
+    "Bushy Bodyguard",
+    "Camellia, the Seedmiser",
+    "Caterwauling Boggart",
+    "Charismatic Conqueror",
+    "Chatter of the Squirrel",
+    "Chitterspitter",
+    "Chivalric Alliance",
+    "Citizen V, Helmut Zemo",
+    "Citywide Bust",
+    "Cloakwood Hermit",
+    "Cloud of Faeries",
+    "Cloudshift",
+    "Coat of Arms",
+    "Creakwood Liege",
+    "Damnation",
+    "Darkbore Pathway // Slitherbore Pathway",
+    "Darksteel Plate",
+    "Dawn-Blessed Pennant",
+    "Deep Forest Hermit",
+    "Deranged Hermit",
+    "Dino DNA",
+    "Divine Visitation",
+    "Dolmen Gate",
+    "Dragonmaster Outcast",
+    "Druid's Call",
+    "Endless Ranks of the Dead",
+    "Enduring Tenacity",
+    "Excalibur II",
+    "Experimental Confectioner",
+    "Exquisite Blood",
+    "Eye Collector",
+    "Faerie Bladecrafter",
+    "Faerie Dreamthief",
+    "Faerie Impostor",
+    "Faerie Swarm",
+    "Ferocity of the Wilds",
+    "Feywild Visitor",
+    "Goblin King",
+    "Goblin Lackey",
+    "Goblin Matron",
+    "Goblin Rabblemaster",
+    "Goblin Sledder",
+    "Goblin War Drums",
+    "Golgari Rot Farm",
+    "Guardian Gladewalker",
+    "Guildpact Informant",
+    "Hanweir Militia Captain // Westvale Cult Leader",
+    "Hazel of the Rootbloom",
+    "Herald's Horn",
+    "Herd Baloth",
+    "Honored Dreyleader",
+    "Icon of Ancestry",
+    "Indulgent Aristocrat",
+    "Interface Ace",
+    "Legion Warboss",
+    "Legion's Landing // Adanto, the First Fort",
+    "Liliana, Heretical Healer // Liliana, Defiant Necromancer",
+    "Liliana, the Last Hope",
+    "Marauding Blight-Priest",
+    "Mardu Ascendancy",
+    "Maskwood Nexus",
+    "Mauh\u00far, Uruk-hai Captain",
+    "Metallic Mimic",
+    "Mirkwood Bats",
+    "Murder Investigation",
+    "Nadier's Nightblade",
+    "Nectar Faerie",
+    "Needleverge Pathway // Pillarverge Pathway",
+    "Nuka-Cola Vending Machine",
+    "Ocelot Pride",
+    "Oona's Blackguard",
+    "Oona, Queen of the Fae",
+    "Orcish Siegemaster",
+    "Orcrist, Goblin-cleaver",
+    "Overgrown Tomb",
+    "Path to Exile",
+    "Pitiless Plunderer",
+    "Primal Vigor",
+    "Quilled Charger",
+    "Rally the Ranks",
+    "Ravenous Squirrel",
+    "Recon Craft Theta",
+    "Roadside Assistance",
+    "Rundvelt Hordemaster",
+    "Scion of Oona",
+    "Scurry Oak",
+    "Securitron Squadron",
+    "Serra Ascendant",
+    "Shadow Puppeteers",
+    "Skirk Prospector",
+    "Speaker of the Heavens",
+    "Spell Stutter",
+    "Sporeweb Weaver",
+    "Squirrel Nest",
+    "Squirrel Sanctuary",
+    "Starscape Cleric",
+    "Stonecoil Serpent",
+    "Sword of Hearth and Home",
+    "Sword of Vengeance",
+    "Sword of the Animist",
+    "Swords to Plowshares",
+    "Talion, the Kindly Lord",
+    "Tegwyll's Scouring",
+    "Tegwyll, Duke of Splendor",
+    "The Book of Vile Darkness",
+    "The Eternity Elevator",
+    "Thornvault Forager",
+    "Throne of the God-Pharaoh",
+    "Tribute to the World Tree",
+    "Twitching Doll",
+    "Universal Automaton",
+    "Urborg, Tomb of Yawgmoth",
+    "Urza's Incubator",
+    "Verdant Command",
+    "Vinereap Mentor",
+    "Vito, Thorn of the Dusk Rose",
+    "Warren Instigator",
+    "Wildwood Scourge",
+    "Ygra, Eater of All"
+  ]
+}

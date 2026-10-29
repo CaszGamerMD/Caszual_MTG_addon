@@ -92,6 +92,10 @@ class Definition:
     bestow: tuple = ()
     ability_removals: tuple = ()
     loyalty: int | None = None
+    station: tuple = ()
+    history_activation: tuple = ()
+    equipment_attacks: tuple = ()
+    pilot_bonus: int = 0
 
 
 def parse_card(card: dict) -> Definition:
@@ -113,8 +117,17 @@ def parse_card(card: dict) -> Definition:
     base = dict(name=name, types=types, subtypes=subtypes,
                 legendary="Legendary" in (card.get("superTypes") or []), power=power, toughness=toughness,
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
-    if ("Creature" in types or "Vehicle" in subtypes) and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
+    if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from advanced_abilities import station,history,equipped_attacks
+    levels=station(text,types,subtypes)
+    if levels:return Definition(**base,abilities=frozenset(),station=levels)
+    activated=history(text)
+    if activated and 'Creature' in types and (not activated[0].devotion or 'Enchantment' in types):
+        program,ability=activated
+        return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects,history_activation=ability,activations=program.activations,devotion=program.devotion)
+    equipped=equipped_attacks(text,types,subtypes)
+    if equipped:return Definition(**base,abilities=frozenset(),attachment=equipped[0],equipment_attacks=equipped[1])
     bestow=parse_bestow(text,types)
     if bestow:return Definition(**base,abilities=bestow[1],bestow=bestow)
     removal_program=parse_equipment_removals(text,types,subtypes)
@@ -133,7 +146,7 @@ def parse_card(card: dict) -> Definition:
             static_effects=entry_program.static_effects,activations=entry_program.activations,devotion=entry_program.devotion,
             crew=attacks[1],saddle=attacks[2],attack_effects=attacks[3])
     program = compile_abilities(text,name)
-    if program is not None and ("Creature" in types or "Enchantment" in types):
+    if program is not None and ("Creature" in types or "Enchantment" in types or "Artifact" in types):
         if program.devotion and not {'Creature','Enchantment'}<=types:
             return Definition(**base,abilities=frozenset(),supported=False,reason='Unsupported devotion type transition')
         return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects,
@@ -210,6 +223,7 @@ class Permanent:
     lost_abilities: dict[str,int] = field(default_factory=dict)
     temporary_ability_times: dict[str,int] = field(default_factory=dict)
     loyalty: int | None = None
+    charge_counters: int = 0
 
 
 @dataclass
@@ -248,10 +262,21 @@ class Game:
                    for part in re.findall(r'\{([^}]+)\}',permanent.definition.mana_cost))
 
     def creature(self, p: Permanent) -> bool:
+        if p.definition.station:return p.charge_counters>=p.definition.station[-1][0]
         if p.definition.devotion:
             symbol,threshold=p.definition.devotion
             if self.devotion(p.controller,symbol)<threshold:return False
         return "Creature" in p.definition.types or ("Vehicle" in p.definition.subtypes and p.animated)
+
+    def static_effects(self,source):
+        effects=list(source.definition.static_effects)
+        for threshold,effect,_ in source.definition.station:
+            if source.charge_counters>=threshold and effect:
+                effects.extend(effect if isinstance(effect,tuple) else (effect,))
+        return effects
+
+    def protected(self,permanent,colors):
+        return any(self.has(permanent,'protection from '+color.lower()) for color in colors)
 
     def stats(self, p: Permanent) -> tuple[int, int]:
         if not self.creature(p):
@@ -262,7 +287,7 @@ class Game:
         for source in self.battlefield.values():
             if source.attached_to==p.id and source.definition.attachment:
                 power_bonus+=source.definition.attachment[3];toughness_bonus+=source.definition.attachment[4]
-            for effect in source.definition.static_effects:
+            for effect in self.static_effects(source):
                 if not matches(effect.subject,source,p,True): continue
                 if effect.condition and not any(matches(effect.condition,source,x,self.creature(x)) for x in self.battlefield.values()): continue
                 multiplier = (sum(matches(effect.count,source,x,self.creature(x)) for x in self.battlefield.values())
@@ -273,11 +298,12 @@ class Game:
                 p.definition.toughness + p.counters + bonus + toughness_bonus)
 
     def ward_costs(self,p):
-        return tuple(effect.ward_cost for source in self.battlefield.values() for effect in source.definition.static_effects
+        return tuple(effect.ward_cost for source in self.battlefield.values() for effect in self.static_effects(source)
                      if effect.ward_cost and matches(effect.subject,source,p,self.creature(p)))
 
     def has(self, p: Permanent, ability: str) -> bool:
         grants=[]
+        if any(p.charge_counters>=threshold and ability in keywords for threshold,_,keywords in p.definition.station):grants.append(p.entered_at)
         if ability in p.definition.abilities:grants.append(p.entered_at)
         if ability in p.temporary_abilities:grants.append(p.temporary_ability_times.get(ability,p.entered_at))
         for source in self.battlefield.values():
@@ -285,7 +311,7 @@ class Game:
             if source.attached_to==p.id and source.definition.attachment and ability in source.definition.attachment[2]:
                 grants.append(stamp)
             if any(effect.grant==ability and matches(effect.subject,source,p,self.creature(p))
-                   for effect in source.definition.static_effects):grants.append(stamp)
+                   for effect in self.static_effects(source)):grants.append(stamp)
         if ability=='indestructible' and p.definition.name=='Zurgo Helmsmasher' and p.controller==self.turn_player:
             grants.append(p.entered_at)
         if ability=='haste' and ({'Mount','Vehicle'} & p.definition.subtypes):
@@ -379,7 +405,7 @@ class Game:
             if p is None or p.controller != self.battlefield[permanent_id].controller or p.tapped or not self.creature(p):
                 raise IllegalAction("Crew/saddle requires untapped creatures you control")
             creatures.append(p)
-        if sum(self.stats(p)[0] for p in creatures) < required:
+        if sum(self.stats(p)[0]+p.definition.pilot_bonus for p in creatures) < required:
             raise IllegalAction("Insufficient total power")
         return creatures
 
@@ -428,7 +454,9 @@ class Game:
         a.attacking = defending_player
         self.emit("attacks", id=a.id, defending=defending_player)
         for operation,power,toughness,keyword in a.definition.attack_effects:
-            if operation=='counter':
+            if operation=='counter' and defer:
+                self.emit('trigger',operation='self_counter',source=a.id,name=a.definition.name,controller=a.controller,effect='add counter',amount=power)
+            elif operation=='counter':
                 a.counters+=power
                 self.emit('trigger',source=a.id,effect='add +1/+1 counter',target=a.id)
             elif operation=='counter_power_tokens':
@@ -447,6 +475,8 @@ class Game:
                 self.emit('trigger',source=a.id,name=a.definition.name,controller=a.controller,target=a.id,
                     operation='subtype_count_boost',effect='temporary boost per controlled subtype',
                     power=power,toughness=toughness,subtype=keyword)
+            elif operation=='saddled_boost' and a.saddled and defer:
+                self.emit('trigger',operation='saddled_boost',source=a.id,name=a.definition.name,controller=a.controller,effect='saddled boost',power=power,toughness=toughness,keyword=keyword)
             elif operation=='saddled_boost' and a.saddled:
                 a.temporary_power+=power;a.temporary_toughness+=toughness
                 self.grant_temporary(a,keyword)
@@ -460,6 +490,9 @@ class Game:
             if equipment.definition.name != "Andúril, Flame of the West" or equipment.attached_to != a.id:
                 continue
             attacking = defending_player if a.definition.legendary and equipment.controller == a.controller else None
+            if defer:
+                self.emit('trigger',operation='create_tokens',source=equipment.id,name=equipment.definition.name,controller=equipment.controller,effect='two Spirits',tokenSpec=dict(amount=2,power=1,toughness=1,colors=['White'],subtypes=['Spirit'],keywords=['flying'],tapped=True,attacking=attacking is not None))
+                continue
             ids = []
             for _ in range(2):
                 self._next_token += 1

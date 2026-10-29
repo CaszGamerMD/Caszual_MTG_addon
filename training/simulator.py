@@ -10,6 +10,7 @@ import base64
 from oracle_abilities import parse_token_creation
 import mana_pool
 import x_spells
+from advanced_simulator import AdvancedRules,root
 import library_effects
 from priority_stack import PriorityStack
 from dataclasses import dataclass, field, replace, asdict
@@ -155,7 +156,7 @@ def audit_decks(rules: RulesBridge, decks: list[dict]) -> dict:
     questions["full-commander-backend"] = {
         "id": "full-commander-backend", "status": "open", "blocking": True, "card": "",
         "reason": "simulation scope",
-        "question": "Implement/validate complete Commander timing, priority, multiple attackers/blockers, commander zones/damage and replacement effects before running these decks.",
+        "question": "Complete arbitrary Commander targeting, replacement/prevention and continuous-effect dependencies, multiplayer and unsupported card programs before treating diagnostics as full games.",
         "answer": None}
     return {"schemaVersion": 1, "kind": "rules-review", "status": "blocked",
             "learningEligible": False, "decks": coverage, "questions": list(questions.values())}
@@ -192,6 +193,9 @@ class Card:
     removal: str = ""
     printed_types: tuple[str, ...] = ()
     printed_mana_value: int | None = None
+    physical_id: str = ""
+    blink: bool = False
+    rebound: bool = False
 
 
 
@@ -225,6 +229,7 @@ class Permanent:
     lost_abilities: dict[str,int] = field(default_factory=dict)
     temporary_ability_times: dict[str,int] = field(default_factory=dict)
     loyalty: int | None = None
+    charge_counters: int = 0
 
 
 @dataclass
@@ -233,6 +238,7 @@ class Player:
     hand: list[Card] = field(default_factory=list)
     battlefield: list[Permanent] = field(default_factory=list)
     graveyard: list[Card] = field(default_factory=list)
+    exile: list[Card] = field(default_factory=list)
     life: int = 40
     failed_draw: bool = False
     mana_pool: list[int] = field(default_factory=lambda: [0]*6)
@@ -254,6 +260,8 @@ class Candidate:
     target_stack: int | None = None
     target_permanent: str = ""
     activation_index: int = 0
+    attack_ids: tuple[str, ...] = ()
+    blocks: tuple = ()
 
 
 @dataclass(frozen=True)
@@ -316,8 +324,8 @@ def demo_deck(seat: int) -> list[Card]:
     return result
 
 
-class Simulator:
-    """Deterministic classroom turn model. No priority, stack, commanders or multi-attack combat."""
+class Simulator(AdvancedRules):
+    """Deterministic classroom model with a broader, non-training-eligible real-deck diagnostic."""
     def __init__(self, rules: RulesBridge, seed: int, starter: int = 0,
                  policies: tuple[Policy, Policy] = (Policy(), Policy()), max_turns: int = 100,
                  decks: tuple[list[Card], list[Card]] | None = None, starting_life: int = 40,
@@ -344,6 +352,7 @@ class Simulator:
         all_cards = [c for p in self.players for c in p.library] + [p.command_zone for p in self.players if p.command_zone]
         if len({c.id for c in all_cards}) != len(all_cards):
             raise ValueError("Card identities must be unique")
+        self.card_owners={root(c):seat for seat,p in enumerate(self.players) for c in p.library+([p.command_zone] if p.command_zone else [])}
         self.total_cards = tuple(len(p.library) + int(p.command_zone is not None) for p in self.players)
         self.turn, self.active, self.phase = 0, starter, "setup"
         self.events: list[dict] = []
@@ -353,6 +362,11 @@ class Simulator:
         self.winner: int | None = None
         self.result = "running"
         self.combat_context=None
+        self.group_combat=None
+        self.entry_history=[]
+        self.rebound_pending=[]
+        self.object_sequence=0
+        self._rebound_permission=None
         self.pending: str | None = None
         self.land_played = False
         self.main_return = ""
@@ -380,6 +394,7 @@ class Simulator:
                     continue
                 if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands"):
                     continue
+                if self.diagnostic and card.blink:continue
                 if self.diagnostic and card.kind=="counter_spell" and card.counter_filter in ("any","creature","noncreature"):
                     continue
                 if card.kind not in ("land", "creature", "spell"):
@@ -416,7 +431,7 @@ class Simulator:
         return {"id": c.id, "name": c.name, "kind": "aura" if item.bestowed else ("enchantment" if not effective and c.event_definition and c.event_definition.devotion else c.kind), "power": c.power,
                 "toughness": c.toughness, "traits": c.traits, "tapped": item.tapped,
                 "fresh": item.fresh, "saddled": item.saddled, "counters": item.counters, "isCreature": effective is not None, "bestowed": item.bestowed, "attachedTo": item.attached_to,
-                "hexproof": bool(state and game.has(state,'hexproof')), "wardCosts": list(game.ward_costs(state)) if state else [], "loyalty": item.loyalty}
+                "hexproof": bool(state and game.has(state,'hexproof')), "wardCosts": list(game.ward_costs(state)) if state else [], "loyalty": item.loyalty, "chargeCounters": item.charge_counters}
 
     def state(self) -> dict:
         return {"active": self.active, "turn": self.turn, "phase": self.phase,
@@ -426,21 +441,20 @@ class Simulator:
                              "battlefield": [self.display_permanent(x) for x in p.battlefield],
                              "commanderInZone": p.command_zone is not None,
                              "commanderDamage": dict(p.commander_damage),
-                             "graveyard": [{"id": c.id, "name": c.name} for c in p.graveyard]}
+                             "graveyard": [{"id": c.id, "name": c.name} for c in p.graveyard],
+                             "exile": [{"id":c.id,"name":c.name} for c in p.exile]}
                             for i, p in enumerate(self.players)]}
 
     def invariant(self):
-        for i, p in enumerate(self.players):
-            cards = p.library + p.hand + p.graveyard + [x.card for x in p.battlefield]
-            if p.command_zone: cards.append(p.command_zone)
-            cards += [frame.payload[1] for frame in self.stack.items
-                      if frame.controller==i and frame.payload[0].get('operation')=='spell'
-                      and not frame.payload[0].get('copy')]
-            if self._current_spell and self._current_spell[0]==i:
-                resolving=self._current_spell[1]
-                if not any(c.id==resolving.id for c in cards): cards.append(resolving)
-            if sum(not c.is_token for c in cards) != self.total_cards[i] or len({c.id for c in cards}) != len(cards):
-                raise RuntimeError("Card conservation failed")
+        cards=[]
+        for seat,p in enumerate(self.players):
+            cards.extend((seat,c) for c in p.library+p.hand+p.graveyard+p.exile+[x.card for x in p.battlefield]+([p.command_zone] if p.command_zone else []))
+        cards.extend((frame.controller,frame.payload[1]) for frame in self.stack.items if frame.payload[0].get('operation')=='spell' and not frame.payload[0].get('copy'))
+        if self._current_spell and not any(root(c)==root(self._current_spell[1]) for _,c in cards):cards.append(self._current_spell)
+        physical=[root(c) for _,c in cards if not c.is_token]
+        counts=[sum(not c.is_token and self.card_owners.get(root(c),seat)==owner for seat,c in cards) for owner in (0,1)]
+        if tuple(counts)!=self.total_cards or len(physical)!=len(set(physical)) or len([c.id for _,c in cards])!=len({c.id for _,c in cards}):
+            raise RuntimeError('Card conservation failed')
 
     def bestowed_definition(self,definition):
         # The supported bestow grammar has creature subtypes and no enchantment subtypes.
@@ -467,7 +481,7 @@ class Simulator:
                     item.fresh, item.saddled, item.animated, counters=item.counters, token=item.card.is_token,temporary_power=item.temporary_power,
                     temporary_toughness=item.temporary_toughness,temporary_abilities=item.temporary_abilities,attached_to=item.attached_to,
                     entered_at=item.entered_at,attachment_at=item.attachment_at,lost_abilities=dict(item.lost_abilities),
-                    temporary_ability_times=dict(item.temporary_ability_times),loyalty=item.loyalty)
+                    temporary_ability_times=dict(item.temporary_ability_times),loyalty=item.loyalty,charge_counters=item.charge_counters)
         return game
 
     def sync_events(self, game: EventGame):
@@ -479,6 +493,7 @@ class Simulator:
                     item.attached_to=state.attached_to
                     item.entered_at,item.attachment_at=state.entered_at,state.attachment_at
                     item.loyalty=state.loyalty
+                    item.charge_counters=state.charge_counters
                     item.lost_abilities=dict(state.lost_abilities);item.temporary_ability_times=dict(state.temporary_ability_times)
                     item.tapped, item.fresh = state.tapped, state.fresh
                     item.saddled, item.animated, item.counters = state.saddled, state.animated, state.counters
@@ -516,6 +531,7 @@ class Simulator:
             entrants.append(EventPermanent(card.id,replace(definition,mana_cost=card.mana_cost),controller,
                                            attached_to=bestowed_targets.get(card.id)))
         game.enter_batch(entrants)
+        self.entry_history.extend(dict(turn=self.turn,controller=controller,subtypes=sorted(p.definition.subtypes)) for p in entrants)
         player.battlefield.extend(Permanent(card,attached_to=bestowed_targets.get(card.id),bestowed=card.id in bestowed_targets) for card in cards)
         for token_id in game.battlefield.keys()-known-{card.id for card in cards}:
             token_state=game.battlefield[token_id]
@@ -550,7 +566,7 @@ class Simulator:
                 for item in player.battlefield:
                     if item.card.kind not in ('aura','equipment') and not item.bestowed:continue
                     target=game.battlefield.get(item.attached_to)
-                    if target and game.creature(target):continue
+                    if target and game.creature(target) and not game.protected(target,item.card.colors):continue
                     if item.bestowed:detached.append(item)
                     elif item.card.kind=='aura':invalid_auras.append((owner,item))
                     elif item.attached_to:detached.append(item)
@@ -628,7 +644,7 @@ class Simulator:
 
     def response_choices(self,seat):
         if seat!=self.stack.priority: return ()
-        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','token_spell','counter_spell','removal_spell')
+        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','token_spell','counter_spell','removal_spell','blink_spell')
                      and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
 
@@ -702,7 +718,7 @@ class Simulator:
             if source.card.kind!='equipment' or source.attached_to:continue
             cost=source.card.event_definition.attachment[1]
             if not self.payment(replace(source.card,mana_cost=cost),seat=seat)['paid']:continue
-            for owner,target in self.creature_targets():
+            for owner,target in self.creature_targets(seat,source.card):
                 if owner==seat and source.attached_to!=target.card.id:
                     choices.append(Candidate(source.card.id+':equip:'+target.card.id,'equip',source.card.id,
                         features=features(power=.5),label='Equip '+source.card.name,target_permanent=target.card.id))
@@ -711,7 +727,7 @@ class Simulator:
     def activate_equip(self,seat,source_id,target):
         if self.stack.items or self.stack.priority!=seat or seat!=self.active or self.phase not in ('main','second_main'):raise ValueError('Illegal equip timing')
         source=next((p for p in self.players[seat].battlefield if p.card.id==source_id and p.card.kind=='equipment'),None)
-        if source is None or target not in {p.card.id for owner,p in self.creature_targets() if owner==seat}:raise ValueError('Illegal equip target')
+        if source is None or target not in {p.card.id for owner,p in self.creature_targets(seat,source.card) if owner==seat}:raise ValueError('Illegal equip target')
         payment=self.payment(replace(source.card,mana_cost=source.card.event_definition.attachment[1]),seat=seat)
         if not payment['paid']:raise ValueError('Cannot pay equip')
         for p in self.players[seat].battlefield:
@@ -719,11 +735,12 @@ class Simulator:
         self.players[seat].mana_pool=list(payment['pool'])
         self.resolve_entry_triggers([dict(operation='attach',source=source_id,target=target,controller=seat,name=source.card.name)],source.card)
 
-    def creature_targets(self,controller=None):
+    def creature_targets(self,controller=None,source=None):
         game=self.event_game('main')
         return tuple((seat,item) for seat,player in enumerate(self.players) for item in player.battlefield
                      if item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id])
-                     and (controller is None or seat==controller or not game.has(game.battlefield[item.card.id],'hexproof')))
+                     and (controller is None or seat==controller or not game.has(game.battlefield[item.card.id],'hexproof'))
+                     and (source is None or not game.protected(game.battlefield[item.card.id],source.colors)))
 
     def removal_choices(self,seat,card,kind):
         if card.removal=='opponent_nonlands':
@@ -731,7 +748,7 @@ class Simulator:
             return (Candidate(card.id,kind,card.id,features=features(power=count,cost=len(self.payment(card,seat=seat).get('sources',[]))),label='Cast '+card.name),)
         game=self.event_game('main')
         choices=[]
-        for owner,item in self.creature_targets(seat):
+        for owner,item in self.creature_targets(seat,card):
             state=game.battlefield[item.card.id]
             wards=game.ward_costs(state) if owner!=seat else ()
             projected=self.payment(replace(card,mana_cost=card.mana_cost+''.join(wards)),seat=seat)
@@ -767,7 +784,7 @@ class Simulator:
         removed=self.stack.counter(frame.id)
         if removed and removed.payload[0].get('operation')=='spell' and not removed.payload[0].get('copy'):
             owner=self.players[removed.controller];countered=removed.payload[1]
-            if countered.id==owner.commander_id:owner.command_zone=countered
+            if root(countered)==owner.commander_id:owner.command_zone=countered
             else:owner.graveyard.append(countered)
         return removed
 
@@ -788,10 +805,23 @@ class Simulator:
     def priority_observation(self,seat):
         if seat!=self.stack.priority: raise ValueError('Player lacks priority')
         actions=[Candidate('priority-pass','priority_pass',features=features(),label='Pass priority')]
+        crews=self.activation_choices(seat,{'crew'})
+        if self.group_combat is not None and self.phase=='block' and seat!=self.active:
+            game=self.event_game('combat')
+            for choice in crews:
+                state=game.battlefield[choice.card_id];state.animated=True
+                useful=not state.tapped and any(identifier in game.battlefield and game.creature(game.battlefield[identifier])
+                    and (not game.has(game.battlefield[identifier],'flying') or game.has(state,'flying') or game.has(state,'reach'))
+                    and not game.protected(game.battlefield[identifier],state.definition.colors) for identifier in self.group_combat['attackers'])
+                actions.append(replace(choice,features=features(power=.5 if useful else -100)))
+        else:actions.extend(crews)
+        actions.extend(self.special_choices(seat))
         actions.extend(self.token_ability_choices(seat))
         actions.extend(self.strip_ability_choices(seat))
         for card in self.response_choices(seat):
-            if card.kind=='removal_spell':
+            if card.blink:
+                actions.extend(self.blink_choices(seat,card))
+            elif card.kind=='removal_spell':
                 actions.extend(self.removal_choices(seat,card,'respond'))
             elif card.kind=='counter_spell':
                 actions.extend(Candidate(card.id+':target='+str(frame.id),'respond',card.id,
@@ -807,6 +837,10 @@ class Simulator:
     def act_priority(self,seat,choice):
         if choice not in self.priority_observation(seat).legal_actions: raise ValueError('Illegal priority choice')
         if choice.kind=='priority_pass': return self.pass_priority(seat)
+        if choice.kind in ('crew','saddle'):
+            self.activate_transport(seat,choice.kind,choice.card_id,choice.tap_ids);return 'activate'
+        if choice.kind=='history_tokens':
+            self.activate_history(seat,choice.card_id);return 'activate'
         if choice.kind=='activate_strip':
             self.activate_strip(seat,choice.card_id,choice.activation_index)
             return 'activate'
@@ -817,33 +851,36 @@ class Simulator:
         self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack)
         return 'cast'
 
-    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False):
+    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False):
         player=self.players[seat]
         if not card.instant and seat!=self.stack.priority: raise ValueError('Player lacks priority')
         if self.stack.items:
             if seat!=self.stack.priority or not card.instant: raise ValueError('Spell timing or priority invalid')
         elif seat!=self.active or self.phase not in ('main','second_main'):
             if not card.instant or seat!=self.stack.priority: raise ValueError('Spell timing invalid')
-        if not commander and card not in player.hand: raise ValueError('Card not in hand')
+        if rebound and self._rebound_permission!=(seat,root(card)):raise ValueError('No rebound casting permission')
+        if not commander and card not in (player.exile if rebound else player.hand): raise ValueError('Card not in casting zone')
         if bestow and (not card.event_definition or not card.event_definition.bestow):raise ValueError('Card has no supported bestow ability')
-        if (card.kind=='aura' or bestow) and target not in {p.card.id for _,p in self.creature_targets(seat)}:raise ValueError('Illegal Aura target')
-        if card.kind=='removal_spell' and card.removal=='destroy' and target not in {item.card.id for _,item in self.creature_targets(seat)}:
+        if (card.kind=='aura' or bestow) and target not in {p.card.id for _,p in self.creature_targets(seat,card)}:raise ValueError('Illegal Aura target')
+        if card.kind=='removal_spell' and card.removal=='destroy' and target not in {item.card.id for _,item in self.creature_targets(seat,card)}:
             raise ValueError('Removal requires a legal creature target')
         if card.kind=='counter_spell' and target not in {f.id for f in self.counter_targets(card)}:
             raise ValueError('Counterspell requires a legal spell target')
+        if card.blink and target not in {p.card.id for owner,p in self.creature_targets(seat,card) if owner==seat}:raise ValueError('Blink requires own legal creature')
         payment_card=replace(card,mana_cost=card.event_definition.bestow[0]) if bestow else card
+        if rebound:payment_card=replace(payment_card,mana_cost='{0}')
         payment=self.payment(payment_card,player.commander_casts if commander else 0,x=x,seat=seat)
         if not payment['paid']: raise ValueError('Cannot pay spell cost')
         for source in player.battlefield:
             if source.card.id in payment['sources']:source.tapped=True
         player.mana_pool=list(payment['pool'])
         if commander:player.command_zone=None;player.commander_casts+=1
-        else:player.hand.remove(card)
+        else:(player.exile if rebound else player.hand).remove(card)
         prior=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)
         self.stack.active=self.active
-        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow},card),card.name)
+        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'fromHand':not rebound and not commander},card),card.name)
         self.log('cast',f'Player {seat+1} casts {card.name}.',actor=seat,card=card.name,
-                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,bestow=bestow,targetStack=target if card.kind=='counter_spell' else None,
+                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,bestow=bestow,rebound=rebound,targetStack=target if card.kind=='counter_spell' else None,
                  targetPermanent=target if card.kind=='removal_spell' else None)
         self.stack.priority=seat
         self.log('stack_push',f'{card.name} goes on the stack.',stackId=frame.id,controller=seat)
@@ -859,8 +896,20 @@ class Simulator:
     def resolve_spell(self,event,original):
         controller=event['controller'];p=self.players[controller];card=original
         if event.get('copy'): self.log('spell_copy',f'A copy of {card.name} resolves.',card=card.name)
+        if card.blink:
+            target=next(((owner,item) for owner,item in self.creature_targets(controller,card) if owner==controller and item.card.id==event['target']),None)
+            if target is None:
+                if not event.get('copy'):p.graveyard.append(original)
+                self.log('illegal_target',f'{card.name} has no legal blink target.')
+                return
+            if not event.get('copy'):
+                if card.rebound and event.get('fromHand'):
+                    p.exile.append(original);self.rebound_pending.append(dict(controller=controller,card=root(original),afterTurn=self.turn))
+                else:p.graveyard.append(original)
+            self.blink_permanent(*target)
+            return
         if event.get('bestow'):
-            if event['target'] in {target.card.id for _,target in self.creature_targets(controller)}:
+            if event['target'] in {target.card.id for _,target in self.creature_targets(controller,card)}:
                 pending=self.enter_creatures([card],p,{card.id:event['target']})
                 self.log('bestow',f'{card.name} enters as an Aura.',targetPermanent=event['target'])
                 self.resolve_entry_triggers(pending,card)
@@ -870,7 +919,7 @@ class Simulator:
                 self.resolve_entry_triggers(pending,card)
             return
         if card.kind=='aura':
-            if event['target'] not in {p.card.id for _,p in self.creature_targets(controller)}:
+            if event['target'] not in {p.card.id for _,p in self.creature_targets(controller,card)}:
                 if not event.get('copy'):p.graveyard.append(card)
                 self.log('illegal_target',f'{card.name} has no legal Aura target.')
                 return
@@ -882,7 +931,7 @@ class Simulator:
         if card.kind=='equipment':
             self.enter_creature(card,p)
             return
-        if card.kind in ('creature','vehicle','enchantment','planeswalker'):
+        if card.kind in ('creature','vehicle','enchantment','planeswalker','station','artifact'):
             triggers=self.enter_creature(card,p)
             self.resolve_entry_triggers(triggers,card)
         elif card.kind=='mana_artifact': p.battlefield.append(Permanent(card))
@@ -891,7 +940,7 @@ class Simulator:
             if card.removal=='opponent_nonlands':
                 self.destroy_batch(self.nonland_destruction_set(controller),card)
                 return
-            target=next(((seat,item) for seat,item in self.creature_targets(controller) if item.card.id==event['target']),None)
+            target=next(((seat,item) for seat,item in self.creature_targets(controller,card) if item.card.id==event['target']),None)
             if target is None:
                 self.log('illegal_target',f'{card.name} has no legal creature target.',targetPermanent=event['target'])
                 return
@@ -940,6 +989,39 @@ class Simulator:
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='transport':
+                source=next((p for player in self.players for p in player.battlefield if p.card.id==event['source']),None)
+                if source:
+                    if event['kind']=='crew':source.animated=True
+                    else:source.saddled=True
+                self.log('transport_resolve','Transport activation resolves.',source=event['source'],ability=event['kind'])
+                continue
+            if event.get('operation')=='station':
+                game=self.event_game('main');station=game.battlefield.get(event['source']);helper=game.battlefield.get(event['helper'])
+                amount=max(0,(game.stats(helper)[0] if game.creature(helper) else 0) if helper else event['lastPower'])
+                if station:station.charge_counters+=amount;self.sync_events(game)
+                self.log('station','Station adds charge counters.',source=event['source'],amount=amount)
+                continue
+            if event.get('operation')=='history_tokens':
+                amount=self.history_count(event['controller'],event['watch'])
+                event=dict(event,operation='create_tokens',tokenSpec=dict(event['tokenSpec'],amount=amount))
+            if event.get('operation')=='rebound':
+                owner=event['controller'];p=self.players[owner];rebound_card=next((c for c in p.exile if root(c)==event['card']),None)
+                if rebound_card:
+                    choices=self.blink_choices(owner,rebound_card,'rebound_cast')
+                    # A legal deterministic policy accepts a non-token target; otherwise declines.
+                    usable=[c for c in choices if not next(item for item in p.battlefield if item.card.id==c.target_permanent).card.is_token]
+                    if usable:
+                        choice=max(usable,key=lambda c:sum(w*f for w,f in zip(self.policies[owner].weights,c.features)))
+                        self._rebound_permission=(owner,root(rebound_card))
+                        try:self.cast_spell(owner,rebound_card,target=choice.target_permanent,rebound=True)
+                        finally:self._rebound_permission=None
+                    else:self.log('rebound_declined','No chosen legal non-token target; the spell remains exiled.',actor=owner)
+                continue
+            if event.get('operation')=='saddled_boost':
+                game=self.event_game('combat');source=game.battlefield.get(event['source'])
+                if source:source.temporary_power+=event['power'];source.temporary_toughness+=event['toughness'];game.grant_temporary(source,event['keyword']);self.sync_events(game)
+                continue
             if event.get('operation')=='lose_abilities':
                 game=self.event_game('main')
                 affected=game.lose_opposing_abilities(event['controller'],event['abilities'])
@@ -1016,12 +1098,14 @@ class Simulator:
                 for _ in range(spec["amount"]):
                     self.token_sequence+=1
                     definition=EventDefinition(" ".join(spec["subtypes"]),frozenset({"Creature"}|({"Land"} if spec.get("land") else set())|({"Enchantment"} if spec.get("enchantment") else set())),frozenset(spec["subtypes"]),
-                        False,spec["power"],spec["toughness"],frozenset(spec["keywords"]),colors=frozenset(spec["colors"]))
+                        False,spec["power"],spec["toughness"],frozenset(spec["keywords"]),colors=frozenset(spec["colors"]),pilot_bonus=spec.get("contribution_bonus",0))
                     token=Card(f"token-{self.token_sequence}",definition.name,"creature",
                         traits=f"{definition.power};{definition.toughness};"+",".join(sorted(definition.abilities)),
                         power=definition.power,toughness=definition.toughness,event_definition=definition,is_token=True)
                     pending.extend(self.enter_creature(token,owner))
                     next(p for p in owner.battlefield if p.card.id==token.id).tapped=spec["tapped"]
+                    if spec.get('attacking') and event['controller']==self.active and self.group_combat is not None:
+                        self.group_combat['attackers'].append(token.id)
                 self.log("upkeep" if event.get("event")=="upkeep" else "trigger",
                          f"{event['name']}: controller loses {event.get('controllerLoss',0)} life and creates {spec['amount']} creature tokens.",actor=event["controller"],
                          **{k:v for k,v in event.items() if k!="kind"})
@@ -1032,7 +1116,7 @@ class Simulator:
                 continue
             elif event.get('operation')=='attach':
                 source=next((p for p in self.players[event['controller']].battlefield if p.card.id==event['source']),None)
-                if source and event['target'] in {p.card.id for owner,p in self.creature_targets() if owner==event['controller']}:
+                if source and event['target'] in {p.card.id for owner,p in self.creature_targets(event['controller'],source.card) if owner==event['controller']}:
                     if source.attached_to!=event['target']:
                         source.attached_to=event['target']
                         self.effect_clock+=1;source.attachment_at=self.effect_clock
@@ -1068,20 +1152,22 @@ class Simulator:
                     self.pause('Cannot apply board damage without planeswalker loyalty',card);return
                 opponent=1-event['controller'];amount=event['amount']
                 self.players[opponent].life-=amount
+                prevented={item.card.id for _,item in targets if game.protected(game.battlefield[item.card.id],event.get('sourceColors',card.colors))}
                 for _,item in targets:
+                    if item.card.id in prevented:continue
                     state=game.battlefield[item.card.id]
                     if game.creature(state):item.marked_damage+=amount
                     if 'Planeswalker' in state.definition.types:item.loyalty=max(0,item.loyalty-amount)
-                if lifelink:self.players[event['controller']].life+=amount*(len(targets)+1)
+                if lifelink:self.players[event['controller']].life+=amount*(len(targets)-len(prevented)+1)
                 dead=[]
                 for owner,item in targets:
                     state=game.battlefield[item.card.id]
                     zero_loyalty='Planeswalker' in state.definition.types and item.loyalty==0
-                    lethal=game.creature(state) and not game.has(state,'indestructible') and (touch or item.marked_damage>=game.stats(state)[1])
+                    lethal=game.creature(state) and not game.has(state,'indestructible') and (touch and item.card.id not in prevented or item.marked_damage>=game.stats(state)[1])
                     if zero_loyalty or lethal:dead.append((owner,item))
                 self.log('damage_board',f"{event['name']} deals {amount} damage to the opposing player and their creatures and planeswalkers.",
                          actor=event['controller'],damaged=[item.card.id for _,item in targets],amount=amount,
-                         loyaltyAfter={item.card.id:item.loyalty for _,item in targets if 'Planeswalker' in game.battlefield[item.card.id].definition.types})
+                         prevented=sorted(prevented),loyaltyAfter={item.card.id:item.loyalty for _,item in targets if 'Planeswalker' in game.battlefield[item.card.id].definition.types})
                 self.destroy_batch(dead,card,reason='damage_deaths')
                 self.outcome()
                 if self.finished:return
@@ -1138,8 +1224,8 @@ class Simulator:
         if has(a,'lifelink'):active.life+=to_blocker+to_player
         if has(b,'lifelink'):defender.life+=to_attacker
         defender.life-=to_player
-        if attacker and attacker.card.id==active.commander_id and to_player:
-            defender.commander_damage[attacker.card.id]=defender.commander_damage.get(attacker.card.id,0)+to_player
+        if attacker and root(attacker.card)==active.commander_id and to_player:
+            defender.commander_damage[root(attacker.card)]=defender.commander_damage.get(root(attacker.card),0)+to_player
         game=self.event_game('combat');dead=[]
         for player in self.players:
             for item in player.battlefield:
@@ -1177,6 +1263,9 @@ class Simulator:
 
     def send_to_destination(self, player: Player, item: Permanent, snapshot=None):
         for event,_ in [frame.payload for frame in self.stack.items]+self._waiting_triggers:
+            if event.get('operation')=='station' and event.get('helper')==item.card.id:
+                game=snapshot or self.event_game('main')
+                if item.card.id in game.battlefield:event['lastPower']=game.stats(game.battlefield[item.card.id])[0] if game.creature(game.battlefield[item.card.id]) else 0
             if event.get('operation')=='damage_board' and event.get('source')==item.card.id:
                 game=snapshot or self.event_game('main');state=game.battlefield.get(item.card.id)
                 if state:
@@ -1195,13 +1284,14 @@ class Simulator:
                     if attached.card.kind=='aura':
                         owner.battlefield.remove(attached)
                         if not attached.card.is_token:owner.graveyard.append(attached.card)
+        destination=self.players[self.card_owners.get(root(item.card),next(i for i,p in enumerate(self.players) if p is player))]
         player.battlefield.remove(item)
         if item.card.is_token:
             return  # Tokens cease to exist after leaving the battlefield.
-        if item.card.id == player.commander_id:
-            player.command_zone = item.card  # This prototype chooses the command-zone option.
+        if root(item.card) == destination.commander_id:
+            destination.command_zone = item.card  # This prototype chooses the command-zone option.
         else:
-            player.graveyard.append(item.card)
+            destination.graveyard.append(item.card)
 
     def log(self, kind: str, message: str, **details):
         self.invariant()
@@ -1284,7 +1374,7 @@ class Simulator:
                 for other in player.battlefield:
                     effective = self.effective_card(other)
                     if other.card.id != permanent.card.id and not other.tapped and effective:
-                        helpers.append((other.card.id, effective.power))
+                        helpers.append((other.card.id, effective.power+(other.card.event_definition.pilot_bonus if other.card.event_definition else 0)))
                 options = []
                 for n in range(1, min(len(helpers), 4)+1):
                     for group in itertools.combinations(helpers,n):
@@ -1300,6 +1390,8 @@ class Simulator:
 
     def legal(self, seat: int) -> tuple[Candidate, ...]:
         p = self.players[seat]
+        if self.diagnostic and self.phase=='attack':return self.group_attack_choices(seat)
+        if self.group_combat is not None and self.phase=='block':return self.group_block_choices(seat)
         actions = []
         if self.phase == "land":
             if not self.land_played:
@@ -1308,6 +1400,7 @@ class Simulator:
                         actions.append(Candidate(c.id, "land", c.id, features(power=1), "Play " + c.name))
         elif self.phase in ("main", "second_main"):
             if self.diagnostic: actions.extend(self.activation_choices(seat, {"crew","saddle"}))
+            actions.extend(self.special_choices(seat))
             actions.extend(self.equip_choices(seat))
             actions.extend(self.token_ability_choices(seat))
             actions.extend(self.strip_ability_choices(seat))
@@ -1319,17 +1412,19 @@ class Simulator:
                              cost=len(self.payment(c, p.commander_casts).get("sources", []))),
                     "Cast commander " + c.name))
             for c in p.hand:
+                if c.blink and self.payment(c)['paid']:
+                    actions.extend(self.blink_choices(seat,c,'cast'));continue
                 if c.event_definition and c.event_definition.bestow:
                     payment=self.payment(replace(c,mana_cost=c.event_definition.bestow[0]))
                     if payment['paid']:
                         actions.extend(Candidate(c.id+':bestow:'+target.card.id,'bestow',c.id,
                             features=features(power=2 if owner==seat else -100,cost=len(payment['sources'])),
                             label='Bestow '+c.name,target_permanent=target.card.id)
-                            for owner,target in self.creature_targets(seat))
+                            for owner,target in self.creature_targets(seat,c))
                 if c.kind=='aura' and self.payment(c)['paid']:
                     actions.extend(Candidate(c.id+':aura:'+target.card.id,'cast',c.id,
                         features=features(power=1 if owner==seat else -100),label='Cast '+c.name,target_permanent=target.card.id)
-                        for owner,target in self.creature_targets(seat))
+                        for owner,target in self.creature_targets(seat,c))
                     continue
                 if c.kind=='removal_spell' and self.payment(c)['paid']:
                     actions.extend(self.removal_choices(seat,c,'cast'))
@@ -1345,7 +1440,7 @@ class Simulator:
                                      draw=x if c.x_effect=='draw' else 0,life=x if c.x_effect=='life' else 0,
                                      cost=len(payment['sources'])), 'Cast '+c.name+' with X='+str(x),x_value=x))
                     continue
-                if c.kind in ("creature", "vehicle", "enchantment", "spell", "token_spell", "mana_artifact", "equipment", "planeswalker") and self.payment(c)["paid"]:
+                if c.kind in ("creature", "vehicle", "enchantment", "spell", "token_spell", "mana_artifact", "equipment", "planeswalker", "station", "artifact") and self.payment(c)["paid"]:
                     if c.draw and len(p.library) < c.draw:
                         continue  # never choose a known self-decking draw spell
                     keywords = c.traits.split(";")[-1].split(",") if c.traits else []
@@ -1449,11 +1544,18 @@ class Simulator:
             self.log("untap", f"Player {self.active + 1} starts turn {self.turn} and untaps.")
         elif self.phase == "untap":
             self.phase = "upkeep"
-            for trigger in self.event_game("upkeep").upkeep_triggers():
-                source = next(p.card for player in self.players for p in player.battlefield
-                              if p.card.id == trigger["source"])
-                self.resolve_entry_triggers([trigger],source)
-                if self.finished: return False
+            due=[e for e in self.rebound_pending if e['controller']==self.active and e['afterTurn']<self.turn]
+            self.rebound_pending=[e for e in self.rebound_pending if e not in due]
+            waiting=[]
+            # Snapshot every beginning-of-upkeep trigger before any rebound can blink a source.
+            for trigger in self.event_game('upkeep').upkeep_triggers():
+                source=next(item.card for player in self.players for item in player.battlefield if item.card.id==trigger['source'])
+                waiting.append((trigger,source))
+            for event in due:
+                source=next((c for c in p.exile if root(c)==event['card']),None)
+                if source:waiting.append((dict(event,operation='rebound',effect='rebound',name=source.name),source))
+            self._waiting_triggers.extend(waiting)
+            self.resolve_entry_triggers([],Card('upkeep','Upkeep','spell'))
             return True
         elif self.phase == "upkeep":
             self.phase = "draw"
@@ -1470,17 +1572,18 @@ class Simulator:
             if choice.kind == "pass":
                 self.phase = {"land": "main", "main": "attack", "second_main": "cleanup"}[self.phase]
                 self.log("pass", choice.label)
+            elif choice.kind=='station':
+                self.activate_station(self.active,choice.card_id,choice.tap_ids[0])
+            elif choice.kind=='history_tokens':
+                self.activate_history(self.active,choice.card_id)
             elif choice.kind=='activate_strip':
                 self.activate_strip(self.active,choice.card_id,choice.activation_index)
             elif choice.kind=='activate_tokens':
                 self.activate_tokens(self.active,choice.card_id,choice.activation_index)
             elif choice.kind=='equip':
                 self.activate_equip(self.active,choice.card_id,choice.target_permanent)
-            elif choice.kind in ("crew","saddle"):
-                game = self.event_game("main")
-                getattr(game, choice.kind)(choice.card_id, list(choice.tap_ids), self.active)
-                self.sync_events(game)
-                self.log(choice.kind, choice.label, target=choice.card_id, tapped=list(choice.tap_ids))
+            elif choice.kind in ('crew','saddle'):
+                self.activate_transport(self.active,choice.kind,choice.card_id,choice.tap_ids)
             else:
                 card = p.command_zone if choice.kind == "cast_commander" else next(c for c in p.hand if c.id == choice.card_id)
                 if card is None: raise RuntimeError("Commander is no longer in command zone")
@@ -1498,6 +1601,8 @@ class Simulator:
                     self.cast_spell(self.active,card,choice.x_value,choice.kind=='cast_commander',target=choice.target_permanent or choice.target_stack,bestow=choice.kind=='bestow')
         elif self.phase == "attack":
             choice = self.decide(self.active)
+            if choice.kind=='attack_group':
+                self.declare_attackers(choice.attack_ids);return not self.finished
             if choice.kind == "pass":
                 self.phase = "second_main"
                 self.log("pass", "No attack.")
@@ -1520,7 +1625,14 @@ class Simulator:
                                  **{k:v for k,v in event.items() if k != "kind"})
         elif self.phase in ('first_damage','regular_damage'):
             self.strike_damage_step(self.phase=='first_damage')
+        elif self.phase in ('group_damage_start','group_regular_damage'):
+            self.group_damage_step()
         elif self.phase == "block":
+            if self.group_combat is not None:
+                choice=self.decide(1-self.active)
+                if choice.kind=='crew':self.activate_transport(1-self.active,'crew',choice.card_id,choice.tap_ids)
+                else:self.declare_blockers(dict(choice.blocks))
+                return not self.finished
             if not any(item.card.id==self.pending and self.effective_card(item) is not None for item in p.battlefield):
                 self.pending=None;self.phase='second_main'
                 self.log('combat_skipped','The attacker is no longer a creature on the battlefield.')
@@ -1614,8 +1726,9 @@ class Simulator:
         return self.report()
 
     def report(self):
-        return {"schemaVersion": 1, "kind": "turn-replay", "mode": "sandbox-single-attacker-v1",
-                "notice": "Synthetic classroom match; not a complete Commander game or Minecraft entity test.",
+        return {"schemaVersion": 1, "kind": "turn-replay", "mode": "diagnostic-group-combat-v2" if self.diagnostic else "sandbox-single-attacker-v1",
+                "combatMode": "group-v2" if self.diagnostic else "single-attacker-v1",
+                "notice": "Partial diagnostic/classroom match; not a complete Commander game or Minecraft entity test.",
                 "seed": self.seed, "starter": self.starter, "turns": self.turn, "result": self.result,
                 "winner": self.winner, "learningEligible": not self.diagnostic and self.result in ("win", "draw") and not self.questions,
                 "productionEligible": False, "policyVersions": [p.version for p in self.policies],
@@ -1653,7 +1766,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or "hexproof" in event_definition.abilities or "Planeswalker" in event_definition.types) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or "hexproof" in event_definition.abilities or "Planeswalker" in event_definition.types or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):
@@ -1661,6 +1774,8 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         parsed = {"kind":("vehicle" if "Vehicle" in event_definition.subtypes else
                           "creature" if "Creature" in event_definition.types else
                           "planeswalker" if "Planeswalker" in event_definition.types else
+                          "station" if event_definition.station else
+                          "artifact" if "Artifact" in event_definition.types and not event_definition.attachment else
                           event_definition.attachment[0] if event_definition.attachment else "enchantment"),
                   "power":event_definition.power,"toughness":event_definition.toughness,
                   "traits":f"{event_definition.power};{event_definition.toughness};"+",".join(keywords),
@@ -1703,11 +1818,14 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             parsed['token_definition']=EventDefinition(' '.join(spec.subtypes),frozenset({'Creature'}|({'Land'} if spec.land else set())|({'Enchantment'} if spec.enchantment else set())),frozenset(spec.subtypes),
                 False,spec.power,spec.toughness,spec.keywords,colors=frozenset(spec.colors))
             parsed['token_tapped']=spec.tapped
+    blink_lines=rule_text(definition.get('oracleText','')).splitlines()
+    if definition.get('types')==['Instant'] and blink_lines and blink_lines[0]=="Exile target creature you control, then return it to the battlefield under its owner's control." and blink_lines[1:] in ([],['Rebound']):
+        if rules.query('cost',cost)['supported']:parsed={'kind':'blink_spell','blink':True,'rebound':len(blink_lines)==2}
     output=mana_pool.production(definition.get("oracleText", ""))
     if (parsed["kind"]=="unsupported" and definition.get("types")==["Artifact"]
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
-    return Card(id=uid, name=definition["name"], kind=parsed["kind"],
+    return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),
         instant="Instant" in definition.get("types",[]), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),

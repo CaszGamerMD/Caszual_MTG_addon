@@ -9,6 +9,14 @@ def compile(text):
         if not line: continue
         words={w.strip().lower() for w in line.split(',')}
         if words<=KEYWORDS: keywords.update(words);continue
+        group=re.fullmatch(r'Whenever this creature and at least (one|two|three|[1-9][0-9]*) other creatures attack, (create .+)',line)
+        token=re.fullmatch(r'Whenever this creature attacks, (create .+)',line)
+        if group or token:
+            clause=group[2] if group else token[1]
+            spec=parse_token_creation(clause[:1].upper()+clause[1:])
+            if not spec:return None
+            minimum=({'one':1,'two':2,'three':3}.get(group[1]) or int(group[1])) if group else 0
+            effects.append(('group_tokens' if group else 'attack_tokens',minimum,0,spec));continue
         m=re.fullmatch(r"Whenever this creature attacks, put a \+1/\+1 counter on it, then create a number of (.+) equal to this creature's power\.",line)
         if m:
             token=parse_token_creation('Create a '+m[1]+'.')
