@@ -26,7 +26,7 @@ class TribalTapTokenChecks(unittest.TestCase):
         self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'a',{'Red'}).kind,'creature')
         raw['oracleText']+='\nDraw a card without paying.'
         self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'b',{'Red'}).kind,'unsupported')
-        raw['oracleText']='{T}: Create X 2/2 green Elf creature tokens, where X is the number of Elfs you control.'
+        raw['oracleText']='{T}: Create X 2/2 green Elf creature tokens, where X is the number of Elves you control.'
         self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'c',{'Red'}).kind,'creature')
 
     def test_tap_and_summoning_sickness_and_reactivation(self):
