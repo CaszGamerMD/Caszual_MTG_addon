@@ -106,6 +106,7 @@ class Definition:
     life_addition: int = 0
     cost_reductions: tuple = ()
     counter_replacements: tuple = ()
+    upkeep_attachment_counters: int = 0
     role: str = ""
 
 
@@ -142,7 +143,8 @@ def parse_card(card: dict) -> Definition:
             life_multiplier=program.life_multiplier,
             opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
             life_addition=program.life_addition,cost_reductions=program.cost_reductions,
-            counter_replacements=program.counter_replacements)
+            counter_replacements=program.counter_replacements,
+            upkeep_attachment_counters=enchantments.upkeep_attachment_counters)
     from advanced_abilities import station,history,equipped_attacks
     levels=station(text,types,subtypes)
     if levels:return Definition(**base,abilities=frozenset(),station=levels)
@@ -465,6 +467,10 @@ class Game:
         triggers = []
         for p in self.battlefield.values():
             if p.controller != self.turn_player: continue
+            if p.definition.upkeep_attachment_counters and p.attached_to in self.battlefield:
+                triggers.append(dict(operation='enchanted_counters',effect='put counters on enchanted creature',
+                    source=p.id,name=p.definition.name,controller=p.controller,
+                    amount=p.definition.upkeep_attachment_counters))
             for trigger in p.definition.triggers:
                 if trigger.event == "upkeep":
                     triggers.append(event_data(trigger,p,p))
