@@ -62,6 +62,7 @@ class Effect:
     controller_loss: int = 0
     library_filter: tuple = ()
     steps: tuple = ()
+    optional: bool = False
 
 @dataclass(frozen=True)
 class Trigger:
@@ -173,6 +174,11 @@ def selector(text):
                     subtype='' if noun=='creature' else noun.split()[0])
 
 def effect(text):
+    may=re.fullmatch(r'you may (create .+)',text)
+    if may:
+        spec=parse_token_creation(may[1][0].upper()+may[1][1:])
+        if spec:return Effect('create_tokens',spec.amount,token=spec,optional=True)
+        return None
     tutor=re.fullmatch(r'you may search your library for a ([A-Z][a-z]+) card, reveal that card, put it into your hand, then shuffle\.',text)
     if tutor:
         return Effect('optional_subtype_search_hand',0,library_filter=('subtype',tutor[1]))
@@ -364,6 +370,7 @@ def event_data(trigger, source, subject):
     return {'source':source.id,'name':source.definition.name,'controller':source.controller,
             'effect':label,'operation':e.operation,'recipient':e.recipient,'sourceColors':sorted(source.definition.colors),
             'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
+            'optional':e.optional,
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             **({'libraryFilter':e.library_filter} if e.library_filter else {}),
             **({'steps':[{'operation':step.operation,'amount':step.amount,'recipient':step.recipient,'gain':step.gain} for step in e.steps]} if e.steps else {}),
