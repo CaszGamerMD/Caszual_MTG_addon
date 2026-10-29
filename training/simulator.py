@@ -1456,12 +1456,20 @@ class Simulator(AdvancedRules):
                 else:
                     effective=self.effective_card(item)
                     if effective:event['lastPower']=effective.power
-        for owner in self.players:
+        for owner_index,owner in enumerate(self.players):
             for attached in list(owner.battlefield):
                 if attached.attached_to==item.card.id:
                     attached.attached_to=None
                     attached.bestowed=False
                     if attached.card.kind=='aura':
+                        if attached.card.is_token:
+                            # An Aura Role token also leaves when its host
+                            # disappears; this is another real token-leave
+                            # event, not a sacrifice. Snapshot before either
+                            # permanent is removed from the battlefield.
+                            game=snapshot or self.event_game('main')
+                            self._waiting_triggers.extend((event,attached.card)
+                                for event in game.token_leave_events(owner_index,1))
                         owner.battlefield.remove(attached)
                         if not attached.card.is_token:owner.graveyard.append(attached.card)
         destination=self.players[self.card_owners.get(root(item.card),next(i for i,p in enumerate(self.players) if p is player))]
