@@ -1436,6 +1436,12 @@ class Simulator(AdvancedRules):
         self.resolve_entry_triggers(events,token.card)
 
     def send_to_destination(self, player: Player, item: Permanent, snapshot=None, to_exile=False):
+        if item.card.is_token:
+            game=snapshot or self.event_game('main')
+            controller=next(i for i,p in enumerate(self.players) if item in p.battlefield)
+            # Leaves-the-battlefield abilities are queued from the state
+            # immediately BEFORE the token exits, independent of the cause.
+            self._waiting_triggers.extend((event,item.card) for event in game.token_leave_events(controller,1))
         for event,_ in [frame.payload for frame in self.stack.items]+self._waiting_triggers:
             if event.get('operation')=='station' and event.get('helper')==item.card.id:
                 game=snapshot or self.event_game('main')
@@ -1990,7 +1996,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace"} & event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace"} & event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):
