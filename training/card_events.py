@@ -100,6 +100,7 @@ class Definition:
     role_events: tuple = ()
     enchanted_draw: bool = False
     attachment_draw: bool = False
+    damage_events: tuple = ()
     role: str = ""
 
 
@@ -132,7 +133,7 @@ def parse_card(card: dict) -> Definition:
             static_effects=program.static_effects,activations=program.activations,devotion=program.devotion,
             attachment=enchantments.attachment,attachment_scale=enchantments.scale,
             role_events=enchantments.role_events,enchanted_draw=enchantments.enchanted_draw,
-            attachment_draw=enchantments.attachment_draw)
+            attachment_draw=enchantments.attachment_draw,damage_events=enchantments.damage_events)
     from advanced_abilities import station,history,equipped_attacks
     levels=station(text,types,subtypes)
     if levels:return Definition(**base,abilities=frozenset(),station=levels)
@@ -348,6 +349,31 @@ class Game:
         return dict(operation='create_role',effect='create Virtuous Role',role='Virtuous',
                     source=source.id,name=source.definition.name,controller=source.controller,
                     sourceColors=sorted(source.definition.colors))
+
+    def aura_damage_triggers(self, dealt: list[dict], player_target: int) -> list[dict]:
+        """Snapshot positive damage by enchanted sources before any sources die.
+
+        Each Aura creates one trigger per simultaneous damage event. The Aura
+        controller receives its own life/draw even when the host is controlled
+        by another player. Keen-Sense-style opponents are relative to the Aura.
+        """
+        events=[]
+        for aura in self.battlefield.values():
+            if not aura.definition.damage_events or aura.attached_to not in self.battlefield:continue
+            damage=[d for d in dealt if d['source']==aura.attached_to and d['amount']>0]
+            if not damage:continue
+            for rule in aura.definition.damage_events:
+                if rule=='gain_damage':
+                    amount=sum(d['amount'] for d in damage)
+                    if amount:events.append(dict(operation='gain_life',effect='gain life equal to damage',
+                        controller=aura.controller,source=aura.id,name=aura.definition.name,amount=amount))
+                elif rule=='optional_draw_opponent':
+                    players={player_target for d in damage if d['target'] is None and player_target!=aura.controller}
+                    for opponent in sorted(players):
+                        events.append(dict(operation='draw_cards',effect='may draw a card',optional=True,
+                            controller=aura.controller,source=aura.id,name=aura.definition.name,amount=1,target=opponent))
+                else:raise NeedsRules('Unknown Aura damage trigger')
+        return events
 
     def combat_draw_triggers(self, identifier):
         creature=self.battlefield[identifier];result=[]
