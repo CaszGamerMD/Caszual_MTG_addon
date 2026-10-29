@@ -1,3 +1,41 @@
+## Token-doubling and subtype-effect progress
+
+Strict Oracle grammar now accepts reusable token-creation replacements:
+Doubling Season (effect-created tokens under its controller), Parallel Lives
+(tokens under its controller), and Primal Vigor (tokens for either player).
+One replacement operation applies once per source to a **single creation
+event**, before any of its tokens enter. Multiple doublers multiply rather
+than recursively retrigger each other. Spell-created and triggered tokens
+share the same logic, including their ordinary enter-the-battlefield
+triggers. This currently creates creature tokens within the diagnostic
+engine's token model; it does not imply arbitrary noncreature token support.
+
+Counter replacements now distinguish `+1/+1 counters on creatures` from
+`any counters on a permanent you control`. Primal Vigor affects +1/+1
+counter events on both players' creatures, while Doubling Season affects
+effect-generated counters of any type on its controller's permanents,
+including supported noncreature Spacecraft charge counters. Beginning
+planeswalker loyalty counters and counter payments are not treated as
+effect-generated counters. See
+`training/tests/test_token_replacements.py`.
+
+A subtype-aware spell-cost filter additionally supports Goblin and Rogue
+spell discounts from Frogtosser Banneret and Goblin Warchief. Printed
+creature subtypes are consulted even when the existing Java card parser
+handles a spell without an EventDefinition. Goblin Warchief's live haste
+grant and Goblin Chieftain's other-Goblin stat/haste anthem share the
+existing static-effect engine and disappear with the source. Regression
+checks are in `training/tests/test_subtype_rules.py`. Creature-wide
+keyword grants deliberately remain separate to preserve older effects.
+
+`training/diagnostic_coverage.py` now writes a separate per-deck JSON
+coverage report at `training/reports/diagnostic-coverage.json`, printed
+in the GitHub training workflow and saved in its report artifact.
+The full Java rules audit is **not** the same as diagnostic parse coverage:
+neither is proof of complete Magic rules or training eligibility.
+
+No code from these experimental rules has been moved into Minecraft.
+
 ## Hydra-style Aura counter growth
 
 The reusable attachment-event grammar now also recognizes
