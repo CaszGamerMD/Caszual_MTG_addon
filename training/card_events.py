@@ -101,6 +101,7 @@ class Definition:
     role_events: tuple = ()
     enchanted_draw: bool = False
     attachment_draw: bool = False
+    aura_graveyard_draw: bool = False
     damage_events: tuple = ()
     life_multiplier: int = 1
     opponent_creatures_enter_tapped: bool = False
@@ -148,7 +149,8 @@ def parse_card(card: dict) -> Definition:
             static_effects=program.static_effects,activations=program.activations,devotion=program.devotion,
             attachment=enchantments.attachment,attachment_scale=enchantments.scale,
             role_events=enchantments.role_events,enchanted_draw=enchantments.enchanted_draw,
-            attachment_draw=enchantments.attachment_draw,damage_events=enchantments.damage_events,
+            attachment_draw=enchantments.attachment_draw,aura_graveyard_draw=enchantments.aura_graveyard_draw,
+            damage_events=enchantments.damage_events,
             life_multiplier=program.life_multiplier,
             opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
             life_addition=program.life_addition,cost_reductions=program.cost_reductions,

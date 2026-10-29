@@ -1809,6 +1809,10 @@ class Simulator(AdvancedRules):
             next(i for i,p in enumerate(self.players) if p is player))]
         to_graveyard=not (to_exile or to_hand or root(item.card)==destination.commander_id)
         if to_graveyard:
+            if item.card.event_definition and item.card.event_definition.aura_graveyard_draw:
+                controller=next(seat for seat,owner in enumerate(self.players) if owner is player)
+                self._waiting_triggers.append((dict(operation='draw_cards',effect='draw a card',
+                    source=item.card.id,name=item.card.name,controller=controller,amount=1),item.card))
             from oracle_abilities import matches,event_data
             before=snapshot or self.event_game('main')
             moved=before.battlefield.get(item.card.id)
