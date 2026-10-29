@@ -6,6 +6,10 @@ on:
   pull_request:
     paths: ['training/**', 'src/main/java/dev/casz/caszualmtg/Commander*.java', '.github/workflows/commander-training.yml']
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 jobs:
