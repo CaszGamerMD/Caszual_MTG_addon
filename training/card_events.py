@@ -120,6 +120,7 @@ class Definition:
     chosen_type_entry: bool = False
     aura_exile: bool = False  # Targeted ETB exile lasting until this Aura leaves.
     linked_exile: str = ''  # Separate ETB-exile and LTB-return triggers, with source identity.
+    tribal_tap_tokens: tuple = ()  # (token spec, counted subtype), evaluated on resolution.
     living_weapon: bool = False  # ETB create 0/0 Phyrexian Germ, then attach.
 
 
@@ -175,6 +176,10 @@ def parse_card(card: dict) -> Definition:
         r"When this \1 leaves the battlefield, return the exiled card to the battlefield under its owner's control\.",text)
     if linked and linked[1].title() in types:
         return Definition(**base,abilities=frozenset(),linked_exile='opponent' if linked[2] else 'any')
+    from tribal_tap_tokens import parse as parse_tribal_tap_tokens
+    tribal_tap=parse_tribal_tap_tokens(text,types)
+    if tribal_tap:
+        return Definition(**base,abilities=frozenset(),tribal_tap_tokens=tribal_tap)
     from advanced_abilities import station,history,equipped_attacks
     levels=station(text,types,subtypes)
     if levels:return Definition(**base,abilities=frozenset(),station=levels)

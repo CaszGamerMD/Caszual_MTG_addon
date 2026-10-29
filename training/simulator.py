@@ -837,7 +837,35 @@ class Simulator(AdvancedRules):
                     result.append(Candidate(source.card.id+':activate:'+str(index),'activate_tokens',source.card.id,
                         features=features(power=spec.amount*spec.power,toughness=spec.amount*spec.toughness,
                                           cost=len(payment['sources'])),label='Activate '+source.card.name,activation_index=index))
+            if definition and definition.tribal_tap_tokens and not source.tapped:
+                game=self.event_game('main');state=game.battlefield.get(source.card.id)
+                if state and (not source.fresh or not game.creature(state) or game.has(state,'haste')):
+                    spec,subtype=definition.tribal_tap_tokens
+                    count=sum(subtype in p.card.event_definition.subtypes for p in self.players[seat].battlefield
+                              if p.card.event_definition)
+                    result.append(Candidate(source.card.id+':tribal-tap','activate_tribal_tokens',source.card.id,
+                        features=features(power=count*spec.power,cost=0),label='Activate '+source.card.name))
         return result
+
+    def activate_tribal_tokens(self,seat,source_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        definition=source.card.event_definition if source else None
+        if not definition or not definition.tribal_tap_tokens or source.tapped:
+            raise ValueError('Illegal tribal token activation')
+        game=self.event_game('main');state=game.battlefield.get(source_id)
+        if state is None or (source.fresh and game.creature(state) and not game.has(state,'haste')):
+            raise ValueError('Tap ability is summoning sick')
+        spec,subtype=definition.tribal_tap_tokens
+        source.tapped=True
+        event=dict(operation='tribal_tap_tokens',effect='create counted tokens',source=source_id,
+                   controller=seat,name=source.card.name,subtype=subtype,
+                   tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords)))
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_tribal_tokens','Player activates a tap-for-tribal-tokens ability.',
+                 actor=seat,source=source_id,stackId=frame.id)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
 
     def activate_tokens(self,seat,source_id,index=0):
         if self.stack.priority!=seat:raise ValueError('Player lacks priority')
@@ -1218,6 +1246,9 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_tokens':
             self.activate_tokens(seat,choice.card_id,choice.activation_index)
+            return 'activate'
+        if choice.kind=='activate_tribal_tokens':
+            self.activate_tribal_tokens(seat,choice.card_id)
             return 'activate'
         card=next(c for c in self.players[seat].hand if c.id==choice.card_id)
         self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack)
@@ -1826,6 +1857,11 @@ class Simulator(AdvancedRules):
                     self.sync_events(game)
                 else: amount=max(0,event['lastPower'])
                 event=dict(event,operation='create_tokens',tokenSpec=dict(event['tokenSpec'],amount=amount))
+            if event.get('operation')=='tribal_tap_tokens':
+                game=self.event_game('main')
+                amount=sum(state.controller==event['controller'] and event['subtype'] in state.definition.subtypes
+                           for state in game.battlefield.values())
+                event=dict(event,operation='create_tokens',tokenSpec=dict(event['tokenSpec'],amount=amount))
             if event.get("operation") == "create_tokens":
                 if event.get('optional') and not self.choose_optional_token_creation(event):
                     self.log('token_creation_declined','Optional token creation declined.',
@@ -2394,7 +2430,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
-                           "history_tokens","activate_tokens","activate_strip"):
+                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens"):
             self.turn_development[seat]=True
         return choice
 
@@ -2475,6 +2511,8 @@ class Simulator(AdvancedRules):
                 self.activate_strip(self.active,choice.card_id,choice.activation_index)
             elif choice.kind=='activate_tokens':
                 self.activate_tokens(self.active,choice.card_id,choice.activation_index)
+            elif choice.kind=='activate_tribal_tokens':
+                self.activate_tribal_tokens(self.active,choice.card_id)
             elif choice.kind=='equip':
                 self.activate_equip(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind in ('crew','saddle'):
