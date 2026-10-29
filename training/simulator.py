@@ -886,7 +886,7 @@ class Simulator(AdvancedRules):
         return choices
 
     def activate_sacrifice_protection(self,seat,source_id,target_id,color):
-        if self.stack.priority!=seat or color not in mana_pool.COLORS[:5]:
+        if self.stack.priority!=seat or color not in ('White','Blue','Black','Red','Green'):
             raise ValueError('Illegal chosen protection color')
         source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
         ability=source.card.event_definition.sacrifice_protection if source and source.card.event_definition else ()
@@ -1473,7 +1473,7 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_sacrifice_protection':
             self.activate_sacrifice_protection(seat,choice.card_id,choice.target_permanent,
-                                              mana_pool.COLORS[choice.x_value])
+                                              ('White','Blue','Black','Red','Green')[choice.x_value])
             return 'activate'
         card=next(c for c in self.players[seat].hand if c.id==choice.card_id)
         self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack)
@@ -2833,7 +2833,7 @@ class Simulator(AdvancedRules):
                 self.activate_sacrifice_team_boost(self.active,choice.card_id)
             elif choice.kind=='activate_sacrifice_protection':
                 self.activate_sacrifice_protection(self.active,choice.card_id,choice.target_permanent,
-                                                  mana_pool.COLORS[choice.x_value])
+                                                  ('White','Blue','Black','Red','Green')[choice.x_value])
             elif choice.kind=='equip':
                 self.activate_equip(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind in ('crew','saddle'):
