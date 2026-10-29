@@ -70,6 +70,8 @@ class Effect:
     counter_subtype: str = ""
     counter_subtypes: tuple = ()
     alternate_amount: int = 0
+    boost_toughness: int = 0
+    boost_keyword: str = ''
 
 @dataclass(frozen=True)
 class Trigger:
@@ -487,6 +489,15 @@ def compile_abilities(text, name=''):
             if action is None:return None
             triggers.append(Trigger('end_step',Selector(self_only=True),action))
             continue
+        combat_boost=re.fullmatch(
+            r'At the beginning of combat on your turn, target enchanted creature or enchantment creature you control gets \\+([0-9]+)/\\+([0-9]+) and gains ([a-z ]+) until end of turn\\.',line)
+        if combat_boost:
+            if combat_boost[3] not in KEYWORDS-{'flash'}:return None
+            triggers.append(Trigger('begin_combat',Selector(self_only=True),
+                Effect('combat_target_boost',int(combat_boost[1]),
+                       recipient='enchanted_or_enchantment',boost_toughness=int(combat_boost[2]),
+                       boost_keyword=combat_boost[3])))
+            continue
         upkeep=re.fullmatch(r'At the beginning of your upkeep, (.+)',line)
         if upkeep:
             clause=upkeep[1]
@@ -571,6 +582,7 @@ def event_data(trigger, source, subject):
             'optional_subtype_search_hand':'controller may tutor a subtype card to hand and shuffle',
             'return_graveyard':'controller may return target subtype card from graveyard to hand',
             'self_counter':'put +1/+1 counters on the source',
+            'combat_target_boost':'target enchanted or enchantment creature gets a temporary bonus and keyword',
             'optional_put_hand_permanent':'controller may put a matching permanent card from hand onto the battlefield',
             'opponent_loss_tapped_creatures':'each opponent loses life equal to controlled tapped creatures'}
     label='; then '.join(f'{part.operation} {part.amount}' for part in e.steps) if e.operation=='ordered_effects' else labels[e.operation]
@@ -579,6 +591,7 @@ def event_data(trigger, source, subject):
     return {'source':source.id,'name':source.definition.name,'controller':source.controller,
             'effect':label,'operation':e.operation,'recipient':e.recipient,'sourceColors':sorted(source.definition.colors),
             'counterSubtype':e.counter_subtype,'counterSubtypes':e.counter_subtypes,'alternateAmount':e.alternate_amount,
+            'boostToughness':e.boost_toughness,'boostKeyword':e.boost_keyword,
             **({'deadSubtypes':sorted(subject.definition.subtypes)} if trigger.event in ('dies','graveyard') else {}),
             'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
             'optional':e.optional,
@@ -586,4 +599,4 @@ def event_data(trigger, source, subject):
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             **({'libraryFilter':e.library_filter} if e.library_filter else {}),
             **({'steps':[{'operation':step.operation,'amount':step.amount,'recipient':step.recipient,'gain':step.gain} for step in e.steps]} if e.steps else {}),
-            {'enters':'entered','dies':'dead','upkeep':'permanent','end_step':'permanent','cast':'spell','gain_life':'permanent','deals_player_damage':'damageSource','graveyard':'dead'}[trigger.event]:subject.id}
+            {'enters':'entered','dies':'dead','upkeep':'permanent','end_step':'permanent','cast':'spell','gain_life':'permanent','deals_player_damage':'damageSource','graveyard':'dead','begin_combat':'permanent'}[trigger.event]:subject.id}

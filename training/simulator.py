@@ -721,6 +721,18 @@ class Simulator(AdvancedRules):
                     targets=self.graveyard_subtype_targets(controller,subtype[1])
                     if not targets:continue
                     event=dict(event,target=targets[0].id)
+                if event.get('operation')=='combat_target_boost':
+                    game=self.event_game('main')
+                    candidates=[item for owner,item in self.creature_targets(controller,origin)
+                                if owner==controller and item.card.id in game.battlefield
+                                and (game.enchanted(game.battlefield[item.card.id]) or
+                                     'Enchantment' in game.battlefield[item.card.id].definition.types)]
+                    if not candidates:
+                        self.log('combat_boost_no_target','No legal enchanted or enchantment creature for combat trigger.',
+                                 source=event['source'])
+                        continue
+                    chosen=max(candidates,key=lambda item:(self.effective_card(item).power,item.card.id))
+                    event=dict(event,target=chosen.card.id)
                 if event.get('operation')=='create_role':
                     targets=self.role_targets(event)
                     chosen=next((p for p in targets if p.card.id==event.get('target')),None) if event.get('target') else max(targets,key=lambda p:(self.effective_card(p).power,p.card.id),default=None)
@@ -1324,6 +1336,22 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='combat_target_boost':
+                game=self.event_game('combat');target=game.battlefield.get(event.get('target'))
+                legal=bool(target and target.controller==event['controller'] and game.creature(target)
+                           and (game.enchanted(target) or 'Enchantment' in target.definition.types)
+                           and not game.has(target,'shroud')
+                           and not game.protected(target,event.get('sourceColors',())))
+                if legal:
+                    target.temporary_power+=event['amount']
+                    target.temporary_toughness+=event['boostToughness']
+                    game.grant_temporary(target,event['boostKeyword'])
+                    self.sync_events(game)
+                self.log('combat_boost' if legal else 'combat_boost_fizzle',
+                         'Beginning-of-combat target bonus '+('resolves.' if legal else 'has no legal target.'),
+                         actor=event['controller'],source=event['source'],targetPermanent=event.get('target'),
+                         power=event['amount'],toughness=event['boostToughness'],keyword=event['boostKeyword'])
+                continue
             if event.get('operation')=='grant_target_keywords':
                 from oracle_abilities import KEYWORDS
                 keywords=event.get('keywords',[])
@@ -2208,6 +2236,10 @@ class Simulator(AdvancedRules):
             if choice.kind == "pass":
                 self.phase = {"land": "main", "main": "attack", "second_main": "end_step"}[self.phase]
                 self.log("pass", choice.label)
+                if self.phase=='attack':
+                    game=self.event_game('combat');game.turn_player=self.active
+                    pending=game.begin_combat_triggers()
+                    self.resolve_entry_triggers(pending,Card('combat','Beginning of combat','spell'))
             elif choice.kind=='station':
                 self.activate_station(self.active,choice.card_id,choice.tap_ids[0])
             elif choice.kind=='history_tokens':

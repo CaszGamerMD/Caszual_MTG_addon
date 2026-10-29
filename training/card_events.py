@@ -551,6 +551,12 @@ class Game:
                     triggers.append(event_data(trigger,p,p))
         return triggers
 
+    def begin_combat_triggers(self) -> list[dict]:
+        """Snapshot controlled beginning-of-combat abilities before attackers are chosen."""
+        return [event_data(trigger,source,source)
+                for source in self.battlefield.values() if source.controller==self.turn_player
+                for trigger in source.definition.triggers if trigger.event=='begin_combat']
+
     def end_step_triggers(self, life_gained: int) -> list[dict]:
         """Check gained-life conditions at the beginning of the end step only.
 
