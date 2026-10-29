@@ -776,6 +776,12 @@ class Simulator(AdvancedRules):
                      and (controller is None or seat==controller or not game.has(game.battlefield[item.card.id],'hexproof'))
                      and (source is None or not game.protected(game.battlefield[item.card.id],source.colors)))
 
+    def controlled_land_count(self, seat):
+        return sum(item.card.kind=='land' or
+                   (item.card.event_definition is not None and
+                    'Land' in item.card.event_definition.types)
+                   for item in self.players[seat].battlefield)
+
     def choose_optional_token_creation(self, event):
         """Diagnostic deterministic accept policy for a legal may-create clause.
 
@@ -1127,6 +1133,11 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            minimum=event.get('minLands',0)
+            if minimum and self.controlled_land_count(event['controller'])<minimum:
+                self.log('condition_failed','Intervening upkeep land threshold no longer holds.',
+                         actor=event['controller'],source=event['source'],minimumLands=minimum)
+                continue
             if event.get('operation')=='create_role':
                 self.resolve_role(event)
                 continue
@@ -1813,7 +1824,8 @@ class Simulator(AdvancedRules):
             self.rebound_pending=[e for e in self.rebound_pending if e not in due]
             waiting=[]
             # Snapshot every beginning-of-upkeep trigger before any rebound can blink a source.
-            for trigger in self.event_game('upkeep').upkeep_triggers():
+            for trigger in self.event_game('upkeep').upkeep_triggers(
+                    {seat:self.controlled_land_count(seat) for seat in range(len(self.players))}):
                 source=next(item.card for player in self.players for item in player.battlefield if item.card.id==trigger['source'])
                 waiting.append((trigger,source))
             for event in due:
