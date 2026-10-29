@@ -37,7 +37,7 @@ def compile(text, name, types, subtypes):
         if line=='Enchanted creature has "Whenever this creature deals combat damage to a player, you may draw a card."':
             if attachment_draw or mode!='aura':return None
             attachment_draw=True;continue
-        upkeep=re.fullmatch(r'At the beginning of your upkeep, put (a|one|two|three|[1-9][0-9]*) \\+1/\\+1 counters? on enchanted creature\\.',line)
+        upkeep=re.fullmatch(r'At the beginning of your upkeep, put (a|one|two|three|[1-9][0-9]*) \+1/\+1 counters? on enchanted creature\.',line)
         if upkeep:
             if mode!='aura' or upkeep_attachment_counters:return None
             upkeep_attachment_counters={'a':1,'one':1,'two':2,'three':3}.get(upkeep[1]) or int(upkeep[1])
