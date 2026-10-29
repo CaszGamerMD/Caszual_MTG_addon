@@ -367,7 +367,7 @@ def compile_abilities(text, name=''):
         if static:
             static_effects.extend(static if isinstance(static,tuple) else (static,)); continue
         damage_hand=re.fullmatch(
-            r'Whenever this creature deals damage to (a player|an opponent), you may put a ([A-Z][a-z]+) (creature|permanent) card from your hand onto the battlefield\.',
+            r'Whenever this creature deals damage to (a player|an opponent), you may put (?:a|an) ([A-Z][a-z]+) (creature|permanent) card from your hand onto the battlefield\.',
             line)
         if damage_hand:
             # Not hard-coded to Goblins; classify the type of eligible card.
@@ -443,7 +443,7 @@ def compile_abilities(text, name=''):
         if action.operation=='create_tokens' and not subject.self_only:
             return None  # Repeating token engines need bounded stack/loop handling.
         triggers.append(Trigger(event,subject,action))
-    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers),tuple(token_leave_triggers),tuple(entry_counter_grants)) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers or token_leave_triggers or entry_counter_grants else None
+    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers),tuple(token_leave_triggers),tuple(entry_counter_grants)) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers or token_leave_triggers or entry_counter_grants or keywords else None
 
 def matches(subject, source, entered, is_creature):
     return ((not subject.self_only or source.id==entered.id)

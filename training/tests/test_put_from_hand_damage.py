@@ -43,6 +43,7 @@ class PutHandOnDamageChecks(unittest.TestCase):
         attacker=self.put(sim,cards['Goblin Lackey'])
         matron=cards['Goblin Matron']
         self.start_attack(sim,attacker)
+        sim.group_damage_step()
         self.assertIn(matron,sim.players[0].hand)
         self.assertEqual(len([f for f in sim.stack.items if f.payload[0].get('operation')=='optional_put_hand_permanent']),1)
         self.drain(sim)
@@ -71,6 +72,7 @@ class PutHandOnDamageChecks(unittest.TestCase):
         sim,cards=self.fixture(['Goblin Lackey','Goblin Matron'])
         attacker=self.put(sim,cards['Goblin Lackey'])
         self.start_attack(sim,attacker)
+        sim.group_damage_step()
         with patch.object(sim,'choose_optional_hand_permanent',return_value=None):
             self.drain(sim)
         self.assertIn(cards['Goblin Matron'],sim.players[0].hand)
