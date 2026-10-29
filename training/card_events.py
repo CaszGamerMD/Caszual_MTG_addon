@@ -351,6 +351,13 @@ class Game:
                      if effect.ward_cost and matches(effect.subject,source,p,self.creature(p)))
 
     def has(self, p: Permanent, ability: str) -> bool:
+        # "Can't have or gain" is a continuous prohibition: even a later
+        # Aura, equipment or temporary grant cannot restore the keyword.
+        for source in self.battlefield.values():
+            if any(effect.suppress==ability and
+                   matches(effect.subject,source,p,self.creature(p))
+                   for effect in self.static_effects(source)):
+                return False
         grants=[]
         if any(p.charge_counters>=threshold and ability in keywords for threshold,_,keywords in p.definition.station):grants.append(p.entered_at)
         if ability in p.definition.abilities:grants.append(p.entered_at)

@@ -22,6 +22,10 @@ jobs:
           python-version: '3.12'
       - name: Count parsed cards and list focused unresolved card names
         run: python training/diagnostic_coverage.py
+      - name: Verify newly learned static-language families
+        run: python -m unittest discover -s training/tests -p test_static_language_cycles.py -v
+      - name: Rank unresolved complete Oracle language families
+        run: python training/question_batches.py --decks training/decks/*.json --focal-id 5189995 --out training/reports/question-batches-current.json
       - name: Probe seeded diagnostic matches for regression blockers
         run: |
           python - <<'PY'
@@ -49,5 +53,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: focused-diagnostic-coverage
-          path: training/reports/diagnostic-coverage.json
+          path: |
+            training/reports/diagnostic-coverage.json
+            training/reports/question-batches-current.json
           retention-days: 14

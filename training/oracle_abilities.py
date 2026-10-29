@@ -52,6 +52,7 @@ class StaticEffect:
     grant: str = ''
     ward_cost: str = ''
     life_min: int = 0
+    suppress: str = ''  # Continuous 'can't have or gain' overrides all grants.
 
 @dataclass(frozen=True)
 class Effect:
@@ -96,6 +97,12 @@ class Program:
     attack_watchers: tuple = ()
 
 def static_effect(text):
+    # A continuous prohibition is not a temporary timestamped ability loss:
+    # the keyword cannot be granted again while this source is present.
+    denial=re.fullmatch(r"Creatures your opponents control lose (.+) and can't have or gain \\1\\.",text)
+    if denial:
+        if denial[1] not in KEYWORDS:return None
+        return StaticEffect(Selector(relation='opponent',creature=True),0,0,suppress=denial[1])
     # Global lords affect matching creature types even when an opponent
     # controls them. Landwalk is a blocking restriction evaluated at declare
     # blockers, not a stat bonus or a change to land ownership.
