@@ -76,8 +76,8 @@ class OpponentEntryChecks(unittest.TestCase):
         sim.invariant()
 
     def test_simultaneous_entry_does_not_apply_nonexistent_replacement(self):
-        sim,_=self.fixture(['Authority of the Consuls'])
-        authority=sim.players[0].hand[0]
+        sim,cards=self.fixture(['Authority of the Consuls'])
+        authority=cards['Authority of the Consuls']
         d=authority.event_definition
         creature=s.EventDefinition('New creature',frozenset({'Creature'}),frozenset(),
                                    False,2,2,frozenset())
