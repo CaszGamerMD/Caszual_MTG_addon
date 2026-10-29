@@ -101,6 +101,7 @@ class Definition:
     enchanted_draw: bool = False
     attachment_draw: bool = False
     damage_events: tuple = ()
+    life_multiplier: int = 1
     role: str = ""
 
 
@@ -133,7 +134,8 @@ def parse_card(card: dict) -> Definition:
             static_effects=program.static_effects,activations=program.activations,devotion=program.devotion,
             attachment=enchantments.attachment,attachment_scale=enchantments.scale,
             role_events=enchantments.role_events,enchanted_draw=enchantments.enchanted_draw,
-            attachment_draw=enchantments.attachment_draw,damage_events=enchantments.damage_events)
+            attachment_draw=enchantments.attachment_draw,damage_events=enchantments.damage_events,
+            life_multiplier=program.life_multiplier)
     from advanced_abilities import station,history,equipped_attacks
     levels=station(text,types,subtypes)
     if levels:return Definition(**base,abilities=frozenset(),station=levels)
@@ -165,7 +167,7 @@ def parse_card(card: dict) -> Definition:
         if program.devotion and not {'Creature','Enchantment'}<=types:
             return Definition(**base,abilities=frozenset(),supported=False,reason='Unsupported devotion type transition')
         return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects,
-                          activations=program.activations,devotion=program.devotion)
+                          activations=program.activations,devotion=program.devotion,life_multiplier=program.life_multiplier)
     attack_text=text.replace(name,'this creature') if name else text
     if ',' in name:
         short=name.split(',')[0]
