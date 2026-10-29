@@ -203,6 +203,7 @@ class Card:
     blink_to_controller: bool = False
     flashback_cost: str = ""
     graveyard_return_subtype: str = ""
+    target_modifier: tuple = ()  # (power, toughness, keyword choices, conditional draw subtype).
 
 
 
@@ -418,6 +419,8 @@ class Simulator(AdvancedRules):
                 if self.diagnostic and card.kind == "mana_artifact" and len(card.mana_production)==6:
                     continue
                 if self.diagnostic and card.kind == "x_spell" and card.x_effect in ("tokens","draw","life"):
+                    continue
+                if self.diagnostic and card.kind=='modifier_spell' and card.target_modifier:
                     continue
                 if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_artifact_creature_token","destroy_artifact","exile_creature_life","exile_creature_basic_land","exile_creature_damaged_you","destroy_all_creatures","destroy_toughness_min"):
                     continue
@@ -838,7 +841,7 @@ class Simulator(AdvancedRules):
 
     def response_choices(self,seat):
         if seat!=self.stack.priority: return ()
-        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','token_spell','counter_spell','removal_spell','blink_spell',
+        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','token_spell','counter_spell','removal_spell','modifier_spell','blink_spell',
             'creature','enchantment','artifact','equipment','vehicle','station','planeswalker')
                      and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
@@ -1647,7 +1650,7 @@ class Simulator(AdvancedRules):
         self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack)
         return 'cast'
 
-    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False):
+    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None):
         player=self.players[seat]
         if not card.instant and seat!=self.stack.priority: raise ValueError('Player lacks priority')
         if self.stack.items:
@@ -1663,6 +1666,10 @@ class Simulator(AdvancedRules):
         if (card.kind=='aura' or bestow) and target not in {p.card.id for _,p in
                 (self.aura_targets(seat,card) if card.kind=='aura' and not bestow else self.creature_targets(seat,card))}:
             raise ValueError('Illegal Aura target')
+        if card.kind=='modifier_spell' and target not in {item.card.id for _,item in self.creature_targets(seat,card)}:
+            raise ValueError('Temporary modifier requires a legal creature target')
+        if card.kind=='modifier_spell' and keyword_choice is not None and keyword_choice not in card.target_modifier[2]:
+            raise ValueError('Unknown keyword choice')
         if card.kind=='removal_spell' and card.removal not in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min') and target not in {item.card.id for _,item in self.removal_targets(seat,card)}:
             raise ValueError('Removal requires a legal permanent target')
         if card.kind=='graveyard_return_spell' and target not in {c.id for c in self.graveyard_subtype_targets(seat,card.graveyard_return_subtype)}:
@@ -1682,7 +1689,7 @@ class Simulator(AdvancedRules):
         else:casting_zone.remove(card)
         prior=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)
         self.stack.active=self.active
-        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'fromHand':not rebound and not flashback and not commander},card),card.name)
+        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'keywordChoice':keyword_choice or (card.target_modifier[2][0] if card.target_modifier and card.target_modifier[2] else None),'fromHand':not rebound and not flashback and not commander},card),card.name)
         self.log('cast',f'Player {seat+1} casts {card.name}.',actor=seat,card=card.name,
                  manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,bestow=bestow,rebound=rebound,flashback=flashback,targetStack=target if card.kind=='counter_spell' else None,
                  targetPermanent=target if card.kind=='removal_spell' else None)
@@ -1752,6 +1759,31 @@ class Simulator(AdvancedRules):
                 self.log('graveyard_return','A subtype card is returned from graveyard to hand.',
                          actor=controller,card=target.name,source=card.name)
             else:self.log('illegal_target','Graveyard-return target no longer exists.',actor=controller,source=card.name)
+            return
+        if card.kind=='modifier_spell':
+            target=next((item for _,item in self.creature_targets(controller,card)
+                         if item.card.id==event.get('target')),None)
+            if target is None:
+                self.log('modifier_fizzle','Targeted temporary modifier has no legal target.',
+                         actor=controller,source=card.name,targetPermanent=event.get('target'))
+                return
+            power,toughness,choices,draw_subtype=card.target_modifier
+            game=self.event_game('main')
+            state=game.battlefield[target.card.id]
+            state.temporary_power+=power
+            state.temporary_toughness+=toughness
+            chosen=event.get('keywordChoice')
+            if choices:
+                if chosen not in choices:raise RuntimeError('Unrecognized spell keyword choice')
+                game.grant_temporary(state,chosen)
+            self.sync_events(game)
+            if draw_subtype and any(draw_subtype in x.definition.subtypes and x.controller==controller
+                                    for x in game.battlefield.values()):
+                self.draw(controller)
+            self.log('modifier_resolve','Targeted temporary modifier resolves.',
+                     actor=controller,source=card.name,targetPermanent=target.card.id,
+                     power=power,toughness=toughness,keyword=chosen,drawCondition=draw_subtype)
+            self.resolve_entry_triggers(self.state_based_actions(),card)
             return
         if card.kind=='removal_spell':
             if card.removal in ('destroy_all_creatures','destroy_toughness_min'):
@@ -2876,6 +2908,13 @@ class Simulator(AdvancedRules):
                 if c.kind=='removal_spell' and self.payment(c)['paid']:
                     actions.extend(self.removal_choices(seat,c,'cast'))
                     continue
+                if c.kind=='modifier_spell' and self.payment(c)['paid']:
+                    actions.extend(Candidate(c.id+':target='+target.card.id,'cast',c.id,
+                        features=features(power=1 if owner==seat else -1),
+                        label='Cast '+c.name+' targeting '+target.card.name,
+                        target_permanent=target.card.id)
+                        for owner,target in self.creature_targets(seat,c))
+                    continue
                 if c.kind == "x_spell":
                     budget=sum(p.mana_pool)+sum(max(map(sum,options)) for _,options in self.mana_sources(seat))
                     for x in range(budget//c.mana_cost.count('{X}')+1):
@@ -3421,11 +3460,17 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         rule_text(definition.get('oracleText','')))
     if (parsed['kind']=='unsupported' and 'Sorcery' in definition.get('types',[]) and return_subtype and rules.query('cost',cost)['supported']):
         parsed={'kind':'graveyard_return_spell','graveyard_return_subtype':return_subtype[1]}
+    from targeted_modifiers import parse as parse_targeted_modifier
+    modifier=parse_targeted_modifier(rule_text(definition.get('oracleText','')),
+                                     definition.get('types',[]))
+    if parsed['kind']=='unsupported' and modifier and rules.query('cost',cost)['supported']:
+        parsed={'kind':'modifier_spell','target_modifier':modifier}
     output=mana_pool.production(definition.get("oracleText", ""))
     if (parsed["kind"]=="unsupported" and definition.get("types")==["Artifact"]
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
     return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),blink_to_controller=parsed.get("blink_to_controller",False),flashback_cost=parsed.get("flashback_cost",""),graveyard_return_subtype=parsed.get("graveyard_return_subtype",""),
+        target_modifier=parsed.get('target_modifier',()),
         instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),
