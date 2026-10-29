@@ -90,6 +90,26 @@ class TokenReplacementsChecks(unittest.TestCase):
         self.assertEqual(sim.event_game('main').token_amount(0,2,by_effect=True),8)
         sim.invariant()
 
+    def test_token_spell_resolves_into_modified_token_batch(self):
+        sim,cards=self.fixture(['Doubling Season','Primal Vigor'])
+        for permanent in cards.values():self.put(sim,permanent)
+        definition=s.EventDefinition('Wolf',frozenset({'Creature'}),frozenset({'Wolf'}),
+                                     False,2,2,frozenset())
+        spell=s.Card('wolf-spell','Unfamiliar Wolf Creation','token_spell',mana_cost='{0}',
+                     token_count=2,token_definition=definition,printed_types=('Sorcery',))
+        sim.players[0].hand.append(spell)
+        sim.card_owners[spell.id]=0
+        sim.total_cards=tuple(n+(i==0) for i,n in enumerate(sim.total_cards))
+        sim.cast_spell(0,spell)
+        self.assertFalse(self.token_count(sim,0))
+        self.drain(sim)
+        wolves=[p for p in sim.players[0].battlefield if p.card.is_token
+                and p.card.name=='Wolf']
+        self.assertEqual(len(wolves),8)
+        self.assertTrue(all((p.card.power,p.card.toughness)==(2,2) for p in wolves))
+        self.assertIn(spell,sim.players[0].graveyard)
+        sim.invariant()
+
     def test_primal_vigor_counter_replacement_applies_to_both_players(self):
         sim,cards=self.fixture(['Primal Vigor'])
         self.put(sim,cards['Primal Vigor'])
