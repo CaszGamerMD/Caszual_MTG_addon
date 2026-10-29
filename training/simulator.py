@@ -2343,7 +2343,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.special_choices(seat))
             actions.extend(self.equip_choices(seat))
             actions.extend(self.token_ability_choices(seat))
-        actions.extend(self.scaled_mana_choices(seat))
+            actions.extend(self.scaled_mana_choices(seat))
             actions.extend(self.strip_ability_choices(seat))
             if (self.diagnostic and p.command_zone and p.command_zone.kind == "creature"
                     and self.payment(p.command_zone, p.commander_casts)["paid"]):
