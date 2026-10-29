@@ -130,6 +130,7 @@ class Definition:
     sacrifice_team_boost: tuple = ()  # Self-sacrifice cost for a team-wide temporary boost.
     sacrifice_protection: tuple = ()  # Mana + self-sacrifice to grant chosen-color protection.
     attack_group_draw: tuple = ()  # (minimum declared attackers, cards drawn) on the stack.
+    discard_token_ability: tuple = ()  # (mana cost, TokenSpec); discard one card as cost.
 
 
 def parse_card(card: dict) -> Definition:
@@ -189,6 +190,11 @@ def parse_card(card: dict) -> Definition:
     if scaled_mana and types.intersection({'Creature','Artifact','Enchantment'}):
         return Definition(**base,abilities=frozenset(),scaled_mana_tap={
             'enchantments':'Enchantment','artifacts':'Artifact'}[scaled_mana[1]])
+    from discard_abilities import parse as parse_discard_abilities
+    discard_ability=parse_discard_abilities(text,types)
+    if discard_ability:
+        return Definition(**base,abilities=frozenset(),attack_group_draw=discard_ability[0],
+                          discard_token_ability=discard_ability[1])
     from attack_group_draw import parse as parse_attack_group_draw
     group_draw=parse_attack_group_draw(text,types)
     if group_draw:
