@@ -1445,10 +1445,13 @@ class Simulator(AdvancedRules):
         if spell_cost:
             types={word.lower() for word in card.printed_types}
             if card.event_definition:types.update(word.lower() for word in card.event_definition.types)
-            subtypes={word.lower() for word in card.event_definition.subtypes} if card.event_definition else set()
+            # Printed subtypes live on Card even when the Java rules bridge
+            # understands an otherwise plain spell without an EventDefinition.
+            subtypes={word.lower() for word in card.land_subtypes}
+            if card.event_definition:subtypes.update(word.lower() for word in card.event_definition.subtypes)
             if card.kind=='aura':subtypes.add('aura')
             colors={word.lower() for word in card.colors}
-            categories=types|subtypes|colors|({'colorless'} if not colors else set())
+            categories=types|subtypes|{'subtype:'+word for word in subtypes}|colors|({'colorless'} if not colors else set())
             reduction=sum(amount for permanent in player.battlefield
                           if permanent.card.event_definition
                           for names,amount in permanent.card.event_definition.cost_reductions
