@@ -53,6 +53,7 @@ class StaticEffect:
     ward_cost: str = ''
     life_min: int = 0
     suppress: str = ''  # Continuous 'can't have or gain' overrides all grants.
+    share_types: bool = False  # Count other creatures sharing any creature subtype.
 
 @dataclass(frozen=True)
 class Effect:
@@ -103,6 +104,11 @@ def static_effect(text):
     if denial:
         if denial[1] not in KEYWORDS:return None
         return StaticEffect(Selector(relation='opponent',creature=True),0,0,suppress=denial[1])
+    # Coat-style global bonuses count each *other creature* once, even if it
+    # shares multiple creature types; opposing creatures also participate.
+    shared=re.fullmatch(r'Each creature gets \\+([1-9][0-9]*)/\\+([1-9][0-9]*) for each other creature on the battlefield that shares at least one creature type with it\\.',text)
+    if shared:
+        return StaticEffect(Selector(creature=True),int(shared[1]),int(shared[2]),share_types=True)
     # Global lords affect matching creature types even when an opponent
     # controls them. Landwalk is a blocking restriction evaluated at declare
     # blockers, not a stat bonus or a change to land ownership.

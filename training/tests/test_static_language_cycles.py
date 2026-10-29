@@ -54,3 +54,52 @@ class ArchetypeSuppressionChecks(unittest.TestCase):
         sim.send_to_destination(sim.players[0],source)
         self.assertIn('first strike',sim.effective_card(foe).traits)
         sim.invariant()
+
+
+class SharedCreatureTypesChecks(unittest.TestCase):
+    setUpClass=classmethod(fixtures.EnchantmentChecks.setUpClass.__func__)
+    tearDownClass=classmethod(fixtures.EnchantmentChecks.tearDownClass.__func__)
+    fixture=fixtures.EnchantmentChecks.fixture
+    put=fixtures.EnchantmentChecks.put
+    token=fixtures.EnchantmentChecks.token
+
+    def test_full_real_oracle_and_unseen_names(self):
+        raw=dict(self.lookup['Coat of Arms'],name='Unfamiliar shared-type artifact')
+        parsed=s.import_diagnostic_card(self.rules,raw,0,'shared',set())
+        self.assertEqual(parsed.kind,'artifact')
+        self.assertTrue(parsed.event_definition.static_effects[0].share_types)
+        raw['oracleText']+='\\nWhenever a mystery happens, change reality.'
+        self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad',set()).kind,'unsupported')
+        self.assertIsNone(compile_abilities(
+            'Each creature gets +1/+1 for each other permanent on the battlefield that shares at least one creature type with it.'))
+
+    def test_opponents_and_dual_types_count_once_and_update_dynamically(self):
+        sim,cards=self.fixture(['Coat of Arms'])
+        first=self.token(sim,'goblin',subtypes=('Goblin',))
+        second=self.token(sim,'warrior',seat=1,subtypes=('Goblin','Warrior'))
+        third=self.token(sim,'shaman',subtypes=('Goblin','Shaman'))
+        elf=self.token(sim,'elf',subtypes=('Elf',))
+        source=self.put(sim,cards['Coat of Arms'])
+        self.assertEqual([sim.effective_card(p).power for p in (first,second,third,elf)],
+                         [4,4,4,2])
+        fourth=self.token(sim,'dual',seat=1,subtypes=('Goblin','Warrior'))
+        self.assertEqual([sim.effective_card(p).power for p in (first,second,third,fourth)],
+                         [5,5,5,5])
+        sim.send_to_destination(sim.players[0],third)
+        self.assertEqual(sim.effective_card(first).power,4)
+        sim.send_to_destination(sim.players[0],source)
+        self.assertEqual([sim.effective_card(p).power for p in (first,second,fourth,elf)],
+                         [2,2,2,2])
+        sim.invariant()
+
+    def test_noncreatures_with_matching_subtypes_do_not_count(self):
+        sim,cards=self.fixture(['Coat of Arms'])
+        goblin=self.token(sim,'goblin',subtypes=('Goblin',))
+        self.put(sim,cards['Coat of Arms'])
+        from dataclasses import replace
+        fake=s.EventDefinition('Goblin relic',frozenset({'Artifact'}),frozenset({'Goblin'}),
+                               False,0,0,frozenset())
+        sim.enter_creature(s.Card('relic','Goblin relic','artifact',event_definition=fake,is_token=True),
+                           sim.players[1])
+        self.assertEqual(sim.effective_card(goblin).power,2)
+        sim.invariant()

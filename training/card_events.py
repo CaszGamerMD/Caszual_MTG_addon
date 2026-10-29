@@ -339,8 +339,13 @@ class Game:
                 if not matches(effect.subject,source,p,True): continue
                 if effect.life_min and self.life_totals.get(source.controller,0)<effect.life_min:continue
                 if effect.condition and not any(matches(effect.condition,source,x,self.creature(x)) for x in self.battlefield.values()): continue
-                multiplier = (sum(matches(effect.count,source,x,self.creature(x)) for x in self.battlefield.values())
-                              if effect.count else 1)
+                if effect.share_types:
+                    multiplier=sum(other.id!=p.id and self.creature(other)
+                                   and bool(p.definition.subtypes & other.definition.subtypes)
+                                   for other in self.battlefield.values())
+                else:
+                    multiplier = (sum(matches(effect.count,source,x,self.creature(x)) for x in self.battlefield.values())
+                                  if effect.count else 1)
                 power_bonus += effect.power * multiplier
                 toughness_bonus += effect.toughness * multiplier
         return (p.definition.power + p.counters + 3*bonus + power_bonus,
