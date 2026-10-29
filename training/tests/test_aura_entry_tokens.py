@@ -41,9 +41,9 @@ class AuraEntryTokenChecks(unittest.TestCase):
         sim.invariant()
 
     def test_trigger_survives_aura_leaving_and_token_replacement(self):
-        sim,cards=self.fixture(['Cartouche of Solidarity','Anointed Procession'])
+        sim,cards=self.fixture(['Cartouche of Solidarity','Parallel Lives'])
         host=self.token(sim,'host')
-        self.put(sim,cards['Anointed Procession'])
+        self.put(sim,cards['Parallel Lives'])
         aura=self.put(sim,cards['Cartouche of Solidarity'],host.card.id)
         sim.send_to_destination(sim.players[0],aura)
         self.drain(sim)
