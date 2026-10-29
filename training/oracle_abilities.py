@@ -173,6 +173,8 @@ def selector(text):
                     subtype='' if noun=='creature' else noun.split()[0])
 
 def effect(text):
+    if text=='each opponent may search their library for a basic land card, put it onto the battlefield tapped, then shuffle.':
+        return Effect('opponent_optional_basic_search',0,'each opponent')
     gain=re.fullmatch(r'you gain ([1-9][0-9]*) life\.',text)
     if gain:return Effect('gain_life',int(gain[1]))
     drawn=re.fullmatch(r'(?:you )?draw (a|one|two|three|[1-9][0-9]*) cards?\.',text)
@@ -350,7 +352,8 @@ def event_data(trigger, source, subject):
             'damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
             'damage':f'deal {e.amount} damage to each opponent','scry':'scry',
             'add_counters':f'put {e.amount} +1/+1 counters on each creature you control',
-            'create_tokens':f'create {e.amount} creature tokens'}
+            'create_tokens':f'create {e.amount} creature tokens',
+            'opponent_optional_basic_search':'each opponent may find a tapped basic land and shuffle'}
     label='; then '.join(f'{part.operation} {part.amount}' for part in e.steps) if e.operation=='ordered_effects' else labels[e.operation]
     if e.controller_loss: label=f'controller loses {e.controller_loss} life; '+label
     if e.gain: label+=f'; controller gains {e.gain} life'
