@@ -86,3 +86,23 @@ class CreatureTokenReplacementTests(unittest.TestCase):
         self.assertTrue(all(t.card.name=='Angel' for t in self.tokens(sim,0)))
         self.assertIn(spell,player.graveyard)
         sim.invariant()
+
+    def test_direct_event_kernel_token_creation_is_also_replaced(self):
+        from card_events import Game, Permanent, Definition
+        raw=self.lookup['Divine Visitation']
+        visitation=s.parse_event_card(raw)
+        game=Game(turn_player=0,phase='combat')
+        hero=Definition('Hero',frozenset({'Creature'}),frozenset({'Warrior'}),
+                        True,2,2,frozenset())
+        equipment=Definition('Andúril, Flame of the West',frozenset({'Artifact'}),
+                             frozenset({'Equipment'}),False,0,0,frozenset())
+        game.enter(Permanent('hero',hero,0,fresh=False))
+        game.enter(Permanent('equipment',equipment,0,attached_to='hero'))
+        game.enter(Permanent('replacement',visitation,0))
+        game.attack('hero',1)
+        tokens=[p for p in game.battlefield.values() if p.token]
+        self.assertEqual(len(tokens),2)
+        self.assertTrue(all(p.definition.name=='Angel' for p in tokens))
+        self.assertTrue(all(p.attacking==1 and p.tapped for p in tokens))
+        self.assertTrue(all(p.definition.abilities==frozenset({'flying','vigilance'})
+                            for p in tokens))
