@@ -1335,7 +1335,7 @@ class Simulator(AdvancedRules):
                 pending=self.enter_creature(selected,player)
                 self.log('put_from_hand','A matching permanent enters from hand without being cast.',
                          actor=controller,card=selected.name,source=event['source'],
-                         subtype=subtype,kind=kind,permanent=selected.id)
+                         subtype=subtype,restriction=kind,permanent=selected.id)
                 self.resolve_entry_triggers(pending,selected)
                 continue
             if event.get('operation')=='optional_subtype_search_hand':
