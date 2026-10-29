@@ -133,6 +133,7 @@ class Definition:
     attack_group_draw: tuple = ()  # (minimum declared attackers, cards drawn) on the stack.
     discard_token_ability: tuple = ()  # (mana cost, TokenSpec); discard one card as cost.
     umbra_armor: bool = False  # Replace destruction of the enchanted creature.
+    regenerate_subtype: str = ''  # Tap: create a one-use destruction replacement shield.
 
 
 def parse_card(card: dict) -> Definition:
@@ -218,6 +219,12 @@ def parse_card(card: dict) -> Definition:
     sacrifice=parse_sacrifice_ability(text,types)
     if sacrifice:
         return Definition(**base,abilities=frozenset(),sacrifice_ability=sacrifice)
+    from regeneration_abilities import parse as parse_regeneration
+    regeneration=parse_regeneration(text,types)
+    if regeneration:
+        program,subtype=regeneration
+        return Definition(**base,abilities=program.keywords,static_effects=program.static_effects,
+                          regenerate_subtype=subtype)
     from tribal_tap_tokens import parse as parse_tribal_tap_tokens
     tribal_tap=parse_tribal_tap_tokens(text,types)
     if tribal_tap:
