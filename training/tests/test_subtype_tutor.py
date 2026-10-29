@@ -46,7 +46,9 @@ class SubtypeTutorChecks(unittest.TestCase):
         self.assertIn(found,sim.players[0].hand)
         self.assertNotIn(found,sim.players[0].library)
         self.assertIn(nonmatching,sim.players[0].library)
-        self.assertEqual(len(sim.players[0].hand),before+1)
+        # Casting/putting Matron onto the field removes it from hand,
+        # and the successful tutor replaces it with one chosen card.
+        self.assertEqual(len(sim.players[0].hand),before)
         self.assertEqual(sim.library_random_sequence,1)
         self.assertTrue(any(e['kind']=='search_reveal' and
                             e['details'].get('revealed')==found.name for e in sim.events))
