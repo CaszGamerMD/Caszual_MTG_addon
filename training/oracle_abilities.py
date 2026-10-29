@@ -78,6 +78,7 @@ class Program:
     activations: tuple = ()
     devotion: tuple = ()
     life_multiplier: int = 1
+    opponent_creatures_enter_tapped: bool = False
 
 def static_effect(text):
     life_conditional=re.fullmatch(r'As long as you have ([1-9][0-9]*) or more life, this creature gets \+([0-9]+)/\+([0-9]+) and has (.+)\.',text)
@@ -139,7 +140,9 @@ def selector(text):
     if text in ('this creature or another creature','this creature or another creature you control'):
         return Selector(relation='controller' if text.endswith('you control') else 'any',creature=True)
     m=re.fullmatch(r'(a|another) (creature|[A-Z][a-z]+(?: creature)?) you control',text)
-    if not m: return None
+    if not m:
+        if text=='a creature an opponent controls':return Selector(relation='opponent',creature=True)
+        return None
     noun=m[2]
     return Selector(relation='controller',other=m[1]=='another',
                     creature=noun=='creature' or noun.endswith(' creature'),
@@ -185,7 +188,7 @@ def compile_abilities(text, name=''):
         text=text.replace(name,'this creature')
         if ',' in name:
             text=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= isn't a creature| enters| attacks|\'s power)",'this creature',text)
-    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1
+    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False
     for line in text.splitlines():
         line=line.strip()
         if not line: continue
@@ -195,6 +198,9 @@ def compile_abilities(text, name=''):
             threshold={'one':1,'two':2,'three':3,'four':4,'five':5,'six':6,'seven':7,'eight':8,'nine':9}.get(condition[2])
             devotion=({'white':'W','blue':'U','black':'B','red':'R','green':'G'}[condition[1]],threshold or int(condition[2]))
             continue
+        if line=='Creatures your opponents control enter tapped.':
+            if opponent_creatures_enter_tapped:return None
+            opponent_creatures_enter_tapped=True;continue
         if line=='If you would gain life, you gain twice that much life instead.':
             if life_multiplier!=1:return None
             life_multiplier=2;continue
@@ -247,12 +253,13 @@ def compile_abilities(text, name=''):
         if action.operation=='create_tokens' and not subject.self_only:
             return None  # Repeating token engines need bounded stack/loop handling.
         triggers.append(Trigger(event,subject,action))
-    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier) if triggers or static_effects or activations or devotion or life_multiplier!=1 else None
+    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped else None
 
 def matches(subject, source, entered, is_creature):
     return ((not subject.self_only or source.id==entered.id)
         and (not subject.other or source.id!=entered.id)
         and (subject.relation!='controller' or source.controller==entered.controller)
+        and (subject.relation!='opponent' or source.controller!=entered.controller)
         and (not subject.creature or is_creature)
         and (subject.legendary is None or subject.legendary==entered.definition.legendary)
         and (not subject.color or subject.color in entered.definition.colors)
