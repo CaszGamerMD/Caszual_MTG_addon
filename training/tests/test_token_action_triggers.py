@@ -146,6 +146,22 @@ class TokenActionTriggersChecks(unittest.TestCase):
         self.assertEqual(len(roles),1)
         sim.invariant()
 
+    def test_doubled_roles_count_creation_then_extra_role_leaves(self):
+        sim,cards=self.fixture(['Mirkwood Bats',"Nadier's Nightblade",
+                                'Doubling Season','Ellivere of the Wild Court'])
+        for name in ('Mirkwood Bats',"Nadier's Nightblade",'Doubling Season'):
+            self.put(sim,cards[name])
+        self.token(sim,'strong-host',power=9,toughness=9)
+        self.put(sim,cards['Ellivere of the Wild Court'])
+        self.drain(sim)
+        roles=[p for p in sim.players[0].battlefield if
+               p.card.event_definition and p.card.event_definition.role]
+        # Replacement creates two Roles. Only the newest may remain,
+        # and the older token leaving triggers Nightblade.
+        self.assertEqual(len(roles),1)
+        self.assertEqual([p.life for p in sim.players],[41,37])
+        sim.invariant()
+
     def test_zero_created_tokens_does_not_trigger_and_noncreature_token_counts(self):
         sim,cards=self.fixture(['Mirkwood Bats'])
         self.put(sim,cards['Mirkwood Bats'])
