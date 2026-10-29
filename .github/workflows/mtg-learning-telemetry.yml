@@ -1,0 +1,62 @@
+name: MTG learning cycle telemetry
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - 'training/**'
+      - '.github/workflows/mtg-learning-telemetry.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Focused learning-cycle regression tests
+        id: focused
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m unittest discover -s training/tests -p 'test_session_learning_*.py' -v 2>&1 | tee /tmp/mtg-focused.log
+      - name: Diagnostic deck coverage
+        id: coverage
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          python training/diagnostic_coverage.py 2>&1 | tee /tmp/mtg-coverage.log
+      - name: Report results to tracking issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.sha }}
+          FOCUSED_RESULT: ${{ steps.focused.outcome }}
+          COVERAGE_RESULT: ${{ steps.coverage.outcome }}
+        shell: bash
+        run: |
+          {
+            echo "### MTG Golem focused CI — \`$HEAD_SHA\`"
+            echo
+            echo "Focused tests: **$FOCUSED_RESULT**; deck coverage: **$COVERAGE_RESULT**."
+            echo
+            echo '~~~text'
+            if [ -f /tmp/mtg-focused.log ]; then tail -n 45 /tmp/mtg-focused.log; else echo 'Focused tests did not start'; fi
+            echo '~~~'
+            echo
+            echo '~~~text'
+            if [ -f /tmp/mtg-coverage.log ]; then grep -E 'FOCUSED_UNRESOLVED|uniqueUnsupportedNames|learningEligible' /tmp/mtg-coverage.log | tail -n 8; else echo 'Coverage did not start'; fi
+            echo '~~~'
+            echo
+            echo "Run: https://github.com/$GH_REPO/actions/runs/${{ github.run_id }}"
+          } > /tmp/mtg-report.md
+          gh issue comment 26 --body-file /tmp/mtg-report.md
