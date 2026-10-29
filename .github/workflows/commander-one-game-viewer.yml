@@ -37,6 +37,10 @@ jobs:
           game=json.loads(p.read_text())
           if len(game['deckNames'])!=2 or not game['events']:
               raise RuntimeError('One game did not produce valid replay events')
+          opening=[e for e in game['events'] if e['kind']=='opening_hand']
+          keeps=[e for e in game['events'] if e['kind']=='keep_hand']
+          if len(keeps)!=2 or not opening or any(e['details'].get('count')!=7 for e in opening):
+              raise RuntimeError('Opening seven / mulligan replay events were not recorded correctly')
           if not game.get('spectatorReplay') or not all(
               len(e.get('spectatorHands',[]))==2 for e in game['events']):
               raise RuntimeError('Replay lacks complete both-hand spectator snapshots')
@@ -50,6 +54,8 @@ jobs:
             result=game['result'],winner=game['winner'],
             lifeTotals=[p['life'] for p in final],eventCount=len(game['events']),
             flaggedQuestions=len(game.get('questions',[])),
+            openingMulligans=game.get('openingMulligans',[0,0]),
+            openingDrawEvents=len(opening),
             spectatorHands=True,scryfallImages=True,
             learningEligible=game['learningEligible'],productionEligible=game['productionEligible'],
             viewer='budget-vs-goblins-spectator-20261029.html')
