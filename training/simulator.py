@@ -237,6 +237,7 @@ class Permanent:
     loyalty: int | None = None
     charge_counters: int = 0
     chosen_subtype: str = ''
+    regeneration_shields: int = 0
 
 
 @dataclass
@@ -1036,6 +1037,63 @@ class Simulator(AdvancedRules):
             self.stack.push(ward['controller'],(ward,source.card),ward['name'])
         self.resolve_entry_triggers(triggers,source.card)
 
+    def regeneration_targets(self,seat,source):
+        subtype=source.card.event_definition.regenerate_subtype
+        game=self.event_game('main')
+        return tuple((owner,item) for owner,item in self.creature_targets(seat,source.card)
+                     if item.card.id!=source.card.id and
+                     subtype in game.battlefield[item.card.id].definition.subtypes)
+
+    def regenerate_choices(self,seat):
+        if self.stack.priority!=seat:return []
+        game=self.event_game('main');choices=[]
+        for source in self.players[seat].battlefield:
+            definition=source.card.event_definition
+            if not definition or not definition.regenerate_subtype or source.tapped:continue
+            state=game.battlefield.get(source.card.id)
+            if source.fresh and not (state and game.has(state,'haste')):continue
+            for owner,target in self.regeneration_targets(seat,source):
+                choices.append(Candidate(source.card.id+':regen:'+target.card.id,
+                    'activate_regenerate',source.card.id,features=features(power=.2),
+                    label='Regenerate '+target.card.name,target_permanent=target.card.id))
+        return choices
+
+    def activate_regenerate(self,seat,source_id,target_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        if source is None or source.tapped or not source.card.event_definition or not source.card.event_definition.regenerate_subtype:
+            raise ValueError('Illegal regeneration source')
+        game=self.event_game('main');state=game.battlefield.get(source_id)
+        if source.fresh and not (state and game.has(state,'haste')):raise ValueError('Summoning sick regeneration source')
+        if target_id not in {p.card.id for _,p in self.regeneration_targets(seat,source)}:
+            raise ValueError('Illegal regeneration target')
+        source.tapped=True
+        event=dict(operation='regenerate_shield',controller=seat,source=source_id,
+                   target=target_id,name=source.card.name,subtype=source.card.event_definition.regenerate_subtype,
+                   sourceColors=sorted(source.card.colors))
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' regeneration ability')
+        self.log('activate_regenerate','Regeneration tap cost paid; ability waits on stack.',
+                 actor=seat,source=source_id,targetPermanent=target_id,stackId=frame.id)
+        self.resolve_entry_triggers([],source.card)
+
+    def replace_regeneration(self,owner,item,game):
+        state=game.battlefield.get(item.card.id)
+        if (item not in self.players[owner].battlefield or not state or
+                not game.creature(state) or game.stats(state)[1]<=0 or
+                game.has(state,'indestructible') or item.regeneration_shields<=0):return False
+        item.regeneration_shields-=1;item.marked_damage=0;item.tapped=True
+        if self.group_combat:
+            combat=self.group_combat
+            if item.card.id in combat['attackers']:
+                combat['attackers'].remove(item.card.id)
+            for blockers in combat['blocks'].values():
+                if item.card.id in blockers:blockers.remove(item.card.id)
+        if self.combat_context and item.card.id in (self.combat_context['attacker'],self.combat_context['blocker']):
+            self.combat_context['blocked']=True
+        self.log('regenerate','Regeneration replaces destruction, taps and removes creature from combat.',
+                 targetPermanent=item.card.id,remainingShields=item.regeneration_shields)
+        return True
+
     def land_counter_target(self,target,scope):
         if scope=='all':return True
         if not scope.startswith('entered:'):return False
@@ -1521,6 +1579,7 @@ class Simulator(AdvancedRules):
         actions.extend(self.sacrifice_team_choices(seat))
         actions.extend(self.sacrifice_protection_choices(seat))
         actions.extend(self.land_counter_choices(seat))
+        actions.extend(self.regenerate_choices(seat))
         actions.extend(self.strip_ability_choices(seat))
         for card in self.response_choices(seat):
             if card.blink:
@@ -1565,6 +1624,9 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_sacrifice_boost':
             self.activate_sacrifice_boost(seat,choice.card_id,choice.tap_ids[0],choice.target_permanent)
+            return 'activate'
+        if choice.kind=='activate_regenerate':
+            self.activate_regenerate(seat,choice.card_id,choice.target_permanent)
             return 'activate'
         if choice.kind=='activate_land_counters':
             self.activate_land_counters(seat,choice.card_id)
@@ -2736,6 +2798,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.sacrifice_team_choices(seat))
             actions.extend(self.sacrifice_protection_choices(seat))
             actions.extend(self.land_counter_choices(seat))
+            actions.extend(self.regenerate_choices(seat))
             actions.extend(self.strip_ability_choices(seat))
             if (self.diagnostic and p.command_zone and p.command_zone.kind == "creature"
                     and self.payment(p.command_zone, p.commander_casts)["paid"]):
@@ -2858,7 +2921,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
-                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana","activate_sacrifice_boost","activate_land_counters","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
+                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana","activate_sacrifice_boost","activate_land_counters","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
             self.turn_development[seat]=True
         return choice
 
@@ -2950,6 +3013,8 @@ class Simulator(AdvancedRules):
                 self.activate_sacrifice_mana(self.active,choice.card_id,choice.tap_ids[0])
             elif choice.kind=='activate_sacrifice_boost':
                 self.activate_sacrifice_boost(self.active,choice.card_id,choice.tap_ids[0],choice.target_permanent)
+            elif choice.kind=='activate_regenerate':
+                self.activate_regenerate(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind=='activate_land_counters':
                 self.activate_land_counters(self.active,choice.card_id)
             elif choice.kind=='activate_sacrifice_team':
@@ -3184,7 +3249,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):
