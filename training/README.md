@@ -1,3 +1,36 @@
+## Continuing unresolved-card work: damage Auras, life replacement and entry rules
+
+The strict Oracle grammar now accepts three additional damage-Aura programs:
+Spirit Link (`Whenever enchanted creature deals damage, you gain that much
+life.`), Keen Sense (optional controller draw when the enchanted creature
+damages an **opponent of the Aura controller**), and Armadillo Cloak (combining
+the same damage-life trigger with an attachment bonus and trample).
+The damage event kernel collects actual positive damage from supported regular
+combat, first/double strike, grouped combat, and supported noncombat player
+and board-damage abilities. A trigger is queued on the existing priority stack,
+and it can resolve after the Aura leaves. A prevented/zero-damage event does
+not trigger. This still does not claim arbitrary card text or all damage
+redirection/replacement interactions are handled.
+
+Boon Reflection and Rhox Faithmender now compile a generic gain-life replacement
+of `twice that much`. Two independent doublers multiply the gain by four,
+before it updates life totals and gained-life-this-turn history. Opposing
+players' gains are unaffected. Other life-gain replacement wording and
+ordering choices are deliberately not inferred.
+
+Authority of the Consuls now compiles two independent clauses: creatures
+controlled by opponents enter tapped if the source already exists, and
+opposing creature entries trigger the source controller's lifegain.
+Simultaneously entering sources do not retroactively apply tapped-entry
+replacements. The same trigger wording works with unfamiliar card names.
+
+Regressions: `test_damage_auras.py`, `test_life_replacements.py`,
+`test_opponent_entry.py`. These additions are to the **offline, experimental
+rules simulator only**. No production Minecraft golem code has been migrated.
+Old stored gauntlet totals and outstanding-card counts are historical and
+**must not be presented as a fresh coverage audit** until tests and the
+gauntlet are rerun.
+
 ## Conditional life rules: end-step tokens and continuous effects
 
 Two additional Oracle-language families are implemented without card-name
