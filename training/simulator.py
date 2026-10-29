@@ -395,6 +395,7 @@ class Simulator(AdvancedRules):
         self._draining_priority=False
         self._resolving_stack=False
         self._waiting_triggers=[]
+        self.aura_exiles={}  # Aura object id -> (owner seat, physical card) still in exile.
         self.life_gained_turn=[0,0]
         self._end_step_triggers_queued=False
         self.token_sequence = 0
@@ -752,6 +753,14 @@ class Simulator(AdvancedRules):
                         self.log('combat_boost_no_target','No legal enchanted or enchantment creature for combat trigger.',
                                  source=event['source'])
                         continue
+                    chosen=max(candidates,key=lambda item:(self.effective_card(item).power,item.card.id))
+                    event=dict(event,target=chosen.card.id)
+                if event.get('operation')=='exile_until_aura_leaves':
+                    # Target is chosen when the ETB trigger is put on the stack,
+                    # not when it resolves. Opposing hexproof and protection apply.
+                    candidates=[item for owner,item in self.creature_targets(controller,origin)
+                                if owner!=controller]
+                    if not candidates:continue
                     chosen=max(candidates,key=lambda item:(self.effective_card(item).power,item.card.id))
                     event=dict(event,target=chosen.card.id)
                 if event.get('operation')=='create_role':
@@ -1405,6 +1414,26 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='exile_until_aura_leaves':
+                # The delayed return belongs to this specific Aura instance.
+                # If it left before the ETB trigger resolved, nothing is exiled.
+                game=self.event_game('main')
+                source=game.battlefield.get(event['source'])
+                legal=next(((owner,item) for owner,item in self.creature_targets(event['controller'],card)
+                            if owner!=event['controller'] and item.card.id==event.get('target')),None)
+                if not source or source.entered_at!=event['sourceEntry'] or legal is None:
+                    self.log('aura_exile_fizzle','Aura exile trigger has no legal source or target.',
+                             source=event['source'],targetPermanent=event.get('target'))
+                    continue
+                owner,item=legal
+                self.send_to_destination(self.players[owner],item,snapshot=game,to_exile=True)
+                physical_owner=self.card_owners.get(root(item.card),owner)
+                if item.card in self.players[physical_owner].exile:
+                    self.aura_exiles.setdefault(event['source'],[]).append((physical_owner,item.card))
+                self.log('aura_exile','Aura temporarily exiles its chosen creature.',
+                         actor=event['controller'],source=event['source'],targetPermanent=item.card.id)
+                self.resolve_entry_triggers(self.state_based_actions(),card)
+                continue
             if event.get('operation')=='damage_any_target':
                 if event.get('optional') and not self.choose_optional_damage(event):
                     self.log('damage_declined','Controller declines optional triggered damage.',
@@ -2017,6 +2046,14 @@ class Simulator(AdvancedRules):
                         # see its departure exactly once.
                         self.send_to_destination(owner,attached,snapshot=snapshot)
         player.battlefield.remove(item)
+        # The return is a linked zone change, not a death or a recast.
+        # It happens immediately when the specific Aura leaves the battlefield.
+        for owner_seat,exiled_card in self.aura_exiles.pop(item.card.id,()):
+            owner=self.players[owner_seat]
+            if exiled_card in owner.exile:
+                owner.exile.remove(exiled_card)
+                pending=self.enter_creature(exiled_card,owner)
+                self._waiting_triggers.extend((trigger,exiled_card) for trigger in pending)
         if item.card.is_token:
             return  # Tokens cease to exist after leaving the battlefield.
         if root(item.card) == destination.commander_id:

@@ -118,6 +118,7 @@ class Definition:
     entry_counter_grants: tuple = ()
     attack_watchers: tuple = ()
     chosen_type_entry: bool = False
+    aura_exile: bool = False  # Targeted ETB exile lasting until this Aura leaves.
 
 
 def parse_card(card: dict) -> Definition:
@@ -160,6 +161,10 @@ def parse_card(card: dict) -> Definition:
             upkeep_attachment_counters=enchantments.upkeep_attachment_counters,
             entry_attachment_counters=enchantments.entry_attachment_counters,
             double_attachment_counters_upkeep=enchantments.double_attachment_counters_upkeep)
+    from land_aura_exile import parse as parse_land_aura_exile
+    land_exile=parse_land_aura_exile(text,types,subtypes)
+    if land_exile:
+        return Definition(**base,abilities=frozenset(),attachment=land_exile,aura_exile=True)
     from advanced_abilities import station,history,equipped_attacks
     levels=station(text,types,subtypes)
     if levels:return Definition(**base,abilities=frozenset(),station=levels)
@@ -483,6 +488,11 @@ class Game:
                       subtypes=sorted(permanent.definition.subtypes))
             if 'enters' in permanent.definition.role_events:
                 self.emit('trigger',**self.role_trigger(permanent))
+            if permanent.definition.aura_exile:
+                self.emit('trigger',operation='exile_until_aura_leaves',
+                          source=permanent.id,name=permanent.definition.name,
+                          controller=permanent.controller,sourceEntry=permanent.entered_at,
+                          sourceColors=sorted(permanent.definition.colors))
             if permanent.definition.entry_attachment_counters and permanent.attached_to:
                 self.emit('trigger',operation='enchanted_counters',effect='put counters on enchanted creature',
                           source=permanent.id,name=permanent.definition.name,controller=permanent.controller,
