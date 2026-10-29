@@ -10,6 +10,7 @@ import base64
 from oracle_abilities import parse_token_creation
 import mana_pool
 import x_spells
+import library_effects
 from priority_stack import PriorityStack
 from dataclasses import dataclass, field, replace, asdict
 import hashlib
@@ -189,6 +190,8 @@ class Card:
     instant: bool = False
     counter_filter: str = ""
     removal: str = ""
+    printed_types: tuple[str, ...] = ()
+    printed_mana_value: int | None = None
 
 
 
@@ -216,6 +219,7 @@ class Permanent:
     temporary_power: int = 0
     temporary_toughness: int = 0
     temporary_abilities: frozenset[str] = frozenset()
+    bestowed: bool = False
 
 
 @dataclass
@@ -244,6 +248,7 @@ class Candidate:
     x_value: int | None = None
     target_stack: int | None = None
     target_permanent: str = ""
+    activation_index: int = 0
 
 
 @dataclass(frozen=True)
@@ -353,6 +358,7 @@ class Simulator:
         self._resolving_stack=False
         self._waiting_triggers=[]
         self.token_sequence = 0
+        self.library_random_sequence = 0
         self.log("setup", "Two independent agents use frozen policies; sandbox rules apply.")
         for player in self.players:
             for card in player.library:
@@ -400,9 +406,9 @@ class Simulator:
     def display_permanent(self, item: Permanent) -> dict:
         effective = self.effective_card(item)
         c = effective or item.card
-        return {"id": c.id, "name": c.name, "kind": c.kind, "power": c.power,
+        return {"id": c.id, "name": c.name, "kind": "aura" if item.bestowed else ("enchantment" if not effective and c.event_definition and c.event_definition.devotion else c.kind), "power": c.power,
                 "toughness": c.toughness, "traits": c.traits, "tapped": item.tapped,
-                "fresh": item.fresh, "saddled": item.saddled, "counters": item.counters}
+                "fresh": item.fresh, "saddled": item.saddled, "counters": item.counters, "isCreature": effective is not None, "bestowed": item.bestowed, "attachedTo": item.attached_to}
 
     def state(self) -> dict:
         return {"active": self.active, "turn": self.turn, "phase": self.phase,
@@ -428,6 +434,11 @@ class Simulator:
             if sum(not c.is_token for c in cards) != self.total_cards[i] or len({c.id for c in cards}) != len(cards):
                 raise RuntimeError("Card conservation failed")
 
+    def bestowed_definition(self,definition):
+        # The supported bestow grammar has creature subtypes and no enchantment subtypes.
+        return replace(definition,types=frozenset({'Enchantment'}),subtypes=frozenset({'Aura'}),
+                       attachment=definition.bestow[2])
+
     def event_game(self, phase: str) -> EventGame:
         """Adapt public battlefield state to the shared type-aware event kernel."""
         game = EventGame(turn_player=self.active, phase=phase)
@@ -437,11 +448,13 @@ class Simulator:
                 if card.kind == "land": continue
                 definition = card.event_definition
                 if definition is None:
-                    if card.kind != "creature": continue
+                    if card.kind not in ("creature","mana_artifact"): continue
                     keywords = frozenset(k for k in card.traits.split(";")[-1].split(",") if k)
-                    definition = EventDefinition(card.name, frozenset({"Creature"}), frozenset(card.land_subtypes),
+                    definition = EventDefinition(card.name, frozenset({"Artifact"} if card.kind=="mana_artifact" else {"Creature"}), frozenset(card.land_subtypes),
                                                  card.legendary, card.power, card.toughness, keywords,
                                                  colors=frozenset(card.colors))
+                if item.bestowed:definition=self.bestowed_definition(definition)
+                definition=replace(definition,mana_cost=card.mana_cost)
                 game.battlefield[card.id] = EventPermanent(card.id, definition, seat, item.tapped,
                     item.fresh, item.saddled, item.animated, counters=item.counters, token=item.card.is_token,temporary_power=item.temporary_power,
                     temporary_toughness=item.temporary_toughness,temporary_abilities=item.temporary_abilities,attached_to=item.attached_to)
@@ -470,28 +483,36 @@ class Simulator:
                        traits=f"{power};{toughness};"+",".join(sorted(keywords)))
 
     def enter_creature(self, card: Card, player: Player):
-        game = self.event_game("main")
-        definition = card.event_definition
-        if definition is None:
-            definition = EventDefinition(card.name, frozenset({"Creature"}), frozenset(card.land_subtypes), card.legendary,
-                card.power, card.toughness, frozenset(k for k in card.traits.split(";")[-1].split(",") if k),
-                colors=frozenset(card.colors))
-        game._next_token = self.token_sequence
-        known = set(game.battlefield)
-        controller = next(i for i, candidate in enumerate(self.players) if candidate is player)
-        game.enter(EventPermanent(card.id, definition, controller))
-        player.battlefield.append(Permanent(card))
-        for token_id in game.battlefield.keys()-known-{card.id}:
-            token_state = game.battlefield[token_id]
-            if not token_state.token: raise RuntimeError("Unknown event-created permanent")
-            d = token_state.definition
-            token = Card(token_id,d.name,"creature",traits=f"{d.power};{d.toughness};"+
-                ",".join(sorted(d.abilities)),power=d.power,toughness=d.toughness,
-                event_definition=d,is_token=True)
+        return self.enter_creatures([card],player)
+
+    def enter_creatures(self, cards, player: Player, bestowed_targets=None):
+        game=self.event_game('main')
+        game._next_token=self.token_sequence
+        known=set(game.battlefield)
+        controller=next(i for i,candidate in enumerate(self.players) if candidate is player)
+        entrants=[]
+        bestowed_targets=bestowed_targets or {}
+        for card in cards:
+            definition=card.event_definition
+            if definition is None:
+                definition=EventDefinition(card.name,frozenset({'Creature'}),frozenset(card.land_subtypes),card.legendary,
+                    card.power,card.toughness,frozenset(k for k in card.traits.split(';')[-1].split(',') if k),
+                    colors=frozenset(card.colors))
+            if card.id in bestowed_targets:definition=self.bestowed_definition(definition)
+            entrants.append(EventPermanent(card.id,replace(definition,mana_cost=card.mana_cost),controller,
+                                           attached_to=bestowed_targets.get(card.id)))
+        game.enter_batch(entrants)
+        player.battlefield.extend(Permanent(card,attached_to=bestowed_targets.get(card.id),bestowed=card.id in bestowed_targets) for card in cards)
+        for token_id in game.battlefield.keys()-known-{card.id for card in cards}:
+            token_state=game.battlefield[token_id]
+            if not token_state.token:raise RuntimeError('Unknown event-created permanent')
+            d=token_state.definition
+            token=Card(token_id,d.name,'creature',traits=f'{d.power};{d.toughness};'+','.join(sorted(d.abilities)),
+                       power=d.power,toughness=d.toughness,event_definition=d,is_token=True)
             player.battlefield.append(Permanent(token))
-        self.token_sequence = game._next_token
+        self.token_sequence=game._next_token
         self.sync_events(game)
-        return [event for event in game.events if event["kind"] == "trigger"]
+        return [event for event in game.events if event['kind']=='trigger']
 
     def state_based_actions(self):
         """Collect creature deaths in repeated simultaneous batches before priority."""
@@ -507,7 +528,22 @@ class Simulator:
                     if toughness<=0 or (item.marked_damage>0 and item.marked_damage>=toughness
                                         and not game.has(state,'indestructible')):
                         dead.append((owner,item))
-            if not dead:break
+            invalid_auras=[];detached=[]
+            for owner,player in enumerate(self.players):
+                for item in player.battlefield:
+                    if item.card.kind not in ('aura','equipment') and not item.bestowed:continue
+                    target=game.battlefield.get(item.attached_to)
+                    if target and game.creature(target):continue
+                    if item.bestowed:detached.append(item)
+                    elif item.card.kind=='aura':invalid_auras.append((owner,item))
+                    elif item.attached_to:detached.append(item)
+            if not dead and not invalid_auras and not detached:break
+            for item in detached:item.attached_to=None;item.bestowed=False
+            for owner,item in invalid_auras:
+                if item in self.players[owner].battlefield:self.send_to_destination(self.players[owner],item,snapshot=game)
+            if invalid_auras or detached:
+                self.log('state_based_attachments','Illegal creature attachments are removed.',
+                    auras=[item.card.id for _,item in invalid_auras],detached=[item.card.id for item in detached])
             # Every watcher sees the same pre-death snapshot, once per batch.
             pending.extend(game.death_triggers([item.card.id for _,item in dead]))
             for owner,item in dead:
@@ -579,6 +615,37 @@ class Simulator:
                      and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
 
+    def token_ability_choices(self,seat):
+        result=[]
+        for source in self.players[seat].battlefield:
+            definition=source.card.event_definition
+            for index,(cost,spec) in enumerate(definition.activations if definition else ()):
+                payment=self.payment(replace(source.card,mana_cost=cost),seat=seat)
+                if payment['paid']:
+                    result.append(Candidate(source.card.id+':activate:'+str(index),'activate_tokens',source.card.id,
+                        features=features(power=spec.amount*spec.power,toughness=spec.amount*spec.toughness,
+                                          cost=len(payment['sources'])),label='Activate '+source.card.name,activation_index=index))
+        return result
+
+    def activate_tokens(self,seat,source_id,index=0):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        activations=source.card.event_definition.activations if source and source.card.event_definition else ()
+        if not 0<=index<len(activations):raise ValueError('Illegal activated ability')
+        cost,spec=activations[index]
+        payment=self.payment(replace(source.card,mana_cost=cost),seat=seat)
+        if not payment['paid']:raise ValueError('Cannot pay activated ability')
+        for permanent in self.players[seat].battlefield:
+            if permanent.card.id in payment['sources']:permanent.tapped=True
+        self.players[seat].mana_pool=list(payment['pool'])
+        event=dict(operation='create_tokens',effect='create tokens',source=source_id,controller=seat,
+                   name=source.card.name,tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords)))
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_tokens',f'Player {seat+1} activates {source.card.name}.',actor=seat,stackId=frame.id,
+                 manaSources=payment['sources'],manaPool=list(self.players[seat].mana_pool))
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
     def equip_choices(self,seat):
         choices=[]
         for source in self.players[seat].battlefield:
@@ -644,12 +711,13 @@ class Simulator:
         if card.kind!='counter_spell': return ()
         return tuple(frame for frame in self.stack.items if frame.payload[0].get('operation')=='spell'
                      and (card.counter_filter=='any' or
-                          (frame.payload[1].kind=='creature' and card.counter_filter=='creature') or
-                          (frame.payload[1].kind!='creature' and card.counter_filter=='noncreature')))
+                          (frame.payload[1].kind=='creature' and not frame.payload[0].get('bestow') and card.counter_filter=='creature') or
+                          ((frame.payload[1].kind!='creature' or frame.payload[0].get('bestow')) and card.counter_filter=='noncreature')))
 
     def priority_observation(self,seat):
         if seat!=self.stack.priority: raise ValueError('Player lacks priority')
         actions=[Candidate('priority-pass','priority_pass',features=features(),label='Pass priority')]
+        actions.extend(self.token_ability_choices(seat))
         for card in self.response_choices(seat):
             if card.kind=='removal_spell':
                 actions.extend(self.removal_choices(seat,card,'respond'))
@@ -667,11 +735,14 @@ class Simulator:
     def act_priority(self,seat,choice):
         if choice not in self.priority_observation(seat).legal_actions: raise ValueError('Illegal priority choice')
         if choice.kind=='priority_pass': return self.pass_priority(seat)
+        if choice.kind=='activate_tokens':
+            self.activate_tokens(seat,choice.card_id,choice.activation_index)
+            return 'activate'
         card=next(c for c in self.players[seat].hand if c.id==choice.card_id)
         self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack)
         return 'cast'
 
-    def cast_spell(self,seat,card,x=None,commander=False,target=None):
+    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False):
         player=self.players[seat]
         if not card.instant and seat!=self.stack.priority: raise ValueError('Player lacks priority')
         if self.stack.items:
@@ -679,12 +750,14 @@ class Simulator:
         elif seat!=self.active or self.phase not in ('main','second_main'):
             if not card.instant or seat!=self.stack.priority: raise ValueError('Spell timing invalid')
         if not commander and card not in player.hand: raise ValueError('Card not in hand')
-        if card.kind=='aura' and target not in {p.card.id for _,p in self.creature_targets()}:raise ValueError('Illegal Aura target')
+        if bestow and (not card.event_definition or not card.event_definition.bestow):raise ValueError('Card has no supported bestow ability')
+        if (card.kind=='aura' or bestow) and target not in {p.card.id for _,p in self.creature_targets()}:raise ValueError('Illegal Aura target')
         if card.kind=='removal_spell' and card.removal=='destroy' and target not in {item.card.id for _,item in self.creature_targets()}:
             raise ValueError('Removal requires a legal creature target')
         if card.kind=='counter_spell' and target not in {f.id for f in self.counter_targets(card)}:
             raise ValueError('Counterspell requires a legal spell target')
-        payment=self.payment(card,player.commander_casts if commander else 0,x=x,seat=seat)
+        payment_card=replace(card,mana_cost=card.event_definition.bestow[0]) if bestow else card
+        payment=self.payment(payment_card,player.commander_casts if commander else 0,x=x,seat=seat)
         if not payment['paid']: raise ValueError('Cannot pay spell cost')
         for source in player.battlefield:
             if source.card.id in payment['sources']:source.tapped=True
@@ -693,9 +766,9 @@ class Simulator:
         else:player.hand.remove(card)
         prior=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)
         self.stack.active=self.active
-        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target},card),card.name)
+        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow},card),card.name)
         self.log('cast',f'Player {seat+1} casts {card.name}.',actor=seat,card=card.name,
-                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,targetStack=target if card.kind=='counter_spell' else None,
+                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,bestow=bestow,targetStack=target if card.kind=='counter_spell' else None,
                  targetPermanent=target if card.kind=='removal_spell' else None)
         self.stack.priority=seat
         self.log('stack_push',f'{card.name} goes on the stack.',stackId=frame.id,controller=seat)
@@ -708,6 +781,16 @@ class Simulator:
     def resolve_spell(self,event,original):
         controller=event['controller'];p=self.players[controller];card=original
         if event.get('copy'): self.log('spell_copy',f'A copy of {card.name} resolves.',card=card.name)
+        if event.get('bestow'):
+            if event['target'] in {target.card.id for _,target in self.creature_targets()}:
+                pending=self.enter_creatures([card],p,{card.id:event['target']})
+                self.log('bestow',f'{card.name} enters as an Aura.',targetPermanent=event['target'])
+                self.resolve_entry_triggers(pending,card)
+            else:
+                pending=self.enter_creature(card,p)
+                self.log('bestow_creature',f'{card.name} resolves as a creature after its target became illegal.')
+                self.resolve_entry_triggers(pending,card)
+            return
         if card.kind=='aura':
             if event['target'] not in {p.card.id for _,p in self.creature_targets()}:
                 if not event.get('copy'):p.graveyard.append(card)
@@ -782,6 +865,41 @@ class Simulator:
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='reveal_creatures':
+                owner=self.players[event['controller']]
+                count,subtype,maximum=event['libraryFilter']
+                revealed=list(reversed(owner.library[-count:]))
+                self.log('reveal',f"{event['name']} reveals {len(revealed)} cards.",actor=event['controller'],
+                         revealed=[dict(id=c.id,name=c.name) for c in revealed])
+                selected=[]
+                for candidate in revealed:
+                    if 'Creature' not in candidate.printed_types or subtype not in candidate.land_subtypes:continue
+                    if candidate.printed_mana_value is None:
+                        self.pause('Cannot determine revealed creature mana value',candidate);return
+                    if candidate.printed_mana_value<=maximum:
+                        if candidate.kind!='creature' or (candidate.event_definition and not candidate.event_definition.supported):
+                            self.pause('Revealed matching creature needs rules before it can enter',candidate);return
+                        selected.append(candidate)
+                for candidate in revealed:owner.library.remove(candidate)
+                bottom=[candidate for candidate in revealed if candidate not in selected]
+                self.library_random_sequence+=1
+                random.Random(str(self.seed)+':library:'+str(self.library_random_sequence)).shuffle(bottom)
+                owner.library[0:0]=bottom
+                pending=self.enter_creatures(selected,owner)
+                self.log('library_to_battlefield',f"{event['name']} puts {len(selected)} matching creatures onto the battlefield together.",
+                         actor=event['controller'],entered=[c.id for c in selected],bottomedCount=len(bottom))
+                self.resolve_entry_triggers(pending,card)
+                if self.finished:return
+                continue
+            if event.get('operation')=='subtype_count_boost':
+                game=self.event_game('combat');source=game.battlefield.get(event['source'])
+                if source:
+                    count=sum(other.id!=source.id and other.controller==source.controller and event['subtype'] in other.definition.subtypes
+                              for other in game.battlefield.values())
+                    source.temporary_power+=event['power']*count;source.temporary_toughness+=event['toughness']*count
+                    self.sync_events(game)
+                self.log('subtype_count_boost',f"{event['name']} resolves its temporary attack bonus.",source=event['source'])
+                continue
             if event.get('operation')=='counter_power_tokens':
                 game=self.event_game('main')
                 source=game.battlefield.get(event['source'])
@@ -798,7 +916,7 @@ class Simulator:
                 owner.life -= event.get("controllerLoss",0)
                 for _ in range(spec["amount"]):
                     self.token_sequence+=1
-                    definition=EventDefinition(" ".join(spec["subtypes"]),frozenset({"Land","Creature"} if spec.get("land") else {"Creature"}),frozenset(spec["subtypes"]),
+                    definition=EventDefinition(" ".join(spec["subtypes"]),frozenset({"Creature"}|({"Land"} if spec.get("land") else set())|({"Enchantment"} if spec.get("enchantment") else set())),frozenset(spec["subtypes"]),
                         False,spec["power"],spec["toughness"],frozenset(spec["keywords"]),colors=frozenset(spec["colors"]))
                     token=Card(f"token-{self.token_sequence}",definition.name,"creature",
                         traits=f"{definition.power};{definition.toughness};"+",".join(sorted(definition.abilities)),
@@ -960,6 +1078,7 @@ class Simulator:
             for attached in list(owner.battlefield):
                 if attached.attached_to==item.card.id:
                     attached.attached_to=None
+                    attached.bestowed=False
                     if attached.card.kind=='aura':
                         owner.battlefield.remove(attached)
                         if not attached.card.is_token:owner.graveyard.append(attached.card)
@@ -1077,6 +1196,7 @@ class Simulator:
         elif self.phase in ("main", "second_main"):
             if self.diagnostic: actions.extend(self.activation_choices(seat, {"crew","saddle"}))
             actions.extend(self.equip_choices(seat))
+            actions.extend(self.token_ability_choices(seat))
             if (self.diagnostic and p.command_zone and p.command_zone.kind == "creature"
                     and self.payment(p.command_zone, p.commander_casts)["paid"]):
                 c = p.command_zone
@@ -1085,6 +1205,13 @@ class Simulator:
                              cost=len(self.payment(c, p.commander_casts).get("sources", []))),
                     "Cast commander " + c.name))
             for c in p.hand:
+                if c.event_definition and c.event_definition.bestow:
+                    payment=self.payment(replace(c,mana_cost=c.event_definition.bestow[0]))
+                    if payment['paid']:
+                        actions.extend(Candidate(c.id+':bestow:'+target.card.id,'bestow',c.id,
+                            features=features(power=2 if owner==seat else -100,cost=len(payment['sources'])),
+                            label='Bestow '+c.name,target_permanent=target.card.id)
+                            for owner,target in self.creature_targets())
                 if c.kind=='aura' and self.payment(c)['paid']:
                     actions.extend(Candidate(c.id+':aura:'+target.card.id,'cast',c.id,
                         features=features(power=1 if owner==seat else -100),label='Cast '+c.name,target_permanent=target.card.id)
@@ -1229,6 +1356,8 @@ class Simulator:
             if choice.kind == "pass":
                 self.phase = {"land": "main", "main": "attack", "second_main": "cleanup"}[self.phase]
                 self.log("pass", choice.label)
+            elif choice.kind=='activate_tokens':
+                self.activate_tokens(self.active,choice.card_id,choice.activation_index)
             elif choice.kind=='equip':
                 self.activate_equip(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind in ("crew","saddle"):
@@ -1250,7 +1379,7 @@ class Simulator:
                     if self.phase == "land": self.phase = "main"
                     self.log("land", f"Player {self.active + 1} plays {card.name}.", card=card.name)
                 else:
-                    self.cast_spell(self.active,card,choice.x_value,choice.kind=='cast_commander',target=choice.target_permanent or choice.target_stack)
+                    self.cast_spell(self.active,card,choice.x_value,choice.kind=='cast_commander',target=choice.target_permanent or choice.target_stack,bestow=choice.kind=='bestow')
         elif self.phase == "attack":
             choice = self.decide(self.active)
             if choice.kind == "pass":
@@ -1267,7 +1396,7 @@ class Simulator:
                          attacker=x.card.id)
                 for event in game.events:
                     if event["kind"] == "trigger":
-                        if event.get('operation') in ('create_tokens','counter_power_tokens'):
+                        if event.get('operation') in ('create_tokens','counter_power_tokens','subtype_count_boost'):
                             self.resolve_entry_triggers([event],x.card)
                             if self.finished: return False
                             continue
@@ -1276,9 +1405,9 @@ class Simulator:
         elif self.phase in ('first_damage','regular_damage'):
             self.strike_damage_step(self.phase=='first_damage')
         elif self.phase == "block":
-            if not any(item.card.id==self.pending for item in p.battlefield):
+            if not any(item.card.id==self.pending and self.effective_card(item) is not None for item in p.battlefield):
                 self.pending=None;self.phase='second_main'
-                self.log('combat_skipped','The attacker has left the battlefield.')
+                self.log('combat_skipped','The attacker is no longer a creature on the battlefield.')
                 return True
             defender = self.players[1-self.active]
             choice = self.decide(1-self.active)
@@ -1408,7 +1537,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):
@@ -1423,7 +1552,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         text = definition.get("oracleText", "")
         token_spec = parse_token_creation(text)
         if definition.get("types") == ["Sorcery"] and token_spec and rules.query("cost",cost)["supported"]:
-            template = EventDefinition(" ".join(token_spec.subtypes),frozenset({"Land","Creature"} if token_spec.land else {"Creature"}),frozenset(token_spec.subtypes),
+            template = EventDefinition(" ".join(token_spec.subtypes),frozenset({"Creature"}|({"Land"} if token_spec.land else set())|({"Enchantment"} if token_spec.enchantment else set())),frozenset(token_spec.subtypes),
                 False,token_spec.power,token_spec.toughness,token_spec.keywords,colors=frozenset(token_spec.colors))
             parsed = {"kind":"token_spell", "token_count":token_spec.amount,
                       "token_definition":template,"token_tapped":token_spec.tapped}
@@ -1435,7 +1564,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             and storm_lines[1]=='Storm' and rules.query('cost',cost)['supported']):
         spec=parse_token_creation(storm_lines[0])
         if spec:
-            template=EventDefinition(' '.join(spec.subtypes),frozenset({'Land','Creature'} if spec.land else {'Creature'}),
+            template=EventDefinition(' '.join(spec.subtypes),frozenset({'Creature'}|({'Land'} if spec.land else set())|({'Enchantment'} if spec.enchantment else set())),
                 frozenset(spec.subtypes),False,spec.power,spec.toughness,spec.keywords,colors=frozenset(spec.colors))
             parsed={'kind':'token_spell','token_count':spec.amount,'token_definition':template,'token_tapped':spec.tapped,'storm':True}
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
@@ -1454,7 +1583,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         parsed={'kind':'x_spell','x_effect':variable['effect']}
         if variable['effect']=='tokens':
             spec=variable['token']
-            parsed['token_definition']=EventDefinition(' '.join(spec.subtypes),frozenset({'Land','Creature'} if spec.land else {'Creature'}),frozenset(spec.subtypes),
+            parsed['token_definition']=EventDefinition(' '.join(spec.subtypes),frozenset({'Creature'}|({'Land'} if spec.land else set())|({'Enchantment'} if spec.enchantment else set())),frozenset(spec.subtypes),
                 False,spec.power,spec.toughness,spec.keywords,colors=frozenset(spec.colors))
             parsed['token_tapped']=spec.tapped
     output=mana_pool.production(definition.get("oracleText", ""))
@@ -1470,6 +1599,8 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         basic_land="Basic" in definition.get("superTypes", []), event_definition=parsed.get("event"),
         storm=parsed.get("storm",False), x_effect=parsed.get("x_effect",""), token_count=parsed.get("token_count",0),
         token_definition=parsed.get("token_definition"),token_tapped=parsed.get("token_tapped",False),
+        printed_types=tuple(definition.get('types',[])),
+        printed_mana_value=library_effects.mana_value(cost) if definition.get('layout','normal') in ('normal','token') else None,
         colors=tuple(definition.get("colors") or []), legendary="Legendary" in (definition.get("superTypes") or []))
 
 

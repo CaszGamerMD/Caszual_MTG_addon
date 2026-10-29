@@ -14,6 +14,8 @@ def compile(text):
             token=parse_token_creation('Create a '+m[1]+'.')
             if token: effects.append(('counter_power_tokens',1,0,token));continue
             return None
+        m=re.fullmatch(r'Whenever this creature attacks, it gets \+([0-9]+)/\+([0-9]+) until end of turn for each other ([A-Z][a-z]+) you control\.',line)
+        if m:effects.append(('subtype_count_boost',int(m[1]),int(m[2]),m[3]));continue
         m=re.fullmatch(r'(Crew|Saddle) ([1-9][0-9]*)',line)
         if m:
             if m[1]=='Crew': crew=int(m[2])

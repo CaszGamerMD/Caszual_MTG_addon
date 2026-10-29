@@ -15,13 +15,13 @@ Three resolved through reusable parsing: Honor of the Pure (capitalized color se
 | Flowering of the White Tree | Legendary selectors and ward payments |
 | Goblin Chainwhirler | Implemented for diagnostic player/creature boards: simultaneous damage and death triggers |
 | Haazda Marshal | Multiple attackers and attack-group conditions |
-| Heliod, God of the Sun | Devotion, conditional creature type, activated token creation |
+| Heliod, God of the Sun | Implemented in diagnostic: generic devotion, conditional creature type, vigilance, paid enchantment-creature token activation |
 | Honor of the Pure | Implemented in diagnostic simulator |
-| Hopeful Eidolon | Bestow and Aura attachment/type transitions |
+| Hopeful Eidolon | Implemented in diagnostic: alternate Bestow cost, Aura stack type, grants, target-loss fallback and same-object creature transition |
 | Krenko, Tin Street Kingpin | Implemented in diagnostic: counter then current-power token creation |
 | Lifelink | Implemented in diagnostic: Aura targeting, lifelink grant and cleanup |
 | Lumen-Class Frigate | Station activation and counter thresholds |
-| Muxus, Goblin Grandee | Library reveal/filter, mana value, multiple entries, temporary attack stats |
+| Muxus, Goblin Grandee | Implemented in diagnostic: generic reveal/filter by printed type/mana value, simultaneous entry, random bottom order, resolving subtype-count attack bonus |
 | Radiant Summit | Implemented in diagnostic simulator |
 | Ruinous Ultimatum | Implemented in diagnostic: opponent nonland sweep, indestructible and simultaneous death-trigger discovery |
 | Shadowspear | Equipment, activated ability removal and duration |
@@ -49,3 +49,7 @@ Board-damage follow-up: Goblin Chainwhirler now compiles through a generic fixed
 ## Repeated creature state-based checks
 
 Added cascading creature deaths from lost toughness bonuses, deferred all waiting death triggers until those batches finish, and preserved ordinary-combat damage marks through the turn. This is shared rules infrastructure, not an additional completed card: 12 original cards remain completely blocked, with Goblin Chainwhirler still partial pending planeswalker loyalty damage. See `state-based-actions.md` for scope and limitations.
+
+## Devotion, filtered library entry and Bestow
+
+Heliod, Muxus and Hopeful Eidolon now compile all printed instructions using reusable grammar. Nine original cards remain completely blocked, plus Chainwhirler's pending planeswalker portion. Unsupported creatures revealed by Muxus produce a human-review question before the batch moves. See `devotion-library-bestow.md` for validation and explicit boundaries.

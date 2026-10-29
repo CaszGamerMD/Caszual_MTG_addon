@@ -12,10 +12,11 @@ class TokenSpec:
     keywords: frozenset[str]
     tapped: bool = False
     land: bool = False
+    enchantment: bool = False
 
 def parse_token_creation(text):
     """A whole standalone instruction, not a substring stripped of extra rules."""
-    m=re.fullmatch(r'Create (a|an|one|two|three|four|[1-9][0-9]*) (tapped )?([0-9]+)/([1-9][0-9]*) (white|blue|black|red|green|colorless)(?: and (white|blue|black|red|green))? ([A-Z][a-z]+(?: [A-Z][a-z]+)*) (land )?creature tokens?(?: with (.+))?\.',text)
+    m=re.fullmatch(r'Create (a|an|one|two|three|four|[1-9][0-9]*) (tapped )?([0-9]+)/([1-9][0-9]*) (white|blue|black|red|green|colorless)(?: and (white|blue|black|red|green))? ([A-Z][a-z]+(?: [A-Z][a-z]+)*) (land |enchantment )?creature tokens?(?: with (.+))?\.',text)
     if not m: return None
     abilities=frozenset(re.split(r', | and ',m[9] or ''))-{''}
     if not abilities <= KEYWORDS-{'flash'}: return None
@@ -23,7 +24,7 @@ def parse_token_creation(text):
     amount={'a':1,'an':1,'one':1,'two':2,'three':3,'four':4}.get(m[1])
     if amount is None: amount=int(m[1])
     return TokenSpec(amount,int(m[3]),int(m[4]),tuple(c.title() for c in (m[5],m[6]) if c and c!='colorless'),
-                     tuple(m[7].split()),abilities,bool(m[2]),bool(m[8]))
+                     tuple(m[7].split()),abilities,bool(m[2]),m[8]=='land ',m[8]=='enchantment ')
 
 @dataclass(frozen=True)
 class Selector:
@@ -51,6 +52,7 @@ class Effect:
     gain: int = 0
     token: TokenSpec | None = None
     controller_loss: int = 0
+    library_filter: tuple = ()
 
 @dataclass(frozen=True)
 class Trigger:
@@ -63,6 +65,8 @@ class Program:
     triggers: tuple[Trigger, ...]
     keywords: frozenset[str]
     static_effects: tuple[StaticEffect, ...] = ()
+    activations: tuple = ()
+    devotion: tuple = ()
 
 def static_effect(text):
     m=re.fullmatch(r'(Other )?(?:([Ww]hite|[Bb]lue|[Bb]lack|[Rr]ed|[Gg]reen) )?[Cc]reatures you control have (flying|first strike|double strike|lifelink|vigilance|trample|haste|defender|reach|deathtouch|indestructible)\.',text)
@@ -103,6 +107,9 @@ def selector(text):
                     subtype='' if noun=='creature' else noun.split()[0])
 
 def effect(text):
+    from library_effects import parse
+    library_filter=parse(text)
+    if library_filter:return Effect('reveal_creatures',library_filter[0],library_filter=library_filter)
     token=parse_token_creation(text[:1].upper()+text[1:])
     if token: return Effect('create_tokens',token.amount,token=token)
     m=re.fullmatch(r'put (a|[1-9][0-9]*) \+1/\+1 counters? on each creature you control\.',text)
@@ -123,11 +130,25 @@ def compile_abilities(text, name=''):
     A name is used only to normalize an Oracle self-reference, never to select
     behavior. Keywords and trigger/effect combinations compose independently.
     """
-    if name: text=text.replace(name,'this creature')
-    triggers=[]; keywords=set(); static_effects=[]
+    if name:
+        text=text.replace(name,'this creature')
+        if ',' in name:
+            text=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= isn't a creature| enters| attacks|\'s power)",'this creature',text)
+    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=()
     for line in text.splitlines():
         line=line.strip()
         if not line: continue
+        condition=re.fullmatch(r"As long as your devotion to (white|blue|black|red|green) is less than (one|two|three|four|five|six|seven|eight|nine|[1-9][0-9]*), this creature isn't a creature\.",line)
+        if condition:
+            if devotion:return None
+            threshold={'one':1,'two':2,'three':3,'four':4,'five':5,'six':6,'seven':7,'eight':8,'nine':9}.get(condition[2])
+            devotion=({'white':'W','blue':'U','black':'B','red':'R','green':'G'}[condition[1]],threshold or int(condition[2]))
+            continue
+        activated=re.fullmatch(r'((?:\{(?:[0-9]+|[WUBRGC])\})+): (Create .+)',line)
+        if activated:
+            spec=parse_token_creation(activated[2])
+            if not spec or all(part=='0' for part in re.findall(r'\{([^}]+)\}',activated[1])):return None
+            activations.append((activated[1],spec));continue
         words=[w.strip().lower() for w in line.split(',')]
         if all(w in KEYWORDS for w in words):
             keywords.update(words); continue
@@ -160,7 +181,7 @@ def compile_abilities(text, name=''):
         if action.operation=='create_tokens' and not subject.self_only:
             return None  # Repeating token engines need bounded stack/loop handling.
         triggers.append(Trigger(event,subject,action))
-    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects)) if triggers or static_effects else None
+    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion) if triggers or static_effects or activations or devotion else None
 
 def matches(subject, source, entered, is_creature):
     return ((not subject.self_only or source.id==entered.id)
@@ -172,7 +193,7 @@ def matches(subject, source, entered, is_creature):
 
 def event_data(trigger, source, subject):
     e=trigger.effect
-    label={'damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
+    label={'reveal_creatures':f'reveal {e.amount} cards and put matching creatures onto the battlefield','damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
            'damage':f'deal {e.amount} damage to each opponent','scry':'scry',
            'add_counters':f'put {e.amount} +1/+1 counters on each creature you control',
            'create_tokens':f'create {e.amount} creature tokens'}[e.operation]
@@ -182,4 +203,5 @@ def event_data(trigger, source, subject):
             'effect':label,'operation':e.operation,'recipient':e.recipient,
             'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
+            **({'libraryFilter':e.library_filter} if e.library_filter else {}),
             {'enters':'entered','dies':'dead','upkeep':'permanent'}[trigger.event]:subject.id}

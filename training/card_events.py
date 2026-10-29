@@ -7,7 +7,7 @@ rules raise NeedsRules rather than being treated as blank.
 from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 import re
-from attachments import parse as parse_attachment
+from attachments import parse as parse_attachment, parse_bestow
 from attack_abilities import compile as compile_attacks
 from oracle_abilities import Trigger, StaticEffect, compile_abilities, matches, event_data
 
@@ -86,6 +86,10 @@ class Definition:
     static_effects: tuple[StaticEffect, ...] = ()
     attack_effects: tuple = ()
     attachment: tuple = ()
+    activations: tuple = ()
+    devotion: tuple = ()
+    mana_cost: str = ""
+    bestow: tuple = ()
 
 
 def parse_card(card: dict) -> Definition:
@@ -100,14 +104,30 @@ def parse_card(card: dict) -> Definition:
                           reason="Variable power or toughness")
     base = dict(name=name, types=types, subtypes=subtypes,
                 legendary="Legendary" in (card.get("superTypes") or []), power=power, toughness=toughness,
-                colors=frozenset(card.get("colors") or []))
+                colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "")
     if ("Creature" in types or "Vehicle" in subtypes) and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    bestow=parse_bestow(text,types)
+    if bestow:return Definition(**base,abilities=bestow[1],bestow=bestow)
     attachment=parse_attachment(text,types,subtypes)
     if attachment:return Definition(**base,abilities=frozenset(),attachment=attachment)
+    normalized=text.replace(name,'this creature') if name else text
+    if ',' in name:
+        normalized=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= enters| attacks| isn't a creature|\'s power)",'this creature',normalized)
+    attack_lines=[line for line in normalized.splitlines() if line.startswith('Whenever this creature attacks')]
+    other_lines=[line for line in normalized.splitlines() if not line.startswith('Whenever this creature attacks')]
+    entry_program=compile_abilities('\n'.join(other_lines)) if other_lines else None
+    attacks=compile_attacks('\n'.join(attack_lines)) if attack_lines else None
+    if entry_program and attacks and 'Creature' in types and (not entry_program.devotion or 'Enchantment' in types):
+        return Definition(**base,abilities=entry_program.keywords|attacks[0],triggers=entry_program.triggers,
+            static_effects=entry_program.static_effects,activations=entry_program.activations,devotion=entry_program.devotion,
+            crew=attacks[1],saddle=attacks[2],attack_effects=attacks[3])
     program = compile_abilities(text,name)
     if program is not None and ("Creature" in types or "Enchantment" in types):
-        return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects)
+        if program.devotion and not {'Creature','Enchantment'}<=types:
+            return Definition(**base,abilities=frozenset(),supported=False,reason='Unsupported devotion type transition')
+        return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects,
+                          activations=program.activations,devotion=program.devotion)
     attack_text=text.replace(name,'this creature') if name else text
     if ',' in name:
         short=name.split(',')[0]
@@ -190,7 +210,15 @@ class Game:
     def emit(self, kind: str, **data):
         self.events.append({"kind":kind, **data})
 
+    def devotion(self, controller, symbol):
+        # Hybrid/Phyrexian symbols contribute once when they contain this color.
+        return sum(symbol in part.split('/') for permanent in self.battlefield.values() if permanent.controller==controller
+                   for part in re.findall(r'\{([^}]+)\}',permanent.definition.mana_cost))
+
     def creature(self, p: Permanent) -> bool:
+        if p.definition.devotion:
+            symbol,threshold=p.definition.devotion
+            if self.devotion(p.controller,symbol)<threshold:return False
         return "Creature" in p.definition.types or ("Vehicle" in p.definition.subtypes and p.animated)
 
     def stats(self, p: Permanent) -> tuple[int, int]:
@@ -227,31 +255,38 @@ class Game:
         return False
 
     def enter(self, permanent: Permanent):
-        if permanent.id in self.battlefield: raise IllegalAction("Duplicate permanent ID")
-        if not permanent.definition.supported:
-            self.questions.append({"card":permanent.definition.name, "blocking":True,
-                "reason":permanent.definition.reason,
-                "question":"How should this ability be implemented and tested: " + permanent.definition.reason + "?"})
-            raise NeedsRules(permanent.definition.reason)
-        self.battlefield[permanent.id] = permanent
-        self.emit("enters", id=permanent.id, name=permanent.definition.name,
-                  controller=permanent.controller, types=sorted(permanent.definition.types),
-                  subtypes=sorted(permanent.definition.subtypes))
-        for watcher in list(self.battlefield.values()):
-            for trigger in watcher.definition.triggers:
-                if trigger.event == "enters" and matches(trigger.subject,watcher,permanent,self.creature(permanent)):
-                    self.emit("trigger",**event_data(trigger,watcher,permanent))
-        # These are triggered abilities, modeled as immediate resolutions in this
-        # focused prototype. The full engine must provide stack/priority.
-        watched = any(x.id != permanent.id and x.controller == permanent.controller
-                      and x.definition.name == "Kolodin, Triumph Caster"
-                      for x in self.battlefield.values())
-        if watched and "Mount" in permanent.definition.subtypes:
-            permanent.saddled = True
-            self.emit("trigger", source="Kolodin, Triumph Caster", effect="saddled", target=permanent.id)
-        if watched and "Vehicle" in permanent.definition.subtypes:
-            permanent.animated = True
-            self.emit("trigger", source="Kolodin, Triumph Caster", effect="animated", target=permanent.id)
+        self.enter_batch([permanent])
+
+    def enter_batch(self, permanents):
+        if len({p.id for p in permanents})!=len(permanents):raise IllegalAction('Duplicate permanent ID')
+        for permanent in permanents:
+            if permanent.id in self.battlefield: raise IllegalAction("Duplicate permanent ID")
+            if not permanent.definition.supported:
+                self.questions.append({"card":permanent.definition.name, "blocking":True,
+                    "reason":permanent.definition.reason,
+                    "question":"How should this ability be implemented and tested: " + permanent.definition.reason + "?"})
+                raise NeedsRules(permanent.definition.reason)
+        for permanent in permanents:self.battlefield[permanent.id]=permanent
+        for permanent in permanents:
+            self.emit("enters", id=permanent.id, name=permanent.definition.name,
+                      controller=permanent.controller, types=sorted(permanent.definition.types),
+                      subtypes=sorted(permanent.definition.subtypes))
+            for watcher in list(self.battlefield.values()):
+                for trigger in watcher.definition.triggers:
+                    if trigger.event == "enters" and matches(trigger.subject,watcher,permanent,self.creature(permanent)):
+                        self.emit("trigger",**event_data(trigger,watcher,permanent))
+            # These are triggered abilities, modeled as immediate resolutions in this
+            # focused prototype. The full engine must provide stack/priority.
+            watched = any(x.id != permanent.id and x.controller == permanent.controller
+                          and x.definition.name == "Kolodin, Triumph Caster"
+                          for x in self.battlefield.values())
+            if watched and "Mount" in permanent.definition.subtypes:
+                permanent.saddled = True
+                self.emit("trigger", source="Kolodin, Triumph Caster", effect="saddled", target=permanent.id)
+            if watched and "Vehicle" in permanent.definition.subtypes:
+                permanent.animated = True
+                self.emit("trigger", source="Kolodin, Triumph Caster", effect="animated", target=permanent.id)
+
 
     def upkeep_triggers(self) -> list[dict]:
         """One trigger per supported permanent controlled by the active player."""
@@ -361,6 +396,13 @@ class Game:
                           operation='counter_power_tokens' if defer else 'create_tokens',
                           counterAmount=power,lastPower=last_power,
                           effect='counter then create tokens equal to power',tokenSpec=spec)
+            elif operation=='subtype_count_boost':
+                count=sum(other.id!=a.id and other.controller==a.controller and keyword in other.definition.subtypes
+                          for other in self.battlefield.values())
+                if not defer:a.temporary_power+=power*count;a.temporary_toughness+=toughness*count
+                self.emit('trigger',source=a.id,name=a.definition.name,controller=a.controller,target=a.id,
+                    operation='subtype_count_boost',effect='temporary boost per controlled subtype',
+                    power=power,toughness=toughness,subtype=keyword)
             elif operation=='saddled_boost' and a.saddled:
                 a.temporary_power+=power;a.temporary_toughness+=toughness
                 a.temporary_abilities=a.temporary_abilities|{keyword}

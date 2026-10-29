@@ -18,9 +18,28 @@ def parse(text,types,subtypes):
             keywords=set(re.split(r', | and ',m[1]))
             if not keywords<=KEYWORDS:return None
             abilities.update(keywords);continue
-        m=re.fullmatch(prefix+r' creature gets \+([0-9]+)/\+([0-9]+)\.',line)
-        if m:power+=int(m[1]);toughness+=int(m[2]);continue
+        m=re.fullmatch(prefix+r' creature gets \+([0-9]+)/\+([0-9]+)(?: and has (.+))?\.',line)
+        if m:
+            keywords=set(re.split(r', | and ',m[3] or ''))-{''}
+            if not keywords<=KEYWORDS:return None
+            abilities.update(keywords);power+=int(m[1]);toughness+=int(m[2]);continue
         return None
     if not abilities and not power and not toughness:return None
     if mode=='equipment' and cost is None:return None
     return mode,cost,frozenset(abilities),power,toughness
+
+def parse_bestow(text,types):
+    """Keyword-only enchantment creatures with fixed enchanted-creature grants."""
+    if not {'Creature','Enchantment'}<=types:return None
+    lines=[line.strip() for line in text.splitlines() if line.strip()]
+    if not lines:return None
+    cost=re.fullmatch(r'Bestow ((?:\{(?:[0-9]{1,2}|[WUBRGC])\})+)',lines.pop(0))
+    if not cost:return None
+    intrinsic=set();enchanted=[]
+    for line in lines:
+        words={w.strip().lower() for w in line.split(',')}
+        if words<=KEYWORDS-{'flash'}:intrinsic.update(words)
+        else:enchanted.append(line)
+    attachment=parse('\n'.join(['Enchant creature']+enchanted),{'Enchantment'},{'Aura'})
+    if not attachment:return None
+    return cost[1],frozenset(intrinsic),attachment
