@@ -47,6 +47,21 @@ class EndStepLifeGainChecks(unittest.TestCase):
         self.assertIn('flying',griffin.card.event_definition.abilities)
         sim.invariant()
 
+    def test_end_step_keeps_priority_window_until_trigger_resolves(self):
+        sim,_=self.with_aerie()
+        sim.gain_life(0,3)
+        self.step_to_end(sim)
+        self.assertEqual(sim.phase,'end_step')
+        self.assertEqual(len(sim.stack.items),1)
+        with self.assertRaisesRegex(ValueError,'unresolved stack'):
+            sim.step()
+        self.drain(sim)
+        self.assertEqual(len(self.griffins(sim)),1)
+        sim.step()
+        self.assertEqual(sim.phase,'cleanup')
+        self.assertEqual(len(self.griffins(sim)),1)
+        sim.invariant()
+
     def test_net_life_loss_does_not_erase_previous_gain(self):
         sim,_=self.with_aerie()
         sim.gain_life(0,3)
