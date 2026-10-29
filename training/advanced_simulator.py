@@ -240,7 +240,7 @@ class AdvancedRules:
    state=g.battlefield[identifier];toughness=g.stats(state)[1]
    if toughness<=0 or ('Planeswalker' in state.definition.types and p.loyalty==0) or (p.marked_damage>=toughness or identifier in touch) and not g.has(state,'indestructible'):
     dead.append((state.controller,p))
-  pending=[]
+  pending=g.aura_damage_triggers(dealt,1-self.active)
   from oracle_abilities import matches
   for identifier in set(player_hits):
    pending.extend(g.combat_draw_triggers(identifier))
