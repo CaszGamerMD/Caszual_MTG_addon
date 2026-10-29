@@ -284,6 +284,11 @@ def compile_abilities(text, name=''):
     """
     if name:
         text=text.replace(name,'this creature')
+        # Many Oracle texts shorten a multiword name to its first word.
+        # Normalize that reference only in a self-counter instruction.
+        if ' ' in name:
+            short=name.split(' ',1)[0].rstrip(',')
+            text=re.sub(r'(?<= on )'+re.escape(short)+r'(?=\.| instead\.)','this creature',text)
         if ',' in name:
             text=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= isn't a creature| enters| attacks|\'s power)",'this creature',text)
     triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0;cost_reductions=[];counter_replacements=[];token_replacements=[];token_action_triggers=[];token_leave_triggers=[];entry_counter_grants=[];attack_watchers=[]

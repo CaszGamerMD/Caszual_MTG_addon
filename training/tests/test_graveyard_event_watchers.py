@@ -18,6 +18,7 @@ class GraveyardEventWatchersChecks(unittest.TestCase):
     def test_real_and_renamed_card_rules_and_strict_remainder(self):
         for name in ('Knucklebone Witch','Uglúk of the White Hand','Starfield Mystic'):
             raw=dict(self.lookup[name],name='Unknown source')
+            if name=='Uglúk of the White Hand':raw['oracleText']=raw['oracleText'].replace('Uglúk','Unknown')
             imported=s.import_diagnostic_card(self.rules,raw,0,'new',set())
             self.assertEqual(imported.kind,'creature',name)
             self.assertTrue(any(t.event in ('dies','graveyard') for t in imported.event_definition.triggers))
