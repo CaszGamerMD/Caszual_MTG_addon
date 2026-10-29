@@ -118,6 +118,40 @@ class CastTriggerChecks(unittest.TestCase):
         sim.cast_spell(1,rival)
         self.assertEqual(sum(f.payload[0]['operation']=='ordered_effects' for f in sim.stack.items),0)
 
+    def test_ordered_gain_happens_before_failed_draw(self):
+        sim,_=self.setup_sythis()
+        spell=self.spell('empty-library')
+        self.give(sim,0,spell)
+        owner=sim.players[0]
+        owner.graveyard.extend(owner.library)
+        owner.library.clear()
+        sim.cast_spell(0,spell)
+        sim.pass_priority(0);sim.pass_priority(1)
+        self.assertEqual(owner.life,41)
+        self.assertTrue(owner.failed_draw)
+        self.assertTrue(sim.finished)
+
+    def test_unfamiliar_noncreature_cast_source(self):
+        raw=dict(name='Unseen spell scholar',types=['Enchantment'],subTypes=[],
+                 manaCost='{0}',oracleText='Whenever you cast a noncreature spell, draw a card.')
+        watcher=s.import_diagnostic_card(self.rules,raw,0,'scholar',{'White'})
+        self.assertEqual(watcher.kind,'enchantment')
+        sim,_=self.fixture([SYTHIS])
+        self.give(sim,0,watcher)
+        sim.players[0].hand.remove(watcher)
+        pending=sim.enter_creature(watcher,sim.players[0])
+        sim.resolve_entry_triggers(pending,watcher)
+        creature=self.spell('bear2',kind='creature',printed=('Creature',))
+        self.give(sim,0,creature)
+        sim.cast_spell(0,creature)
+        self.assertEqual(len(sim.stack.items),1)
+        sim.pass_priority(0);sim.pass_priority(1)
+        enchantment=self.spell('glow2')
+        self.give(sim,0,enchantment)
+        sim.cast_spell(0,enchantment)
+        self.assertEqual(len(sim.stack.items),2)
+        self.assertEqual(sim.stack.items[-1].payload[0]['operation'],'draw_cards')
+
     def test_generic_spell_subtypes_and_sequence_parse(self):
         for phrase in ('a spell','a creature spell','a noncreature spell',
                        'an enchantment spell','an instant spell','a sorcery spell',
