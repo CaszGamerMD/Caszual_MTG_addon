@@ -67,6 +67,7 @@ class Trigger:
     event: str
     subject: Selector
     effect: Effect
+    life_gained_at_least: int = 0
 
 @dataclass(frozen=True)
 class Program:
@@ -205,6 +206,12 @@ def compile_abilities(text, name=''):
             if action is None:return None
             triggers.append(Trigger('cast',Selector(relation='controller',spell_type=casting[1] or 'any'),action))
             continue
+        endstep=re.fullmatch(r'At the beginning of your end step, if you gained ([1-9][0-9]*) or more life this turn, (.+)',line)
+        if endstep:
+            action=effect(endstep[2])
+            if action is None:return None
+            triggers.append(Trigger('end_step',Selector(self_only=True),action,int(endstep[1])))
+            continue
         upkeep=re.fullmatch(r'At the beginning of your upkeep, (.+)',line)
         if upkeep:
             clause=upkeep[1]
@@ -263,4 +270,4 @@ def event_data(trigger, source, subject):
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             **({'libraryFilter':e.library_filter} if e.library_filter else {}),
             **({'steps':[{'operation':step.operation,'amount':step.amount,'recipient':step.recipient,'gain':step.gain} for step in e.steps]} if e.steps else {}),
-            {'enters':'entered','dies':'dead','upkeep':'permanent','cast':'spell'}[trigger.event]:subject.id}
+            {'enters':'entered','dies':'dead','upkeep':'permanent','end_step':'permanent','cast':'spell'}[trigger.event]:subject.id}
