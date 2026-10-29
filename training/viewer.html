@@ -61,6 +61,8 @@ textarea{background:#101c18;border:1px solid #547063;border-radius:8px;color:var
 dialog{border:1px solid var(--gold);border-radius:15px;background:#172620;color:var(--text);padding:22px;max-width:min(470px,92vw);box-shadow:0 20px 80px #000d}dialog::backdrop{background:#020908c9}dialog h2{font:700 23px Georgia,serif;margin:0 0 8px}.modalLabels{line-height:1.75;font-size:13px;color:#d4e4d5}
 .footer{font-size:11px;color:#98b2a3;text-align:center;padding:18px 4px;line-height:1.6}
 [hidden]{display:none!important}
+.gameCard.attacking{border-color:#f6a17a;box-shadow:0 0 0 2px #e56f51,0 0 21px #f39c6a99}
+.gameCard.blocking{border-color:#96d7ed;box-shadow:0 0 0 2px #6ba5bd,0 0 18px #74c5e088}
 @keyframes materialize{from{transform:translateY(18px) scale(.85);opacity:.35}to{transform:translateY(0) scale(1);opacity:1}}
 @media(max-width:1060px){.theater{grid-template-columns:minmax(0,1fr) 250px}.gameCard{width:96px;flex-basis:96px;height:138px}}
 @media(max-width:790px){.theater{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:1fr 1fr;gap:9px}.eventFeed{max-height:290px}.playerRow{min-height:0}.arena{border-radius:12px}}
@@ -124,7 +126,10 @@ function setTab(value){tab=value;$("turnTab").classList.toggle("active",value===
 function eventStyle(e){const k=(e?.kind||"").toLowerCase();if(/damage|attack|block|destroy|death|exile/.test(k))return "glowCombat";if(/life|gain|heal|draw/.test(k))return "glowLife";if(/cast|stack|token|land|trigger/.test(k))return "glowCast";return ""}
 function renderPhase(phase){const rail=$("phaseRail");rail.replaceChildren();for(const p of phases){const text=p.replace("_"," ");const chip=make("span",text,"phasePill"+(p===phase?" current":""));rail.append(chip)}}
 function cardType(c){return c.kind==="land"?"land":c.isCreature||c.kind==="creature"?"creature":c.kind||"permanent"}
-function makeCard(c,previous){const kind=cardType(c);const root=make("button",undefined,"gameCard "+kind+(c.tapped?" tapped":""));
+function makeCard(c,previous,combat){const kind=cardType(c);const attackers=combat?.details?.attackers||combat?.details?.attackIds||[];
+ const isAttacker=(combat?.details?.attacker===c.id||(Array.isArray(attackers)&&attackers.includes(c.id)))&&/attack|combat/.test(combat?.kind||"");
+ const isBlocker=(combat?.details?.blocker===c.id)&&/block|combat/.test(combat?.kind||"");
+ const root=make("button",undefined,"gameCard "+kind+(c.tapped?" tapped":"")+(isAttacker?" attacking":"")+(isBlocker?" blocking":""));
  root.type="button";root.title="Inspect "+c.name;root.setAttribute("aria-label",c.name+(c.tapped?", tapped":""));
  if(!previous)root.classList.add("entered");else if(previous.tapped!==c.tapped||previous.counters!==c.counters||previous.power!==c.power||previous.toughness!==c.toughness)root.classList.add("changed");
  root.append(make("div",c.name,"cardName"));
@@ -138,7 +143,7 @@ function makeCard(c,previous){const kind=cardType(c);const root=make("button",un
  root.addEventListener("click",()=>inspectCard(c));return root
 }
 function kindOf(c){const k=cardType(c);return k==="land"?"land":k==="creature"?"creature":"other"}
-function groupCards(p,prev,kind){const list=make("div",undefined,"cardTrack"+(kind==="land"?" landStack":""));const cards=(p.battlefield||[]).filter(c=>kindOf(c)===kind);const old=new Map((prev?.battlefield||[]).map(c=>[c.id,c]));for(const c of cards)list.append(makeCard(c,old.get(c.id)));return list}
+function groupCards(p,prev,kind,event){const list=make("div",undefined,"cardTrack"+(kind==="land"?" landStack":""));const cards=(p.battlefield||[]).filter(c=>kindOf(c)===kind);const old=new Map((prev?.battlefield||[]).map(c=>[c.id,c]));for(const c of cards)list.append(makeCard(c,old.get(c.id),event));return list}
 function nameFor(seat){return data?.deckNames?.[seat]||("Player "+(seat+1))}
 function playerPanel(seat,e,prev){const p=e.state.players[seat],past=prev?.state?.players?.[seat];const panel=make("div");
  const header=make("div",undefined,"identity");const info=make("div",undefined,"identityInfo");info.append(make("div",nameFor(seat),"seat"));if(e.state.active===seat)info.append(make("span","Active player","turnTag"));header.append(info);
@@ -149,7 +154,7 @@ function playerPanel(seat,e,prev){const p=e.state.players[seat],past=prev?.state
  if((p.manaPool||[]).some(Boolean))details.append(make("span","Mana pool: "+p.manaPool.join("/")));
  panel.append(details);
  const field=make("div",undefined,"field");
- for(const [k,title] of [["creature","Creatures"],["other","Other permanents"],["land","Lands"]]){const zone=make("section",undefined,"zone");const total=(p.battlefield||[]).filter(c=>kindOf(c)===k).length;const label=make("div",undefined,"zoneLabel");label.append(make("span",title),make("span",total));zone.append(label,groupCards(p,past,k));field.append(zone)}
+ for(const [k,title] of [["creature","Creatures"],["other","Other permanents"],["land","Lands"]]){const zone=make("section",undefined,"zone");const total=(p.battlefield||[]).filter(c=>kindOf(c)===k).length;const label=make("div",undefined,"zoneLabel");label.append(make("span",title),make("span",total));zone.append(label,groupCards(p,past,k,e));field.append(zone)}
  panel.append(field);const backs=make("div",undefined,"handLine");for(let i=0;i<Math.min(p.handCount,10);i++)backs.append(make("span",undefined,"backCard"));backs.append(make("span",p.handCount>10?"+ "+(p.handCount-10)+" more hidden cards":"Hand hidden · "+p.handCount+" cards","hiddenCount"));panel.append(backs);
  return panel
 }
@@ -188,7 +193,14 @@ function renderQuestions(){const list=$("questionList");list.replaceChildren();f
  if(!(data.questions||[]).length)list.append(make("div","No open rules questions in this replay.","questionCard"))}
 function unpack(value){if(value.packedReplay!==1)return value;const catalog=value.cardCatalog||[];
  value.events=(value.compactEvents||[]).map(e=>{const snap=e[7];return {index:e[0],turn:e[1],phase:e[2],actor:e[3],kind:e[4],message:e[5],details:e[6],
- state:{active:snap[0],turn:snap[1],phase:snap[2],stack:snap.length>4?snap[4]:undefined,priority:snap.length>5?snap[5]:undefined,players:snap[3].map((p,seat)=>({seat,life:p[0],handCount:p[1],libraryCount:p[2],battlefield:p[3].map(c=>({...catalog[c[0]],tapped:!!c[1],fresh:!!c[2],power:c.length>3?c[3]:catalog[c[0]].power,toughness:c.length>4?c[4]:catalog[c[0]].toughness,traits:c.length>5?c[5]:catalog[c[0]].traits,saddled:!!c[6],counters:c[7]||0})),graveyard:p[4].map(c=>({id:catalog[c].id,name:catalog[c].name})),commanderInZone:!!p[5],commanderDamage:p[6]||{},exile:(p[7]||[]).map(c=>({id:catalog[c].id,name:catalog[c].name})),manaPool:p[8]||[]}))}}});return value}
+ state:{active:snap[0],turn:snap[1],phase:snap[2],stack:snap.length>4?snap[4]:undefined,priority:snap.length>5?snap[5]:undefined,players:snap[3].map((p,seat)=>({seat,life:p[0],handCount:p[1],libraryCount:p[2],battlefield:p[3].map(c=>({...catalog[c[0]],tapped:!!c[1],fresh:!!c[2],power:c.length>3?c[3]:catalog[c[0]].power,toughness:c.length>4?c[4]:catalog[c[0]].toughness,traits:c.length>5?c[5]:catalog[c[0]].traits,saddled:!!c[6],counters:c[7]||0,kind:c.length>8&&c[8]?c[8]:catalog[c[0]].kind,
+ isCreature:c.length>9&&c[9]!==null?!!c[9]:catalog[c[0]].isCreature,
+ loyalty:c.length>10?c[10]:catalog[c[0]].loyalty,
+ chargeCounters:c.length>11?c[11]:catalog[c[0]].chargeCounters,
+ attachedTo:c.length>12?c[12]:catalog[c[0]].attachedTo,
+ hexproof:c.length>13?c[13]:catalog[c[0]].hexproof,
+ wardCosts:c.length>14?c[14]:catalog[c[0]].wardCosts,
+ bestowed:c.length>15?c[15]:catalog[c[0]].bestowed})),graveyard:p[4].map(c=>({id:catalog[c].id,name:catalog[c].name})),commanderInZone:!!p[5],commanderDamage:p[6]||{},exile:(p[7]||[]).map(c=>({id:catalog[c].id,name:catalog[c].name})),manaPool:p[8]||[]}))}}});return value}
 function load(value){if(!value||value.schemaVersion!==1||!["turn-replay","rules-review"].includes(value.kind))throw Error("Unsupported replay file or version");
  stop();data=unpack(value);if(data.events?.length&&!data.events.every(e=>e.state?.players?.length===2))throw Error("This replay has an unsupported player-state format");
  position=0;tab=data.events?.length?"turns":"questions";$("search").value="";renderQuestions();render()}
