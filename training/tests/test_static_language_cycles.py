@@ -68,7 +68,7 @@ class SharedCreatureTypesChecks(unittest.TestCase):
         parsed=s.import_diagnostic_card(self.rules,raw,0,'shared',set())
         self.assertEqual(parsed.kind,'artifact')
         self.assertTrue(parsed.event_definition.static_effects[0].share_types)
-        raw['oracleText']+='\\nWhenever a mystery happens, change reality.'
+        raw['oracleText']+='\nWhenever a mystery happens, change reality.'
         self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad',set()).kind,'unsupported')
         self.assertIsNone(compile_abilities(
             'Each creature gets +1/+1 for each other permanent on the battlefield that shares at least one creature type with it.'))

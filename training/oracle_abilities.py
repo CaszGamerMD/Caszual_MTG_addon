@@ -106,7 +106,7 @@ def static_effect(text):
         return StaticEffect(Selector(relation='opponent',creature=True),0,0,suppress=denial[1])
     # Coat-style global bonuses count each *other creature* once, even if it
     # shares multiple creature types; opposing creatures also participate.
-    shared=re.fullmatch(r'Each creature gets \\+([1-9][0-9]*)/\\+([1-9][0-9]*) for each other creature on the battlefield that shares at least one creature type with it\\.',text)
+    shared=re.fullmatch(r'Each creature gets \+([1-9][0-9]*)/\+([1-9][0-9]*) for each other creature on the battlefield that shares at least one creature type with it\.',text)
     if shared:
         return StaticEffect(Selector(creature=True),int(shared[1]),int(shared[2]),share_types=True)
     # Global lords affect matching creature types even when an opponent
