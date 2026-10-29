@@ -34,6 +34,20 @@ jobs:
         run: |
           set -o pipefail
           python training/diagnostic_coverage.py 2>&1 | tee /tmp/mtg-coverage.log
+      - name: Rank remaining Oracle-language families for next session
+        id: families
+        if: contains(github.event.head_commit.message, '[learning-final]')
+        shell: bash
+        run: |
+          set -o pipefail
+          python training/question_batches.py --decks training/decks/*.json --focal-id 5189995 --out training/reports/question-batches-current.json
+          python - <<'PY' | tee /tmp/mtg-families.log
+          import json
+          report=json.load(open('training/reports/question-batches-current.json'))
+          print('Unresolved cards:',report['unresolvedCards'])
+          for row in report['families'][:7]:
+              print(row['family'], 'focal=',row['focalCards'],'all=',row['affectedCards'])
+          PY
       - name: Full Python regression for final learning batch
         id: full
         if: contains(github.event.head_commit.message, '[learning-final]')
@@ -58,13 +72,14 @@ jobs:
           FOCUSED_RESULT: ${{ steps.focused.outcome }}
           COVERAGE_RESULT: ${{ steps.coverage.outcome }}
           FULL_RESULT: ${{ steps.full.outcome }}
+          FAMILIES_RESULT: ${{ steps.families.outcome }}
           JAVA_RESULT: ${{ steps.java.outcome }}
         shell: bash
         run: |
           {
             echo "### MTG Golem focused CI — \`$HEAD_SHA\`"
             echo
-            echo "Focused tests: **$FOCUSED_RESULT**; deck coverage: **$COVERAGE_RESULT**; full Python: **$FULL_RESULT**; Java/Gradle: **$JAVA_RESULT**."
+            echo "Focused tests: **$FOCUSED_RESULT**; deck coverage: **$COVERAGE_RESULT**; families: **$FAMILIES_RESULT**; full Python: **$FULL_RESULT**; Java/Gradle: **$JAVA_RESULT**."
             echo
             echo '~~~text'
             if [ -f /tmp/mtg-focused.log ]; then tail -n 45 /tmp/mtg-focused.log; else echo 'Focused tests did not start'; fi
@@ -74,8 +89,18 @@ jobs:
             if [ -f /tmp/mtg-coverage.log ]; then grep -E 'FOCUSED_UNRESOLVED|uniqueUnsupportedNames|learningEligible' /tmp/mtg-coverage.log | tail -n 8; else echo 'Coverage did not start'; fi
             echo '~~~'
             echo
+            if [ -f /tmp/mtg-families.log ]; then echo "Ranked unresolved families:"; tail -n 9 /tmp/mtg-families.log; fi
             if [ -f /tmp/mtg-full.log ]; then echo "Full Python summary:"; tail -n 5 /tmp/mtg-full.log; fi
             if [ -f /tmp/mtg-java.log ]; then echo "Java/Gradle summary:"; tail -n 12 /tmp/mtg-java.log; fi
             echo "Run: https://github.com/$GH_REPO/actions/runs/${{ github.run_id }}"
           } > /tmp/mtg-report.md
           gh issue comment 26 --body-file /tmp/mtg-report.md
+
+      - uses: actions/upload-artifact@v4
+        if: contains(github.event.head_commit.message, '[learning-final]')
+        with:
+          name: mtg-learning-final-${{ github.sha }}
+          path: |
+            training/reports/diagnostic-coverage.json
+            training/reports/question-batches-current.json
+          retention-days: 14
