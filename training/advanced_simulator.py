@@ -201,6 +201,14 @@ class AdvancedRules:
       events.append(dict(operation='create_tokens',effect='nontoken creature attack token creation',
                          source=watcher.id,controller=watcher.controller,name=watcher.definition.name,
                          tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords))))
+  # A group-attack trigger is generated once for a simultaneous declaration,
+  # not once per creature and not for tokens entering already attacking.
+  for watcher in g.battlefield.values():
+   if watcher.controller!=self.active or not watcher.definition.attack_group_draw:continue
+   minimum,amount=watcher.definition.attack_group_draw
+   if len(ids)>=minimum:
+    events.append(dict(operation='draw_cards',effect='draw for declared attack group',
+                       source=watcher.id,controller=watcher.controller,name=watcher.definition.name,amount=amount))
   # All attackers are declared simultaneously; mentor can target any lesser-power attacker.
   for identifier in ids:
    source=g.battlefield[identifier]
