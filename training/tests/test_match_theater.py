@@ -48,6 +48,38 @@ class MatchTheaterChecks(unittest.TestCase):
         self.assertNotIn("handCards", json.dumps(packed))
         self.assertEqual(s.pack_replay(report),packed)
 
+    def test_spectator_hand_snapshots_preserve_ids_without_entering_public_state(self):
+        from types import SimpleNamespace
+        simulator=s.Simulator.__new__(s.Simulator)
+        simulator.events=[];simulator.turn=2;simulator.active=0
+        simulator.phase="main";simulator.diagnostic=True
+        simulator.players=[
+            SimpleNamespace(hand=[s.Card("hand-a","Thorn Weaver","creature")]),
+            SimpleNamespace(hand=[s.Card("hand-b","Misty Tunnel","land")])]
+        simulator.invariant=lambda:None
+        simulator.state=lambda:dict(active=0,turn=2,phase="main",stack=[],priority=0,
+              players=[dict(seat=k,life=40,handCount=1,libraryCount=3,
+                            battlefield=[],graveyard=[],exile=[]) for k in (0,1)])
+        simulator.log("draw","Draws",actor=0)
+        event=simulator.events[0]
+        self.assertNotIn("hand",str(event["state"]))
+        self.assertEqual(event["spectatorHands"][0][0]["name"],"Thorn Weaver")
+        packed=s.pack_replay(dict(schemaVersion=1,kind="turn-replay",events=[event]))
+        self.assertEqual(packed["cardCatalog"][packed["compactEvents"][0][8][1][0]]["name"],"Misty Tunnel")
+        self.assertEqual(len(packed["compactEvents"][0][8]),2)
+
+    def test_scryfall_artwork_is_paced_and_supports_multiple_faces(self):
+        html=(HERE/"viewer.html").read_text(encoding="utf-8")
+        self.assertIn("api.scryfall.com/cards/named?exact=",html)
+        self.assertIn("scryfallDelay=600",html)
+        self.assertIn("card.card_faces",html)
+        self.assertIn("function trustedImage(url)",html)
+        self.assertIn('id="toggleArt"',html)
+        self.assertIn('id="toggleHands"',html)
+        self.assertIn("spectatorHands",html)
+        self.assertIn("Face ",html)
+        self.assertNotIn("innerHTML",html)
+
     def test_original_viewer_uses_only_local_css_and_javascript(self):
         html=(HERE/"viewer.html").read_text(encoding="utf-8")
         self.assertEqual(html.count("/*EMBEDDED_REPLAY*/null"),1)
