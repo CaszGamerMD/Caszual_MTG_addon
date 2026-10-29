@@ -91,13 +91,137 @@ dialog{border:1px solid var(--gold);border-radius:15px;background:#172620;color:
 @media(max-width:790px){.theater{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:1fr 1fr;gap:9px}.eventFeed{max-height:290px}.playerRow{min-height:0}.arena{border-radius:12px}}
 @media(max-width:520px){.shell{padding:10px 8px}header{align-items:flex-start}.sigil{height:34px;width:34px;font-size:18px}.headActions{justify-content:flex-end}.headActions button{padding:7px;font-size:11px}.fileButton{padding:8px;font-size:11px}h1{font-size:18px}.sidebar{grid-template-columns:1fr}.gameCard{flex-basis:89px;width:89px;height:126px}.landStack .gameCard{height:66px;flex-basis:78px;width:78px}.gameCard .cardName{font-size:9px}.lifeNumber{font-size:27px}.seat{font-size:15px;max-width:235px}.centerBand{padding:11px 6px}.phasePill{font-size:8px;padding:3px 5px}.controls{padding:10px 8px}.controlsRow button{padding:8px 9px;font-size:11px}.playerRow{padding:9px}.cardTrack{padding-bottom:7px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+
+/* Viewport-fit match table: all gameplay elements stay on one screen. */
+body:has(.shell.fitMatch){overflow:hidden}
+.shell.fitMatch{height:100vh;height:100dvh;max-width:none;min-height:0;display:flex;flex-direction:column;gap:4px;padding:6px 9px;overflow:hidden}
+.shell.fitMatch header{flex:0 0 auto;padding:0;gap:6px}
+.shell.fitMatch .sigil{height:29px;width:29px;font-size:17px}
+.shell.fitMatch h1{font-size:18px}
+.shell.fitMatch .headActions{gap:4px}
+.shell.fitMatch .headActions button,.shell.fitMatch .fileButton{padding:5px 7px;font-size:11px}
+.shell.fitMatch .notice{flex:0 0 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0;padding:4px 8px;font-size:10px}
+.shell.fitMatch .artStatus,.shell.fitMatch .footer{display:none}
+.shell.fitMatch .viewTabs{flex:0 0 auto;margin:0;gap:5px}
+.shell.fitMatch .viewTabs button{font-size:10px;padding:4px 8px}
+.shell.fitMatch #turns{flex:1 1 0;min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:5px;overflow:hidden}
+.shell.fitMatch .theater{min-height:0;height:100%;grid-template-columns:minmax(0,1fr) clamp(215px,22vw,290px);gap:7px;align-items:stretch}
+.shell.fitMatch .arena{min-height:0;height:100%;display:grid;grid-template-rows:minmax(0,1fr) auto minmax(0,1fr);border-radius:10px}
+.shell.fitMatch .playerRow{min-width:0;min-height:0;overflow:hidden;padding:4px 8px}
+.shell.fitMatch .playerRow>div{height:100%;min-height:0;display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.shell.fitMatch .identity{flex:0 0 auto;flex-wrap:nowrap;gap:5px;min-height:22px}
+.shell.fitMatch .identityInfo{flex:1;min-width:0;gap:4px}
+.shell.fitMatch .seat{font-size:clamp(12px,1.2vw,17px);max-width:min(36vw,370px)}
+.shell.fitMatch .turnTag{font-size:8px;padding:2px 5px}
+.shell.fitMatch .lifeWheel{flex:none;gap:3px}
+.shell.fitMatch .lifeNumber{min-width:29px;font-size:clamp(17px,2.5vh,28px)}
+.shell.fitMatch .detailLine{flex:none;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;gap:8px;margin:0;font-size:9px;line-height:1.3;min-height:12px}
+.shell.fitMatch .detailLine span{flex:none}
+.shell.fitMatch .field{flex:1 1 0;min-height:0;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1.15fr) minmax(0,1fr);gap:5px;overflow:hidden}
+.shell.fitMatch .zone{min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.shell.fitMatch .zoneLabel{flex:none;min-height:13px;white-space:nowrap;margin:0 0 2px;padding:0 2px 2px;font-size:9px;line-height:1.1}
+.shell.fitMatch .cardTrack{flex:1 1 0;min-height:0;min-width:0;display:flex;flex-wrap:wrap;align-content:flex-start;align-items:flex-start;gap:3px;padding:1px;overflow:hidden}
+.shell.fitMatch .cardTrack:empty:after{padding:3px;font-size:9px}
+.shell.fitMatch .gameCard{flex:0 0 var(--compact-card-w,60px);width:var(--compact-card-w,60px);min-width:0;height:var(--compact-card-h,70px);min-height:0;padding:2px;border-width:1px;border-radius:5px;box-shadow:1px 2px 5px #0009}
+.shell.fitMatch .gameCard .cardName{font-size:8px;line-height:1.1;min-height:11px;max-height:21px;padding:0 1px}
+.shell.fitMatch .gameCard .cardIllustration{min-height:0;border-width:1px}
+.shell.fitMatch .gameCard .artSymbol{font-size:18px}
+.shell.fitMatch .gameCard .cardType{font-size:7px;margin-top:1px;padding:1px 0 0}
+.shell.fitMatch .gameCard .cardStats{font-size:9px;bottom:2px;right:2px;padding:0 2px}
+.shell.fitMatch .gameCard .cardMeta{font-size:7px;bottom:2px;left:2px}
+.shell.fitMatch .gameCard .cardMark{top:-4px;right:-4px;min-width:15px;min-height:15px;font-size:8px}
+.shell.fitMatch .landStack .gameCard{flex-basis:var(--compact-card-w,60px);width:var(--compact-card-w,60px);height:var(--compact-card-h,70px)}
+.shell.fitMatch .landStack .cardIllustration{min-height:0}
+.shell.fitMatch .handLine{height:24px;flex:none;min-height:0;overflow:hidden;margin:0}
+.shell.fitMatch .handLine.revealed{height:clamp(39px,8vh,74px);min-height:0;flex-wrap:nowrap;justify-content:flex-start;gap:3px;padding:1px;overflow:hidden}
+.shell.fitMatch .handLine.revealed .gameCard{flex:0 0 var(--compact-card-w,54px);width:var(--compact-card-w,54px);min-width:0;height:var(--compact-card-h,65px)}
+.shell.fitMatch .handLine .backCard{width:16px;height:22px}
+.shell.fitMatch .commandZone{flex:none;max-width:40px;margin:0 0 0 3px;padding:1px 3px;gap:0;border-radius:4px}
+.shell.fitMatch .commandZone .gameCard{width:22px;height:30px;flex:0 0 22px;--compact-card-w:22px;--compact-card-h:30px;padding:0}
+.shell.fitMatch .commandZone .cardName,.shell.fitMatch .commandZone .cardType,.shell.fitMatch .commandZone .cardIllustration,.shell.fitMatch .commandZone .cardStats,.shell.fitMatch .commandInfo{display:none}
+.shell.fitMatch .centerBand{min-height:0;max-height:clamp(43px,10vh,80px);padding:3px 8px;display:flex;flex-direction:column;justify-content:center;gap:1px;overflow:hidden}
+.shell.fitMatch .phaseRail{flex-wrap:nowrap;gap:3px;margin:0;overflow:hidden}
+.shell.fitMatch .phasePill{padding:2px 4px;font-size:8px;white-space:nowrap}
+.shell.fitMatch .turnCount{font-size:9px}
+.shell.fitMatch .eventKind{display:none}
+.shell.fitMatch .eventHeadline{font-size:clamp(11px,1.4vw,16px);line-height:1.16;max-height:2.32em;overflow:hidden}
+.shell.fitMatch .spotlight{margin:0;padding:0;border:0;gap:4px}
+.shell.fitMatch .spotlight .gameCard{display:none}
+.shell.fitMatch .spotlightInfo{font-size:9px;line-height:1.15;text-align:center}
+.shell.fitMatch .spotlightInfo strong{display:inline;font:700 10px system-ui;margin-right:5px}
+.shell.fitMatch .sidebar{height:100%;min-height:0;display:grid;grid-template-rows:minmax(100px,38%) minmax(0,1fr);gap:5px}
+.shell.fitMatch .sidePanel{min-height:0;display:flex;flex-direction:column;border-radius:8px}
+.shell.fitMatch .sideHead{flex:none;padding:6px 8px;font-size:12px}
+.shell.fitMatch .stackCards{flex:1 1 0;min-height:0;padding:5px;gap:4px;overflow-y:auto;overscroll-behavior:contain}
+.shell.fitMatch .stackItem{padding:5px 6px;font-size:10px;min-height:34px}
+.shell.fitMatch .stackPreview{width:26px;height:36px}
+.shell.fitMatch .sideTools{flex:none;padding:4px;gap:4px}
+.shell.fitMatch .sideTools .tiny{padding:5px;font-size:10px}
+.shell.fitMatch .logSearch{flex:none;width:calc(100% - 10px);margin:5px;padding:5px;font-size:11px}
+.shell.fitMatch .eventFeed{flex:1 1 0;min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain}
+.shell.fitMatch .feedItem{padding:5px 7px;font-size:10px}
+.shell.fitMatch .controls{flex:none;margin:0;padding:6px 8px;border-radius:8px}
+.shell.fitMatch .controlsRow{flex-wrap:nowrap;gap:4px}
+.shell.fitMatch .controlsRow button,.shell.fitMatch .controlsRow select{white-space:nowrap;padding:5px 6px;font-size:10px}
+.shell.fitMatch .controls input[type=range]{height:13px;margin:4px 0 0}
+.shell.fitMatch .timelineLegend{font-size:10px}
+.shell.fitMatch .overflowTile{display:flex;flex:0 0 var(--compact-card-w,54px);width:var(--compact-card-w,54px);height:var(--compact-card-h,62px);min-width:0;align-items:center;justify-content:center;padding:2px;border:1px dashed #d0b174;border-radius:5px;background:#223c33;color:#fbe7b7;font-weight:800;font-size:10px}
+#sideToggle{display:none}
+@media(max-width:1100px){
+.shell.fitMatch .theater{grid-template-columns:minmax(0,1fr) 207px}
+.shell.fitMatch .phasePill:not(.current){display:none}
+.shell.fitMatch .controlsRow button,.shell.fitMatch .controlsRow select{padding:4px;font-size:10px}
+}
+@media(max-width:850px){
+#sideToggle{display:inline-block}
+.shell.fitMatch .theater{position:relative;grid-template-columns:minmax(0,1fr)}
+.shell.fitMatch .sidebar{display:none;position:absolute;z-index:8;right:0;top:0;bottom:0;width:min(320px,90vw);background:#0b1917;box-shadow:-15px 0 45px #000c;padding:5px}
+.shell.fitMatch .sidebar.open{display:grid}
+.shell.fitMatch .seat{max-width:45vw}
+.shell.fitMatch .controlsRow{flex-wrap:wrap}
+.shell.fitMatch .controlsRow .spacer{flex:0 0 0}
+}
+@media(max-width:600px){
+.shell.fitMatch{padding:4px;gap:2px}
+.shell.fitMatch header{flex-wrap:wrap;gap:3px}
+.shell.fitMatch .sigil{height:23px;width:23px;font-size:14px}
+.shell.fitMatch .brand{gap:5px}
+.shell.fitMatch .brand .eyebrow{display:none}
+.shell.fitMatch h1{font-size:14px}
+.shell.fitMatch .headActions{gap:2px}
+.shell.fitMatch .headActions button,.shell.fitMatch .fileButton{font-size:10px;padding:4px 5px}
+.shell.fitMatch .notice{font-size:9px;padding:2px 5px}
+.shell.fitMatch .playerRow{padding:3px 4px}
+.shell.fitMatch .lifeNumber{font-size:18px}
+.shell.fitMatch .seat{font-size:12px}
+.shell.fitMatch .detailLine{font-size:8px;gap:4px}
+.shell.fitMatch .field{gap:3px;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,.85fr)}
+.shell.fitMatch .zoneLabel{font-size:8px}
+.shell.fitMatch .centerBand{max-height:49px;padding:2px 4px}
+.shell.fitMatch .phaseRail,.shell.fitMatch .spotlightInfo{display:none}
+.shell.fitMatch .eventHeadline{font-size:11px}
+.shell.fitMatch .controls{padding:4px}
+.shell.fitMatch .controlsRow{gap:2px}
+.shell.fitMatch .controlsRow button,.shell.fitMatch .controlsRow select{padding:3px;font-size:10px}
+.shell.fitMatch .timelineLegend{font-size:9px}
+}
+@media(max-height:700px){
+.shell.fitMatch .notice{display:none}
+.shell.fitMatch .playerRow>div{gap:1px}
+.shell.fitMatch .centerBand{max-height:47px}
+.shell.fitMatch .handLine.revealed{height:clamp(34px,7vh,51px)}
+}
+@media(max-height:480px){
+.shell.fitMatch .viewTabs,.shell.fitMatch .detailLine{display:none}
+.shell.fitMatch .centerBand{max-height:36px}
+}
 </style>
 </head>
 <body>
 <div class="shell">
 <header>
   <div class="brand"><div class="sigil" aria-hidden="true">M</div><div><div class="eyebrow">Commander Golem · Simulator</div><h1>Match Theater</h1></div></div>
-  <div class="headActions"><button id="toggleHands" type="button" title="Show or hide both players' hands">Hide hands</button><button id="toggleArt" type="button" title="Enable or disable online Scryfall card artwork">Art: On</button><button id="swapSeats" type="button" title="Swap upper and lower player positions">⇅ Seats</button><button id="fullscreen" type="button" title="Toggle fullscreen">⛶ Fullscreen</button><label class="fileButton">Open replay<input type="file" id="file" accept=".json,application/json"></label></div>
+  <div class="headActions"><button id="toggleHands" type="button" title="Show or hide both players' hands">Hide hands</button><button id="toggleArt" type="button" title="Enable or disable online Scryfall card artwork">Art: On</button><button id="sideToggle" type="button" title="Toggle stack and commentary" aria-expanded="false">☷ Stack / log</button><button id="swapSeats" type="button" title="Swap upper and lower player positions">⇅ Seats</button><button id="fullscreen" type="button" title="Toggle fullscreen">⛶ Fullscreen</button><label class="fileButton">Open replay<input type="file" id="file" accept=".json,application/json"></label></div>
 </header>
 <div id="notice" class="notice" role="status">Saved spectator replays show both hands. Card faces load from Scryfall when online; placeholders work offline.</div>
 <div class="artStatus" id="artStatus">Artwork: Scryfall online lookup enabled · paced requests, cached by card name · viewer only</div>
@@ -110,7 +234,7 @@ dialog{border:1px solid var(--gold);border-radius:15px;background:#172620;color:
    <div class="centerBand" id="centerBand"><div class="phaseRail" id="phaseRail"></div><div class="turnCount" id="turnCount"></div><div class="eventKind" id="eventKind"></div><div class="eventHeadline" id="eventHeadline" aria-live="polite"></div><div id="spotlight" class="spotlight" hidden></div></div>
    <div class="playerRow bottom" id="you"></div>
   </div>
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidePanel" aria-label="Stack and commentary">
    <section class="sidePanel"><div class="sideHead">The stack <span id="stackCount" class="muted">0</span></div><div id="stack" class="stackCards"></div><div class="sideTools"><button id="zones0" class="tiny">Player 1 zones</button><button id="zones1" class="tiny">Player 2 zones</button></div></section>
    <section class="sidePanel"><div class="sideHead">Match commentary <span id="eventNumber" class="muted"></span></div><input id="search" class="logSearch" type="search" placeholder="Find cards or actions…" aria-label="Search replay log"><div class="eventFeed" id="log"></div></section>
   </aside>
@@ -214,7 +338,7 @@ function important(e,prev){if(!e)return false;if(importance.has(e.kind))return t
 function tick(){const events=data?.events||[];const n=onlyHighlights?nextInteresting(position):position+1;if(n<0||n>=events.length){stop();return}position=n;render()}
 function play(){if(timer!==null){stop();return}if(!data?.events?.length)return;if(position===data.events.length-1)position=0;$("play").textContent="❚❚ Pause";timer=setInterval(tick,Number($("speed").value));render()}
 function seekTurn(direction){stop();const e=data?.events||[];if(!e.length)return;const current=e[position].turn;if(direction>0){const n=e.findIndex((v,i)=>i>position&&v.turn>current);if(n>=0)position=n}else{const n=e.findIndex(v=>v.turn===current);if(n>=0&&n<position)position=n;else{const prev=e.slice(0,n).map(x=>x.turn).filter(t=>t<current).pop();if(prev!==undefined)position=e.findIndex(x=>x.turn===prev)}}render()}
-function setTab(value){tab=value;$("turnTab").classList.toggle("active",value==="turns");$("questionTab").classList.toggle("active",value==="questions");$("turns").hidden=value!=="turns"||!data?.events?.length;$("questions").hidden=value!=="questions"||!data}
+function setTab(value){tab=value;document.querySelector(".shell").classList.toggle("fitMatch",value==="turns"&&!!data?.events?.length);$("turnTab").classList.toggle("active",value==="turns");$("questionTab").classList.toggle("active",value==="questions");$("turns").hidden=value!=="turns"||!data?.events?.length;$("questions").hidden=value!=="questions"||!data}
 function eventStyle(e){const k=(e?.kind||"").toLowerCase();if(/damage|attack|block|destroy|death|exile/.test(k))return "glowCombat";if(/life|gain|heal|draw/.test(k))return "glowLife";if(/cast|stack|token|land|trigger/.test(k))return "glowCast";return ""}
 function renderPhase(phase){const rail=$("phaseRail");rail.replaceChildren();for(const p of phases){const text=p.replace("_"," ");const chip=make("span",text,"phasePill"+(p===phase?" current":""));rail.append(chip)}}
 function cardType(c){return c.kind==="land"?"land":c.isCreature||c.kind==="creature"?"creature":c.kind||"permanent"}
@@ -276,7 +400,58 @@ function renderSpotlight(event){
  target.append(caption);
 }
 function kindOf(c){const k=cardType(c);return k==="land"?"land":k==="creature"?"creature":"other"}
-function groupCards(p,prev,kind,event){const list=make("div",undefined,"cardTrack"+(kind==="land"?" landStack":""));const cards=(p.battlefield||[]).filter(c=>kindOf(c)===kind);const old=new Map((prev?.battlefield||[]).map(c=>[c.id,c]));for(const c of cards)list.append(makeCard(c,old.get(c.id),event));return list}
+function groupCards(p,prev,kind,event){const list=make("div",undefined,"cardTrack"+(kind==="land"?" landStack":""));const cards=(p.battlefield||[]).filter(c=>kindOf(c)===kind);list._allCards=cards;list._collectionName=kind==="creature"?"Creatures":kind==="land"?"Lands":"Other permanents";const old=new Map((prev?.battlefield||[]).map(c=>[c.id,c]));for(const c of cards)list.append(makeCard(c,old.get(c.id),event));return list}
+
+let fitFrame=0;
+function showCollection(title,cards){
+ $("modalTitle").textContent=title+" · "+cards.length+" cards";
+ const body=$("modalBody");body.replaceChildren();
+ const gallery=make("div",undefined,"zonesGallery");
+ for(const card of cards)gallery.append(makeCard({...card,kind:card.kind||"card"},card,null));
+ body.append(gallery);
+ if(!$("modal").open)$("modal").showModal();
+}
+function fitTrack(track){
+ if(!track._allCards||track.clientWidth<30||track.clientHeight<20)return;
+ track.querySelector(".overflowTile")?.remove();
+ const cards=Array.from(track.children).filter(n=>n.classList.contains("gameCard"));
+ for(const card of cards)card.hidden=false;
+ if(!cards.length)return;
+ const hand=track.classList.contains("handLine"),gap=3;
+ const w=Math.max(0,track.clientWidth-4),h=Math.max(0,track.clientHeight-3);
+ const minH=hand?32:34,minW=hand?27:38,maxW=hand?75:69,maxH=hand?74:77;
+ const maxRows=hand?1:Math.min(3,Math.max(1,Math.floor((h+gap)/(minH+gap))));
+ let best=null;
+ for(let rows=1;rows<=maxRows;rows++){
+  const height=Math.min(maxH,Math.floor((h-gap*(rows-1))/rows));
+  if(height<minH)continue;
+  const width=Math.min(maxW,Math.max(minW,Math.floor(height*0.75)));
+  const columns=Math.max(1,Math.floor((w+gap)/(width+gap)));
+  const capacity=rows*columns,score=Math.min(capacity,cards.length)*100+width*0.1-rows*0.01;
+  if(!best||score>best.score)best={width,height,capacity,score};
+ }
+ if(!best)return;
+ track.style.setProperty("--compact-card-w",best.width+"px");
+ track.style.setProperty("--compact-card-h",best.height+"px");
+ if(cards.length>best.capacity){
+   const shown=Math.max(0,best.capacity-1);
+   for(let i=shown;i<cards.length;i++)cards[i].hidden=true;
+   const button=make("button","+"+(cards.length-shown)+" more","overflowTile");
+   button.type="button";button.title="View all "+cards.length+" cards";
+   button.onclick=()=>showCollection(track._collectionName,track._allCards);
+   track.append(button);
+ }
+}
+function fitVisibleTracks(){
+ if(!document.querySelector(".shell")?.classList.contains("fitMatch"))return;
+ for(const node of document.querySelectorAll(".arena .cardTrack,.arena .handLine.revealed"))fitTrack(node);
+}
+function requestFit(){
+ if(fitFrame)return;
+ fitFrame=requestAnimationFrame(()=>{fitFrame=0;fitVisibleTracks()});
+}
+window.addEventListener("resize",requestFit);
+
 function nameFor(seat){return data?.deckNames?.[seat]||("Player "+(seat+1))}
 function playerPanel(seat,e,prev){const p=e.state.players[seat],past=prev?.state?.players?.[seat];const panel=make("div");
  const header=make("div",undefined,"identity");const info=make("div",undefined,"identityInfo");info.append(make("div",nameFor(seat),"seat"));if(e.state.active===seat)info.append(make("span","Active player","turnTag"));header.append(info);
@@ -295,12 +470,13 @@ function playerPanel(seat,e,prev){const p=e.state.players[seat],past=prev?.state
   zone.append(makeCard(commander,commander,null));
   const info=make("div",undefined,"commandInfo");
   info.append(make("strong","COMMAND ZONE"),make("div",data.commanders[seat]),make("div","Available to cast · spectator view"));
-  zone.append(info);panel.append(zone);
+  zone.append(info);header.querySelector(".identityInfo").append(zone);
  }
  const snapshot=e.spectatorHands?.[seat],show=revealHands&&Array.isArray(snapshot);
  const label=make("div",undefined,"zoneLabel");label.append(make("span",show?"Hand · spectator view":"Hand · hidden"),make("span",p.handCount));panel.append(label);
  const backs=make("div",undefined,"handLine"+(show?" revealed":""));
  if(show){
+   backs._allCards=snapshot;backs._collectionName=nameFor(seat)+" · Hand";
    for(const c of snapshot)backs.append(makeCard({...c,kind:c.kind||"card",tapped:false,fresh:false},null,null));
    if(!snapshot.length)backs.append(make("span","No cards in hand","hiddenCount"));
  }else{
@@ -349,7 +525,7 @@ function render(){if(!data)return;const events=data.events||[];$("count").textCo
   $("eventKind").textContent=e.kind.replaceAll("_"," ");$("eventHeadline").textContent=e.message;
   $("centerBand").className="centerBand "+eventStyle(e);
   $(`opponent`).replaceChildren(playerPanel(flippedSeats?0:1,e,prev));$(`you`).replaceChildren(playerPanel(flippedSeats?1:0,e,prev));renderStack(state);renderSpotlight(e)}
- renderLog();setTab(tab)}
+ renderLog();setTab(tab);requestFit()}
 function renderQuestions(){const list=$("questionList");list.replaceChildren();for(const q of data.questions||[]){const article=make("article",undefined,"questionCard");article.append(make("h3",q.card||q.reason||"Rules question"),make("p",q.question||q.reason||""));
  if(q.deck)article.append(make("div","Deck: "+q.deck,"muted"));if(q.diagnosticSupport)article.append(make("div",q.supportNote||"Diagnostic subset supported","muted"));
  if(q.ruleAnswer)article.append(make("p","Validated diagnostic ruling: "+q.ruleAnswer));if(q.oracleText){const details=make("details");details.append(make("summary","Oracle text"),make("pre",q.oracleText));article.append(details)}
@@ -384,6 +560,7 @@ $("slider").oninput=e=>{stop();position=Number(e.target.value);render()};$("spee
 $("highlights").onclick=()=>{onlyHighlights=!onlyHighlights;$("highlights").classList.toggle("active",onlyHighlights);$("highlights").textContent=onlyHighlights?"★ Highlights":"All events"};
 $("turnTab").onclick=()=>{stop();setTab("turns")};$("questionTab").onclick=()=>{stop();setTab("questions")};$("search").oninput=renderLog;
 $("zones0").onclick=()=>showZones(0);$("zones1").onclick=()=>showZones(1);
+$("sideToggle").onclick=()=>{const opened=$("sidePanel").classList.toggle("open");$("sideToggle").setAttribute("aria-expanded",String(opened))};
 $("toggleHands").onclick=()=>{revealHands=!revealHands;$("toggleHands").textContent=revealHands?"Hide hands":"Show hands";render()};
 $("toggleArt").onclick=()=>{artEnabled=!artEnabled;$("toggleArt").textContent=artEnabled?"Art: On":"Art: Off";
  $("artStatus").textContent=artEnabled?"Artwork: Scryfall online lookup enabled · unique card names cached":"Artwork disabled · offline card placeholders";render()};

@@ -133,6 +133,20 @@ class MatchTheaterChecks(unittest.TestCase):
         summary=json.loads((HERE/"examples/budget-vs-goblins-spectator-20261029-summary.json").read_text(encoding="utf-8"))
         self.assertEqual(len(report["compactEvents"]),summary["eventCount"])
 
+    def test_single_screen_layout_and_overflow_galleries(self):
+        template=(HERE/"viewer.html").read_text(encoding="utf-8")
+        for marker in ('height:100dvh', 'body:has(.shell.fitMatch){overflow:hidden}',
+                       'grid-template-rows:minmax(0,1fr) auto minmax(0,1fr)',
+                       'function fitTrack(track)', 'function showCollection(title,cards)',
+                       'id="sideToggle"', 'id="sidePanel"', 'track._allCards=cards',
+                       'backs._allCards=snapshot', 'window.addEventListener("resize",requestFit)'):
+            self.assertIn(marker,template)
+        for relative in ("examples/match-theater-real-decks.html",
+                         "examples/budget-vs-goblins-spectator-20261029.html"):
+            sample=(HERE/relative).read_text(encoding="utf-8")
+            self.assertIn('function fitTrack(track)',sample)
+            self.assertIn('body:has(.shell.fitMatch){overflow:hidden}',sample)
+
     def test_html_export_still_embeds_without_script_injection(self):
         report=dict(schemaVersion=1,kind="rules-review",
                     notice="Cards: </script><script>alert('x')</script>",
