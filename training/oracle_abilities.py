@@ -213,7 +213,7 @@ def compile_abilities(text, name=''):
         if line=='If you would gain life, you gain twice that much life instead.':
             if life_multiplier!=1:return None
             life_multiplier=2;continue
-        discount=re.fullmatch(r'([A-Z][a-z]+(?: and [a-z]+)?) spells you cast cost \\{([1-9][0-9]*)\\} less to cast\\.',line)
+        discount=re.fullmatch(r'([A-Z][a-z]+(?: and [a-z]+)?) spells you cast cost \{([1-9][0-9]*)\} less to cast\.',line)
         if discount:
             words=tuple(word.lower() for word in discount[1].split(' and '))
             allowed={'white','blue','black','red','green','colorless',
