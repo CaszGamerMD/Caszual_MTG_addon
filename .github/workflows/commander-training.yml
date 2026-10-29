@@ -24,6 +24,8 @@ jobs:
         run: python -m unittest discover -s training/tests -v
       - name: Audit all supplied decks and flag blocking questions
         run: python training/simulator.py audit
+      - name: Audit diagnostic card coverage separately from full rules support
+        run: python training/diagnostic_coverage.py
       - name: Diagnose a random pair of submitted decks for ten turns each
         run: python training/simulator.py diagnose
       - name: Exercise all six random distinct deck pairings
