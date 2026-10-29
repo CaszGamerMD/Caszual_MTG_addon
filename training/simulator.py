@@ -470,7 +470,8 @@ class Simulator(AdvancedRules):
 
     def event_game(self, phase: str) -> EventGame:
         """Adapt public battlefield state to the shared type-aware event kernel."""
-        game = EventGame(turn_player=self.active, phase=phase,clock=self.effect_clock)
+        game = EventGame(turn_player=self.active, phase=phase,clock=self.effect_clock,
+                         life_totals={seat:player.life for seat,player in enumerate(self.players)})
         for seat, player in enumerate(self.players):
             for item in player.battlefield:
                 card = item.card
