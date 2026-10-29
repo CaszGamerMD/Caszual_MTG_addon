@@ -131,6 +131,7 @@ class Definition:
     sacrifice_protection: tuple = ()  # Mana + self-sacrifice to grant chosen-color protection.
     attack_group_draw: tuple = ()  # (minimum declared attackers, cards drawn) on the stack.
     discard_token_ability: tuple = ()  # (mana cost, TokenSpec); discard one card as cost.
+    umbra_armor: bool = False  # Replace destruction of the enchanted creature.
 
 
 def parse_card(card: dict) -> Definition:
@@ -233,6 +234,10 @@ def parse_card(card: dict) -> Definition:
     if bestow:return Definition(**base,abilities=bestow[1],bestow=bestow)
     removal_program=parse_equipment_removals(text,types,subtypes)
     if removal_program:return Definition(**base,abilities=frozenset(),attachment=removal_program[0],ability_removals=removal_program[1])
+    from umbra_armor import parse as parse_umbra_armor
+    umbra=parse_umbra_armor(text,types,subtypes)
+    if umbra:
+        return Definition(**base,abilities=frozenset(),attachment=umbra,umbra_armor=True)
     attachment=parse_with_intrinsic(text,types,subtypes)
     if attachment:return Definition(**base,abilities=attachment[0],attachment=attachment[1])
     normalized=text.replace(name,'this creature') if name else text
