@@ -25,6 +25,13 @@ class AuraEntryTokenChecks(unittest.TestCase):
         raw['oracleText']+='\nIf the moon is full, draw an extra card.'
         self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad',{'Green'}).kind,'unsupported')
 
+    def test_existing_counter_entry_aura_still_parses(self):
+        raw=self.lookup["Hydra's Growth"]
+        card=s.import_diagnostic_card(self.rules,raw,0,'growth',{'Green'})
+        self.assertEqual(card.kind,'aura')
+        self.assertEqual(card.event_definition.entry_attachment_counters,1)
+        self.assertTrue(card.event_definition.double_attachment_counters_upkeep)
+
     def test_aura_enters_then_token_trigger_resolves_after_priority(self):
         sim,cards=self.fixture(['Cartouche of Solidarity'])
         host=self.token(sim,'host')
