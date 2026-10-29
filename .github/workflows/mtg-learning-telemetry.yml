@@ -34,6 +34,21 @@ jobs:
         run: |
           set -o pipefail
           python training/diagnostic_coverage.py 2>&1 | tee /tmp/mtg-coverage.log
+      - name: Full Python regression for final learning batch
+        id: full
+        if: contains(github.event.head_commit.message, '[learning-final]')
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m unittest discover -s training/tests -v 2>&1 | tee /tmp/mtg-full.log
+      - name: Java Gradle build for final learning batch
+        id: java
+        if: contains(github.event.head_commit.message, '[learning-final]')
+        shell: bash
+        run: |
+          chmod +x ./gradlew
+          set -o pipefail
+          ./gradlew clean build --stacktrace 2>&1 | tee /tmp/mtg-java.log
       - name: Report results to tracking issue
         if: always()
         env:
@@ -42,12 +57,14 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
           FOCUSED_RESULT: ${{ steps.focused.outcome }}
           COVERAGE_RESULT: ${{ steps.coverage.outcome }}
+          FULL_RESULT: ${{ steps.full.outcome }}
+          JAVA_RESULT: ${{ steps.java.outcome }}
         shell: bash
         run: |
           {
             echo "### MTG Golem focused CI — \`$HEAD_SHA\`"
             echo
-            echo "Focused tests: **$FOCUSED_RESULT**; deck coverage: **$COVERAGE_RESULT**."
+            echo "Focused tests: **$FOCUSED_RESULT**; deck coverage: **$COVERAGE_RESULT**; full Python: **$FULL_RESULT**; Java/Gradle: **$JAVA_RESULT**."
             echo
             echo '~~~text'
             if [ -f /tmp/mtg-focused.log ]; then tail -n 45 /tmp/mtg-focused.log; else echo 'Focused tests did not start'; fi
@@ -57,6 +74,8 @@ jobs:
             if [ -f /tmp/mtg-coverage.log ]; then grep -E 'FOCUSED_UNRESOLVED|uniqueUnsupportedNames|learningEligible' /tmp/mtg-coverage.log | tail -n 8; else echo 'Coverage did not start'; fi
             echo '~~~'
             echo
+            if [ -f /tmp/mtg-full.log ]; then echo "Full Python summary:"; tail -n 5 /tmp/mtg-full.log; fi
+            if [ -f /tmp/mtg-java.log ]; then echo "Java/Gradle summary:"; tail -n 12 /tmp/mtg-java.log; fi
             echo "Run: https://github.com/$GH_REPO/actions/runs/${{ github.run_id }}"
           } > /tmp/mtg-report.md
           gh issue comment 26 --body-file /tmp/mtg-report.md
