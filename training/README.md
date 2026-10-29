@@ -678,3 +678,28 @@ The diagnostic now chooses and logs X for whole-text token creation, draw, and l
 ### Land-creature tokens
 
 Awaken the Woods now works through the generic X/token grammar. Land-creature tokens preserve types, gain basic-land-type mana abilities, and obey summoning sickness and haste. Payment and X-budget enumeration share source discovery. All 112 tests pass, including a focused cast and next-turn mana payment. Seeds 1042–1047 produced six matches without runtime questions, but none cast Awaken the Woods; see `examples/land-tokens-1042.json`. This is diagnostic simulator support, not live golem integration.
+
+## Opening seven, friendly mulligans and tempo rule (2026-10-29)
+
+The simulator deals opening hands as **seven cards at once** (one
+`opening_hand` event, rather than seven separate draw actions).
+Each agent privately inspects its seven for **three or four lands**
+and **two distinct proactive spells costing at most three mana**
+that could both be played in the first three turns. The evaluator
+checks color requirements, lands entering tapped and whether two spells
+would overspend the same turn's mana. Target-dependent cards like
+removal and Auras are not treated as dependable first-turn development.
+
+Rejected hands are **shuffled back into the library in full** and
+replaced with **seven fresh cards, with no penalty**. To prevent a deck
+with impossible opening criteria from looping forever, the simulator
+permits up to **16 free redraws**, then keeps the last seven. The
+public replay logs each redraw and keep decision; private hand-analysis
+scores are not serialized. Both-hand identities remain restricted to
+the explicitly omniscient diagnostic spectator replay.
+
+The main-phase agent also receives a modest bonus for legal proactive
+development rather than passing through an otherwise empty turn.
+This is not a mandatory cast rule and does not override mana, legality
+or strongly negative action utilities. These are experimental simulator
+policies, not changes to official Commander mulligan rules.
