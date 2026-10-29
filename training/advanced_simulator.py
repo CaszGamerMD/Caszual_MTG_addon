@@ -119,7 +119,8 @@ class AdvancedRules:
    g.attack(identifier,1-self.active,defer=True)
    p=g.battlefield[identifier]
    for operation,minimum,_,spec in p.definition.attack_effects:
-    if operation=='attack_tokens' or operation=='group_tokens' and len(ids)>=minimum+1:
+    if (operation=='attack_tokens' or operation=='group_tokens' and len(ids)>=minimum+1
+        or operation=='saddled_tokens' and p.saddled):
      events.append(dict(operation='create_tokens',effect='attack token creation',source=identifier,controller=p.controller,name=p.definition.name,tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords))))
    for equipment in g.battlefield.values():
     if equipment.attached_to==identifier:
@@ -134,13 +135,14 @@ class AdvancedRules:
  def group_block_choices(self,seat):
   s=model(self);combat=self.group_combat;attackers=[p for p in self.players[self.active].battlefield if p.card.id in combat['attackers'] and self.effective_card(p)]
   blockers=[p for p in self.players[seat].battlefield if self.effective_card(p) and not p.tapped]
-  maps=[{}];greedy={};used=set()
+  maps=[{}];greedy={};used=set();g=self.event_game('combat')
   for a in sorted(attackers,key=lambda p:self.effective_card(p).power,reverse=True):
    legal=[b for b in blockers if b.card.id not in used and self.can_block(a,b)]
-   if legal:
-    b=max(legal,key=lambda p:self.effective_card(p).power+self.effective_card(p).toughness)
-    greedy[a.card.id]=(b.card.id,);used.add(b.card.id)
-   for b in legal:maps.append({a.card.id:(b.card.id,)})
+   minimum=2 if g.has(g.battlefield[a.card.id],'menace') else 1
+   if len(legal)>=minimum:
+    chosen=sorted(legal,key=lambda p:self.effective_card(p).power+self.effective_card(p).toughness,reverse=True)[:minimum]
+    greedy[a.card.id]=tuple(b.card.id for b in chosen);used.update(greedy[a.card.id])
+   for group in combinations(legal,minimum):maps.append({a.card.id:tuple(b.card.id for b in group)})
   if greedy:maps.append(greedy)
   result=[]
   for index,mapping in enumerate(maps):
@@ -157,9 +159,10 @@ class AdvancedRules:
   if not self.group_combat or self.phase!='block' or self.stack.items:raise ValueError('Illegal block timing')
   combat=self.group_combat;used=set();defender=1-self.active
   attackers={p.card.id:p for p in self.players[self.active].battlefield if p.card.id in combat['attackers'] and self.effective_card(p)}
-  blockers={p.card.id:p for p in self.players[defender].battlefield}
+  blockers={p.card.id:p for p in self.players[defender].battlefield};g=self.event_game('combat')
   for identifier,chosen in mapping.items():
    if identifier not in attackers:raise ValueError('Missing attacking creature')
+   if len(chosen)==1 and g.has(g.battlefield[identifier],'menace'):raise ValueError('Menace requires at least two blockers')
    for b in chosen:
     if b in used or b not in blockers or not self.can_block(attackers[identifier],blockers[b]):raise ValueError('Illegal or duplicate blocker')
     used.add(b)

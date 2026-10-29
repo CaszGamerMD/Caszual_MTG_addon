@@ -75,7 +75,7 @@ class CardEventChecks(unittest.TestCase):
         for name in ("Kolodin, Triumph Caster","Andúril, Flame of the West","Brightfield Mustang","Thundering Chariot"):
             self.assertTrue(parse_card(cards[name]).supported,name)
         g=Game()
-        with self.assertRaises(NeedsRules):g.enter(real("Bridled Bighorn","b"))
+        with self.assertRaises(NeedsRules):g.enter(Permanent("b", parse_card(dict(cards["Bridled Bighorn"], oracleText=cards["Bridled Bighorn"]["oracleText"]+"\nDraw a card.")), 0))
         self.assertEqual(g.questions[0]["card"],"Bridled Bighorn")
         self.assertTrue(g.questions[0]["blocking"])
         self.assertNotIn("b",g.battlefield)

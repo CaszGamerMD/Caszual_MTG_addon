@@ -76,7 +76,7 @@ class Program:
 
 def static_effect(text):
     multi=re.fullmatch(r'Creatures you control have (.+)\.',text)
-    if multi and (',' in multi[1] or 'protection from ' in multi[1]):
+    if multi and (',' in multi[1] or ' and ' in multi[1] or 'protection from ' in multi[1]):
         clause=multi[1].replace(' and from ',', protection from ').replace(', and ',', ').replace(' and ',', ')
         words=[w.strip() for w in clause.split(',')]
         allowed=KEYWORDS|{'protection from '+c for c in ('white','blue','black','red','green')}
@@ -89,7 +89,7 @@ def static_effect(text):
     m=re.fullmatch(r'(Legendary|Nonlegendary) creatures you control get \+([0-9]+)/\+([0-9]+)(?: and have ward '+cost+r')?\.',text)
     if m:return StaticEffect(Selector(relation='controller',creature=True,legendary=m[1]=='Legendary'),
                              int(m[2]),int(m[3]),ward_cost=m[4] or '')
-    m=re.fullmatch(r'(Other )?(?:([Ww]hite|[Bb]lue|[Bb]lack|[Rr]ed|[Gg]reen) )?[Cc]reatures you control have (flying|first strike|double strike|lifelink|vigilance|trample|haste|defender|reach|deathtouch|indestructible|hexproof)\.',text)
+    m=re.fullmatch(r'(Other )?(?:([Ww]hite|[Bb]lue|[Bb]lack|[Rr]ed|[Gg]reen) )?[Cc]reatures you control have (flying|first strike|double strike|lifelink|vigilance|trample|haste|defender|reach|deathtouch|indestructible|hexproof|menace)\.',text)
     if m: return StaticEffect(Selector(relation='controller',other=bool(m[1]),creature=True,color=(m[2] or '').title()),0,0,grant=m[3])
     m=re.fullmatch(r'(Other )?(?:([Ww]hite|[Bb]lue|[Bb]lack|[Rr]ed|[Gg]reen) )?[Cc]reatures you control get \+([0-9]+)/\+([0-9]+)\.',text)
     if m: return StaticEffect(Selector(relation='controller',other=bool(m[1]),creature=True,
@@ -113,7 +113,7 @@ def static_effect(text):
     return None
 
 KEYWORDS = {'flash','flying','first strike','double strike','lifelink','vigilance',
-            'trample','haste','defender','reach','deathtouch','indestructible','hexproof'}
+            'trample','haste','defender','reach','deathtouch','indestructible','hexproof','menace'}
 
 def selector(text):
     if text == 'this creature': return Selector(self_only=True,creature=True)

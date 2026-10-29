@@ -633,10 +633,20 @@ class SimulatorChecks(unittest.TestCase):
     def test_real_deck_bitterbloom_tokens_feed_obyra(self):
         decks=[json.loads((HERE/"decks"/name).read_text()) for name in
                ("27521806-faeries.json","14850373-budget-deck.json")]
-        report=s.diagnose(self.rules,decks,3,10)
-        self.assertTrue(all(n<=10 for n in report['turnsCompleted']))
-        self.assertIn(report['result'],('win','diagnostic_window_complete'))
-        self.assertFalse(report['rulesProgress']['runtimeQuestions'])
+        # Arrange the actual submitted cards explicitly: support additions may
+        # change policy choices in a seeded game before this interaction occurs.
+        cards=tuple(s.import_diagnostic_deck(self.rules,deck,seat) for seat,deck in enumerate(decks))
+        commanders=tuple(s.import_diagnostic_card(self.rules,deck['commanders'][0],seat,str(seat)+'-commander',
+                         set(deck['commanders'][0].get('colorIdentity',[]))) for seat,deck in enumerate(decks))
+        sim=s.Simulator(self.rules,3,decks=cards,commanders=commanders,diagnostic=True)
+        player=sim.players[0]
+        obyra=player.command_zone;player.command_zone=None
+        bloom=next(c for c in player.library+player.hand if c.name=='Bitterbloom Bearer')
+        (player.hand if bloom in player.hand else player.library).remove(bloom)
+        for card in (obyra,bloom):sim.resolve_entry_triggers(sim.enter_creature(card,player),card)
+        sim.phase='untap';sim.step()
+        report=sim.report()
+        self.assertFalse(sim.questions)
         upkeep=[e for e in report['events'] if e['kind']=='upkeep' and 'Bitterbloom' in e['message']]
         triggers=[e for e in report['events'] if e['kind']=='trigger' and 'Obyra, Dreaming Duelist triggers' in e['message']]
         self.assertTrue(upkeep);self.assertTrue(triggers)

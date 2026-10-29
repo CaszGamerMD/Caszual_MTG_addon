@@ -10,13 +10,14 @@ def compile(text):
         words={w.strip().lower() for w in line.split(',')}
         if words<=KEYWORDS: keywords.update(words);continue
         group=re.fullmatch(r'Whenever this creature and at least (one|two|three|[1-9][0-9]*) other creatures attack, (create .+)',line)
+        saddled=re.fullmatch(r'Whenever this creature attacks while saddled, (create .+)',line)
         token=re.fullmatch(r'Whenever this creature attacks, (create .+)',line)
-        if group or token:
-            clause=group[2] if group else token[1]
+        if group or token or saddled:
+            clause=group[2] if group else token[1] if token else saddled[1]
             spec=parse_token_creation(clause[:1].upper()+clause[1:])
             if not spec:return None
             minimum=({'one':1,'two':2,'three':3}.get(group[1]) or int(group[1])) if group else 0
-            effects.append(('group_tokens' if group else 'attack_tokens',minimum,0,spec));continue
+            effects.append(('group_tokens' if group else 'saddled_tokens' if saddled else 'attack_tokens',minimum,0,spec));continue
         m=re.fullmatch(r"Whenever this creature attacks, put a \+1/\+1 counter on it, then create a number of (.+) equal to this creature's power\.",line)
         if m:
             token=parse_token_creation('Create a '+m[1]+'.')
@@ -31,7 +32,7 @@ def compile(text):
             continue
         m=re.fullmatch(r'Whenever this (?:creature|Vehicle) attacks, put a \+1/\+1 counter on it\.',line)
         if m: effects.append(('counter',1,1,''));continue
-        m=re.fullmatch(r'Whenever this creature attacks while saddled, it gets \+([0-9]+)/\+([0-9]+) and gains (flying|trample|lifelink|vigilance) until end of turn\.',line)
+        m=re.fullmatch(r'Whenever this creature attacks while saddled, it gets \+([0-9]+)/\+([0-9]+) and gains (flying|trample|lifelink|vigilance|menace) until end of turn\.',line)
         if m: effects.append(('saddled_boost',int(m[1]),int(m[2]),m[3]));continue
         return None
     return (frozenset(keywords),crew,saddle,tuple(effects)) if effects else None

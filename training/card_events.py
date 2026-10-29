@@ -65,7 +65,7 @@ INSTIGATOR = "When this creature enters, create a 1/1 red Goblin creature token.
 MUSTANG = """Whenever this creature attacks while saddled, untap it and put a +1/+1 counter on it.
 Saddle 1"""
 SIMPLE_ABILITIES = {"flying", "first strike", "double strike", "lifelink", "vigilance",
-                    "trample", "haste", "defender", "reach", "deathtouch", "indestructible", "hexproof"}
+                    "trample", "haste", "defender", "reach", "deathtouch", "indestructible", "hexproof", "menace"}
 
 
 @dataclass(frozen=True)

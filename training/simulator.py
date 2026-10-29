@@ -506,7 +506,7 @@ class Simulator(AdvancedRules):
         power, toughness = game.stats(state)
         keywords = {ability for ability in state.definition.abilities if ability not in ("hexproof","flash") and game.has(state,ability)}
         for ability in ("haste", "indestructible", "flying", "first strike", "double strike",
-                        "lifelink", "vigilance", "trample", "defender", "reach", "deathtouch"):
+                        "lifelink", "vigilance", "trample", "defender", "reach", "deathtouch", "menace"):
             if game.has(state, ability): keywords.add(ability)
         return replace(item.card, kind="creature", power=power, toughness=toughness,
                        traits=f"{power};{toughness};"+",".join(sorted(keywords)))
@@ -1766,7 +1766,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or "hexproof" in event_definition.abilities or "Planeswalker" in event_definition.types or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace"} & event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):
