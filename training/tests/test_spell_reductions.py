@@ -26,7 +26,7 @@ class CostReductionChecks(unittest.TestCase):
 
     def test_all_five_real_sources_compile_with_unknown_names(self):
         names=('Emerald Medallion','Pearl Medallion','Jukai Naturalist',
-               'Starnheim Courser','Transcendent Envoy')
+               'Starnheim Courser','Transcendent Envoy','Danitha Capashen, Paragon')
         for name in names:
             raw=dict(self.lookup[name],name='Unfamiliar reducer')
             card=s.import_diagnostic_card(self.rules,raw,0,'unseen',{'White','Green'})
@@ -101,6 +101,20 @@ class CostReductionChecks(unittest.TestCase):
         # Unrelated activated costs are never discounted.
         self.assertFalse(sim.payment(self.spell('cost','{2}{G}',('Creature',),('Green',)),
                                      seat=0,spell_cost=False)['paid'])
+        sim.invariant()
+
+    def test_danitha_aura_equipment_and_ordinary_creature_filters(self):
+        sim,cards=self.fixture(['Danitha Capashen, Paragon'])
+        source=self.put(sim,cards['Danitha Capashen, Paragon'])
+        self.assertTrue({'first strike','vigilance','lifelink'} <=
+                        set(source.card.event_definition.abilities))
+        self.limit(sim,2)
+        aura=self.spell('aura','{2}{W}',('Enchantment',),('White',),('Aura',))
+        equipment=self.spell('equipment','{2}{W}',('Artifact',),('White',),('Equipment',))
+        artifact=self.spell('artifact','{2}{W}',('Artifact',),('White',))
+        self.assertTrue(sim.payment(aura,seat=0)['paid'])
+        self.assertTrue(sim.payment(equipment,seat=0)['paid'])
+        self.assertFalse(sim.payment(artifact,seat=0)['paid'])
         sim.invariant()
 
     def test_generic_x_and_hybrid_symbol_preservation(self):
