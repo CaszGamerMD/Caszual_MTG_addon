@@ -305,3 +305,19 @@ cancel its already-triggered event.
 
 Coverage: Gravity Well, Raking Canopy, renamed and changed-damage
 fixtures in `training/tests/test_flying_attack_watchers.py`.
+
+
+## Subtype-scoped additional +1/+1 counters
+
+The replacement grammar recognizes “If one or more +1/+1 counters
+would be put on an [Subtype A], [Subtype B], or [Subtype C] you
+control, that many plus one ... instead.” This is compiled to a
+list of typed predicates, not a string check for Mauhúr. It applies
+to relevant permanents controlled by its source's controller, not
+opposing permanents or unrelated tribes. Additional counters compose
+with existing doubled-counter effects in the sandbox's deterministic
+add-then-multiply order, while zero remains zero.
+
+Mauhúr, Uruk-hai Captain is the real-deck fixture; renamed card
+and changed-tribe patterns and strict program rejection have tests:
+`training/tests/test_subtype_counter_replacements.py`.

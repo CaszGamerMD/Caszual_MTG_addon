@@ -340,6 +340,14 @@ def compile_abilities(text, name=''):
         if token_global:
             token_replacements.append(('double',2,'any','any'))
             continue
+        subtype_replacement=re.fullmatch(
+            r'If one or more \+1/\+1 counters would be put on an? ((?:[A-Z][a-z]+(?:, [A-Z][a-z]+)*,? or [A-Z][a-z]+)|[A-Z][a-z]+) you control, that many plus one \+1/\+1 counters are put on it instead\.',
+            line)
+        if subtype_replacement:
+            names=tuple(name for name in re.split(r',? or |, ',subtype_replacement[1]) if name)
+            if not names or len(set(names))!=len(names):return None
+            counter_replacements.append(('plus',1,'controlled_subtypes','any',names))
+            continue
         counter_permanent=re.fullmatch(r'If an effect would put one or more counters on a permanent you control, it puts twice that many of those counters on that permanent instead\.',line)
         if counter_permanent:
             counter_replacements.append(('double',2,'controlled_permanent','effect'))

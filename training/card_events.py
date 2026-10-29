@@ -690,7 +690,8 @@ class Game:
                 kind,value,scope=replacement[:3]
                 condition=replacement[3] if len(replacement)>3 else 'any'
                 if condition=='effect' and not by_effect:continue
-                if scope in ('controlled_creature','controlled_permanent') and source.controller!=target.controller:continue
+                if scope in ('controlled_creature','controlled_permanent','controlled_subtypes') and source.controller!=target.controller:continue
+                if scope=='controlled_subtypes' and not set(replacement[4]).intersection(target.definition.subtypes):continue
                 if scope in ('controlled_creature','any_creature') and not creature:continue
                 if scope!='controlled_permanent' and counter_type!='+1/+1':continue
                 if kind not in ('plus','double'):raise NeedsRules('Unknown counter replacement')
