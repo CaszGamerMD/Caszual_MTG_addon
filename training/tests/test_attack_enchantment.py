@@ -24,22 +24,9 @@ class AttackEnchantmentChecks(unittest.TestCase):
         self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad',{'Green'}).kind,'unsupported')
 
     def test_each_nontoken_attacker_creates_tapped_attacking_token(self):
-        sim,cards=self.fixture(['Mardu Ascendancy'])
+        sim,cards=self.fixture(['Mardu Ascendancy','Legion Warboss'])
         self.put(sim,cards['Mardu Ascendancy'])
-        a=self.token(sim,'nontoken-placeholder')
-        b=self.token(sim,'also-nontoken-placeholder')
-        # These are physical creature stand-ins; token attackers must not trigger.
-        a.card=s.Card('a-physical','A','creature',power=2,toughness=2,
-                      traits='2;2;',event_definition=a.card.event_definition)
-        b.card=s.Card('b-physical','B','creature',power=2,toughness=2,
-                      traits='2;2;',event_definition=b.card.event_definition)
-        sim.card_owners['a-physical']=0;sim.card_owners['b-physical']=0
-        # Use a single real nontoken imported creature for invariant-safe testing instead.
-        sim.players[0].battlefield.remove(a);sim.players[0].battlefield.remove(b)
-        raw=self.lookup['Legion Warboss']
-        physical=s.import_diagnostic_card(self.rules,raw,0,'physical',{'Red'})
-        sim.players[0].hand.append(physical)
-        source=self.put(sim,physical)
+        source=self.put(sim,cards['Legion Warboss'])
         goblin=self.token(sim,'token-attacker')
         self.ready(sim)
         sim.declare_attackers([source.card.id,goblin.card.id])
