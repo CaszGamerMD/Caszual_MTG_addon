@@ -9,6 +9,7 @@ from card_events import Game as EventGame, Permanent as EventPermanent, Definiti
 import base64
 from oracle_abilities import parse_token_creation
 import mana_pool
+import opening_hand
 import x_spells
 from advanced_simulator import AdvancedRules,root
 import library_effects
@@ -274,6 +275,7 @@ class Observation:
     own_hand: tuple[Card, ...]
     public_state: str  # JSON string is immutable; it contains no private identities.
     legal_actions: tuple[Candidate, ...]
+    developed_this_turn: bool = False
 
 
 @dataclass(frozen=True)
@@ -286,8 +288,15 @@ class Policy:
         if not observation.legal_actions:
             raise ValueError("No legal action")
         # Identical observations give identical decisions. No access to the engine or replay.
-        return max(observation.legal_actions,
-                   key=lambda a: (sum(w * f for w, f in zip(self.weights, a.features)), a.id))
+        development={"cast","cast_commander","bestow","equip","station",
+                     "history_tokens","activate_tokens","activate_strip"}
+        def utility(action):
+            score=sum(w*f for w,f in zip(self.weights,action.features))
+            if observation.phase in ("main","second_main") and not observation.developed_this_turn:
+                if action.kind in development:score+=1.25
+                if action.kind=="pass":score-=0.75
+            return score,action.id
+        return max(observation.legal_actions,key=utility)
 
     def to_json(self):
         return {"schemaVersion": 1, "version": self.version, "scope": self.scope,
@@ -370,6 +379,10 @@ class Simulator(AdvancedRules):
         self._rebound_permission=None
         self.pending: str | None = None
         self.land_played = False
+        self.turn_development=[False,False]
+        self.opening_mulligans=[0,0]
+        self.opening_reviews=[None,None]  # Private; not part of public state or AI observations
+        self.opening_rng=[random.Random(f"{seed}:friendly-opening:{seat}") for seat in (0,1)]
         self.main_return = ""
         self.stack=PriorityStack(starter)
         self._current_spell=None
@@ -424,8 +437,27 @@ class Simulator(AdvancedRules):
                         self.pause("Unsupported spell rule", card)
                         return
         for seat in (0, 1):
-            for _ in range(7):
-                self.draw(seat)
+            self.prepare_opening_hand(seat)
+
+    def prepare_opening_hand(self,seat:int):
+        """Draw seven in one event; free redraws keep all seven cards."""
+        p=self.players[seat]
+        for attempt in range(opening_hand.FRIENDLY_MULLIGAN_LIMIT+1):
+            p.hand.extend(p.library.pop() for _ in range(min(7,len(p.library))))
+            self.log("opening_hand",f"Player {seat+1} draws {len(p.hand)} opening cards at once.",
+                     actor=seat,count=len(p.hand),attempt=attempt)
+            review=opening_hand.assess(p.hand)
+            self.opening_reviews[seat]=review
+            if review["keep"] or attempt==opening_hand.FRIENDLY_MULLIGAN_LIMIT:
+                self.opening_mulligans[seat]=attempt
+                self.log("keep_hand",f"Player {seat+1} keeps {len(p.hand)} cards.",
+                         actor=seat,count=len(p.hand),mulligans=attempt)
+                return
+            self.log("mulligan",f"Player {seat+1} takes a free friendly mulligan.",
+                     actor=seat,mulligan=attempt+1)
+            p.library.extend(p.hand)
+            p.hand.clear()
+            self.opening_rng[seat].shuffle(p.library)
 
     def display_permanent(self, item: Permanent) -> dict:
         game=self.event_game('main');state=game.battlefield.get(item.card.id)
@@ -1877,8 +1909,9 @@ class Simulator(AdvancedRules):
         return tuple(actions)
 
     def observe(self, seat: int) -> Observation:
-        return Observation(seat, self.turn, self.phase, tuple(self.players[seat].hand),
-                           json.dumps(self.state(), sort_keys=True), self.legal(seat))
+        return Observation(seat,self.turn,self.phase,tuple(self.players[seat].hand),
+                           json.dumps(self.state(),sort_keys=True),self.legal(seat),
+                           self.turn_development[seat])
 
     def decide(self, seat: int) -> Candidate:
         observation = self.observe(seat)
@@ -1887,6 +1920,9 @@ class Simulator(AdvancedRules):
             raise RuntimeError("Agent attempted an illegal action")
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
+        if choice.kind in ("cast","cast_commander","bestow","equip","station",
+                           "history_tokens","activate_tokens","activate_strip"):
+            self.turn_development[seat]=True
         return choice
 
     def step(self) -> bool:
@@ -1915,6 +1951,7 @@ class Simulator(AdvancedRules):
             self.turn += 1
             self.stack.active=self.active;self.stack.priority=self.active
             self.land_played = False
+            self.turn_development[self.active]=False
             self.life_gained_turn=[0,0]
             self._end_step_triggers_queued=False
             self.phase = "untap"
@@ -2138,7 +2175,7 @@ class Simulator(AdvancedRules):
                 "combatMode": "group-v2" if self.diagnostic else "single-attacker-v1",
                 "notice": "Partial diagnostic/classroom match; not a complete Commander game or Minecraft entity test.",
                 "seed": self.seed, "starter": self.starter, "turns": self.turn, "result": self.result,
-                "winner": self.winner, "learningEligible": not self.diagnostic and self.result in ("win", "draw") and not self.questions,
+                "winner": self.winner, "openingMulligans": list(self.opening_mulligans), "learningEligible": not self.diagnostic and self.result in ("win", "draw") and not self.questions,
                 "productionEligible": False, "policyVersions": [p.version for p in self.policies],
                 "events": self.events, "questions": self.questions}
 
