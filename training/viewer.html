@@ -297,13 +297,21 @@ function lookupCardImages(name){
  return safe;
 }
 function appendCardFace(element,name){
- if(!artEnabled||!name)return;
+ if(!artEnabled||!name||element.querySelector(".cardFace")||element._artPending===name)return;
+ element._artPending=name;
  lookupCardImages(name).then(art=>{
-   if(!artEnabled||!art?.faces?.length||!element.isConnected)return;
-   const img=make("img",undefined,"cardFace");
-   img.loading="lazy";img.decoding="async";img.alt="Scryfall card face: "+name;
-   img.onerror=()=>img.remove();img.src=art.faces[0].small;element.append(img);
- });
+  if(element._artPending!==name)return;
+  if(!artEnabled||!art?.faces?.length){element._artPending=null;return}
+  const img=make("img",undefined,"cardFace");
+  img.decoding="async";img.alt="Scryfall card face: "+name;
+  img.onload=()=>{
+   if(element._artPending!==name||!artEnabled||!element.isConnected)return;
+   element.querySelector(".cardFace")?.remove();element.append(img)
+  };
+  img.onerror=()=>{if(element._artPending===name)element._artPending=null};
+  img.src=art.faces[0].small;
+  if(img.complete&&img.naturalWidth)img.onload()
+ })
 }
 function modalCardImage(name){
  if(!artEnabled)return;
@@ -342,21 +350,51 @@ function setTab(value){tab=value;document.querySelector(".shell").classList.togg
 function eventStyle(e){const k=(e?.kind||"").toLowerCase();if(/damage|attack|block|destroy|death|exile/.test(k))return "glowCombat";if(/life|gain|heal|draw/.test(k))return "glowLife";if(/cast|stack|token|land|trigger/.test(k))return "glowCast";return ""}
 function renderPhase(phase){const rail=$("phaseRail");rail.replaceChildren();for(const p of phases){const text=p.replace("_"," ");const chip=make("span",text,"phasePill"+(p===phase?" current":""));rail.append(chip)}}
 function cardType(c){return c.kind==="land"?"land":c.isCreature||c.kind==="creature"?"creature":c.kind||"permanent"}
-function makeCard(c,previous,combat){const kind=cardType(c);const attackers=combat?.details?.attackers||combat?.details?.attackIds||[];
- const isAttacker=(combat?.details?.attacker===c.id||(Array.isArray(attackers)&&attackers.includes(c.id)))&&/attack|combat/.test(combat?.kind||"");
- const isBlocker=(combat?.details?.blocker===c.id)&&/block|combat/.test(combat?.kind||"");
- const root=make("button",undefined,"gameCard "+kind+(c.tapped?" tapped":"")+(isAttacker?" attacking":"")+(isBlocker?" blocking":""));
- root.type="button";root.title="Inspect "+c.name;root.setAttribute("aria-label",c.name+(c.tapped?", tapped":""));
- if(!previous)root.classList.add("entered");else if(previous.tapped!==c.tapped||previous.counters!==c.counters||previous.power!==c.power||previous.toughness!==c.toughness)root.classList.add("changed");
- root.append(make("div",c.name,"cardName"));
- const art=make("div",undefined,"cardIllustration");const sigils={creature:"✦",land:"♧",artifact:"◈",equipment:"⚒",mana_artifact:"◇",enchantment:"✧",aura:"✧",planeswalker:"✶",vehicle:"⚙"};art.append(make("span",sigils[kind]||"◇","artSymbol"));root.append(art);
- root.append(make("div",kind==="creature"?"Creature":kind,"cardType"));
- if(kind==="creature")root.append(make("span",String(c.power)+" / "+String(c.toughness),"cardStats"));
- const detail=[];if(c.tapped)detail.push("TAPPED");if(c.fresh)detail.push("NEW");if(c.saddled)detail.push("SADDLED");
- if(c.loyalty!==null&&c.loyalty!==undefined)detail.push("L:"+c.loyalty);if(c.chargeCounters)detail.push("CH:"+c.chargeCounters);
- if(detail.length)root.append(make("span",detail.join(" · "),"cardMeta"));
- if(c.counters)root.append(make("span","+"+c.counters,"cardMark"));
- appendCardFace(root,c.name);root.addEventListener("click",()=>inspectCard(c));return root
+function cardSignature(c,combat){
+ const a=combat?.details?.attackers||combat?.details?.attackIds||[];
+ const attack=(combat?.details?.attacker===c.id||(Array.isArray(a)&&a.includes(c.id)))&&/attack|combat/.test(combat?.kind||"");
+ const block=combat?.details?.blocker===c.id&&/block|combat/.test(combat?.kind||"");
+ return JSON.stringify([c.name,cardType(c),!!c.tapped,!!c.fresh,!!c.saddled,c.counters||0,c.power,c.toughness,c.loyalty,c.chargeCounters,attack,block])
+}
+function updateCard(root,c,previous,combat){
+ const signature=cardSignature(c,combat);
+ if(root._signature===signature){root._card=c;return root}
+ const fresh=!root._signature,old=root._card,type=cardType(c);
+ const attackers=combat?.details?.attackers||combat?.details?.attackIds||[];
+ const attacking=(combat?.details?.attacker===c.id||(Array.isArray(attackers)&&attackers.includes(c.id)))&&/attack|combat/.test(combat?.kind||"");
+ const blocking=combat?.details?.blocker===c.id&&/block|combat/.test(combat?.kind||"");
+ root.className="gameCard "+type+(c.tapped?" tapped":"")+(attacking?" attacking":"")+(blocking?" blocking":"");
+ if(fresh&&!previous)root.classList.add("entered");
+ else if(old&&(old.tapped!==c.tapped||old.counters!==c.counters||old.power!==c.power||old.toughness!==c.toughness))root.classList.add("changed");
+ root.title="Inspect "+c.name+" · Hold Z and hover to magnify";root.setAttribute("aria-label",c.name+(c.tapped?", tapped":""));
+ root.querySelector(".cardName").textContent=c.name;
+ root.querySelector(".cardType").textContent=type==="creature"?"Creature":type;
+ const sigils={creature:"✦",land:"♧",artifact:"◈",equipment:"⚒",mana_artifact:"◇",enchantment:"✧",aura:"✧",planeswalker:"✶",vehicle:"⚙"};
+ root.querySelector(".artSymbol").textContent=sigils[type]||"◇";
+ let stats=root.querySelector(".cardStats");
+ if(type==="creature"){if(!stats){stats=make("span",undefined,"cardStats");root.append(stats)}stats.textContent=String(c.power)+" / "+String(c.toughness)}
+ else stats?.remove();
+ const details=[];if(c.tapped)details.push("TAPPED");if(c.fresh)details.push("NEW");if(c.saddled)details.push("SADDLED");
+ if(c.loyalty!=null)details.push("L:"+c.loyalty);
+ if(c.chargeCounters)details.push("CH:"+c.chargeCounters);
+ let meta=root.querySelector(".cardMeta");
+ if(details.length){if(!meta){meta=make("span",undefined,"cardMeta");root.append(meta)}meta.textContent=details.join(" · ")}
+ else meta?.remove();
+ let counter=root.querySelector(".cardMark");
+ if(c.counters){if(!counter){counter=make("span",undefined,"cardMark");root.append(counter)}counter.textContent="+"+c.counters}
+ else counter?.remove();
+ if(root.dataset.cardName!==c.name){root.dataset.cardName=c.name;root._artPending=null;root.querySelector(".cardFace")?.remove()}
+ if(!artEnabled){root._artPending=null;root.querySelector(".cardFace")?.remove()}
+ else appendCardFace(root,c.name);
+ root._card=c;root._signature=signature;return root
+}
+function makeCard(c,previous,combat){
+ const root=make("button",undefined,"gameCard");root.type="button";
+ root.append(make("div",undefined,"cardName"));
+ const illustration=make("div",undefined,"cardIllustration");illustration.append(make("span",undefined,"artSymbol"));root.append(illustration);
+ root.append(make("div",undefined,"cardType"));
+ root.onclick=()=>inspectCard(root._card);
+ return updateCard(root,c,previous,combat)
 }
 let printedNames=[];
 function indexPrintedNames(){
@@ -400,8 +438,26 @@ function renderSpotlight(event){
  target.append(caption);
 }
 function kindOf(c){const k=cardType(c);return k==="land"?"land":k==="creature"?"creature":"other"}
-function groupCards(p,prev,kind,event){const list=make("div",undefined,"cardTrack"+(kind==="land"?" landStack":""));const cards=(p.battlefield||[]).filter(c=>kindOf(c)===kind);list._allCards=cards;list._collectionName=kind==="creature"?"Creatures":kind==="land"?"Lands":"Other permanents";const old=new Map((prev?.battlefield||[]).map(c=>[c.id,c]));for(const c of cards)list.append(makeCard(c,old.get(c.id),event));return list}
-
+function syncCardTrack(track,cards,previous,event){
+ track._allCards=cards;
+ track.querySelector(".overflowTile")?.remove();
+ const nodes=track._cardNodes||(track._cardNodes=new Map()),prior=new Map((previous||[]).map(c=>[c.id,c])),used=new Set();
+ for(let i=0;i<cards.length;i++){
+  const card=cards[i];used.add(card.id);let node=nodes.get(card.id);
+  if(!node){node=makeCard(card,prior.get(card.id),event);nodes.set(card.id,node)}
+  else updateCard(node,card,prior.get(card.id),event);
+  node.hidden=false;
+  if(track.children[i]!==node)track.insertBefore(node,track.children[i]||null)
+ }
+ for(const [id,node] of nodes)if(!used.has(id)){node.remove();nodes.delete(id)}
+}
+function groupCards(p,prev,kind,event,track){
+ const list=track||make("div",undefined,"cardTrack"+(kind==="land"?" landStack":""));
+ list._collectionName=kind==="creature"?"Creatures":kind==="land"?"Lands":"Other permanents";
+ syncCardTrack(list,(p.battlefield||[]).filter(c=>kindOf(c)===kind),
+   (prev?.battlefield||[]).filter(c=>kindOf(c)===kind),event);
+ return list
+}
 let fitFrame=0;
 function showCollection(title,cards){
  $("modalTitle").textContent=title+" · "+cards.length+" cards";
