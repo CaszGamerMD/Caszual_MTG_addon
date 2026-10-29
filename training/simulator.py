@@ -963,14 +963,15 @@ class Simulator(AdvancedRules):
     def removal_targets(self,controller,source):
         """Only legal targets for an explicitly parsed targeted removal spell."""
         if source.removal in ('destroy','exile_creature_life','exile_creature_basic_land'):return self.creature_targets(controller,source)
-        if source.removal not in ('destroy_artifact_enchantment','destroy_artifact_creature_token'):return ()
+        if source.removal not in ('destroy_artifact_enchantment','destroy_artifact_creature_token','destroy_artifact'):return ()
         game=self.event_game('main')
         targets=[]
         for seat,player in enumerate(self.players):
             for item in player.battlefield:
                 types=set(item.card.printed_types)
                 if item.card.event_definition:types.update(item.card.event_definition.types)
-                allowed={'Artifact','Enchantment'} if source.removal=='destroy_artifact_enchantment' else {'Artifact','Creature'}
+                allowed=({'Artifact','Enchantment'} if source.removal=='destroy_artifact_enchantment' else
+                         {'Artifact'} if source.removal=='destroy_artifact' else {'Artifact','Creature'})
                 if not types.intersection(allowed) and not (source.removal=='destroy_artifact_creature_token' and
                         item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id])):continue
                 state=game.battlefield.get(item.card.id)
@@ -2428,6 +2429,12 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             and rule_text(definition.get('oracleText',''))=='Destroy all nonland permanents your opponents control.'
             and rules.query('cost',cost)['supported']):
         parsed={'kind':'removal_spell','removal':'opponent_nonlands'}
+    artifact_only=re.fullmatch(
+        r"Destroy target artifact\.(?: It can't be regenerated\.)?",
+        rule_text(definition.get('oracleText','')))
+    if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
+            and artifact_only and rules.query('cost',cost)['supported']):
+        parsed={'kind':'removal_spell','removal':'destroy_artifact'}
     counter=re.fullmatch(r'Counter target (?:(creature|noncreature) )?spell\.',rule_text(definition.get('oracleText','')))
     if (parsed['kind']=='unsupported' and definition.get('types')==['Instant'] and counter
             and rules.query('cost',cost)['supported']):

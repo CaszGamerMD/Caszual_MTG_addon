@@ -275,3 +275,15 @@ black. These mechanics are generic and cover Boggart Birth Rite and
 Wort, Boggart Auntie without card-name dispatch.
 
 Regression: `training/tests/test_graveyard_returns.py`.
+
+
+## Artifact-only targeted destruction
+
+Exact full Oracle wording “Destroy target artifact.” and “Destroy target
+artifact. It can't be regenerated.” now shares the targeted-destruction
+pipeline. Targets exclude nonartifacts, and are rechecked on resolution.
+Indestructibility still stops destruction. This sandbox currently
+does not model active regeneration shields; the prohibition does not
+extend the set of destruction outcomes. Oxidize is an actual deck test,
+but unknown card names and either wording use the same parser.
+Regression: `training/tests/test_artifact_only_removal.py`.
