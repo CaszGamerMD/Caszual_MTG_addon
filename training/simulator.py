@@ -671,6 +671,12 @@ class Simulator(AdvancedRules):
                     if toughness<=0 or (item.marked_damage>0 and item.marked_damage>=toughness
                                         and not game.has(state,'indestructible')):
                         dead.append((owner,item))
+            replaced=[]
+            for owner,item in dead:
+                state=game.battlefield.get(item.card.id)
+                if state and game.creature(state) and game.stats(state)[1]>0 and self.replace_umbra_destruction(owner,item,game):
+                    replaced.append((owner,item))
+            if replaced:dead=[entry for entry in dead if entry not in replaced]
             invalid_auras=[];detached=[]
             for owner,player in enumerate(self.players):
                 for item in player.battlefield:
@@ -702,7 +708,9 @@ class Simulator(AdvancedRules):
             for (owner,_),roles in role_groups.items():
                 newest=max(roles,key=lambda item:(item.attachment_at,item.entered_at,item.card.id))
                 invalid_auras.extend((owner,item) for item in roles if item is not newest and (owner,item) not in invalid_auras)
-            if not dead and not invalid_auras and not detached:break
+            if not dead and not invalid_auras and not detached:
+                if replaced:continue  # Recompute after the Aura and its bonuses leave.
+                break
             for item in detached:item.attached_to=None;item.bestowed=False
             for owner,item in invalid_auras:
                 if item in self.players[owner].battlefield:self.send_to_destination(self.players[owner],item,snapshot=game)
@@ -1403,8 +1411,36 @@ class Simulator(AdvancedRules):
                      and not (item.card.event_definition and 'Land' in item.card.event_definition.types)
                      and not (item.card.id in game.battlefield and game.has(game.battlefield[item.card.id],'indestructible')))
 
+    def replace_umbra_destruction(self,owner,item,game):
+        """Replace one actual destruction event; not sacrifice, exile or zero toughness.
+
+        Choose the oldest eligible attached Aura deterministically in this
+        diagnostic. The creature stays in combat, remains untapped and loses
+        all marked damage; only the Aura is destroyed.
+        """
+        state=game.battlefield.get(item.card.id)
+        if (item not in self.players[owner].battlefield or not state
+                or not game.creature(state) or game.stats(state)[1]<=0
+                or game.has(state,'indestructible')):
+            return False
+        candidates=[(seat,aura) for seat,player in enumerate(self.players)
+                    for aura in player.battlefield
+                    if aura.attached_to==item.card.id and aura.card.event_definition
+                    and aura.card.event_definition.umbra_armor
+                    and aura.card.id in game.battlefield
+                    and not game.protected(state,aura.card.colors)]
+        if not candidates:return False
+        aura_owner,aura=min(candidates,key=lambda pair:(pair[1].attachment_at,pair[1].card.id))
+        item.marked_damage=0
+        self.send_to_destination(self.players[aura_owner],aura,snapshot=game)
+        self.log('umbra_armor','Umbra armor replaces destruction, clearing damage and destroying the Aura.',
+                 protected=item.card.id,aura=aura.card.id,controller=aura_owner)
+        return True
+
     def destroy_batch(self,targets,card,reason="destroy"):
         game=self.event_game('main')
+        targets=[(owner,item) for owner,item in targets
+                 if not self.replace_umbra_destruction(owner,item,game)]
         creatures=[item.card.id for _,item in targets if item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id])]
         triggers=game.death_triggers(creatures)
         for owner,item in targets:
@@ -2388,6 +2424,8 @@ class Simulator(AdvancedRules):
         if attacker and to_player:dealt.append(dict(source=attacker.card.id,target=None,amount=to_player))
         if attacker and blocker and to_blocker:dealt.append(dict(source=attacker.card.id,target=blocker.card.id,amount=to_blocker))
         if blocker and attacker and to_attacker:dealt.append(dict(source=blocker.card.id,target=attacker.card.id,amount=to_attacker))
+        dead=[item for item in dead if not self.replace_umbra_destruction(
+            next(seat for seat,p in enumerate(self.players) if item in p.battlefield),item,game)]
         triggers=game.death_triggers([item.card.id for item in dead])
         triggers.extend(game.aura_damage_triggers(dealt,1-self.active))
         if to_player and attacker:
