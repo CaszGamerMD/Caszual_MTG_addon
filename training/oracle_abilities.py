@@ -490,7 +490,7 @@ def compile_abilities(text, name=''):
             triggers.append(Trigger('end_step',Selector(self_only=True),action))
             continue
         combat_boost=re.fullmatch(
-            r'At the beginning of combat on your turn, target enchanted creature or enchantment creature you control gets \\+([0-9]+)/\\+([0-9]+) and gains ([a-z ]+) until end of turn\\.',line)
+            r'At the beginning of combat on your turn, target enchanted creature or enchantment creature you control gets \+([0-9]+)/\+([0-9]+) and gains ([a-z ]+) until end of turn\.',line)
         if combat_boost:
             if combat_boost[3] not in KEYWORDS-{'flash'}:return None
             triggers.append(Trigger('begin_combat',Selector(self_only=True),
