@@ -556,7 +556,8 @@ class Simulator(AdvancedRules):
                     item.fresh, item.saddled, item.animated, counters=item.counters, token=item.card.is_token,temporary_power=item.temporary_power,
                     temporary_toughness=item.temporary_toughness,temporary_abilities=item.temporary_abilities,attached_to=item.attached_to,
                     entered_at=item.entered_at,attachment_at=item.attachment_at,lost_abilities=dict(item.lost_abilities),
-                    temporary_ability_times=dict(item.temporary_ability_times),loyalty=item.loyalty,charge_counters=item.charge_counters,chosen_subtype=item.chosen_subtype)
+                    temporary_ability_times=dict(item.temporary_ability_times),loyalty=item.loyalty,charge_counters=item.charge_counters,chosen_subtype=item.chosen_subtype,
+                    attacking=(1-seat if self.group_combat and card.id in self.group_combat['attackers'] else None))
         return game
 
     def sync_events(self, game: EventGame):

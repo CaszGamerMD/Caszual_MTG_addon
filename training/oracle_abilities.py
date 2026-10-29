@@ -44,6 +44,8 @@ class Selector:
     spell_type: str = ''
     permanent_type: str = ''
     chosen_subtype: bool = False  # Resolve the source's entry-time creature-type choice.
+    attacking: bool = False  # Check current combat participation, not tapped status.
+    excluded_subtype: str = ''  # A non-Human filter must exclude all Human creatures.
 
 @dataclass(frozen=True)
 class StaticEffect:
@@ -105,6 +107,15 @@ class Program:
     chosen_type_entry: bool = False
 
 def static_effect(text):
+    attacking_anthem=re.fullmatch(
+        r'Attacking (?:non-([A-Z][a-z]+) )?creatures you control get \+([0-9]+)/\+([0-9]+) and have (.+)\.',text)
+    if attacking_anthem:
+        traits={part.strip() for part in re.split(r', | and ',attacking_anthem[4])}
+        if not traits or not traits<=KEYWORDS-{'flash'}:return None
+        subject=Selector(relation='controller',creature=True,attacking=True,
+                         excluded_subtype=attacking_anthem[1] or '')
+        return (StaticEffect(subject,int(attacking_anthem[2]),int(attacking_anthem[3])),)+tuple(
+            StaticEffect(subject,0,0,grant=trait) for trait in sorted(traits))
     must=re.fullmatch(r'(Other )?([A-Z][a-z]+) creatures( you control)? attack each combat if able\.',text)
     if must:
         return StaticEffect(Selector(relation='controller' if must[3] else 'any',
@@ -577,7 +588,9 @@ def matches(subject, source, entered, is_creature):
         and (not subject.color or subject.color in entered.definition.colors)
         and (not subject.subtype or subject.subtype in entered.definition.subtypes)
         and (not subject.permanent_type or subject.permanent_type in entered.definition.types)
-        and (not subject.chosen_subtype or bool(source.chosen_subtype) and source.chosen_subtype in entered.definition.subtypes))
+        and (not subject.chosen_subtype or bool(source.chosen_subtype) and source.chosen_subtype in entered.definition.subtypes)
+        and (not subject.attacking or entered.attacking is not None)
+        and (not subject.excluded_subtype or subject.excluded_subtype not in entered.definition.subtypes))
 
 def cast_matches(trigger, source, spell, controller):
     if trigger.event!='cast' or source.controller!=controller:return False
