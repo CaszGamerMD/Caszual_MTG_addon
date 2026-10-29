@@ -18,6 +18,13 @@ def compile(text):
             if not spec:return None
             minimum=({'one':1,'two':2,'three':3}.get(group[1]) or int(group[1])) if group else 0
             effects.append(('group_tokens' if group else 'saddled_tokens' if saddled else 'attack_tokens',minimum,0,spec));continue
+        target_grant=re.fullmatch(
+            r'Whenever this creature attacks, target (legendary|nonlegendary) creature you control gains (.+) until end of turn\.',line)
+        if target_grant:
+            words=tuple(sorted(set(w.strip() for w in re.split(r', | and ',target_grant[2].replace(', and ', ', ')))))
+            if not words or not set(words)<=KEYWORDS:return None
+            effects.append(('attack_target_keywords',int(target_grant[1]=='legendary'),0,words))
+            continue
         team_grant=re.fullmatch(
             r'Whenever this creature attacks, creatures you control gain (.+) until end of turn\.',
             line)

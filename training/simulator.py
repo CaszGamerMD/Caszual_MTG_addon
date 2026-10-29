@@ -1324,6 +1324,24 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='grant_target_keywords':
+                from oracle_abilities import KEYWORDS
+                keywords=event.get('keywords',[])
+                if not keywords or any(ability not in KEYWORDS for ability in keywords):
+                    raise RuntimeError('Malformed target keyword grant')
+                game=self.event_game('combat');target=game.battlefield.get(event.get('target'))
+                legal=bool(target and target.controller==event['controller']
+                           and game.creature(target) and target.definition.legendary==event['legendary']
+                           and not game.has(target,'shroud')
+                           and not game.protected(target,event.get('sourceColors',())))
+                if legal:
+                    for ability in keywords:game.grant_temporary(target,ability)
+                    self.sync_events(game)
+                self.log('target_keywords' if legal else 'target_keywords_fizzle',
+                         'Attack-triggered keyword grant '+('resolves.' if legal else 'has no legal target.'),
+                         actor=event['controller'],source=event['source'],targetPermanent=event.get('target'),
+                         keywords=keywords)
+                continue
             if event.get('operation')=='grant_team_keywords':
                 keywords=event.get('keywords',[])
                 from oracle_abilities import KEYWORDS
