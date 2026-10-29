@@ -94,7 +94,7 @@ def static_effect(text):
     # controls them. Landwalk is a blocking restriction evaluated at declare
     # blockers, not a stat bonus or a change to land ownership.
     lord=re.fullmatch(
-        r'Other ([A-Z][a-z]+) get \\+([0-9]+)/\\+([0-9]+) and have ((?:plains|island|swamp|mountain|forest)walk)\\.',
+        r'Other ([A-Z][a-z]+) get \+([0-9]+)/\+([0-9]+) and have ((?:plains|island|swamp|mountain|forest)walk)\.',
         text)
     if lord:
         plurals={'Faeries':'Faerie','Elves':'Elf','Wolves':'Wolf','Mice':'Mouse',
