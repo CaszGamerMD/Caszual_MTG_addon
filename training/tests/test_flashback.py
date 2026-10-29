@@ -39,8 +39,13 @@ class FlashbackRulesChecks(unittest.TestCase):
         legal=sim.legal(0)
         candidate=next(c for c in legal if c.kind=='cast_flashback' and c.card_id==spell.id)
         self.assertEqual(candidate.id,spell.id+':flashback')
-        sim.cast_spell(0,spell,flashback=True)
+        # Drive the same action through the actual agent-step dispatcher,
+        # not only the direct casting helper.
+        from unittest.mock import patch
+        with patch.object(sim,'decide',return_value=candidate):
+            sim.step()
         self.assertNotIn(spell,sim.players[0].graveyard)
+        self.assertTrue(any(e['kind']=='cast' and e['details'].get('flashback') for e in sim.events))
         self.drain(sim)
         self.assertIn(spell,sim.players[0].exile)
         self.assertEqual(len([p for p in sim.players[0].battlefield if p.card.is_token]),2)
