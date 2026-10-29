@@ -1,0 +1,28 @@
+{
+  "kind": "one-game-diagnostic",
+  "seed": 20261029,
+  "decks": [
+    "Garbo Gobbos",
+    "Budget Deck"
+  ],
+  "commanders": [
+    "Zurgo Helmsmasher",
+    "Kolodin, Triumph Caster"
+  ],
+  "turnLimitPerPlayer": 10,
+  "turnsCompleted": [
+    10,
+    9
+  ],
+  "result": "win",
+  "winner": 1,
+  "lifeTotals": [
+    -10,
+    46
+  ],
+  "eventCount": 458,
+  "flaggedQuestions": 133,
+  "learningEligible": false,
+  "productionEligible": false,
+  "viewer": "budget-vs-goblins-one-game-20261029.html"
+}
