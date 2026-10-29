@@ -1,3 +1,22 @@
+## Life addition and source-controlled replacement ordering
+
+Angel of Vitality now parses as a composition of three reusable pieces:
+flying, `gain that much life plus N instead`, and `this creature gets
++P/+T as long as you have N or more life`. The additive effect applies
+once to each **positive** gain event (not life loss or zero life). It is
+relative to the replacement source's controller, including life gained
+from lifelink and other triggered abilities. The stat bonus updates
+immediately as the creature's controller crosses the threshold.
+
+Where additive and doubling replacements coexist, the current deterministic
+pilot chooses a **legal maximal-gain order**, addition before multiplication.
+That is an explicit decision policy, not a Magic rule requiring this order.
+A future agent may choose any other legal ordering when appropriate. See
+`training/tests/test_additive_lifegain.py` for renamed-card and combined
+replacement regressions.
+
+These changes remain local to `training/` and are not wired to Minecraft.
+
 ## Continuing unresolved-card work: damage Auras, life replacement and entry rules
 
 The strict Oracle grammar now accepts three additional damage-Aura programs:
