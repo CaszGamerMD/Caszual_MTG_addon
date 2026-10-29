@@ -179,3 +179,21 @@ so menace cannot force extra blockers after its source has left.
 The same mechanism accepts unfamiliar names, different creature types
 and combinations of known keywords. Unknown wording or extra clauses
 still reject the whole program. Tests: `training/tests/test_multi_tribe_grants.py`.
+
+
+## Faerie anthem with shroud (2026-10-29)
+
+Scion of Oona's “Other [subtype] creatures you control get +N/+M”
+and “Other [plural subtype] you control have [keyword]” now compose
+as strict independent continuous effects, including unfamiliar
+creature types and stats.
+
+Shroud is not hexproof. Any targeted creature spell, Aura, Equip
+activation or Virtuous Role trigger is illegal if its target currently
+has shroud, even when the spell or ability comes from the same
+controller. Previously attached equipment stays attached; shroud
+does not prevent combat or untargeted effects. Losing Scion ends
+both grants, so later targets become legal. This remains the
+diagnostic rules subset, not blanket support for all target kinds.
+
+Regression: `training/tests/test_shroud_grants.py`.

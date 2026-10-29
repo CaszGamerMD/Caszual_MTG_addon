@@ -12,6 +12,7 @@ class AdvancedRules:
   g=self.event_game('main');controller=event['controller']
   return tuple(p for p in self.players[controller].battlefield
    if p.card.id!=event['source'] and p.card.id in g.battlefield and g.creature(g.battlefield[p.card.id])
+   and not g.has(g.battlefield[p.card.id],'shroud')
    and not g.protected(g.battlefield[p.card.id],event.get('sourceColors',())))
  def resolve_role(self,event):
   s=model(self);target=next((p for p in self.role_targets(event) if p.card.id==event['target']),None)

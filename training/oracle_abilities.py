@@ -108,6 +108,12 @@ def static_effect(text):
         subject=Selector(relation='any',other=True,creature=True,subtype=subtype)
         return (StaticEffect(subject,int(lord[2]),int(lord[3])),
                 StaticEffect(subject,0,0,grant=lord[4]))
+    subtype_stats=re.fullmatch(
+        r'Other ([A-Z][a-z]+) creatures you control get \+([0-9]+)/\+([0-9]+)\.',text)
+    if subtype_stats:
+        return StaticEffect(Selector(relation='controller',other=True,creature=True,
+                                     subtype=subtype_stats[1]),
+                            int(subtype_stats[2]),int(subtype_stats[3]))
     subtype_anthem=re.fullmatch(r'Other ([A-Z][a-z]+) creatures you control get \+([0-9]+)/\+([0-9]+) and have (.+)\.',text)
     if subtype_anthem:
         traits={w.strip() for w in re.split(r', | and ',subtype_anthem[4])}
@@ -134,13 +140,14 @@ def static_effect(text):
         return tuple(StaticEffect(Selector(relation='controller',creature=True,subtype=kind),
                                   0,0,grant=word)
                      for kind in dict.fromkeys((first,second)) for word in sorted(traits))
-    subtype_keyword=re.fullmatch(r'([A-Z][a-z]+)s you control have (.+)\.',text)
+    subtype_keyword=re.fullmatch(r'(Other )?([A-Z][a-z]+)s you control have (.+)\.',text)
     # "Creatures you control" is the older general keyword-anthem grammar.
     # Never treat "Creatures" as an unknown creature subtype.
-    if subtype_keyword and subtype_keyword[1]!='Creature':
-        traits={w.strip() for w in re.split(r', | and ',subtype_keyword[2])}
+    if subtype_keyword and subtype_keyword[2]!='Creature':
+        traits={w.strip() for w in re.split(r', | and ',subtype_keyword[3])}
         if not traits or not traits<=KEYWORDS:return None
-        subject=Selector(relation='controller',creature=True,subtype=subtype_keyword[1])
+        subject=Selector(relation='controller',other=bool(subtype_keyword[1]),
+                         creature=True,subtype=subtype_keyword[2])
         return tuple(StaticEffect(subject,0,0,grant=word) for word in sorted(traits))
     stat_conditional=re.fullmatch(r'This creature gets \+([0-9]+)/\+([0-9]+) as long as you have ([1-9][0-9]*) or more life\.',text)
     if stat_conditional:
@@ -198,7 +205,7 @@ def static_effect(text):
 
 KEYWORDS = {'flash','flying','first strike','double strike','lifelink','vigilance',
             'trample','haste','defender','reach','deathtouch','indestructible','hexproof','menace',
-            'plainswalk','islandwalk','swampwalk','mountainwalk','forestwalk'}
+            'plainswalk','islandwalk','swampwalk','mountainwalk','forestwalk','shroud'}
 
 def selector(text):
     if text == 'this creature': return Selector(self_only=True,creature=True)

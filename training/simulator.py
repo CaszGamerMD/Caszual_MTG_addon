@@ -841,6 +841,7 @@ class Simulator(AdvancedRules):
         game=self.event_game('main')
         return tuple((seat,item) for seat,player in enumerate(self.players) for item in player.battlefield
                      if item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id])
+                     and not game.has(game.battlefield[item.card.id],'shroud')
                      and (controller is None or seat==controller or not game.has(game.battlefield[item.card.id],'hexproof'))
                      and (source is None or not game.protected(game.battlefield[item.card.id],source.colors)))
 
@@ -930,6 +931,7 @@ class Simulator(AdvancedRules):
                 if not types.intersection(allowed) and not (source.removal=='destroy_artifact_creature_token' and
                         item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id])):continue
                 state=game.battlefield.get(item.card.id)
+                if state and game.has(state,'shroud'):continue
                 if state and seat!=controller and game.has(state,'hexproof'):continue
                 if state and game.protected(state,source.colors):continue
                 targets.append((seat,item))
