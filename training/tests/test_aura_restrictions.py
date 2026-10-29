@@ -29,8 +29,9 @@ class OwnCreatureAuraChecks(unittest.TestCase):
         self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad',{'White'}).kind,'unsupported')
 
     def test_enemy_cannot_be_enchanted_and_own_host_gets_stats(self):
-        sim,_=self.fixture(['Lifelink'])
+        sim,cards=self.fixture(['Lifelink'])
         aura,_=self.make_aura()
+        sim.players[0].hand.remove(cards['Lifelink'])
         sim.players[0].hand.append(aura)
         own=self.token(sim,'own-host')
         enemy=self.token(sim,'enemy-host',seat=1)
@@ -44,8 +45,9 @@ class OwnCreatureAuraChecks(unittest.TestCase):
         sim.invariant()
 
     def test_control_change_detaches_restricted_aura(self):
-        sim,_=self.fixture(['Lifelink'])
+        sim,cards=self.fixture(['Lifelink'])
         aura,_=self.make_aura()
+        sim.players[0].hand.remove(cards['Lifelink'])
         host=self.token(sim,'host')
         sim.enter_creature(aura,sim.players[0],attached_to=host.card.id)
         sim.players[0].battlefield.remove(host)
