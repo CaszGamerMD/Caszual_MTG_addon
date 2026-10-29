@@ -335,7 +335,7 @@ class SimulatorChecks(unittest.TestCase):
         report = s.audit_decks(self.rules,decks)
         self.assertEqual(report["status"], "blocked")
         self.assertFalse(report["learningEligible"])
-        self.assertEqual([d["mainCount"] for d in report["decks"]],[99,99,99,99])
+        self.assertEqual([d["mainCount"] for d in report["decks"]],[99]*len(decks))
         names = {q["card"] for q in report["questions"]}
         self.assertIn("Kolodin, Triumph Caster",names)
         self.assertIn("Zurgo Helmsmasher",names)
@@ -402,12 +402,13 @@ class SimulatorChecks(unittest.TestCase):
             self.assertEqual([d["sourceDeckId"] for d in selected],
                              [d["sourceDeckId"] for d in s.select_decks(decks,seed)])
             pairs.add(tuple(sorted(d["sourceDeckId"] for d in selected)))
-        self.assertEqual(len(pairs),6)
-        schedule=s.schedule_decks(decks,42,6)
-        self.assertEqual(len({tuple(sorted(d["sourceDeckId"] for d in pair)) for pair in schedule}),6)
+        pair_count=len(decks)*(len(decks)-1)//2
+        self.assertEqual(len(pairs),pair_count)
+        schedule=s.schedule_decks(decks,42,pair_count)
+        self.assertEqual(len({tuple(sorted(d["sourceDeckId"] for d in pair)) for pair in schedule}),pair_count)
         self.assertEqual([[d["sourceDeckId"] for d in pair] for pair in schedule],
-                         [[d["sourceDeckId"] for d in pair] for pair in s.schedule_decks(decks,42,6)])
-        with self.assertRaises(ValueError):s.schedule_decks(decks,42,7)
+                         [[d["sourceDeckId"] for d in pair] for pair in s.schedule_decks(decks,42,pair_count)])
+        with self.assertRaises(ValueError):s.schedule_decks(decks,42,pair_count+1)
         with self.assertRaises(ValueError):s.select_decks([decks[0],dict(decks[0],sourceDeckId=999)],42)
         with self.assertRaises(ValueError):s.diagnose(self.rules,[decks[0],decks[0]],42,10)
 

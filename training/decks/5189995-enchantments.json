@@ -1,0 +1,2150 @@
+{
+  "schemaVersion": 1,
+  "sourceUrl": "https://archidekt.com/decks/5189995/getting_wild_with_enchantments_fix_land_count",
+  "sourceDeckId": 5189995,
+  "name": "Getting Wild with Enchantments *fix land count",
+  "sourceUpdatedAt": "2025-07-08T12:41:33.776022Z",
+  "retrievedAt": "2026-10-29T05:40:38.357226+00:00",
+  "format": "commander",
+  "commanders": [
+    {
+      "name": "Ellivere of the Wild Court",
+      "manaCost": "{2}{G}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Human",
+        "Knight"
+      ],
+      "colors": [
+        "White",
+        "Green"
+      ],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "4",
+      "toughness": "4",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "97f9b82f-b3cf-44ff-9abc-2d92d7cbaa27",
+      "oracleText": "Whenever Ellivere enters or attacks, create a Virtuous Role token attached to another target creature you control. (If you control another Role on it, put that one into the graveyard. Enchanted creature gets +1/+1 for each enchantment you control.)\nWhenever an enchanted creature you control deals combat damage to a player, draw a card."
+    }
+  ],
+  "mainboard": [
+    {
+      "name": "Ajani's Welcome",
+      "manaCost": "{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "4a782bf9-4051-4613-8852-33b0d85a0edd",
+      "oracleText": "Whenever a creature you control enters, you gain 1 life."
+    },
+    {
+      "name": "Akroma's Memorial",
+      "manaCost": "{7}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "967e8b3f-8266-4d9a-a38b-d0e10184e1e4",
+      "oracleText": "Creatures you control have flying, first strike, vigilance, trample, haste, and protection from black and from red."
+    },
+    {
+      "name": "All That Glitters",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "a4d751e0-41c1-4e90-853d-512f385acd81",
+      "oracleText": "Enchant creature\nEnchanted creature gets +1/+1 for each artifact and/or enchantment you control."
+    },
+    {
+      "name": "Alseid of Life's Bounty",
+      "manaCost": "{W}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Nymph"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "d371031e-78be-4964-b521-b1eaa22a5480",
+      "oracleText": "Lifelink\n{1}, Sacrifice this creature: Target creature or enchantment you control gains protection from the color of your choice until end of turn."
+    },
+    {
+      "name": "Angel of Vitality",
+      "manaCost": "{2}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Angel"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "635fe908-6f58-4c9e-ac55-0775a7c6f278",
+      "oracleText": "Flying\nIf you would gain life, you gain that much life plus 1 instead.\nThis creature gets +2/+2 as long as you have 25 or more life."
+    },
+    {
+      "name": "Anthem of Champions",
+      "manaCost": "{G}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White",
+        "Green"
+      ],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "f1d8e9a6-1903-4be5-8609-1009a463f393",
+      "oracleText": "Creatures you control get +1/+1."
+    },
+    {
+      "name": "Archetype of Courage",
+      "manaCost": "{1}{W}{W}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Soldier"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "79b48704-480d-4905-b87a-40b127894670",
+      "oracleText": "Creatures you control have first strike.\nCreatures your opponents control lose first strike and can't have or gain first strike."
+    },
+    {
+      "name": "Armadillo Cloak",
+      "manaCost": "{1}{G}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "White",
+        "Green"
+      ],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "15397a59-70a8-441f-abf7-230405a1602b",
+      "oracleText": "Enchant creature\nEnchanted creature gets +2/+2 and has trample.\nWhenever enchanted creature deals damage, you gain that much life."
+    },
+    {
+      "name": "Audacity",
+      "manaCost": "{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "4eb8d877-ee46-4bbe-99da-fee9e238ca58",
+      "oracleText": "Enchant creature\nEnchanted creature gets +2/+0 and has trample. (It can deal excess combat damage to the player or planeswalker it's attacking.)\nWhen this Aura is put into a graveyard from the battlefield, draw a card."
+    },
+    {
+      "name": "Authority of the Consuls",
+      "manaCost": "{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "55f3c721-e13a-406e-bc8e-d6cdc91ac477",
+      "oracleText": "Creatures your opponents control enter tapped.\nWhenever a creature an opponent controls enters, you gain 1 life."
+    },
+    {
+      "name": "Blossoming Sands",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "45429b2c-be3b-4b2e-9bab-a059ccbda8cd",
+      "oracleText": "This land enters tapped.\nWhen this land enters, you gain 1 life.\n{T}: Add {G} or {W}."
+    },
+    {
+      "name": "Boon Reflection",
+      "manaCost": "{4}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "b86d3142-568a-4eea-b1ae-5fcfc1453533",
+      "oracleText": "If you would gain life, you gain twice that much life instead."
+    },
+    {
+      "name": "Branching Evolution",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "28fe909b-06e0-424c-9f75-c824a25f5865",
+      "oracleText": "If one or more +1/+1 counters would be put on a creature you control, twice that many +1/+1 counters are put on that creature instead."
+    },
+    {
+      "name": "Calix, Guided by Fate",
+      "manaCost": "{1}{G}{W}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Human",
+        "Druid"
+      ],
+      "colors": [
+        "White",
+        "Green"
+      ],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "1bcc8ca6-5fd0-4fc9-8f0c-f81d8abf9249",
+      "oracleText": "Constellation — Whenever Calix or another enchantment you control enters, put a +1/+1 counter on target creature.\nWhenever Calix or an enchanted creature you control deals combat damage to a player, you may create a token that's a copy of a nonlegendary enchantment you control. Do this only once each turn."
+    },
+    {
+      "name": "Cartouche of Solidarity",
+      "manaCost": "{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura",
+        "Cartouche"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "b9176173-c4a1-45ae-8f34-bd6b31c141fe",
+      "oracleText": "Enchant creature you control\nWhen this Aura enters, create a 1/1 white Warrior creature token with vigilance.\nEnchanted creature gets +1/+1 and has first strike. (It deals combat damage before creatures without first strike.)"
+    },
+    {
+      "name": "Command Tower",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "0895c9b7-ae7d-4bb3-af17-3b75deb50a25",
+      "oracleText": "{T}: Add one mana of any color in your commander's color identity."
+    },
+    {
+      "name": "Danitha Capashen, Paragon",
+      "manaCost": "{2}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Human",
+        "Knight"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "4b6377da-83e7-4519-9582-16a9c16b8faa",
+      "oracleText": "First strike, vigilance, lifelink\nAura and Equipment spells you cast cost {1} less to cast."
+    },
+    {
+      "name": "Destiny Spinner",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "7dd189f8-a23f-4b43-b0ef-fb174a9664ba",
+      "oracleText": "Creature and enchantment spells you control can't be countered.\n{3}{G}: Target land you control becomes an X/X Elemental creature with trample and haste until end of turn, where X is the number of enchantments you control. It's still a land."
+    },
+    {
+      "name": "Dryad of the Ilysian Grove",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Dryad",
+        "Nymph"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "2",
+      "toughness": "4",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "bdbde5d0-f5e4-44da-b27c-b4ad6f374cc9",
+      "oracleText": "You may play an additional land on each of your turns.\nLands you control are every basic land type in addition to their other types."
+    },
+    {
+      "name": "Emerald Medallion",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "d683024d-8fe7-4509-851b-7655fadc1de7",
+      "oracleText": "Green spells you cast cost {1} less to cast."
+    },
+    {
+      "name": "Ethereal Armor",
+      "manaCost": "{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "dbba75f5-2404-4bd5-982b-f6c4effa5316",
+      "oracleText": "Enchant creature\nEnchanted creature gets +1/+1 for each enchantment you control and has first strike."
+    },
+    {
+      "name": "Fang of Shigeki",
+      "manaCost": "{G}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Snake",
+        "Ninja"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "9e187d43-ae75-4589-81fc-476ae95ba5b9",
+      "oracleText": "Deathtouch"
+    },
+    {
+      "name": "Forced Adaptation",
+      "manaCost": "{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "1c859c97-74df-4360-baf8-0f79eae97c45",
+      "oracleText": "Enchant creature\nAt the beginning of your upkeep, put a +1/+1 counter on enchanted creature."
+    },
+    {
+      "name": "Fortified Village",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "56f1a16a-9f41-41fb-b580-c200bca27cd6",
+      "oracleText": "As this land enters, you may reveal a Forest or Plains card from your hand. If you don't, this land enters tapped.\n{T}: Add {G} or {W}."
+    },
+    {
+      "name": "Gavony Township",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "8a44e4e7-dfa2-427b-bbff-11c398fa60bb",
+      "oracleText": "{T}: Add {C}.\n{2}{G}{W}, {T}: Put a +1/+1 counter on each creature you control."
+    },
+    {
+      "name": "Ghalta and Mavren",
+      "manaCost": "{3}{G}{G}{W}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Vampire",
+        "Dinosaur"
+      ],
+      "colors": [
+        "White",
+        "Green"
+      ],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "12",
+      "toughness": "12",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "756042c5-e444-45d7-8dc6-ae7c83c98438",
+      "oracleText": "Trample\nWhenever you attack, choose one —\n• Create a tapped and attacking X/X green Dinosaur creature token with trample, where X is the greatest power among other attacking creatures.\n• Create X 1/1 white Vampire creature tokens with lifelink, where X is the number of other attacking creatures."
+    },
+    {
+      "name": "Gravity Well",
+      "manaCost": "{1}{G}{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "33f757ad-c636-4f17-ba9e-40856f83efd0",
+      "oracleText": "Whenever a creature with flying attacks, it loses flying until end of turn."
+    },
+    {
+      "name": "Graypelt Refuge",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "60b36821-0fad-423c-98c4-f64d991719f3",
+      "oracleText": "This land enters tapped.\nWhen this land enters, you gain 1 life.\n{T}: Add {G} or {W}."
+    },
+    {
+      "name": "Griffin Aerie",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "7cab62dc-a256-4da8-a3ea-b3903ec37077",
+      "oracleText": "At the beginning of your end step, if you gained 3 or more life this turn, create a 2/2 white Griffin creature token with flying."
+    },
+    {
+      "name": "Gylwain, Casting Director",
+      "manaCost": "{1}{G}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Human",
+        "Bard"
+      ],
+      "colors": [
+        "White",
+        "Green"
+      ],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "e7dfe47f-41fc-4071-9ad3-96cd8d9be52e",
+      "oracleText": "Whenever Gylwain or another nontoken creature you control enters, choose one —\n• Create a Royal Role token attached to that creature.\n• Create a Sorcerer Role token attached to that creature.\n• Create a Monster Role token attached to that creature."
+    },
+    {
+      "name": "Halvar, God of Battle // Sword of the Realms",
+      "manaCost": "",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "God"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "modal_dfc",
+      "faces": [
+        {
+          "colors": [
+            "White"
+          ],
+          "flavor": "",
+          "manaCost": "{2}{W}{W}",
+          "name": "Halvar, God of Battle",
+          "power": "4",
+          "subTypes": [
+            "God"
+          ],
+          "superTypes": [
+            "Legendary"
+          ],
+          "text": "Creatures you control that are enchanted or equipped have double strike.\nAt the beginning of each combat, you may attach target Aura or Equipment attached to a creature you control to target creature you control.",
+          "toughness": "4",
+          "types": [
+            "Creature"
+          ],
+          "loyalty": null
+        },
+        {
+          "colors": [
+            "White"
+          ],
+          "flavor": "It cuts through the Cosmos itself, carving new Omenpaths between the realms.",
+          "manaCost": "{1}{W}",
+          "name": "Sword of the Realms",
+          "power": "",
+          "subTypes": [
+            "Equipment"
+          ],
+          "superTypes": [
+            "Legendary"
+          ],
+          "text": "Equipped creature gets +2/+0 and has vigilance.\nWhenever equipped creature dies, return it to its owner's hand.\nEquip {1}{W}",
+          "toughness": "",
+          "types": [
+            "Artifact"
+          ],
+          "loyalty": null
+        }
+      ],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "acfc3e07-757f-4ccf-a65e-bee07ce87f40",
+      "oracleText": ""
+    },
+    {
+      "name": "Hardened Scales",
+      "manaCost": "{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "a1f3da21-af6d-450e-bf0b-985d158418e6",
+      "oracleText": "If one or more +1/+1 counters would be put on a creature you control, that many plus one +1/+1 counters are put on it instead."
+    },
+    {
+      "name": "Helm of the Gods",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "52804094-47b9-40b9-999d-7c050d220e63",
+      "oracleText": "Equipped creature gets +1/+1 for each enchantment you control.\nEquip {1} ({1}: Attach to target creature you control. Equip only as a sorcery.)"
+    },
+    {
+      "name": "Hopeful Eidolon",
+      "manaCost": "{W}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Spirit"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "13c1ca1e-cd17-49ef-bc31-97bff99ec1e3",
+      "oracleText": "Bestow {3}{W} (If you cast this card for its bestow cost, it's an Aura spell with enchant creature. It becomes a creature again if it's not attached.)\nLifelink (Damage dealt by this creature also causes you to gain that much life.)\nEnchanted creature gets +1/+1 and has lifelink."
+    },
+    {
+      "name": "Hydra's Growth",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "559903cd-5cba-47a5-8b5b-7067e393e76a",
+      "oracleText": "Enchant creature\nWhen this Aura enters, put a +1/+1 counter on enchanted creature.\nAt the beginning of your upkeep, double the number of +1/+1 counters on enchanted creature."
+    },
+    {
+      "name": "Hyena Umbra",
+      "manaCost": "{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "354affb3-1be7-4a9e-91da-2989eb54f62d",
+      "oracleText": "Enchant creature\nEnchanted creature gets +1/+1 and has first strike.\nUmbra armor (If enchanted creature would be destroyed, instead remove all damage from it and destroy this Aura.)"
+    },
+    {
+      "name": "Journey to Nowhere",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "2bfec482-be0d-4768-84e7-1c2c74ea1373",
+      "oracleText": "When this enchantment enters, exile target creature.\nWhen this enchantment leaves the battlefield, return the exiled card to the battlefield under its owner's control."
+    },
+    {
+      "name": "Jukai Naturalist",
+      "manaCost": "{G}{W}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Monk"
+      ],
+      "colors": [
+        "White",
+        "Green"
+      ],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "c4d1a78f-0cca-4042-862c-8f322ee25d50",
+      "oracleText": "Lifelink\nEnchantment spells you cast cost {1} less to cast."
+    },
+    {
+      "name": "Keen Sense",
+      "manaCost": "{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "8d47b78b-11cc-4351-91d6-c891eb63dd98",
+      "oracleText": "Enchant creature\nWhenever enchanted creature deals damage to an opponent, you may draw a card."
+    },
+    {
+      "name": "Knighthood",
+      "manaCost": "{2}{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "22f008b3-c263-4dcc-855f-403da9ca4cd9",
+      "oracleText": "Creatures you control have first strike."
+    },
+    {
+      "name": "Lathiel, the Bounteous Dawn",
+      "manaCost": "{2}{G}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Unicorn"
+      ],
+      "colors": [
+        "White",
+        "Green"
+      ],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "d3c56fc4-3611-41b1-952e-4c5311b1510b",
+      "oracleText": "Lifelink\nAt the beginning of each end step, if you gained life this turn, distribute up to that many +1/+1 counters among any number of other target creatures."
+    },
+    {
+      "name": "Leafcrown Dryad",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Dryad",
+        "Nymph"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "01914751-af8e-4aea-a254-6fa4f9fd3457",
+      "oracleText": "Bestow {3}{G} (If you cast this card for its bestow cost, it's an Aura spell with enchant creature. It becomes a creature again if it's not attached.)\nReach\nEnchanted creature gets +2/+2 and has reach."
+    },
+    {
+      "name": "Lifelink",
+      "manaCost": "{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "4fe8316a-9cff-43e9-a1d5-993a0c9daf3a",
+      "oracleText": "Enchant creature\nEnchanted creature has lifelink. (Damage dealt by the creature also causes its controller to gain that much life.)"
+    },
+    {
+      "name": "Luxior, Giada's Gift",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "2f9263d7-916f-4535-95d2-888ab73cf339",
+      "oracleText": "Equipped creature gets +1/+1 for each counter on it.\nEquipped permanent isn't a planeswalker and is a creature in addition to its other types. (Loyalty abilities can still be activated.)\nEquip planeswalker {1}\nEquip {3}"
+    },
+    {
+      "name": "Michiko's Reign of Truth // Portrait of Michiko",
+      "manaCost": "",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Saga"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "transform",
+      "faces": [
+        {
+          "colors": [
+            "White"
+          ],
+          "flavor": "",
+          "manaCost": "{1}{W}",
+          "name": "Michiko's Reign of Truth",
+          "power": "",
+          "subTypes": [
+            "Saga"
+          ],
+          "superTypes": [],
+          "text": "(As this Saga enters and after your draw step, add a lore counter.)\nI, II — Target creature gets +1/+1 until end of turn for each artifact and/or enchantment you control.\nIII — Exile this Saga, then return it to the battlefield transformed under your control.",
+          "toughness": "",
+          "types": [
+            "Enchantment"
+          ],
+          "loyalty": null
+        },
+        {
+          "colors": [
+            "White"
+          ],
+          "flavor": "Long ago, as the first mortal to bond with Kyodai, Michiko Konda brought an end to the Kami War and guided Kamigawa into an age of truth and harmony.",
+          "manaCost": "",
+          "name": "Portrait of Michiko",
+          "power": "0",
+          "subTypes": [
+            "Human",
+            "Noble"
+          ],
+          "superTypes": [],
+          "text": "This creature gets +1/+1 for each artifact and/or enchantment you control.",
+          "toughness": "0",
+          "types": [
+            "Creature",
+            "Enchantment"
+          ],
+          "loyalty": null
+        }
+      ],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "94794f7c-62e7-43c8-ba7f-ac5c0bc9a712",
+      "oracleText": ""
+    },
+    {
+      "name": "Mirkwood Spider",
+      "manaCost": "{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Spider"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "07fb2903-b239-43d0-864b-c4437b7a5230",
+      "oracleText": "Deathtouch\nWhenever this creature attacks, target legendary creature you control gains deathtouch until end of turn."
+    },
+    {
+      "name": "Mirri, Weatherlight Duelist",
+      "manaCost": "{1}{G}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Warrior",
+        "Cat"
+      ],
+      "colors": [
+        "White",
+        "Green"
+      ],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "3",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "60bc9cd2-2e03-4889-b1ef-fdab9a9a6d08",
+      "oracleText": "First strike\nWhenever Mirri attacks, each opponent can't block with more than one creature this combat.\nAs long as Mirri is tapped, no more than one creature can attack you each combat."
+    },
+    {
+      "name": "Naturalize",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "bdb3ca68-ec1f-4e16-81cc-d23f8f52c728",
+      "oracleText": "Destroy target artifact or enchantment."
+    },
+    {
+      "name": "Nature's Chant",
+      "manaCost": "{1}{G/W}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White",
+        "Green"
+      ],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "46e4ace2-e8bf-4b72-81de-286215886a10",
+      "oracleText": "Destroy target artifact or enchantment."
+    },
+    {
+      "name": "Nettlecyst",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "04c7f4fe-2098-4311-866d-6733c08d5178",
+      "oracleText": "Living weapon (When this Equipment enters, create a 0/0 black Phyrexian Germ creature token, then attach this to it.)\nEquipped creature gets +1/+1 for each artifact and/or enchantment you control.\nEquip {2}"
+    },
+    {
+      "name": "Nylea's Forerunner",
+      "manaCost": "{4}{G}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Beast"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "5",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "bf0948b7-f7af-4d99-a8aa-ea7e6a69232d",
+      "oracleText": "Trample\nOther creatures you control have trample."
+    },
+    {
+      "name": "Nyx Herald",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Shaman",
+        "Centaur"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "ed347609-15f9-4d57-9523-63a33a9dccbc",
+      "oracleText": "At the beginning of combat on your turn, target enchanted creature or enchantment creature you control gets +1/+1 and gains trample until end of turn."
+    },
+    {
+      "name": "Nyxborn Shieldmate",
+      "manaCost": "{W}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Soldier"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "1",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "a1012f33-7ebd-47c6-b670-1b0dc046fbce",
+      "oracleText": "Bestow {2}{W} (If you cast this card for its bestow cost, it's an Aura spell with enchant creature. It becomes a creature again if it's not attached.)\nEnchanted creature gets +1/+2."
+    },
+    {
+      "name": "Old-Growth Dryads",
+      "manaCost": "{G}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Dryad"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "3",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "aa125d1c-ab8f-48ff-a6eb-d8fc2154322c",
+      "oracleText": "When this creature enters, each opponent may search their library for a basic land card, put it onto the battlefield tapped, then shuffle."
+    },
+    {
+      "name": "On Thin Ice",
+      "manaCost": "{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [
+        "Snow"
+      ],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "6736bb96-6718-48bb-9385-789d3349dc20",
+      "oracleText": "Enchant snow land you control\nWhen this Aura enters, exile target creature an opponent controls until this Aura leaves the battlefield."
+    },
+    {
+      "name": "Overgrown Farmland",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "709d2f10-1585-48c3-9058-ddd5f62f0452",
+      "oracleText": "This land enters tapped unless you control two or more other lands.\n{T}: Add {G} or {W}."
+    },
+    {
+      "name": "Oxidize",
+      "manaCost": "{G}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "0ff78353-a26e-4b5a-948d-1c3b41d2dd1f",
+      "oracleText": "Destroy target artifact. It can't be regenerated."
+    },
+    {
+      "name": "Paladin Class",
+      "manaCost": "{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Class"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "class",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "ac9d52b2-78a5-4b17-8aaf-1c1cb936a508",
+      "oracleText": "(Gain the next level as a sorcery to add its ability.)\nSpells your opponents cast during your turn cost {1} more to cast.\n{2}{W}: Level 2\nCreatures you control get +1/+1.\n{4}{W}: Level 3\nWhenever you attack, until end of turn, target attacking creature gets +1/+1 for each other attacking creature and gains double strike."
+    },
+    {
+      "name": "Path to Exile",
+      "manaCost": "{W}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "d683d985-9888-4d21-8b5f-69e69ce4a03b",
+      "oracleText": "Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle."
+    },
+    {
+      "name": "Pearl Medallion",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "19015380-1332-4960-8cc6-0732009525a2",
+      "oracleText": "White spells you cast cost {1} less to cast."
+    },
+    {
+      "name": "Raking Canopy",
+      "manaCost": "{1}{G}{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "75f381a6-49f9-4caf-a96a-91c75640b9b0",
+      "oracleText": "Whenever a creature with flying attacks you, this enchantment deals 4 damage to it."
+    },
+    {
+      "name": "Reciprocate",
+      "manaCost": "{W}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "ebdd29c0-2c33-4410-a05c-80ced58c7b81",
+      "oracleText": "Exile target creature that dealt damage to you this turn."
+    },
+    {
+      "name": "Rhox Faithmender",
+      "manaCost": "{3}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Monk",
+        "Rhino"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "1",
+      "toughness": "5",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "2abe9303-d498-4aad-b6b2-8b5064bd2ffd",
+      "oracleText": "Lifelink (Damage dealt by this creature also causes you to gain that much life.)\nIf you would gain life, you gain twice that much life instead."
+    },
+    {
+      "name": "Sanctum Weaver",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Dryad"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "0",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "acfe7ec0-0606-4d5e-b1fa-25f0c7aeec47",
+      "oracleText": "{T}: Add X mana of any one color, where X is the number of enchantments you control."
+    },
+    {
+      "name": "Serra Ascendant",
+      "manaCost": "{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Monk"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "27ad3e00-6ffb-48f7-8469-8868d066d1e2",
+      "oracleText": "Lifelink (Damage dealt by this creature also causes you to gain that much life.)\nAs long as you have 30 or more life, this creature gets +5/+5 and has flying."
+    },
+    {
+      "name": "Sigarda, Host of Herons",
+      "manaCost": "{2}{G}{W}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Angel"
+      ],
+      "colors": [
+        "White",
+        "Green"
+      ],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "5",
+      "toughness": "5",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "e55104e2-4900-48de-b288-d3e6abd5e09e",
+      "oracleText": "Flying, hexproof\nSpells and abilities your opponents control can't cause you to sacrifice permanents."
+    },
+    {
+      "name": "Sixth Sense",
+      "manaCost": "{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "25d35e3e-ece8-4c94-9dbc-d076a52fca0d",
+      "oracleText": "Enchant creature\nEnchanted creature has \"Whenever this creature deals combat damage to a player, you may draw a card.\""
+    },
+    {
+      "name": "Snow-Covered Forest",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [
+        "Basic",
+        "Snow"
+      ],
+      "subTypes": [
+        "Forest"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 11,
+      "oracleId": "5f0d3be8-e63e-4ade-ae58-6b0c14f2ce6d",
+      "oracleText": "({T}: Add {G}.)"
+    },
+    {
+      "name": "Snow-Covered Plains",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [
+        "Basic",
+        "Snow"
+      ],
+      "subTypes": [
+        "Plains"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 10,
+      "oracleId": "ac8cc74d-e43b-4118-bba0-dfa8b9c04d45",
+      "oracleText": "({T}: Add {W}.)"
+    },
+    {
+      "name": "Sol Ring",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "6ad8011d-3471-4369-9d68-b264cc027487",
+      "oracleText": "{T}: Add {C}{C}."
+    },
+    {
+      "name": "Spidersilk Armor",
+      "manaCost": "{2}{G}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "ad73e5eb-197c-45a3-9d20-a406ba126c79",
+      "oracleText": "Creatures you control get +0/+1 and have reach. (They can block creatures with flying.)"
+    },
+    {
+      "name": "Spirit Link",
+      "manaCost": "{W}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "c77ff526-c0a8-45c7-9730-2e306a0d01b8",
+      "oracleText": "Enchant creature (Target a creature as you cast this. This card enters attached to that creature.)\nWhenever enchanted creature deals damage, you gain that much life."
+    },
+    {
+      "name": "Starfield Mystic",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Cleric"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "2975590d-6a5b-41e5-8a3b-e9325e71226a",
+      "oracleText": "Enchantment spells you cast cost {1} less to cast.\nWhenever an enchantment you control is put into a graveyard from the battlefield, put a +1/+1 counter on this creature."
+    },
+    {
+      "name": "Starnheim Courser",
+      "manaCost": "{2}{W}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Pegasus"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "01317d6c-8c11-40e1-8f7b-d36050973ada",
+      "oracleText": "Flying\nArtifact and enchantment spells you cast cost {1} less to cast."
+    },
+    {
+      "name": "Strength of the Harvest // Haven of the Harvest",
+      "manaCost": "",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "White",
+        "Green"
+      ],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "modal_dfc",
+      "faces": [
+        {
+          "colors": [
+            "White",
+            "Green"
+          ],
+          "flavor": "The Kelema Veil flows through Setessa, allowing Karametra's faithful followers direct access to her wisdom and power.",
+          "manaCost": "{2}{G/W}",
+          "name": "Strength of the Harvest",
+          "power": "",
+          "subTypes": [
+            "Aura"
+          ],
+          "superTypes": [],
+          "text": "Enchant creature\nEnchanted creature gets +1/+1 for each creature and/or enchantment you control.",
+          "toughness": "",
+          "types": [
+            "Enchantment"
+          ],
+          "loyalty": null
+        },
+        {
+          "colors": [],
+          "flavor": "\"For us, a temple is a part of nature, not something we impose upon it.\"\n—Sythis, Harvest's Hand",
+          "manaCost": "",
+          "name": "Haven of the Harvest",
+          "power": "",
+          "subTypes": [],
+          "superTypes": [],
+          "text": "This land enters tapped.\n{T}: Add {G} or {W}.",
+          "toughness": "",
+          "types": [
+            "Land"
+          ],
+          "loyalty": null
+        }
+      ],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "1a8c996d-ca93-4c17-ace5-66ecd6b99317",
+      "oracleText": ""
+    },
+    {
+      "name": "Swords to Plowshares",
+      "manaCost": "{W}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "b1544f21-7e98-461b-aed5-e748b0168c52",
+      "oracleText": "Exile target creature. Its controller gains life equal to its power."
+    },
+    {
+      "name": "Sythis, Harvest's Hand",
+      "manaCost": "{G}{W}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Nymph"
+      ],
+      "colors": [
+        "White",
+        "Green"
+      ],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "1",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "0fc64fd6-f057-4056-9dca-47accb7ff036",
+      "oracleText": "Whenever you cast an enchantment spell, you gain 1 life and draw a card."
+    },
+    {
+      "name": "Temple of Plenty",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [
+        "White",
+        "Green"
+      ],
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "e521322b-0e83-458c-8936-7021a80ee279",
+      "oracleText": "This land enters tapped.\nWhen this land enters, scry 1. (Look at the top card of your library. You may put that card on the bottom.)\n{T}: Add {G} or {W}."
+    },
+    {
+      "name": "Transcendent Envoy",
+      "manaCost": "{1}{W}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Griffin"
+      ],
+      "colors": [
+        "White"
+      ],
+      "colorIdentity": [
+        "White"
+      ],
+      "power": "1",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "f08f7814-4585-41dd-b82e-ed2ef5e24242",
+      "oracleText": "Flying\nAura spells you cast cost {1} less to cast."
+    },
+    {
+      "name": "Weaver of Harmony",
+      "manaCost": "{1}{G}",
+      "types": [
+        "Creature",
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Druid",
+        "Snake"
+      ],
+      "colors": [
+        "Green"
+      ],
+      "colorIdentity": [
+        "Green"
+      ],
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null,
+      "quantity": 1,
+      "oracleId": "494b31b2-27ef-4ca1-ac72-c2fcfc8a23a1",
+      "oracleText": "Other enchantment creatures you control get +1/+1.\n{G}, {T}: Copy target activated or triggered ability you control from an enchantment source. You may choose new targets for the copy. (Mana abilities can't be targeted.)"
+    }
+  ]
+}
