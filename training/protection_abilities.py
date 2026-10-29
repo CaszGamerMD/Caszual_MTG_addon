@@ -8,7 +8,12 @@ def parse(text,types):
     lines=[line.strip() for line in text.splitlines() if line.strip()]
     if len(lines)!=2:return None
     keywords=frozenset(word.strip().lower() for word in lines[0].split(','))
-    if not keywords or not keywords <= KEYWORDS-{'flash'}:return None
+    # Only intrinsic keywords with implemented continuous behavior may be
+    # composed here. Mentor and other triggered keywords require separate rules.
+    supported={'lifelink','flying','first strike','double strike','vigilance','trample',
+               'haste','defender','reach','deathtouch','indestructible','hexproof',
+               'menace','shroud','fear'}
+    if not keywords or not keywords <= supported & KEYWORDS:return None
     m=re.fullmatch(
         r'((?:\{(?:[0-9]+|[WUBRGC])\})+), Sacrifice this creature: '
         r'Target (creature|creature or enchantment) you control gains protection from '

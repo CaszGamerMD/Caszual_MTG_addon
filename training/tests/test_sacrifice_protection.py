@@ -19,6 +19,8 @@ class SacrificeProtectionChecks(unittest.TestCase):
         self.assertEqual(variant.event_definition.sacrifice_protection[0],'{2}{W}')
         raw['oracleText']+='\nDraw an unknown card.'
         self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad',{'White'}).kind,'unsupported')
+        raw['oracleText']=raw['oracleText'].replace('Lifelink','Mentor').split('\nDraw an unknown card.')[0]
+        self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'unsupported-keyword',{'White'}).kind,'unsupported')
 
     def test_sacrifice_cost_then_protection_resolves_and_expires(self):
         sim,cards=self.fixture(["Alseid of Life's Bounty"])
