@@ -108,6 +108,23 @@ class MatchTheaterChecks(unittest.TestCase):
         self.assertEqual(report["learningEligible"],False)
         self.assertNotRegex(text,r"<script[^>]+src=")
 
+    def test_both_sample_htmls_share_new_spectator_controls(self):
+        for sample in ("examples/match-theater-real-decks.html",
+                       "examples/budget-vs-goblins-spectator-20261029.html"):
+            text=(HERE/sample).read_text(encoding="utf-8")
+            for marker in ('id="swapSeats"', 'id="nextCombat"', "COMMAND ZONE",
+                           "renderSpotlight", "stackPrintedName"):
+                self.assertIn(marker,text)
+            start=text.index("let data=")+len("let data=")
+            end=text.index(";\\nlet position=",start)
+            report=json.loads(text[start:end])
+            self.assertGreater(len(report["compactEvents"]),100)
+        latest=(HERE/"examples/budget-vs-goblins-spectator-20261029.html").read_text(encoding="utf-8")
+        start=latest.index("let data=")+len("let data=")
+        report=json.loads(latest[start:latest.index(";\\nlet position=",start)])
+        self.assertTrue(report["spectatorReplay"])
+        self.assertEqual(len(report["compactEvents"]),458)
+
     def test_html_export_still_embeds_without_script_injection(self):
         report=dict(schemaVersion=1,kind="rules-review",
                     notice="Cards: </script><script>alert('x')</script>",
