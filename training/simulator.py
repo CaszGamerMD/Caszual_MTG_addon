@@ -1679,7 +1679,11 @@ class Simulator(AdvancedRules):
                 game=self.event_game('combat');source=game.battlefield.get(event['source'])
                 count=0
                 if source:
-                    count=sum(other.id!=source.id and other.attacking is not None and
+                    # The simulator's combat membership is authoritative; its
+                    # EventGame adapter does not persist the attacking field.
+                    attackers=set(self.group_combat['attackers']) if self.group_combat else (
+                        {self.pending} if self.pending else set())
+                    count=sum(other.id!=source.id and other.id in attackers and
                               game.creature(other) and event['subtype'] in other.definition.subtypes
                               for other in game.battlefield.values())
                     source.temporary_power+=event['power']*count
