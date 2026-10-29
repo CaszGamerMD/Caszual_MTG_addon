@@ -129,6 +129,7 @@ class Definition:
     attack_nontoken_tokens: tuple = ()  # Nontoken attacker creates a tapped attacking token.
     sacrifice_team_boost: tuple = ()  # Self-sacrifice cost for a team-wide temporary boost.
     sacrifice_protection: tuple = ()  # Mana + self-sacrifice to grant chosen-color protection.
+    attack_group_draw: tuple = ()  # (minimum declared attackers, cards drawn) on the stack.
 
 
 def parse_card(card: dict) -> Definition:
@@ -188,6 +189,10 @@ def parse_card(card: dict) -> Definition:
     if scaled_mana and types.intersection({'Creature','Artifact','Enchantment'}):
         return Definition(**base,abilities=frozenset(),scaled_mana_tap={
             'enchantments':'Enchantment','artifacts':'Artifact'}[scaled_mana[1]])
+    from attack_group_draw import parse as parse_attack_group_draw
+    group_draw=parse_attack_group_draw(text,types)
+    if group_draw:
+        return Definition(**base,abilities=frozenset(),attack_group_draw=group_draw)
     from protection_abilities import parse as parse_protection
     protection=parse_protection(text,types)
     if protection:
