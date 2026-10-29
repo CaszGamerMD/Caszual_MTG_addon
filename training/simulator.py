@@ -640,7 +640,8 @@ class Simulator(AdvancedRules):
                                            attached_to=attached_targets.get(card.id),chosen_subtype=chosen_types.get(card.id,'')))
         game.life_totals={seat:p.life for seat,p in enumerate(self.players)}
         game.enter_batch(entrants)
-        self.entry_history.extend(dict(turn=self.turn,controller=controller,subtypes=sorted(p.definition.subtypes)) for p in entrants)
+        self.entry_history.extend(dict(turn=self.turn,controller=controller,id=p.id,
+            subtypes=sorted(p.definition.subtypes)) for p in entrants)
         player.battlefield.extend(Permanent(card,attached_to=attached_targets.get(card.id),bestowed=card.id in bestowed_targets,
                                            chosen_subtype=chosen_types.get(card.id,'')) for card in cards)
         for token_id in game.battlefield.keys()-known-{card.id for card in cards}:
@@ -1035,6 +1036,13 @@ class Simulator(AdvancedRules):
             self.stack.push(ward['controller'],(ward,source.card),ward['name'])
         self.resolve_entry_triggers(triggers,source.card)
 
+    def land_counter_target(self,target,scope):
+        if scope=='all':return True
+        if not scope.startswith('entered:'):return False
+        color=scope.split(':',1)[1]
+        return color in target.definition.colors and any(
+            e['turn']==self.turn and e.get('id')==target.id for e in self.entry_history)
+
     def land_counter_choices(self,seat):
         choices=[];player=self.players[seat]
         for source in player.battlefield:
@@ -1045,7 +1053,8 @@ class Simulator(AdvancedRules):
             payment=mana_pool.plan(definition.land_counter_ability,player.mana_pool,options)
             if not payment['paid']:continue
             game=self.event_game('main')
-            count=sum(p.controller==seat and game.creature(p) for p in game.battlefield.values())
+            count=sum(p.controller==seat and game.creature(p) and
+                      self.land_counter_target(p,definition.land_counter_scope) for p in game.battlefield.values())
             choices.append(Candidate(source.card.id+':team-counters','activate_land_counters',source.card.id,
                 features=features(power=count,cost=len(payment['sources'])),
                 label='Activate '+source.card.name+' to strengthen your creatures'))
@@ -1065,7 +1074,8 @@ class Simulator(AdvancedRules):
             if permanent.card.id in payment['sources']:permanent.tapped=True
         player.mana_pool=list(payment['pool']);source.tapped=True
         event=dict(operation='land_team_counters',effect='put counters on controlled creatures',
-                   source=source_id,controller=seat,name=source.card.name)
+                   source=source_id,controller=seat,name=source.card.name,
+                   scope=definition.land_counter_scope)
         frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
         self.log('activate_land_counters','Land activation pays mana and taps the source.',
                  actor=seat,source=source_id,manaSources=payment['sources'],stackId=frame.id)
@@ -1819,7 +1829,8 @@ class Simulator(AdvancedRules):
             if event.get('operation')=='land_team_counters':
                 game=self.event_game('main');seat=event['controller'];affected=[]
                 for target in game.battlefield.values():
-                    if target.controller==seat and game.creature(target):
+                    if (target.controller==seat and game.creature(target)
+                            and self.land_counter_target(target,event.get('scope','all'))):
                         amount=game.counter_amount(target.id,1)
                         target.counters+=amount;affected.append((target.id,amount))
                 self.sync_events(game)
@@ -3140,9 +3151,10 @@ def diagnostic_land(definition: dict, identity: set[str]) -> dict | None:
     if composed:
         program=composed.pop('land_program')
         counter_ability=composed.pop('land_counter_ability','')
+        counter_scope=composed.pop('land_counter_scope','all')
         composed['event']=EventDefinition(definition['name'],frozenset({'Land'}),frozenset(definition.get('subTypes',[])),
             'Legendary' in definition.get('superTypes',[]),0,0,program.keywords,triggers=program.triggers,
-            land_counter_ability=counter_ability)
+            land_counter_ability=counter_ability,land_counter_scope=counter_scope)
         return composed
     text = definition.get("oracleText", "")
     names = {"White": 1, "Blue": 2, "Black": 4, "Red": 8, "Green": 16}
