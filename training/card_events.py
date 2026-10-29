@@ -748,6 +748,15 @@ class Game:
                           operation='counter_power_tokens' if defer else 'create_tokens',
                           counterAmount=power,lastPower=last_power,
                           effect='counter then create tokens equal to power',tokenSpec=spec)
+            elif operation=='greatest_power_boost':
+                if not defer:
+                    amount=max((self.stats(other)[0] for other in self.battlefield.values()
+                                if other.controller==a.controller and self.creature(other)),default=0)
+                    a.temporary_power+=power*amount
+                    a.temporary_toughness+=toughness*amount
+                self.emit('trigger',source=a.id,name=a.definition.name,controller=a.controller,
+                          operation='greatest_power_boost',effect='boost by greatest controlled power at resolution',
+                          power=power,toughness=toughness)
             elif operation=='subtype_count_boost':
                 count=sum(other.id!=a.id and other.controller==a.controller and keyword in other.definition.subtypes
                           for other in self.battlefield.values())

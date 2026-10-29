@@ -1522,6 +1522,17 @@ class Simulator(AdvancedRules):
                 self.resolve_entry_triggers(pending,card)
                 if self.finished:return
                 continue
+            if event.get('operation')=='greatest_power_boost':
+                game=self.event_game('combat');source=game.battlefield.get(event['source'])
+                if source:
+                    amount=max((game.stats(other)[0] for other in game.battlefield.values()
+                                if other.controller==source.controller and game.creature(other)),default=0)
+                    source.temporary_power+=event['power']*amount
+                    source.temporary_toughness+=event['toughness']*amount
+                    self.sync_events(game)
+                self.log('greatest_power_boost',f"{event['name']} resolves its greatest-power attack bonus.",
+                         source=event['source'],amount=amount if source else 0)
+                continue
             if event.get('operation')=='subtype_count_boost':
                 game=self.event_game('combat');source=game.battlefield.get(event['source'])
                 if source:

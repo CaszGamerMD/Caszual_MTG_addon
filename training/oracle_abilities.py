@@ -159,6 +159,25 @@ def static_effect(text):
         return tuple(StaticEffect(Selector(relation='controller',creature=True,subtype=kind),
                                   0,0,grant=word)
                      for kind in dict.fromkeys((first,second)) for word in sorted(traits))
+    # Multiple creature-type groups in one anthem share the same controller
+    # restriction; a creature with both types gets the keyword only once.
+    two_tribes=re.fullmatch(r'(Other )?([A-Z][a-z]+) and ([A-Z][a-z]+) you control have (.+)\.',text)
+    if two_tribes:
+        traits={word.strip() for word in re.split(r', | and ',two_tribes[4])}
+        if not traits or not traits<=KEYWORDS:return None
+        irregular={'Faeries':'Faerie','Elves':'Elf','Wolves':'Wolf','Mice':'Mouse',
+                   'Allies':'Ally','Zombies':'Zombie','Merfolk':'Merfolk','Oxen':'Ox',
+                   'Fish':'Fish','Orcs':'Orc','Goblins':'Goblin'}
+        def singular(word):
+            if word in irregular:return irregular[word]
+            if word.endswith('s') and not word.endswith(('ies','ves','ses','xes','ches','shes')):
+                return word[:-1]
+            return None
+        kinds=tuple(dict.fromkeys((singular(two_tribes[2]),singular(two_tribes[3]))))
+        if not all(kinds):return None
+        return tuple(StaticEffect(Selector(relation='controller',other=bool(two_tribes[1]),
+                                           creature=True,subtype=kind),0,0,grant=trait)
+                     for kind in kinds for trait in sorted(traits))
     subtype_keyword=re.fullmatch(r'(Other )?([A-Z][a-z]+)s you control have (.+)\.',text)
     # "Creatures you control" is the older general keyword-anthem grammar.
     # Never treat "Creatures" as an unknown creature subtype.
