@@ -1,3 +1,38 @@
+## New generic card groups: life-gain events, creature sweeps and compound removal
+
+- **Life gain as a separate triggered event.** Whole-text
+  `Whenever you gain life, each opponent loses N life.` recognizes and
+  compiles Marauding Blight-Priest and equivalent unseen names. Each
+  *positive event* creates one trigger per watcher, even when it gains many
+  life or life replacements double the amount. Losing life or gaining zero
+  does not trigger, and the watcher can leave once its trigger is queued.
+  Life gain from Nadier's Nightblade also produces independent abilities on
+  the usual stack. See `training/tests/test_life_gain_watchers.py`.
+- **Board-wide creature destruction.** Strict sorcery grammar handles
+  `Destroy all creatures.`, `Destroy all creatures. They can't be
+  regenerated.`, and `Destroy all creatures with toughness 4 or greater.`
+  These are represented as a simultaneous, nontargeted destruction event.
+  Current toughness is computed at resolution, including counters and
+  ongoing anthems; hexproof and protection do not stop nondamage
+  destruction, whereas indestructibility does. The current sandbox has no
+  activated regeneration rules; regeneration prohibition is not a full
+  implementation of external regeneration effects. Damnation and Citywide
+  Bust are covered in `training/tests/test_creature_sweeps.py`.
+- **Targeted destroy plus ordered token creation.** Generic Oracle wording
+  `Destroy target artifact or creature. Its controller creates ...` is
+  parsed with a complete token specification, without a card-name branch.
+  The creature or artifact must be a legal target at resolution; an
+  indestructible target survives but its controller still creates the token
+  because the instruction does not say *if it was destroyed*. The target
+  controller (not necessarily the caster or owner) creates tokens with the
+  standard replacement, enter-trigger and token-action machinery. Bovine
+  Intervention is the saved-deck example. See
+  `training/tests/test_destroy_and_create.py`.
+
+These additions are diagnostic two-player approximations, not proof of
+complete Commander legality. All changes remain solely in the private
+experimental GitHub branch; Minecraft integration has not started.
+
 ## Further generic parsing: optional search, upkeep and end-step rules
 
 The strict Oracle parser now recognizes three further reusable trigger patterns.
