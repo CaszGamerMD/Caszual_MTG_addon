@@ -247,7 +247,7 @@ function printedNameWithin(text){
   const word=name.toLocaleLowerCase();let offset=0;
   while(true){const at=lower.indexOf(word,offset);if(at<0)return false;
    const before=lower[at-1]||" ",after=lower[at+word.length]||" ";
-   if(!/[\\p{L}\\p{N}]/u.test(before)&&!/[\\p{L}\\p{N}]/u.test(after))return true;
+   if(!/[\p{L}\p{N}]/u.test(before)&&!/[\p{L}\p{N}]/u.test(after))return true;
    offset=at+1;
   }
  })||null;

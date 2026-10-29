@@ -116,12 +116,12 @@ class MatchTheaterChecks(unittest.TestCase):
                            "renderSpotlight", "stackPrintedName"):
                 self.assertIn(marker,text)
             start=text.index("let data=")+len("let data=")
-            end=text.index(";\\nlet position=",start)
+            end=text.index(";\nlet position=",start)
             report=json.loads(text[start:end])
             self.assertGreater(len(report["compactEvents"]),100)
         latest=(HERE/"examples/budget-vs-goblins-spectator-20261029.html").read_text(encoding="utf-8")
         start=latest.index("let data=")+len("let data=")
-        report=json.loads(latest[start:latest.index(";\\nlet position=",start)])
+        report=json.loads(latest[start:latest.index(";\nlet position=",start)])
         self.assertTrue(report["spectatorReplay"])
         self.assertEqual(len(report["compactEvents"]),458)
 
