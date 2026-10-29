@@ -1,3 +1,15 @@
+## Three-cycle Oracle learning: damage-history exile, recent-color counters and regeneration (October 29, 2026)
+
+This session worked solely in the standalone Python/Java diagnostic simulator and began with a fresh audit of all five saved 100-card decks (**153 unique unsupported names, 156 unsupported card copies**). Three independently implemented and focused-tested Oracle families follow:
+
+1. **Conditional exile after damage to the caster.** Strict whole-text `Exile target creature that dealt damage to you this turn.` compiles for unseen names. Actual positive combat and supported noncombat damage records source identity per damaged player; life loss and zero damage do not count. Targets are checked both on cast and resolution, and history resets each turn. Saved-deck example: **Reciprocate**. Tests: `test_reciprocate_damage.py` (5 passing locally).
+2. **Recent-creature color-filtered land counters.** Strict `{T}: Put a +1/+1 counter on each [color] creature that entered this turn.` composes with ordinary land entry/tap and mana production. Entry identities are tracked; current color, controller, creature status and entry turn are evaluated at ability resolution, including counter replacement effects. Saved example: **Oran-Rief, the Vastwood**. Tests: `test_recent_color_land_counters.py` (4 passing locally).
+3. **Tribal anthem plus paid regeneration.** Parameterized `Other [subtype] creatures you control get +N/+M.` combines with `{T}: Regenerate another target [subtype].`. The tap cost is paid before the ability goes on the priority stack. Legal targets are rechecked at resolution; a one-use shield replaces destruction, taps the creature, clears marked damage and removes it from combat. Zero toughness, sacrifice and exile are not destruction; `can't be regenerated` bypasses the shield. Shields expire at cleanup. Saved example: **Mad Auntie**. Tests: `test_regeneration_tribal.py` (7 passing locally).
+
+**Same-snapshot local coverage:** 153 → **150 unique unsupported names**, 156 → **153 unsupported copies**. Getting Wild With Enchantments 15 → 14, Garbo Gobbos 8 → 7, Squirrels 54 → 53; Budget and Faeries unchanged. All **16 new focused tests** passed locally, including unseen names and strict unknown-remainder rejection. The complete regression and GitHub Actions verification were requested; consult their actual status before describing them as passing. All results are *diagnostic parser/behavior coverage*, not certification of Commander legality or permission to train from incomplete games.
+
+**Next candidates:** Divine Visitation's creature-token replacement; Austere Command's modal sweeps; Calix's once-per-turn enchantment copy; and repeated changeling/creature-type selection patterns across Squirrels and Faeries. Select from a fresh audit, not this historical count. No Minecraft migration.
+
 ## Three-cycle Oracle-language learning session — group attacks, discard costs, umbra armor (October 29, 2026)
 
 The current standalone diagnostic session implemented **three separate generalized rules families**, with full Oracle-text rejection on unknown clauses and no card-name dispatch:
