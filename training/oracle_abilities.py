@@ -109,6 +109,8 @@ def effect(text):
     if m: return Effect('add_counters',1 if m[1]=='a' else int(m[1]),'controlled creatures')
     m=re.fullmatch(r'(each opponent|target player) loses ([1-9][0-9]*) life(?: and you gain ([1-9][0-9]*) life)?\.',text)
     if m: return Effect('lose_life',int(m[2]),m[1],int(m[3] or 0))
+    m=re.fullmatch(r'this (?:creature|enchantment|permanent) deals ([1-9][0-9]*) damage to each opponent and each creature and planeswalker they control\.',text)
+    if m:return Effect('damage_board',int(m[1]),'opposing board')
     m=re.fullmatch(r'this (?:creature|enchantment|permanent) deals ([1-9][0-9]*) damage to each opponent\.',text)
     if m: return Effect('damage',int(m[1]),'each opponent')
     m=re.fullmatch(r'scry ([1-9][0-9]*)\.',text)
@@ -149,7 +151,10 @@ def compile_abilities(text, name=''):
             continue
         m=re.fullmatch(r'(?:When|Whenever) (.+) (enters(?: the battlefield)?|dies), (.+)',line)
         if not m: return None
-        subject=selector(m[1]); action=effect(m[3])
+        subject=selector(m[1])
+        clause=m[3]
+        if subject and subject.self_only and clause.startswith('it deals '):clause='this creature deals '+clause[len('it deals '):]
+        action=effect(clause)
         if subject is None or action is None: return None
         event='dies' if m[2]=='dies' else 'enters'
         if action.operation=='create_tokens' and not subject.self_only:
@@ -167,7 +172,7 @@ def matches(subject, source, entered, is_creature):
 
 def event_data(trigger, source, subject):
     e=trigger.effect
-    label={'lose_life':f'{e.recipient} loses {e.amount} life',
+    label={'damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
            'damage':f'deal {e.amount} damage to each opponent','scry':'scry',
            'add_counters':f'put {e.amount} +1/+1 counters on each creature you control',
            'create_tokens':f'create {e.amount} creature tokens'}[e.operation]

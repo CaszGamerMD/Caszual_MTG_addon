@@ -13,7 +13,7 @@ Three resolved through reusable parsing: Honor of the Pure (capitalized color se
 | Empty the Warrens | Implemented in diagnostic simulator |
 | Ephemerate | Instant priority, exile/return object identity, rebound |
 | Flowering of the White Tree | Legendary selectors and ward payments |
-| Goblin Chainwhirler | Simultaneous creature damage, marked damage and state-based actions |
+| Goblin Chainwhirler | Implemented for diagnostic player/creature boards: simultaneous damage and death triggers |
 | Haazda Marshal | Multiple attackers and attack-group conditions |
 | Heliod, God of the Sun | Devotion, conditional creature type, activated token creation |
 | Honor of the Pure | Implemented in diagnostic simulator |
@@ -43,3 +43,5 @@ Power-token follow-up: the whole attack instruction composes self-counter additi
 Sweep follow-up: a whole-text opponent-nonland destruction grammar now covers Ruinous Ultimatum and unfamiliar names. The single-target destroy path shares batch death discovery. Lands (including land creatures) and indestructible permanents survive; the caster’s permanents are untouched. Blood Artist sees simultaneous deaths even if it dies; Nested Shambler uses its power before a dying anthem leaves. Fifteen original cards remain blocked. Full cascading state-based actions and regeneration remain outside the current model.
 
 Attachment follow-up: Basilisk Collar and Lifelink now compile using whole-text attachment grammars. Thirteen original cards remain blocked. Equipment with additional triggered/activated abilities, Bestow, and tapped attacking token creation are not silently enabled.
+
+Board-damage follow-up: Goblin Chainwhirler now compiles through a generic fixed-damage trigger grammar with First strike retained. Twelve original cards remain blocked. Planeswalker objects and loyalty are not yet supported by the simulator; this is not full coverage of that portion of the card text.

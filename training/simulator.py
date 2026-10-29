@@ -591,13 +591,13 @@ class Simulator:
                      and not (item.card.event_definition and 'Land' in item.card.event_definition.types)
                      and not (item.card.id in game.battlefield and game.has(game.battlefield[item.card.id],'indestructible')))
 
-    def destroy_batch(self,targets,card):
+    def destroy_batch(self,targets,card,reason="destroy"):
         game=self.event_game('main')
         creatures=[item.card.id for _,item in targets if item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id])]
         triggers=game.death_triggers(creatures)
         for owner,item in targets:
             if item in self.players[owner].battlefield:self.send_to_destination(self.players[owner],item)
-        self.log('destroy',f'{card.name} destroys {len(targets)} permanents simultaneously.',destroyed=[item.card.id for _,item in targets])
+        self.log(reason,f'{card.name}: {len(targets)} permanents leave simultaneously.',destroyed=[item.card.id for _,item in targets])
         self.outcome()
         if self.finished:return
         for trigger in triggers:
@@ -804,6 +804,23 @@ class Simulator:
                         affected.append(identifier)
                 self.sync_events(game)
                 message = f"{event['name']} puts {event['amount']} +1/+1 counters on each of {len(affected)} creatures."
+            elif event.get('operation')=='damage_board':
+                game=self.event_game('main');source=game.battlefield.get(event['source'])
+                lifelink=game.has(source,'lifelink') if source else event.get('lastLifelink',False)
+                touch=game.has(source,'deathtouch') if source else event.get('lastDeathtouch',False)
+                targets=[(owner,item) for owner,item in self.creature_targets() if owner!=event['controller']]
+                opponent=1-event['controller'];amount=event['amount']
+                self.players[opponent].life-=amount
+                for _,item in targets:item.marked_damage+=amount
+                if lifelink:self.players[event['controller']].life+=amount*(len(targets)+1)
+                dead=[(owner,item) for owner,item in targets if not game.has(game.battlefield[item.card.id],'indestructible')
+                      and (touch or item.marked_damage>=self.effective_card(item).toughness)]
+                self.log('damage_board',f"{event['name']} deals {amount} damage to the opposing player and their creatures.",
+                         actor=event['controller'],damaged=[item.card.id for _,item in targets],amount=amount)
+                self.destroy_batch(dead,card,reason='damage_deaths')
+                self.outcome()
+                if self.finished:return
+                continue
             elif event.get("operation") == "damage":
                 target = 1-event["controller"]
                 self.players[target].life -= event["amount"]
@@ -896,7 +913,11 @@ class Simulator:
     def send_to_destination(self, player: Player, item: Permanent):
         for frame in self.stack.items:
             event,_=frame.payload
-            if event.get('operation')=='counter_power_tokens' and event.get('source')==item.card.id:
+            if event.get('operation')=='damage_board' and event.get('source')==item.card.id:
+                game=self.event_game('main');state=game.battlefield.get(item.card.id)
+                if state:
+                    event['lastLifelink']=game.has(state,'lifelink');event['lastDeathtouch']=game.has(state,'deathtouch')
+            if event.get('operation')=='counter_power_tokens'  and event.get('source')==item.card.id:
                 effective=self.effective_card(item)
                 if effective: event['lastPower']=effective.power
         for owner in self.players:
@@ -1237,10 +1258,10 @@ class Simulator:
             effective_blocker = self.effective_card(b) if b else None
             if effective_attacker is None: raise RuntimeError("Attacker is no longer a creature")
             early={item.card.id for item,card in ((a,effective_attacker),(b,effective_blocker)) if item and card and any(k in card.traits.split(';')[-1].split(',') for k in ('first strike','double strike'))}
-            if early:
+            if early or a.marked_damage or (b and b.marked_damage):
                 self.combat_context=dict(attacker=a.card.id,blocker=b.card.id if b else None,blocked=b is not None,early=early)
                 self.log('block',choice.label,actor=1-self.active,blocker=b.card.id if b else None)
-                self.phase='first_damage'
+                self.phase='first_damage' if early else 'regular_damage'
                 return True
             d = self.damage(effective_attacker, effective_blocker)
             dead_ids = ([a.card.id] if d["attackerDies"] else []) + ([b.card.id] if b and d["blockerDies"] else [])
