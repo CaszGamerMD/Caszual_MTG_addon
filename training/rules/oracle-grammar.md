@@ -164,3 +164,18 @@ manual blocker action, including for menace and flying combinations. These are
 not full land type-changing effects or general 2026 Commander rules support.
 
 Coverage tests: `training/tests/test_landwalk_lords.py`.
+
+
+## Multiple-tribe keyword grants (2026-10-29)
+
+The parser now composes “Tribe A you control and Tribe B you control
+have [known keyword(s)]” as two independent continuous effects.
+Caterwauling Boggart's Goblin/Elemental menace grant works without
+matching its card name. Creatures of either or both types gain the
+keyword; opposing and unrelated creatures do not. Removing the source
+ends the grant. Blocking legality is checked again at declaration,
+so menace cannot force extra blockers after its source has left.
+
+The same mechanism accepts unfamiliar names, different creature types
+and combinations of known keywords. Unknown wording or extra clauses
+still reject the whole program. Tests: `training/tests/test_multi_tribe_grants.py`.
