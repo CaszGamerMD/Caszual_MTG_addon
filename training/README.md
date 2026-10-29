@@ -1,3 +1,23 @@
+## Generic spell-discount grammar
+
+The diagnostic engine recognizes whole-clause rules of the form `[type or
+color] spells you cast cost {N} less to cast.` Supported filters currently
+include colors, artifact, enchantment, creature, instant, sorcery,
+planeswalker, Aura and Equipment, as well as two-part disjunctions such as
+`Artifact and enchantment`. Reductions from separate battlefield permanents
+stack and apply **only to the generic mana component** of the spell's total
+cost, including commander tax, never to colored or hybrid mana symbols.
+The chosen X value is retained while payment accounts for the reduction.
+Activated abilities and ward payment are not spell costs.
+
+Examples imported by Oracle text: Emerald Medallion, Pearl Medallion,
+Jukai Naturalist, Starnheim Courser and Transcendent Envoy. Their names are
+not dispatched in the parser. Unparsed extra instructions reject the full
+card; `training/tests/test_spell_reductions.py` exercises the grammar,
+payment planning, color restrictions and tax behavior. The work remains
+**offline simulator code only** and does not migrate the AI to Minecraft.
+Some rare additional-cost interactions remain outside the diagnostic engine.
+
 ## Life addition and source-controlled replacement ordering
 
 Angel of Vitality now parses as a composition of three reusable pieces:
