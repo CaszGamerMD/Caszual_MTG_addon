@@ -421,6 +421,20 @@ class Game:
                     triggers.append(event_data(trigger,p,p))
         return triggers
 
+    def end_step_triggers(self, life_gained: int) -> list[dict]:
+        """Check gained-life conditions at the beginning of the end step only.
+
+        Net life change is not a substitute for amount gained; sources can
+        lose life and gain life in the same turn.
+        """
+        triggers=[]
+        for permanent in self.battlefield.values():
+            if permanent.controller!=self.turn_player:continue
+            for ability in permanent.definition.triggers:
+                if ability.event=='end_step' and life_gained>=ability.life_gained_at_least:
+                    triggers.append(event_data(ability,permanent,permanent))
+        return triggers
+
     def death_triggers(self, ids: list[str]) -> list[dict]:
         """Inspect the battlefield immediately before one simultaneous death event.
 
