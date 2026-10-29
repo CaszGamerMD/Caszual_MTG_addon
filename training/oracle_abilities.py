@@ -15,6 +15,8 @@ class TokenSpec:
     enchantment: bool = False
     attacking: bool = False
     contribution_bonus: int = 0
+    temporary_haste: bool = False
+    must_attack_this_combat: bool = False
 
 def parse_token_creation(text):
     """A whole standalone instruction, not a substring stripped of extra rules."""

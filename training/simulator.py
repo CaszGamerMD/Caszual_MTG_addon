@@ -1601,6 +1601,23 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='mentor_counter':
+                game=self.event_game('combat')
+                source=game.battlefield.get(event['source'])
+                target=game.battlefield.get(event['target'])
+                power=game.stats(source)[0] if source and game.creature(source) else event['sourcePower']
+                attacking=set(self.group_combat['attackers']) if self.group_combat else set()
+                legal=bool(target and target.id in attacking and target.controller==event['controller']
+                           and game.creature(target) and game.stats(target)[0]<power
+                           and not game.has(target,'shroud')
+                           and not game.protected(target,event.get('sourceColors',())))
+                if legal:
+                    target.counters+=game.counter_amount(target.id,1)
+                    self.sync_events(game)
+                self.log('mentor_counter' if legal else 'mentor_fizzle',
+                         'Mentor places a counter on a lesser-power attacker.' if legal else 'Mentor target is no longer legal.',
+                         source=event['source'],targetPermanent=event['target'],actor=event['controller'])
+                continue
             if event.get('operation')=='land_team_counters':
                 game=self.event_game('main');seat=event['controller'];affected=[]
                 for target in game.battlefield.values():
@@ -2053,7 +2070,13 @@ class Simulator(AdvancedRules):
                         traits=f"{definition.power};{definition.toughness};"+",".join(sorted(definition.abilities)),
                         power=definition.power,toughness=definition.toughness,event_definition=definition,is_token=True)
                     pending.extend(self.enter_creature(token,owner))
-                    next(p for p in owner.battlefield if p.card.id==token.id).tapped=spec["tapped"]
+                    created_permanent=next(p for p in owner.battlefield if p.card.id==token.id)
+                    created_permanent.tapped=spec["tapped"]
+                    if spec.get('temporary_haste') or spec.get('must_attack_this_combat'):
+                        grants=set(created_permanent.temporary_abilities)
+                        if spec.get('temporary_haste'):grants.add('haste')
+                        if spec.get('must_attack_this_combat'):grants.add('must_attack')
+                        created_permanent.temporary_abilities=frozenset(grants)
                     if spec.get('attacking') and event['controller']==self.active and self.group_combat is not None:
                         self.group_combat['attackers'].append(token.id)
                 self.log("upkeep" if event.get("event")=="upkeep" else "trigger",
@@ -2929,7 +2952,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):

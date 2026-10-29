@@ -125,6 +125,7 @@ class Definition:
     living_weapon: bool = False  # ETB create 0/0 Phyrexian Germ, then attach.
     sacrifice_ability: tuple = ()  # (effect, sacrificed subtype, effect parameter).
     land_counter_ability: str = ''  # Mana cost for tap-to-counter-each-controlled-creature.
+    mentor: bool = False  # Attack trigger: counter on a lesser-power attacker.
 
 
 def parse_card(card: dict) -> Definition:
@@ -184,6 +185,10 @@ def parse_card(card: dict) -> Definition:
     if scaled_mana and types.intersection({'Creature','Artifact','Enchantment'}):
         return Definition(**base,abilities=frozenset(),scaled_mana_tap={
             'enchantments':'Enchantment','artifacts':'Artifact'}[scaled_mana[1]])
+    from mentor_abilities import parse as parse_mentor
+    mentor_triggers=parse_mentor(text,types)
+    if mentor_triggers is not None:
+        return Definition(**base,abilities=frozenset(),mentor=True,triggers=mentor_triggers)
     from sacrifice_abilities import parse as parse_sacrifice_ability
     sacrifice=parse_sacrifice_ability(text,types)
     if sacrifice:
@@ -420,7 +425,7 @@ class Game:
 
     def must_attack(self, permanent):
         """Only an eligible creature can be required; the caller checks eligibility."""
-        return self.creature(permanent) and (permanent.definition.name=='Zurgo Helmsmasher' or any(
+        return self.creature(permanent) and (self.has(permanent,'must_attack') or permanent.definition.name=='Zurgo Helmsmasher' or any(
             effect.must_attack and matches(effect.subject,source,permanent,True)
             for source in self.battlefield.values() for effect in self.static_effects(source)))
 

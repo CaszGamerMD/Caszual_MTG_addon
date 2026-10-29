@@ -192,6 +192,21 @@ class AdvancedRules:
     if equipment.attached_to==identifier:
      for spec in equipment.definition.equipment_attacks:
       events.append(dict(operation='create_tokens',effect='equipped attack token creation',source=equipment.id,controller=equipment.controller,name=equipment.definition.name,tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords))))
+  # All attackers are declared simultaneously; mentor can target any lesser-power attacker.
+  for identifier in ids:
+   source=g.battlefield[identifier]
+   if not source.definition.mentor:continue
+   source_power=g.stats(source)[0]
+   targets=[g.battlefield[other] for other in ids if other!=identifier
+            and g.creature(g.battlefield[other]) and g.stats(g.battlefield[other])[0]<source_power
+            and not g.has(g.battlefield[other],'shroud')
+            and not g.protected(g.battlefield[other],source.definition.colors)]
+   if targets:
+    chosen=min(targets,key=lambda p:(-g.stats(p)[0],p.id))
+    events.append(dict(operation='mentor_counter',effect='mentor attacking lesser-power creature',
+                       source=identifier,controller=source.controller,name=source.definition.name,
+                       target=chosen.id,sourcePower=source_power,
+                       sourceColors=sorted(source.definition.colors)))
   self.sync_events(g)
   events=[e for e in g.events if e['kind']=='trigger' and e.get('operation')]+events
   self.pending=ids[0];self.phase='block'
