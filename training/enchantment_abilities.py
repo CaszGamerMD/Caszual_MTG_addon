@@ -13,6 +13,7 @@ class EnchantmentProgram:
     role_events: tuple = ()
     enchanted_draw: bool = False
     attachment_draw: bool = False
+    damage_events: tuple = ()
 
 
 def compile(text, name, types, subtypes):
@@ -21,7 +22,7 @@ def compile(text, name, types, subtypes):
         short=name.split(',')[0].split(' of ')[0]
         if short!=name:
             text=re.sub(r'\b'+re.escape(short)+r'(?= enters| attacks)', 'this creature',text)
-    rest=[];scale=();role_events=();enchanted_draw=False;attachment_draw=False
+    rest=[];scale=();role_events=();enchanted_draw=False;attachment_draw=False;damage_events=[]
     mode='equipment' if 'Artifact' in types and 'Equipment' in subtypes else 'aura' if 'Enchantment' in types and 'Aura' in subtypes else ''
     for line in text.splitlines():
         line=line.strip()
@@ -35,6 +36,12 @@ def compile(text, name, types, subtypes):
         if line=='Enchanted creature has "Whenever this creature deals combat damage to a player, you may draw a card."':
             if attachment_draw or mode!='aura':return None
             attachment_draw=True;continue
+        if line=='Whenever enchanted creature deals damage, you gain that much life.':
+            if mode!='aura' or 'gain_damage' in damage_events:return None
+            damage_events.append('gain_damage');continue
+        if line=='Whenever enchanted creature deals damage to an opponent, you may draw a card.':
+            if mode!='aura' or 'optional_draw_opponent' in damage_events:return None
+            damage_events.append('optional_draw_opponent');continue
         m=re.fullmatch(r'(Enchanted|Equipped) creature gets \+([1-9][0-9]*)/\+([1-9][0-9]*) for each (enchantment|artifact and/or enchantment) you control(?: and has (first strike))?\.',line)
         if m:
             if scale or mode!=('aura' if m[1]=='Enchanted' else 'equipment'):return None
@@ -42,7 +49,7 @@ def compile(text, name, types, subtypes):
             if m[5]:rest.append(m[1]+' creature has '+m[5]+'.')
             continue
         rest.append(line)
-    if not (scale or role_events or enchanted_draw or attachment_draw):return None
+    if not (scale or role_events or enchanted_draw or attachment_draw or damage_events):return None
     if mode:
         # A temporary +1/+1 instruction lets the existing strict attachment
         # parser validate every remaining line, even a zero-static-bonus Aura.
@@ -50,7 +57,7 @@ def compile(text, name, types, subtypes):
         attachment=parse_attachment('\n'.join(rest+[prefix+' creature gets +1/+1.']),types,subtypes)
         if not attachment:return None
         attachment=attachment[:3]+(attachment[3]-1,attachment[4]-1)
-        return EnchantmentProgram(Program((),frozenset()),attachment,scale,attachment_draw=attachment_draw)
+        return EnchantmentProgram(Program((),frozenset()),attachment,scale,attachment_draw=attachment_draw,damage_events=tuple(damage_events))
     base=compile_abilities('\n'.join(rest)) if rest else Program((),frozenset())
     if base is None:return None
     return EnchantmentProgram(base,role_events=role_events,enchanted_draw=enchanted_draw)
