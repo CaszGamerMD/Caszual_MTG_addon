@@ -273,38 +273,61 @@ const $=id=>document.getElementById(id);
 const make=(tag,content,cls)=>{const n=document.createElement(tag);if(content!==undefined&&content!==null)n.textContent=String(content);if(cls)n.className=cls;return n};
 
 const cardImages=new Map(),imageRetryAt=new Map();
-let artQueue=Promise.resolve(),lastArtRequest=0;
+let lastArtRequest=0,artWorkerRunning=false;
+const artRequests=[],artJobs=new Map();
 const scryfallDelay=600; // One unique-name API request at a time; safely below 10 requests/s.
 function trustedImage(url){try{const u=new URL(url);return u.protocol==="https:"&&(u.hostname==="cards.scryfall.io"||u.hostname.endsWith(".scryfall.io"))?u.href:null}catch(_){return null}}
 function imageFaces(card){
  const faces=card.image_uris?[card.image_uris]:(card.card_faces||[]).map(f=>f.image_uris).filter(Boolean);
  return faces.map(f=>({small:trustedImage(f.small||f.normal),normal:trustedImage(f.normal||f.large||f.small)})).filter(f=>f.small);
 }
-function lookupCardImages(name){
- const key=String(name||"").trim().toLocaleLowerCase();
- if(!key||!artEnabled)return Promise.resolve(null);
- if(cardImages.has(key)){
-  if(!imageRetryAt.has(key)||imageRetryAt.get(key)>Date.now())return cardImages.get(key);
-  cardImages.delete(key);imageRetryAt.delete(key);
- }
- const query=String(name).trim();
- const operation=artQueue.then(async()=>{
+async function pumpArtQueue(){
+ if(artWorkerRunning)return;
+ artWorkerRunning=true;
+ try{
+  while(artRequests.length){
+   const job=artRequests.shift();artJobs.delete(job.key);
    const pause=Math.max(0,scryfallDelay-(Date.now()-lastArtRequest));
    if(pause)await new Promise(done=>setTimeout(done,pause));
    lastArtRequest=Date.now();
+   let artwork=null;
    try{
-     const result=await fetch("https://api.scryfall.com/cards/named?exact="+encodeURIComponent(query),
-       {headers:{"Accept":"application/json"},mode:"cors"});
-     if(!result.ok)return null;
+    const result=await fetch("https://api.scryfall.com/cards/named?exact="+encodeURIComponent(job.query),
+      {headers:{"Accept":"application/json"},mode:"cors"});
+    if(result.ok){
      const card=await result.json(),faces=imageFaces(card);
-     return faces.length?{faces,url:card.scryfall_uri||""}:null;
-   }catch(_){return null}
+     if(faces.length)artwork={faces,url:card.scryfall_uri||""}
+    }
+   }catch(_){}
+   job.resolve(artwork);
+  }
+ }finally{
+  artWorkerRunning=false;
+  if(artRequests.length)pumpArtQueue()
+ }
+}
+function lookupCardImages(name,priority=false){
+ const key=String(name||"").trim().toLocaleLowerCase();
+ if(!key||!artEnabled)return Promise.resolve(null);
+ if(cardImages.has(key)){
+  if(!imageRetryAt.has(key)||imageRetryAt.get(key)>Date.now()){
+   if(priority&&artJobs.has(key)){
+    const job=artJobs.get(key),index=artRequests.indexOf(job);
+    if(index>=0){artRequests.splice(index,1);artRequests.unshift(job)}
+   }
+   return cardImages.get(key)
+  }
+  cardImages.delete(key);imageRetryAt.delete(key)
+ }
+ const query=String(name).trim();
+ const operation=new Promise(done=>{
+  const job={key,query,resolve:done};artJobs.set(key,job);
+  if(priority)artRequests.unshift(job);else artRequests.push(job);
+  pumpArtQueue()
  });
- artQueue=operation.then(()=>null,()=>null);
- const safe=operation.catch(()=>null);
- cardImages.set(key,safe);
- safe.then(value=>{if(!value)imageRetryAt.set(key,Date.now()+45000)});
- return safe;
+ cardImages.set(key,operation);
+ operation.then(value=>{if(!value)imageRetryAt.set(key,Date.now()+45000)});
+ return operation
 }
 function appendCardFace(element,name){
  if(!artEnabled||!name||element.querySelector(".cardFace")||element._artPending===name)return;
@@ -395,7 +418,7 @@ function showCardZoom(target){
  $("zoomTitle").textContent=card.name;$("zoomStatus").textContent="Loading artwork…";
  $("zoomImage").hidden=true;$("hoverZoom").hidden=false;$("hoverZoom").setAttribute("aria-hidden","false");
  positionCardZoom();
- lookupCardImages(card.name).then(art=>{
+ lookupCardImages(card.name,true).then(art=>{
   if(ticket!==zoomRequest||!zoomHeld||zoomName!==card.name)return;
   if(!art?.faces?.length){$("zoomStatus").textContent="Artwork unavailable · Click for details";return}
   zoomFaces=art.faces;showZoomFace()

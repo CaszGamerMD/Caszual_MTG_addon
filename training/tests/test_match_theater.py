@@ -154,7 +154,9 @@ class MatchTheaterChecks(unittest.TestCase):
                      'if(track.children[i]!==node)track.insertBefore(', 'img.onload=',
                      'element._artPending===name', 'let lastStackSignature=null',
                      'let lastSpotlightName=null', 'id="hoverZoom"', 'function showCardZoom(target)',
-                     'e.code==="KeyZ"', 'e.code==="KeyF"', 'function hideCardZoom()'):
+                     'e.code==="KeyZ"', 'e.code==="KeyF"', 'function hideCardZoom()',
+                     'function pumpArtQueue()', 'function lookupCardImages(name,priority=false)',
+                     'lookupCardImages(card.name,true)', 'artRequests.unshift(job)'):
             self.assertIn(code,template)
         self.assertIn('if($("opponent").firstElementChild!==top)',template)
         self.assertIn('if($("you").firstElementChild!==bottom)',template)
