@@ -1,3 +1,17 @@
+## Three-cycle Oracle-language learning session — group attacks, discard costs, umbra armor (October 29, 2026)
+
+The current standalone diagnostic session implemented **three separate generalized rules families**, with full Oracle-text rejection on unknown clauses and no card-name dispatch:
+
+1. **Attack-group draw triggers**: a parameterized threshold of simultaneously declared attacking creatures queues a single draw trigger per watcher, independent of whether the source survives to resolution. New module `attack_group_draw.py`; three focused tests passed at commit `fa85f89`. Diagnostic unique unresolved names remained **155 → 155**.
+2. **Discard-as-cost token activation**: combines the previous trigger with a strictly parsed mana-and-discard activated ability. The controller selects a real card from their private hand, pays mana and discards before the token creation is placed on the priority stack. Existing token replacement and entry triggers apply when it resolves. Full saved-card example: **Chivalric Alliance**, with white-blue vigilant Knight tokens. New module `discard_abilities.py`; seven combined focused tests passed at commit `3dec20a5`. Unique unresolved names **155 → 154**; Garbo Gobbos **9 → 8**.
+3. **Umbra armor destruction replacement**: whole-text Aura parsing, preserving the enchanted creature on an attempted destruction, clearing damage and destroying the Aura instead. Works for explicit destruction, lethal state-based actions and combat; does **not** replace sacrifice, exile or zero toughness, and does not tap or remove the creature from combat. Full saved-card example: **Hyena Umbra**. New module `umbra_armor.py`; eleven combined focused tests passed at commit `561442f3`. Unique unresolved names **154 → 153**; Getting Wild With Enchantments **16 → 15**.
+
+**Verified focused CI**: 11 new tests passed on the final rules commit, including unfamiliar card names, parameter variants, unknown-clause rejection, costs, stack timing, token creation, explicit destruction, lethal damage and non-destruction deaths. See [focused run 40968552414](https://github.com/CaszGamerMD/Caszual_MTG_addon/actions/runs/40968552414) and [tracking issue #26](https://github.com/CaszGamerMD/Caszual_MTG_addon/issues/26).
+
+**Same-snapshot five-deck diagnostic coverage**: 155 → **153** unique unsupported names; 158 → **156** unsupported copies (500 total card copies). Garbo Gobbos 9 → 8; Getting Wild With Enchantments 16 → 15; other decks unchanged. The full Python regression and Java/Gradle build are requested by the final-session CI marker commit and must be reported only after those checks complete.
+
+**Next candidates**: Mad Auntie's tap-to-regenerate and tribal anthem; remaining Goblin/enchantment replacement programs such as Divine Visitation; and the refreshed `question_batches.py` ranked unresolved families. All diagnostic games remain ineligible for final Commander training; no Minecraft migration.
+
 ## Multi-cycle rules learning: mentor, attacking tokens and protection (October 29, 2026)
 
 Three additional **standalone diagnostic** Oracle-language families were implemented in this session. No card-name dispatch, ignored remainder, Minecraft integration, or final Commander-learning promotion was added.
