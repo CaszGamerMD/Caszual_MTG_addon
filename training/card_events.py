@@ -598,7 +598,12 @@ class Game:
             for trigger in watcher.definition.triggers:
                 for creature in dead:
                     if trigger.event == "dies" and matches(trigger.subject,watcher,creature,True):
-                        triggers.append(event_data(trigger,watcher,creature))
+                        event=event_data(trigger,watcher,creature)
+                        if trigger.effect.operation=='damage_any_target':
+                            # The source may leave before the trigger resolves. Preserve LKI.
+                            event.update(lastLifelink=self.has(watcher,'lifelink'),
+                                         lastDeathtouch=self.has(watcher,'deathtouch'))
+                        triggers.append(event)
         return triggers
 
     def leave(self, permanent_id: str):

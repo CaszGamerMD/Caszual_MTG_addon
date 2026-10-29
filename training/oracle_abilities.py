@@ -274,6 +274,8 @@ def selector(text):
                     subtype='' if noun=='creature' else noun.split()[0])
 
 def effect(text):
+    any_target=re.fullmatch(r'you may have (?:it|this creature) deal ([1-9][0-9]*) damage to any target\.',text)
+    if any_target:return Effect('damage_any_target',int(any_target[1]),optional=True)
     if text=='each opponent loses life equal to the number of tapped creatures you control.':
         return Effect('opponent_loss_tapped_creatures',0,'each opponent')
     may=re.fullmatch(r'you may (create .+)',text)
@@ -582,6 +584,7 @@ def event_data(trigger, source, subject):
             'reveal_creatures':f'reveal {e.amount} cards and put matching creatures onto the battlefield',
             'damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
             'damage':f'deal {e.amount} damage to each opponent','scry':'scry',
+            'damage_any_target':f'may deal {e.amount} damage to any target',
             'add_counters':f'put {e.amount} +1/+1 counters on each {e.counter_subtype or "creature"} you control',
             'create_tokens':f'create {e.amount} creature tokens',
             'opponent_optional_basic_search':'each opponent may find a tapped basic land and shuffle',

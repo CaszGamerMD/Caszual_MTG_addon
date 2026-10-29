@@ -721,6 +721,12 @@ class Simulator(AdvancedRules):
                     targets=self.graveyard_subtype_targets(controller,subtype[1])
                     if not targets:continue
                     event=dict(event,target=targets[0].id)
+                if event.get('operation')=='damage_any_target':
+                    options=self.damage_trigger_targets(event)
+                    if not options:continue
+                    kind,target=self.choose_damage_target(event,options)
+                    if (kind,target) not in options:raise ValueError('Illegal damage trigger target')
+                    event=dict(event,targetKind=kind,target=target)
                 if event.get('operation')=='combat_target_boost':
                     game=self.event_game('main')
                     candidates=[item for owner,item in self.creature_targets(controller,origin)
@@ -742,6 +748,9 @@ class Simulator(AdvancedRules):
                     event=dict(event,target=chosen.card.id)
                 item=self.stack.push(controller,(event,origin),event.get('name',origin.name))
                 self.log('stack_push',f'{item.label} ability goes on the stack.',stackId=item.id,controller=controller)
+                if event.get('operation')=='damage_any_target' and event.get('targetKind')=='permanent':
+                    for ward in self.target_triggers(item,event['target']):
+                        self.stack.push(ward['controller'],(ward,origin),ward['name'])
         self.stack.priority=self.active if priority is None else priority
         if not self.manual_priority:self.drain_priority()
 
@@ -881,6 +890,27 @@ class Simulator(AdvancedRules):
                      and not game.has(game.battlefield[item.card.id],'shroud')
                      and (controller is None or seat==controller or not game.has(game.battlefield[item.card.id],'hexproof'))
                      and (source is None or not game.protected(game.battlefield[item.card.id],source.colors)))
+
+    def damage_trigger_targets(self,event):
+        """Legal any-target choices: players, creatures and planeswalkers in this sandbox."""
+        game=self.event_game('main')
+        options=[('player',seat) for seat in range(len(self.players))]
+        for seat,player in enumerate(self.players):
+            for item in player.battlefield:
+                state=game.battlefield.get(item.card.id)
+                if not state or not (game.creature(state) or 'Planeswalker' in state.definition.types):continue
+                if game.has(state,'shroud') or seat!=event['controller'] and game.has(state,'hexproof'):continue
+                if game.protected(state,event.get('sourceColors',())):continue
+                options.append(('permanent',item.card.id))
+        return tuple(options)
+
+    def choose_damage_target(self,event,options):
+        """Deterministic diagnostic policy, overridable by a future agent."""
+        opponent=('player',1-event['controller'])
+        return opponent if opponent in options else options[0]
+
+    def choose_optional_damage(self,event):
+        return True
 
     def graveyard_subtype_targets(self,seat,subtype):
         """Target the owner's public graveyard; never peek at other hidden zones."""
@@ -1336,6 +1366,39 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='damage_any_target':
+                if event.get('optional') and not self.choose_optional_damage(event):
+                    self.log('damage_declined','Controller declines optional triggered damage.',
+                             actor=event['controller'],source=event['source'])
+                    continue
+                game=self.event_game('main');kind=event.get('targetKind');target=event.get('target')
+                amount=event['amount'];legal=False
+                if kind=='player' and isinstance(target,int) and 0<=target<len(self.players):
+                    self.players[target].life-=amount;legal=True
+                elif kind=='permanent':
+                    state=game.battlefield.get(target)
+                    item=next((p for player in self.players for p in player.battlefield if p.card.id==target),None)
+                    if (state and item and (game.creature(state) or 'Planeswalker' in state.definition.types)
+                            and not game.has(state,'shroud')
+                            and (state.controller==event['controller'] or not game.has(state,'hexproof'))
+                            and not game.protected(state,event.get('sourceColors',()))):
+                        legal=True
+                        if game.creature(state):
+                            item.marked_damage+=amount
+                            if event.get('lastDeathtouch') and amount>0:
+                                item.marked_damage=max(item.marked_damage,game.stats(state)[1])
+                        elif item.loyalty is not None:item.loyalty=max(0,item.loyalty-amount)
+                        else:raise RuntimeError('Planeswalker target has no loyalty')
+                if legal and event.get('lastLifelink') and amount>0:self.gain_life(event['controller'],amount)
+                self.log('damage_any_target' if legal else 'damage_any_target_fizzle',
+                         'Optional damage trigger '+('resolves.' if legal else 'has no legal target.'),
+                         actor=event['controller'],source=event['source'],target=target,targetKind=kind,
+                         amount=amount if legal else 0)
+                if legal:
+                    self.resolve_entry_triggers(self.state_based_actions(),card)
+                    self.outcome()
+                    if self.finished:return
+                continue
             if event.get('operation')=='combat_target_boost':
                 game=self.event_game('combat');target=game.battlefield.get(event.get('target'))
                 legal=bool(target and target.controller==event['controller'] and game.creature(target)
