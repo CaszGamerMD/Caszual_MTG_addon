@@ -1279,7 +1279,12 @@ class Simulator(AdvancedRules):
                 touch=(item is attacker and to_attacker>0 and has(b,'deathtouch')) or (item is blocker and to_blocker>0 and has(a,'deathtouch'))
                 if effective.toughness<=0 or ((item.marked_damage>=effective.toughness or touch) and not game.has(game.battlefield[item.card.id],'indestructible')):
                     dead.append(item)
+        dealt=[]
+        if attacker and to_player:dealt.append(dict(source=attacker.card.id,target=None,amount=to_player))
+        if attacker and blocker and to_blocker:dealt.append(dict(source=attacker.card.id,target=blocker.card.id,amount=to_blocker))
+        if blocker and attacker and to_attacker:dealt.append(dict(source=blocker.card.id,target=attacker.card.id,amount=to_attacker))
         triggers=game.death_triggers([item.card.id for item in dead])
+        triggers.extend(game.aura_damage_triggers(dealt,1-self.active))
         if to_player and attacker:
             triggers.extend(game.combat_draw_triggers(attacker.card.id))
             from oracle_abilities import matches
@@ -1714,7 +1719,18 @@ class Simulator(AdvancedRules):
                     for trigger in watcher.definition.triggers:
                         if trigger.event=='combat_damage' and matches(trigger.subject,watcher,game.battlefield[a.card.id],True):
                             damage_triggers.append({'controller':watcher.controller,'name':watcher.definition.name,'source':watcher.id,'target':1-self.active})
-            death_triggers = self.event_game("combat").death_triggers(dead_ids)
+            game=self.event_game('combat')
+            death_triggers = game.death_triggers(dead_ids)
+            dealt=[]
+            if b:
+                attack_damage=max(0,effective_attacker.power)
+                if 'trample' in effective_attacker.traits.split(';')[-1].split(','):
+                    attack_damage=min(attack_damage,1 if 'deathtouch' in effective_attacker.traits.split(';')[-1].split(',') else max(0,effective_blocker.toughness))
+                if attack_damage:dealt.append(dict(source=a.card.id,target=b.card.id,amount=attack_damage))
+                defense_damage=max(0,effective_blocker.power)
+                if defense_damage:dealt.append(dict(source=b.card.id,target=a.card.id,amount=defense_damage))
+            if d['damage']>0:dealt.append(dict(source=a.card.id,target=None,amount=d['damage']))
+            death_triggers.extend(game.aura_damage_triggers(dealt,1-self.active))
             self.log("block", choice.label, actor=1-self.active,
                      blocker=b.card.id if b else None)
             if b:
