@@ -703,3 +703,9 @@ development rather than passing through an otherwise empty turn.
 This is not a mandatory cast rule and does not override mana, legality
 or strongly negative action utilities. These are experimental simulator
 policies, not changes to official Commander mulligan rules.
+
+**Opening hand fallback:** after six free redrawn hands, an opening with
+2–5 lands and at least one mana-payable early development spell may be kept.
+The ideal remains 3–4 lands and two distinct spells on a three-turn
+schedule; this relaxed rule prevents unrealistic 16-mulligan loops in
+partially supported decks.
