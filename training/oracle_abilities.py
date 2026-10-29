@@ -39,6 +39,7 @@ class Selector:
     subtype: str = ''
     color: str = ''
     legendary: bool | None = None
+    spell_type: str = ''
 
 @dataclass(frozen=True)
 class StaticEffect:
@@ -59,6 +60,7 @@ class Effect:
     token: TokenSpec | None = None
     controller_loss: int = 0
     library_filter: tuple = ()
+    steps: tuple = ()
 
 @dataclass(frozen=True)
 class Trigger:
@@ -135,6 +137,8 @@ def selector(text):
 def effect(text):
     gain=re.fullmatch(r'you gain ([1-9][0-9]*) life\.',text)
     if gain:return Effect('gain_life',int(gain[1]))
+    drawn=re.fullmatch(r'(?:you )?draw (a|one|two|three|[1-9][0-9]*) cards?\.',text)
+    if drawn:return Effect('draw_cards',{'a':1,'one':1,'two':2,'three':3}.get(drawn[1],int(drawn[1]) if drawn[1].isdigit() else 0))
     from library_effects import parse
     library_filter=parse(text)
     if library_filter:return Effect('reveal_creatures',library_filter[0],library_filter=library_filter)
@@ -150,6 +154,14 @@ def effect(text):
     if m: return Effect('damage',int(m[1]),'each opponent')
     m=re.fullmatch(r'scry ([1-9][0-9]*)\.',text)
     if m: return Effect('scry',int(m[1]))
+    # Consume the entire ordered instruction; a partially understood clause
+    # must never be treated as a successful parse.
+    if text.endswith('.'):
+        clauses=re.split(r' and (?=(?:you )?(?:gain |draw ))',text[:-1])
+        if len(clauses)>1:
+            steps=tuple(effect(clause+'.') for clause in clauses)
+            if all(step is not None and step.operation in ('gain_life','draw_cards') for step in steps):
+                return Effect('ordered_effects',0,steps=steps)
     return None
 
 def compile_abilities(text, name=''):
@@ -187,6 +199,12 @@ def compile_abilities(text, name=''):
         if combat:
             triggers.append(Trigger('combat_damage',Selector(creature=True,subtype=combat[1]),Effect('discard',1,'damaged player')))
             continue
+        casting=re.fullmatch(r'Whenever you cast (?:a|an) (?:(enchantment|artifact|creature|instant|sorcery|planeswalker|noncreature) )?spell, (.+)',line)
+        if casting:
+            action=effect(casting[2])
+            if action is None:return None
+            triggers.append(Trigger('cast',Selector(relation='controller',spell_type=casting[1] or 'any'),action))
+            continue
         upkeep=re.fullmatch(r'At the beginning of your upkeep, (.+)',line)
         if upkeep:
             clause=upkeep[1]
@@ -220,12 +238,23 @@ def matches(subject, source, entered, is_creature):
         and (not subject.color or subject.color in entered.definition.colors)
         and (not subject.subtype or subject.subtype in entered.definition.subtypes))
 
+def cast_matches(trigger, source, spell, controller):
+    if trigger.event!='cast' or source.controller!=controller:return False
+    kind=trigger.subject.spell_type
+    types=set(spell.printed_types)
+    if kind=='any':return True
+    if kind=='noncreature':return 'Creature' not in types
+    return kind.title() in types
+
 def event_data(trigger, source, subject):
     e=trigger.effect
-    label={'gain_life':f'controller gains {e.amount} life','reveal_creatures':f'reveal {e.amount} cards and put matching creatures onto the battlefield','damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
-           'damage':f'deal {e.amount} damage to each opponent','scry':'scry',
-           'add_counters':f'put {e.amount} +1/+1 counters on each creature you control',
-           'create_tokens':f'create {e.amount} creature tokens'}[e.operation]
+    labels={'gain_life':f'controller gains {e.amount} life','draw_cards':f'controller draws {e.amount} cards',
+            'reveal_creatures':f'reveal {e.amount} cards and put matching creatures onto the battlefield',
+            'damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
+            'damage':f'deal {e.amount} damage to each opponent','scry':'scry',
+            'add_counters':f'put {e.amount} +1/+1 counters on each creature you control',
+            'create_tokens':f'create {e.amount} creature tokens'}
+    label='; then '.join(f'{part.operation} {part.amount}' for part in e.steps) if e.operation=='ordered_effects' else labels[e.operation]
     if e.controller_loss: label=f'controller loses {e.controller_loss} life; '+label
     if e.gain: label+=f'; controller gains {e.gain} life'
     return {'source':source.id,'name':source.definition.name,'controller':source.controller,
@@ -233,4 +262,5 @@ def event_data(trigger, source, subject):
             'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             **({'libraryFilter':e.library_filter} if e.library_filter else {}),
-            {'enters':'entered','dies':'dead','upkeep':'permanent'}[trigger.event]:subject.id}
+            **({'steps':[{'operation':step.operation,'amount':step.amount,'recipient':step.recipient,'gain':step.gain} for step in e.steps]} if e.steps else {}),
+            {'enters':'entered','dies':'dead','upkeep':'permanent','cast':'spell'}[trigger.event]:subject.id}
