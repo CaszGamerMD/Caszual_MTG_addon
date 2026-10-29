@@ -248,6 +248,7 @@ class Game:
     turn_player: int = 0
     phase: str = "main"
     mana: dict[int, int] = field(default_factory=lambda: {0:0, 1:0})
+    life_totals: dict[int, int] = field(default_factory=lambda: {0:40, 1:40})
     _next_token: int = 0
     clock: int = 0
 
@@ -307,6 +308,7 @@ class Game:
                 power_bonus+=power*count;toughness_bonus+=toughness*count
             for effect in self.static_effects(source):
                 if not matches(effect.subject,source,p,True): continue
+                if effect.life_min and self.life_totals.get(source.controller,0)<effect.life_min:continue
                 if effect.condition and not any(matches(effect.condition,source,x,self.creature(x)) for x in self.battlefield.values()): continue
                 multiplier = (sum(matches(effect.count,source,x,self.creature(x)) for x in self.battlefield.values())
                               if effect.count else 1)
@@ -329,6 +331,8 @@ class Game:
             if source.attached_to==p.id and source.definition.attachment and ability in source.definition.attachment[2]:
                 grants.append(stamp)
             if any(effect.grant==ability and matches(effect.subject,source,p,self.creature(p))
+                   and (not effect.life_min or self.life_totals.get(source.controller,0)>=effect.life_min)
+                   and (not effect.condition or any(matches(effect.condition,source,other,self.creature(other)) for other in self.battlefield.values()))
                    for effect in self.static_effects(source)):grants.append(stamp)
         if ability=='indestructible' and p.definition.name=='Zurgo Helmsmasher' and p.controller==self.turn_player:
             grants.append(p.entered_at)
