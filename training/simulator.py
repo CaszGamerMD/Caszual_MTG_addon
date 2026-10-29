@@ -847,6 +847,50 @@ class Simulator(AdvancedRules):
                         features=features(power=count*spec.power,cost=0),label='Activate '+source.card.name))
         return result
 
+    def sacrifice_choices(self,seat):
+        game=self.event_game('main');choices=[]
+        for source in self.players[seat].battlefield:
+            definition=source.card.event_definition
+            if not definition or not definition.sacrifice_ability:continue
+            operation,subtype,parameter=definition.sacrifice_ability
+            for victim in self.players[seat].battlefield:
+                state=game.battlefield.get(victim.card.id)
+                if state is None or not game.creature(state) or subtype not in state.definition.subtypes:continue
+                if operation=='mana':
+                    choices.append(Candidate(source.card.id+':sacrifice:'+victim.card.id,'activate_sacrifice_mana',
+                        source.card.id,features=features(power=.05,cost=1),label='Sacrifice '+victim.card.name+
+                        ' for '+source.card.name,tap_ids=(victim.card.id,)))
+        return choices
+
+    def _pay_sacrifice_creature(self,seat,victim):
+        # Cost is paid before the ability resolves, regardless of whether its
+        # source survives. Indestructible does not prevent sacrifice.
+        game=self.event_game('main');state=game.battlefield.get(victim.card.id)
+        if state is None or state.controller!=seat or not game.creature(state):
+            raise ValueError('Sacrifice cost requires a controlled creature')
+        events=game.death_triggers([victim.card.id])
+        if victim.card.is_token:events.extend(game.token_action_events('sacrifice',seat,1))
+        self.send_to_destination(self.players[seat],victim,snapshot=game)
+        self.log('sacrifice_cost','A creature is sacrificed as an activated ability cost.',
+                 actor=seat,permanent=victim.card.id)
+        return events
+
+    def activate_sacrifice_mana(self,seat,source_id,victim_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        definition=source.card.event_definition if source else None
+        ability=definition.sacrifice_ability if definition else ()
+        if not ability or ability[0]!='mana':raise ValueError('Illegal sacrifice mana ability')
+        victim=next((p for p in self.players[seat].battlefield if p.card.id==victim_id),None)
+        game=self.event_game('main');state=game.battlefield.get(victim_id)
+        if victim is None or state is None or not game.creature(state) or ability[1] not in state.definition.subtypes:
+            raise ValueError('Sacrifice cost requires a matching creature')
+        triggers=self._pay_sacrifice_creature(seat,victim)
+        color=mana_pool.COLORS.index(ability[2]);self.players[seat].mana_pool[color]+=1
+        self.log('sacrifice_mana','Sacrifice mana ability resolves without using the stack.',
+                 actor=seat,source=source_id,color=ability[2],victim=victim_id)
+        self.resolve_entry_triggers(triggers,source.card)
+
     def scaled_mana_choices(self,seat):
         choices=[]
         sources=dict(self.mana_sources(seat))
@@ -1242,6 +1286,7 @@ class Simulator(AdvancedRules):
         actions.extend(self.special_choices(seat))
         actions.extend(self.token_ability_choices(seat))
         actions.extend(self.scaled_mana_choices(seat))
+        actions.extend(self.sacrifice_choices(seat))
         actions.extend(self.strip_ability_choices(seat))
         for card in self.response_choices(seat):
             if card.blink:
@@ -1277,6 +1322,9 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_scaled_mana':
             self.activate_scaled_mana(seat,choice.card_id,choice.x_value)
+            return 'activate'
+        if choice.kind=='activate_sacrifice_mana':
+            self.activate_sacrifice_mana(seat,choice.card_id,choice.tap_ids[0])
             return 'activate'
         card=next(c for c in self.players[seat].hand if c.id==choice.card_id)
         self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack)
@@ -2344,6 +2392,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.equip_choices(seat))
             actions.extend(self.token_ability_choices(seat))
             actions.extend(self.scaled_mana_choices(seat))
+            actions.extend(self.sacrifice_choices(seat))
             actions.extend(self.strip_ability_choices(seat))
             if (self.diagnostic and p.command_zone and p.command_zone.kind == "creature"
                     and self.payment(p.command_zone, p.commander_casts)["paid"]):
@@ -2466,7 +2515,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
-                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens","activate_scaled_mana"):
+                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana"):
             self.turn_development[seat]=True
         return choice
 
@@ -2551,6 +2600,8 @@ class Simulator(AdvancedRules):
                 self.activate_tribal_tokens(self.active,choice.card_id)
             elif choice.kind=='activate_scaled_mana':
                 self.activate_scaled_mana(self.active,choice.card_id,choice.x_value)
+            elif choice.kind=='activate_sacrifice_mana':
+                self.activate_sacrifice_mana(self.active,choice.card_id,choice.tap_ids[0])
             elif choice.kind=='equip':
                 self.activate_equip(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind in ('crew','saddle'):
@@ -2775,7 +2826,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):

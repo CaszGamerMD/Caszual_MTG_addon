@@ -123,6 +123,7 @@ class Definition:
     tribal_tap_tokens: tuple = ()  # (token spec, counted subtype), evaluated on resolution.
     scaled_mana_tap: str = ''  # Tap for X mana of one chosen color, based on permanents.
     living_weapon: bool = False  # ETB create 0/0 Phyrexian Germ, then attach.
+    sacrifice_ability: tuple = ()  # (effect, sacrificed subtype, effect parameter).
 
 
 def parse_card(card: dict) -> Definition:
@@ -182,6 +183,10 @@ def parse_card(card: dict) -> Definition:
     if scaled_mana and types.intersection({'Creature','Artifact','Enchantment'}):
         return Definition(**base,abilities=frozenset(),scaled_mana_tap={
             'enchantments':'Enchantment','artifacts':'Artifact'}[scaled_mana[1]])
+    from sacrifice_abilities import parse as parse_sacrifice_ability
+    sacrifice=parse_sacrifice_ability(text,types)
+    if sacrifice:
+        return Definition(**base,abilities=frozenset(),sacrifice_ability=sacrifice)
     from tribal_tap_tokens import parse as parse_tribal_tap_tokens
     tribal_tap=parse_tribal_tap_tokens(text,types)
     if tribal_tap:
