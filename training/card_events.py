@@ -125,6 +125,7 @@ class Definition:
     living_weapon: bool = False  # ETB create 0/0 Phyrexian Germ, then attach.
     sacrifice_ability: tuple = ()  # (effect, sacrificed subtype, effect parameter).
     land_counter_ability: str = ''  # Mana cost for tap-to-counter-each-controlled-creature.
+    land_counter_scope: str = 'all'  # Or a color-limited, entered-this-turn subset.
     mentor: bool = False  # Attack trigger: counter on a lesser-power attacker.
     attack_nontoken_tokens: tuple = ()  # Nontoken attacker creates a tapped attacking token.
     sacrifice_team_boost: tuple = ()  # Self-sacrifice cost for a team-wide temporary boost.
