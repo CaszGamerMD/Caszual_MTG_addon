@@ -377,6 +377,7 @@ class Simulator(AdvancedRules):
         self._resolving_stack=False
         self._waiting_triggers=[]
         self.life_gained_turn=[0,0]
+        self._end_step_triggers_queued=False
         self.token_sequence = 0
         self.effect_clock = 0
         self.library_random_sequence = 0
@@ -1604,6 +1605,7 @@ class Simulator(AdvancedRules):
             self.stack.active=self.active;self.stack.priority=self.active
             self.land_played = False
             self.life_gained_turn=[0,0]
+            self._end_step_triggers_queued=False
             self.phase = "untap"
             p = self.players[self.active]
             for x in p.battlefield:
@@ -1777,14 +1779,20 @@ class Simulator(AdvancedRules):
                 self.resolve_entry_triggers(death_triggers,a.card)
             if not self.finished: self.phase = "second_main"
         elif self.phase == "end_step":
-            # The conditional trigger checks the full turn's life gain as the
-            # end step begins, including life gained before life was lost.
+            # Snapshot triggers exactly once, and preserve end-step priority
+            # windows before advancing to cleanup. Life gained after the
+            # beginning of this step cannot retroactively make a trigger fire.
+            if not self._end_step_triggers_queued:
+                self._end_step_triggers_queued=True
+                game=self.event_game('end_step')
+                for event in game.end_step_triggers(self.life_gained_turn[self.active]):
+                    source=next(item.card for item in self.players[self.active].battlefield if item.card.id==event['source'])
+                    self._waiting_triggers.append((event,source))
+                self.resolve_entry_triggers([],Card('end-step','End step','spell'))
+                return True
+            if self.stack.items:
+                raise ValueError('Cannot leave end step with unresolved stack items')
             self.phase='cleanup'
-            game=self.event_game('end_step')
-            for event in game.end_step_triggers(self.life_gained_turn[self.active]):
-                source=next(item.card for item in self.players[self.active].battlefield if item.card.id==event['source'])
-                self._waiting_triggers.append((event,source))
-            self.resolve_entry_triggers([],Card('end-step','End step','spell'))
             return True
         elif self.phase == "cleanup":
             # Deterministic discard is a declared sandbox rule, not a learned policy.
