@@ -129,7 +129,9 @@ class MatchTheaterChecks(unittest.TestCase):
         start=latest.index("let data=")+len("let data=")
         report=json.loads(latest[start:latest.index(";\nlet position=",start)])
         self.assertTrue(report["spectatorReplay"])
-        self.assertEqual(len(report["compactEvents"]),458)
+        self.assertGreater(len(report["compactEvents"]),100)
+        summary=json.loads((HERE/"examples/budget-vs-goblins-spectator-20261029-summary.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(report["compactEvents"]),summary["eventCount"])
 
     def test_html_export_still_embeds_without_script_injection(self):
         report=dict(schemaVersion=1,kind="rules-review",
