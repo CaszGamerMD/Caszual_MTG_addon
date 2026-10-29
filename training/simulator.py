@@ -1692,7 +1692,7 @@ class Simulator(AdvancedRules):
         frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'keywordChoice':keyword_choice or (card.target_modifier[2][0] if card.target_modifier and card.target_modifier[2] else None),'fromHand':not rebound and not flashback and not commander},card),card.name)
         self.log('cast',f'Player {seat+1} casts {card.name}.',actor=seat,card=card.name,
                  manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,bestow=bestow,rebound=rebound,flashback=flashback,targetStack=target if card.kind=='counter_spell' else None,
-                 targetPermanent=target if card.kind=='removal_spell' else None)
+                 targetPermanent=target if card.kind in ('removal_spell','modifier_spell') else None)
         self.stack.priority=seat
         self.log('stack_push',f'{card.name} goes on the stack.',stackId=frame.id,controller=seat)
         if card.storm:
@@ -1780,6 +1780,7 @@ class Simulator(AdvancedRules):
             if draw_subtype and any(draw_subtype in x.definition.subtypes and x.controller==controller
                                     for x in game.battlefield.values()):
                 self.draw(controller)
+                self.outcome()
             self.log('modifier_resolve','Targeted temporary modifier resolves.',
                      actor=controller,source=card.name,targetPermanent=target.card.id,
                      power=power,toughness=toughness,keyword=chosen,drawCondition=draw_subtype)
@@ -2910,7 +2911,8 @@ class Simulator(AdvancedRules):
                     continue
                 if c.kind=='modifier_spell' and self.payment(c)['paid']:
                     actions.extend(Candidate(c.id+':target='+target.card.id,'cast',c.id,
-                        features=features(power=1 if owner==seat else -1),
+                        features=features(power=1 if ((owner==seat)==
+                            (c.target_modifier[0]+c.target_modifier[1]>=0)) else -1),
                         label='Cast '+c.name+' targeting '+target.card.name,
                         target_permanent=target.card.id)
                         for owner,target in self.creature_targets(seat,c))
