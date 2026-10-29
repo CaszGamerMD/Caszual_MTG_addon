@@ -1,0 +1,30 @@
+name: Commander source snapshot for standalone rules development
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - 'training/**'
+      - '.github/workflows/commander-source-snapshot.yml'
+  workflow_dispatch:
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package standalone rules source and saved deck fixtures
+        run: |
+          tar -czf /tmp/commander-rules-source.tar.gz \
+            training/*.py training/tests training/decks training/java \
+            src/main/java/dev/casz/caszualmtg/CommanderOracle.java \
+            src/main/java/dev/casz/caszualmtg/CommanderMana.java \
+            src/main/java/dev/casz/caszualmtg/CommanderSimpleCards.java \
+            src/main/java/dev/casz/caszualmtg/CommanderSimpleSpells.java
+          cp /tmp/commander-rules-source.tar.gz commander-rules-source.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: commander-rules-source
+          path: commander-rules-source.tar.gz
+          retention-days: 3
