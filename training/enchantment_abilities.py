@@ -26,11 +26,20 @@ def compile(text, name, types, subtypes):
         short=name.split(',')[0].split(' of ')[0]
         if short!=name:
             text=re.sub(r'\b'+re.escape(short)+r'(?= enters| attacks)', 'this creature',text)
-    rest=[];scale=();role_events=();enchanted_draw=False;attachment_draw=False;damage_events=[];upkeep_attachment_counters=0;entry_attachment_counters=0;double_attachment_counters_upkeep=False;aura_graveyard_draw=False
+    rest=[];scale=();role_events=();enchanted_draw=False;attachment_draw=False;damage_events=[];upkeep_attachment_counters=0;entry_attachment_counters=0;double_attachment_counters_upkeep=False;aura_graveyard_draw=False;entry_token_lines=[]
     mode='equipment' if 'Artifact' in types and 'Equipment' in subtypes else 'aura' if 'Enchantment' in types and 'Aura' in subtypes else ''
     for line in text.splitlines():
         line=line.strip()
         if not line:continue
+        if mode=='aura' and line.startswith('When this Aura enters, '):
+            # Aura ETB is a normal triggered ability: the token is created
+            # only after the trigger resolves, even if the Aura has left.
+            normalized='When this enchantment enters, '+line[len('When this Aura enters, '):]
+            entry=compile_abilities(normalized)
+            if not entry or len(entry.triggers)!=1 or entry.triggers[0].effect.operation!='create_tokens':
+                return None
+            entry_token_lines.append(normalized)
+            continue
         if line=='When this Aura is put into a graveyard from the battlefield, draw a card.':
             if mode!='aura' or aura_graveyard_draw:return None
             aura_graveyard_draw=True
@@ -69,15 +78,17 @@ def compile(text, name, types, subtypes):
             if m[5]:rest.append(m[1]+' creature has '+m[5]+'.')
             continue
         rest.append(line)
-    if not (scale or role_events or enchanted_draw or attachment_draw or damage_events or upkeep_attachment_counters or entry_attachment_counters or double_attachment_counters_upkeep or aura_graveyard_draw):return None
+    if not (scale or role_events or enchanted_draw or attachment_draw or damage_events or upkeep_attachment_counters or entry_attachment_counters or double_attachment_counters_upkeep or aura_graveyard_draw or entry_token_lines):return None
     if mode:
         # A temporary +1/+1 instruction lets the existing strict attachment
         # parser validate every remaining line, even a zero-static-bonus Aura.
         prefix='Enchanted' if mode=='aura' else 'Equipped'
         attachment=parse_attachment('\n'.join(rest+[prefix+' creature gets +1/+1.']),types,subtypes)
         if not attachment:return None
-        attachment=attachment[:3]+(attachment[3]-1,attachment[4]-1)
-        return EnchantmentProgram(Program((),frozenset()),attachment,scale,attachment_draw=attachment_draw,damage_events=tuple(damage_events),upkeep_attachment_counters=upkeep_attachment_counters,entry_attachment_counters=entry_attachment_counters,
+        attachment=attachment[:3]+(attachment[3]-1,attachment[4]-1)+attachment[5:]
+        base=compile_abilities('\\n'.join(entry_token_lines)) if entry_token_lines else Program((),frozenset())
+        if base is None:return None
+        return EnchantmentProgram(base,attachment,scale,attachment_draw=attachment_draw,damage_events=tuple(damage_events),upkeep_attachment_counters=upkeep_attachment_counters,entry_attachment_counters=entry_attachment_counters,
                                   double_attachment_counters_upkeep=double_attachment_counters_upkeep,aura_graveyard_draw=aura_graveyard_draw)
     base=compile_abilities('\n'.join(rest)) if rest else Program((),frozenset())
     if base is None:return None
