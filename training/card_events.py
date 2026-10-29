@@ -107,6 +107,8 @@ class Definition:
     cost_reductions: tuple = ()
     counter_replacements: tuple = ()
     upkeep_attachment_counters: int = 0
+    entry_attachment_counters: int = 0
+    double_attachment_counters_upkeep: bool = False
     role: str = ""
 
 
@@ -144,7 +146,9 @@ def parse_card(card: dict) -> Definition:
             opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
             life_addition=program.life_addition,cost_reductions=program.cost_reductions,
             counter_replacements=program.counter_replacements,
-            upkeep_attachment_counters=enchantments.upkeep_attachment_counters)
+            upkeep_attachment_counters=enchantments.upkeep_attachment_counters,
+            entry_attachment_counters=enchantments.entry_attachment_counters,
+            double_attachment_counters_upkeep=enchantments.double_attachment_counters_upkeep)
     from advanced_abilities import station,history,equipped_attacks
     levels=station(text,types,subtypes)
     if levels:return Definition(**base,abilities=frozenset(),station=levels)
@@ -432,6 +436,10 @@ class Game:
                       subtypes=sorted(permanent.definition.subtypes))
             if 'enters' in permanent.definition.role_events:
                 self.emit('trigger',**self.role_trigger(permanent))
+            if permanent.definition.entry_attachment_counters and permanent.attached_to:
+                self.emit('trigger',operation='enchanted_counters',effect='put counters on enchanted creature',
+                          source=permanent.id,name=permanent.definition.name,controller=permanent.controller,
+                          amount=permanent.definition.entry_attachment_counters)
             for watcher in list(self.battlefield.values()):
                 for trigger in watcher.definition.triggers:
                     if trigger.event == "enters" and matches(trigger.subject,watcher,permanent,self.creature(permanent)):
@@ -471,6 +479,9 @@ class Game:
                 triggers.append(dict(operation='enchanted_counters',effect='put counters on enchanted creature',
                     source=p.id,name=p.definition.name,controller=p.controller,
                     amount=p.definition.upkeep_attachment_counters))
+            if p.definition.double_attachment_counters_upkeep and p.attached_to in self.battlefield:
+                triggers.append(dict(operation='enchanted_double_counters',effect='double enchanted counters',
+                    source=p.id,name=p.definition.name,controller=p.controller))
             for trigger in p.definition.triggers:
                 if trigger.event == "upkeep":
                     triggers.append(event_data(trigger,p,p))
