@@ -86,7 +86,7 @@ def compile(text, name, types, subtypes):
         attachment=parse_attachment('\n'.join(rest+[prefix+' creature gets +1/+1.']),types,subtypes)
         if not attachment:return None
         attachment=attachment[:3]+(attachment[3]-1,attachment[4]-1)+attachment[5:]
-        base=compile_abilities('\\n'.join(entry_token_lines)) if entry_token_lines else Program((),frozenset())
+        base=compile_abilities('\n'.join(entry_token_lines)) if entry_token_lines else Program((),frozenset())
         if base is None:return None
         return EnchantmentProgram(base,attachment,scale,attachment_draw=attachment_draw,damage_events=tuple(damage_events),upkeep_attachment_counters=upkeep_attachment_counters,entry_attachment_counters=entry_attachment_counters,
                                   double_attachment_counters_upkeep=double_attachment_counters_upkeep,aura_graveyard_draw=aura_graveyard_draw)
