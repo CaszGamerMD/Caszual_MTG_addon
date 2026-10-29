@@ -687,7 +687,7 @@ class Simulator(AdvancedRules):
         for source in self.players[seat].battlefield:
             definition=source.card.event_definition
             for index,(cost,spec) in enumerate(definition.activations if definition else ()):
-                payment=self.payment(replace(source.card,mana_cost=cost),seat=seat)
+                payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
                 if payment['paid']:
                     result.append(Candidate(source.card.id+':activate:'+str(index),'activate_tokens',source.card.id,
                         features=features(power=spec.amount*spec.power,toughness=spec.amount*spec.toughness,
@@ -700,7 +700,7 @@ class Simulator(AdvancedRules):
         activations=source.card.event_definition.activations if source and source.card.event_definition else ()
         if not 0<=index<len(activations):raise ValueError('Illegal activated ability')
         cost,spec=activations[index]
-        payment=self.payment(replace(source.card,mana_cost=cost),seat=seat)
+        payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
         if not payment['paid']:raise ValueError('Cannot pay activated ability')
         for permanent in self.players[seat].battlefield:
             if permanent.card.id in payment['sources']:permanent.tapped=True
@@ -718,7 +718,7 @@ class Simulator(AdvancedRules):
         for source in self.players[seat].battlefield:
             definition=source.card.event_definition
             for index,(cost,abilities) in enumerate(definition.ability_removals if definition else ()):
-                payment=self.payment(replace(source.card,mana_cost=cost),seat=seat)
+                payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
                 if not payment['paid']:continue
                 count=sum(p.controller!=seat and any(game.has(p,a) for a in abilities) for p in game.battlefield.values())
                 queued=any(frame.controller==seat and frame.payload[0].get('operation')=='lose_abilities'
@@ -733,7 +733,7 @@ class Simulator(AdvancedRules):
         source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
         removals=source.card.event_definition.ability_removals if source and source.card.event_definition else ()
         if not 0<=index<len(removals):raise ValueError('Illegal ability removal')
-        cost,abilities=removals[index];payment=self.payment(replace(source.card,mana_cost=cost),seat=seat)
+        cost,abilities=removals[index];payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
         if not payment['paid']:raise ValueError('Cannot pay ability removal')
         for permanent in self.players[seat].battlefield:
             if permanent.card.id in payment['sources']:permanent.tapped=True
@@ -751,7 +751,7 @@ class Simulator(AdvancedRules):
         for source in self.players[seat].battlefield:
             if source.card.kind!='equipment' or source.attached_to:continue
             cost=source.card.event_definition.attachment[1]
-            if not self.payment(replace(source.card,mana_cost=cost),seat=seat)['paid']:continue
+            if not self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)['paid']:continue
             for owner,target in self.creature_targets(seat,source.card):
                 if owner==seat and source.attached_to!=target.card.id:
                     choices.append(Candidate(source.card.id+':equip:'+target.card.id,'equip',source.card.id,
@@ -762,7 +762,7 @@ class Simulator(AdvancedRules):
         if self.stack.items or self.stack.priority!=seat or seat!=self.active or self.phase not in ('main','second_main'):raise ValueError('Illegal equip timing')
         source=next((p for p in self.players[seat].battlefield if p.card.id==source_id and p.card.kind=='equipment'),None)
         if source is None or target not in {p.card.id for owner,p in self.creature_targets(seat,source.card) if owner==seat}:raise ValueError('Illegal equip target')
-        payment=self.payment(replace(source.card,mana_cost=source.card.event_definition.attachment[1]),seat=seat)
+        payment=self.payment(replace(source.card,mana_cost=source.card.event_definition.attachment[1]),seat=seat,spell_cost=False)
         if not payment['paid']:raise ValueError('Cannot pay equip')
         for p in self.players[seat].battlefield:
             if p.card.id in payment['sources']:p.tapped=True
@@ -1085,7 +1085,7 @@ class Simulator(AdvancedRules):
                 if frame is None:
                     self.log('ward_no_target',f"{event['name']}: the targeted object has already left the stack.")
                     continue
-                payer=event['payer'];payment=self.payment(replace(card,mana_cost=event['cost']),seat=payer)
+                payer=event['payer'];payment=self.payment(replace(card,mana_cost=event['cost']),seat=payer,spell_cost=False)
                 if payment['paid']:
                     for permanent in self.players[payer].battlefield:
                         if permanent.card.id in payment['sources']:permanent.tapped=True
@@ -1419,10 +1419,23 @@ class Simulator(AdvancedRules):
             sources.append((item.card.id,options))
         return sources
 
-    def payment(self, card: Card, tax: int = 0, x: int | None = None, seat: int | None = None) -> dict:
-        cost = card.mana_cost + (("{2}" * tax) if tax else "")
+    def payment(self, card: Card, tax: int = 0, x: int | None = None, seat: int | None = None,
+                spell_cost: bool = True) -> dict:
+        cost=card.mana_cost+(("{2}"*tax) if tax else "")
         seat=self.active if seat is None else seat
         player=self.players[seat]
+        if spell_cost:
+            types={word.lower() for word in card.printed_types}
+            if card.event_definition:types.update(word.lower() for word in card.event_definition.types)
+            subtypes={word.lower() for word in card.event_definition.subtypes} if card.event_definition else set()
+            if card.kind=='aura':subtypes.add('aura')
+            colors={word.lower() for word in card.colors}
+            categories=types|subtypes|colors|({'colorless'} if not colors else set())
+            reduction=sum(amount for permanent in player.battlefield
+                          if permanent.card.event_definition
+                          for names,amount in permanent.card.event_definition.cost_reductions
+                          if any(name in categories for name in names))
+            cost=mana_pool.reduce_generic_cost(cost,reduction,x)
         sources=self.mana_sources(seat)
         return mana_pool.plan(cost,player.mana_pool,sources,x)
 
@@ -1868,7 +1881,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace"} & event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_creatures_enter_tapped or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace"} & event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.opponent_creatures_enter_tapped or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):
