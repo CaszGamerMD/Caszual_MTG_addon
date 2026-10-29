@@ -13,7 +13,7 @@ def compile_land(raw, clean_text):
     reminder=re.match(r'^\(\{T\}: Add (\{[WUBRGC]\}(?: or \{[WUBRGC]\})*)\.\)',raw.get('oracleText',''))
     lines=[line.strip() for line in text.splitlines() if line.strip()]
     if reminder:lines.append('{T}: Add '+reminder[1]+'.')
-    mask=0;production=();entry='';tapped=False;rest=[];counter_ability=''
+    mask=0;production=();entry='';tapped=False;rest=[];counter_ability='';counter_scope='all'
     for line in lines:
         fixed=re.fullmatch(r'\{T\}: Add ((?:\{[WUBRGC]\}){2,})\.',line)
         if fixed:
@@ -43,6 +43,11 @@ def compile_land(raw, clean_text):
             if counter_ability or mana_pool.requirements(team_counters[1]) is None:return None
             counter_ability=team_counters[1]
             continue
+        recent=re.fullmatch(r'\{T\}: Put a \+1/\+1 counter on each (white|blue|black|red|green) creature that entered this turn\.',line)
+        if recent:
+            if counter_ability:return None
+            counter_ability='{0}';counter_scope='entered:'+recent[1].title()
+            continue
         rest.append(line)
     if not mask and not production:return None
     program=compile_abilities('\n'.join(rest)) if rest else Program((),frozenset())
@@ -50,4 +55,4 @@ def compile_land(raw, clean_text):
     # rule families must be wired into land handling before accepting them.
     if program is None or (rest and (not program.triggers or any(t.event!='enters' or not t.subject.self_only for t in program.triggers))):return None
     if rest and any(not re.fullmatch(r'(?:When|Whenever) this land enters(?: the battlefield)?, .+',line) for line in rest):return None
-    return dict(kind='land',mask=mask,tapped=tapped,land_rule=entry,land_program=program,mana_production=production,land_counter_ability=counter_ability)
+    return dict(kind='land',mask=mask,tapped=tapped,land_rule=entry,land_program=program,mana_production=production,land_counter_ability=counter_ability,land_counter_scope=counter_scope)
