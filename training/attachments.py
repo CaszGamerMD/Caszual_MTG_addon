@@ -10,19 +10,25 @@ def parse(text,types,subtypes):
     if mode=='aura':
         if not lines:return None
         enchant=lines.pop(0)
-        if enchant not in ('Enchant creature','Enchant creature you control'):return None
-        restriction='controller' if enchant=='Enchant creature you control' else ''
+        if enchant in ('Enchant creature','Enchant creature you control'):
+            restriction='controller' if enchant=='Enchant creature you control' else ''
+        else:
+            land=re.fullmatch(r'Enchant (land|snow land|Mountain) you control',enchant)
+            if not land:return None
+            restriction={'land':'land:controller','snow land':'land:snow:controller',
+                         'Mountain':'land:mountain:controller'}[land[1]]
     prefix='Equipped' if mode=='equipment' else 'Enchanted'
+    if restriction.startswith('land:'):prefix='Enchanted land'
     for line in lines:
         line=line.strip()
         m=re.fullmatch(r'Equip (\{[0-9]{1,2}\})',line)
         if m and mode=='equipment':cost=m[1];continue
-        m=re.fullmatch(prefix+r' creature has (.+)\.',line)
+        m=re.fullmatch((prefix if prefix=='Enchanted land' else prefix+' creature')+r' has (.+)\.',line)
         if m:
             keywords=set(re.split(r', | and ',m[1].replace(', and ', ', ')))
             if not keywords<=KEYWORDS:return None
             abilities.update(keywords);continue
-        m=re.fullmatch(prefix+r' creature gets \+([0-9]+)/\+([0-9]+)(?: and has (.+))?\.',line)
+        m=re.fullmatch(prefix+r' creature gets \+([0-9]+)/\+([0-9]+)(?: and has (.+))?\.',line) if prefix!='Enchanted land' else None
         if m:
             keywords=set(re.split(r', | and ',(m[3] or '').replace(', and ', ', ')))-{''}
             if not keywords<=KEYWORDS:return None
@@ -32,7 +38,7 @@ def parse(text,types,subtypes):
     if mode=='equipment' and cost is None:return None
     result=(mode,cost,frozenset(abilities),power,toughness)
     # Optional sixth element preserves the legacy five-field attachment layout.
-    return result+(('controller',) if restriction else ())
+    return result+((restriction,) if restriction else ())
 
 def parse_bestow(text,types):
     """Keyword-only enchantment creatures with fixed enchanted-creature grants."""

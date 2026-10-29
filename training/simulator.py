@@ -180,6 +180,7 @@ class Card:
     land_rule: str = ""
     land_subtypes: tuple[str, ...] = ()
     basic_land: bool = False
+    snow: bool = False
     event_definition: EventDefinition | None = None
     storm: bool = False
     x_effect: str = ""
@@ -674,9 +675,18 @@ class Simulator(AdvancedRules):
                     target=game.battlefield.get(item.attached_to)
                     attachment=item.card.event_definition.attachment if item.card.event_definition else ()
                     restriction=attachment[5] if len(attachment)>5 else ''
-                    legal=bool(target and game.creature(target) and not game.protected(target,item.card.colors)
-                               and (restriction!='controller' or
-                                    target.controller==game.battlefield[item.card.id].controller))
+                    if restriction.startswith('land:'):
+                        host=next((h for pl in self.players for h in pl.battlefield
+                                   if h.card.id==item.attached_to),None)
+                        legal=bool(target and host and 'Land' in target.definition.types
+                                   and target.controller==game.battlefield[item.card.id].controller
+                                   and (restriction!='land:snow:controller' or host.card.snow)
+                                   and (restriction!='land:mountain:controller' or 'Mountain' in target.definition.subtypes)
+                                   and not game.protected(target,item.card.colors))
+                    else:
+                        legal=bool(target and game.creature(target) and not game.protected(target,item.card.colors)
+                                   and (restriction!='controller' or
+                                        target.controller==game.battlefield[item.card.id].controller))
                     if legal:continue
                     if item.bestowed:detached.append(item)
                     elif item.card.kind=='aura':invalid_auras.append((owner,item))
@@ -899,6 +909,24 @@ class Simulator(AdvancedRules):
                           or len(source.event_definition.attachment)<6
                           or source.event_definition.attachment[5]!='controller'
                           or game.battlefield[item.card.id].controller==controller))
+
+    def aura_targets(self,controller,source):
+        """Land Auras target eligible lands; shroud and hexproof only affect targeting."""
+        attachment=source.event_definition.attachment if source.event_definition else ()
+        restriction=attachment[5] if len(attachment)>5 else ''
+        if not restriction.startswith('land:'):
+            return self.creature_targets(controller,source)
+        game=self.event_game('main')
+        return tuple((seat,item) for seat,player in enumerate(self.players)
+                     for item in player.battlefield
+                     if item.card.id in game.battlefield
+                     and 'Land' in game.battlefield[item.card.id].definition.types
+                     and seat==controller
+                     and (restriction!='land:snow:controller' or item.card.snow)
+                     and (restriction!='land:mountain:controller'
+                          or 'Mountain' in game.battlefield[item.card.id].definition.subtypes)
+                     and not game.has(game.battlefield[item.card.id],'shroud')
+                     and not game.protected(game.battlefield[item.card.id],source.colors))
 
     def damage_trigger_targets(self,event):
         """Legal any-target choices: players, creatures and planeswalkers in this sandbox."""
@@ -1192,7 +1220,9 @@ class Simulator(AdvancedRules):
         casting_zone=player.exile if rebound else player.graveyard if flashback else player.hand
         if not commander and card not in casting_zone: raise ValueError('Card not in casting zone')
         if bestow and (not card.event_definition or not card.event_definition.bestow):raise ValueError('Card has no supported bestow ability')
-        if (card.kind=='aura' or bestow) and target not in {p.card.id for _,p in self.creature_targets(seat,card)}:raise ValueError('Illegal Aura target')
+        if (card.kind=='aura' or bestow) and target not in {p.card.id for _,p in
+                (self.aura_targets(seat,card) if card.kind=='aura' and not bestow else self.creature_targets(seat,card))}:
+            raise ValueError('Illegal Aura target')
         if card.kind=='removal_spell' and card.removal not in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min') and target not in {item.card.id for _,item in self.removal_targets(seat,card)}:
             raise ValueError('Removal requires a legal permanent target')
         if card.kind=='graveyard_return_spell' and target not in {c.id for c in self.graveyard_subtype_targets(seat,card.graveyard_return_subtype)}:
@@ -1256,7 +1286,7 @@ class Simulator(AdvancedRules):
                 self.resolve_entry_triggers(pending,card)
             return
         if card.kind=='aura':
-            if event['target'] not in {p.card.id for _,p in self.creature_targets(controller,card)}:
+            if event['target'] not in {p.card.id for _,p in self.aura_targets(controller,card)}:
                 if not event.get('copy'):p.graveyard.append(card)
                 self.log('illegal_target',f'{card.name} has no legal Aura target.')
                 return
@@ -2169,7 +2199,7 @@ class Simulator(AdvancedRules):
                 if c.kind=='aura' and self.payment(c)['paid']:
                     actions.extend(Candidate(c.id+':aura:'+target.card.id,'cast',c.id,
                         features=features(power=1 if owner==seat else -100),label='Cast '+c.name,target_permanent=target.card.id)
-                        for owner,target in self.creature_targets(seat,c))
+                        for owner,target in self.aura_targets(seat,c))
                     continue
                 if c.kind=='removal_spell' and self.payment(c)['paid']:
                     actions.extend(self.removal_choices(seat,c,'cast'))
@@ -2694,7 +2724,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),
         life=parsed.get("life", 0), land_rule=parsed.get("land_rule", ""),
         land_subtypes=tuple(definition.get("subTypes", [])),
-        basic_land="Basic" in definition.get("superTypes", []), event_definition=parsed.get("event") or (event_definition if event_definition.supported and "Planeswalker" in event_definition.types else None),
+        basic_land="Basic" in definition.get("superTypes", []), snow="Snow" in definition.get("superTypes", []), event_definition=parsed.get("event") or (event_definition if event_definition.supported and "Planeswalker" in event_definition.types else None),
         storm=parsed.get("storm",False), x_effect=parsed.get("x_effect",""), token_count=parsed.get("token_count",0),
         token_definition=parsed.get("token_definition"),token_tapped=parsed.get("token_tapped",False),
         printed_types=tuple(definition.get('types',[])),
