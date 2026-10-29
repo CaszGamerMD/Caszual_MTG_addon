@@ -22,6 +22,29 @@ jobs:
           python-version: '3.12'
       - name: Count parsed cards and list focused unresolved card names
         run: python training/diagnostic_coverage.py
+      - name: Probe seeded diagnostic matches for regression blockers
+        run: |
+          python - <<'PY'
+          import json,sys
+          from pathlib import Path
+          sys.path.insert(0,'training')
+          from simulator import RulesBridge,diagnose
+          folder=Path('training/decks')
+          patterns=[
+              ('14850373-budget-deck.json','5254666-garbo-gobbos.json',42,10),
+              ('14850373-budget-deck.json','5254666-garbo-gobbos.json',42,12),
+              ('5254666-garbo-gobbos.json','27521806-faeries.json',44,10)]
+          with RulesBridge() as rules:
+              for a,b,seed,turns in patterns:
+                  decks=[json.loads((folder/name).read_text(encoding='utf-8')) for name in (a,b)]
+                  result=diagnose(rules,decks,seed,turns)
+                  print('FOCUSED_DIAGNOSTIC '+json.dumps({
+                      'decks':[a,b],'seed':seed,'turns':turns,
+                      'result':result['result'],
+                      'runtimeQuestions':result['rulesProgress']['runtimeQuestions'],
+                      'lastEvents':[{'kind':e['kind'],'message':e.get('message')} for e in result['events'][-4:]]
+                  }))
+          PY
       - name: Publish focused coverage report
         uses: actions/upload-artifact@v4
         with:
