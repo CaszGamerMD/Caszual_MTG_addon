@@ -133,6 +133,16 @@ class TokenReplacementsChecks(unittest.TestCase):
         self.assertEqual(game.counter_amount(own.card.id,2,by_effect=False),2)
         sim.invariant()
 
+    def test_doubling_season_modifies_station_charge_counter_effect(self):
+        sim,cards=self.fixture(['Doubling Season','Lumen-Class Frigate'])
+        self.put(sim,cards['Doubling Season'])
+        station=self.put(sim,cards['Lumen-Class Frigate'])
+        helper=self.token(sim,'helper',power=2,toughness=2)
+        sim._resolve_entry_effects([dict(operation='station',source=station.card.id,
+            helper=helper.card.id,lastPower=2,name='Unfamiliar station',controller=0)],helper.card)
+        self.assertEqual(station.charge_counters,4)
+        sim.invariant()
+
     def test_primal_vigor_and_scales_combine_with_doubling_season(self):
         sim,cards=self.fixture(['Doubling Season','Primal Vigor','Hardened Scales'])
         for item in cards.values():self.put(sim,item)
