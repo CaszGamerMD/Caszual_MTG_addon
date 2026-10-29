@@ -90,6 +90,24 @@ class Program:
     token_leave_triggers: tuple = ()
 
 def static_effect(text):
+    # Global lords affect matching creature types even when an opponent
+    # controls them. Landwalk is a blocking restriction evaluated at declare
+    # blockers, not a stat bonus or a change to land ownership.
+    lord=re.fullmatch(
+        r'Other ([A-Z][a-z]+) get \\+([0-9]+)/\\+([0-9]+) and have ((?:plains|island|swamp|mountain|forest)walk)\\.',
+        text)
+    if lord:
+        plurals={'Faeries':'Faerie','Elves':'Elf','Wolves':'Wolf','Mice':'Mouse',
+                 'Allies':'Ally','Zombies':'Zombie','Merfolk':'Merfolk',
+                 'Oxen':'Ox','Fish':'Fish'}
+        plural=lord[1]
+        subtype=plurals.get(plural)
+        if subtype is None and plural.endswith('s') and not plural.endswith(('ies','ves','ses','xes','ches','shes')):
+            subtype=plural[:-1]
+        if subtype is None:return None
+        subject=Selector(relation='any',other=True,creature=True,subtype=subtype)
+        return (StaticEffect(subject,int(lord[2]),int(lord[3])),
+                StaticEffect(subject,0,0,grant=lord[4]))
     subtype_anthem=re.fullmatch(r'Other ([A-Z][a-z]+) creatures you control get \+([0-9]+)/\+([0-9]+) and have (.+)\.',text)
     if subtype_anthem:
         traits={w.strip() for w in re.split(r', | and ',subtype_anthem[4])}
@@ -160,7 +178,8 @@ def static_effect(text):
     return None
 
 KEYWORDS = {'flash','flying','first strike','double strike','lifelink','vigilance',
-            'trample','haste','defender','reach','deathtouch','indestructible','hexproof','menace'}
+            'trample','haste','defender','reach','deathtouch','indestructible','hexproof','menace',
+            'plainswalk','islandwalk','swampwalk','mountainwalk','forestwalk'}
 
 def selector(text):
     if text == 'this creature': return Selector(self_only=True,creature=True)

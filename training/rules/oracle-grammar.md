@@ -142,3 +142,25 @@ Mana-source discovery is shared between payment and the available-X budget. Land
 Validation: 112 tests pass. Focused Awaken the Woods tests cover X=2, land/creature types, nonbasic status, no immediate mana or attacks, next-turn payment, source tapping, source removal, haste, and subtype-dependent color. Six distinct pairings at seeds 1042–1047 produced three ten-turn windows and three earlier wins, without runtime questions. None cast Awaken the Woods in that batch; direct coverage is from focused tests. Summary: `training/examples/land-tokens-1042.json`. Live golem integration remains pending.
 
 Rules reference: Wizards Comprehensive Rules 302.6, 305.6, 305.8, and 702.10: https://media.wizards.com/2026/downloads/MagicCompRules%2020260619.pdf
+
+
+## Global tribal lords and landwalk (2026-10-29)
+
+A whole-text pattern now compiles “Other [plural creature type] get +N/+M
+and have [basic land type]walk” into independent continuous stat and keyword
+grants. Unlike “creatures you control”, the grant applies to matching creatures
+of **both** controllers while excluding only the originating lord. Goblin
+King is a real-deck fixture; renaming the card, changing the subtype, amount,
+or basic land type uses the same code. Unknown inflections and extra rules
+still reject the complete card.
+
+The diagnostic's group-combat blocker legality now checks landwalk *at
+blocker declaration*: if a defending player controls any land with the matching
+basic land subtype, no creature can block that attacker. A nonbasic Mountain
+Forest dual still satisfies mountainwalk; the attacking player's own Mountain
+does not. If the grant or qualifying land leaves before blockers are declared,
+the restriction disappears. The policy uses the same legality routine as the
+manual blocker action, including for menace and flying combinations. These are
+not full land type-changing effects or general 2026 Commander rules support.
+
+Coverage tests: `training/tests/test_landwalk_lords.py`.

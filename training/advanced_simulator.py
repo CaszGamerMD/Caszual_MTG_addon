@@ -120,9 +120,23 @@ class AdvancedRules:
   pending=self.enter_creature(returned,p)
   self.log('blink','A creature returns as a new object.',actor=destination,oldObject=old.id,newObject=returned.id,physicalCard=physical)
   self.resolve_entry_triggers(pending,returned)
+ def landwalk_unblockable(self,attacker,game=None):
+  g=game or self.event_game('combat')
+  state=g.battlefield.get(attacker.card.id)
+  if state is None or not g.creature(state):return False
+  # "Mountainwalk" tests what the DEFENDING player controls, including
+  # nonbasic lands with a Mountain subtype. The attacker controller's
+  # own land types are irrelevant. This is a current-state restriction.
+  for land_type in ('Plains','Island','Swamp','Mountain','Forest'):
+   if not g.has(state,land_type.lower()+'walk'):continue
+   if any('Land' in other.definition.types and land_type in other.definition.subtypes
+          and other.controller!=state.controller for other in g.battlefield.values()):
+    return True
+  return False
  def can_block(self,attacker,blocker):
   g=self.event_game('combat');a=g.battlefield.get(attacker.card.id);b=g.battlefield.get(blocker.card.id)
   return bool(a and b and g.creature(a) and g.creature(b) and not blocker.tapped
+   and not self.landwalk_unblockable(attacker,g)
    and (not g.has(a,'flying') or g.has(b,'flying') or g.has(b,'reach'))
    and not g.protected(a,b.definition.colors))
  def attackable(self,seat):
