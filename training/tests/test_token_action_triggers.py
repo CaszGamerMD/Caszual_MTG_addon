@@ -116,6 +116,36 @@ class TokenActionTriggersChecks(unittest.TestCase):
         self.assertEqual(sim.players[1].life,39)
         sim.invariant()
 
+    def test_token_spell_dispatches_creation_events_on_stack(self):
+        sim,cards=self.fixture(['Mirkwood Bats'])
+        self.put(sim,cards['Mirkwood Bats'])
+        definition=s.EventDefinition('Wolf',frozenset({'Creature'}),frozenset({'Wolf'}),
+                                     False,2,2,frozenset())
+        spell=s.Card('unseen-spell','Unseen wolf pack','token_spell',
+                     mana_cost='{0}',token_count=3,token_definition=definition,
+                     printed_types=('Sorcery',))
+        sim.players[0].hand.append(spell)
+        sim.card_owners[spell.id]=0
+        sim.total_cards=tuple(n+(i==0) for i,n in enumerate(sim.total_cards))
+        sim.cast_spell(0,spell)
+        self.assertEqual(sim.players[1].life,40)
+        self.drain(sim)
+        self.assertEqual(sim.players[1].life,37)
+        self.assertEqual(sum(p.card.name=='Wolf' for p in sim.players[0].battlefield),3)
+        sim.invariant()
+
+    def test_role_token_creation_is_counted_by_same_event_rule(self):
+        sim,cards=self.fixture(['Mirkwood Bats','Ellivere of the Wild Court'])
+        self.put(sim,cards['Mirkwood Bats'])
+        self.token(sim,'role-host')
+        self.put(sim,cards['Ellivere of the Wild Court'])
+        self.drain(sim)
+        self.assertEqual(sim.players[1].life,39)
+        roles=[p for p in sim.players[0].battlefield if
+               p.card.event_definition and p.card.event_definition.role]
+        self.assertEqual(len(roles),1)
+        sim.invariant()
+
     def test_zero_created_tokens_does_not_trigger_and_noncreature_token_counts(self):
         sim,cards=self.fixture(['Mirkwood Bats'])
         self.put(sim,cards['Mirkwood Bats'])
