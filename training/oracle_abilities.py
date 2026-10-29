@@ -82,7 +82,7 @@ class Program:
     life_addition: int = 0
 
 def static_effect(text):
-    stat_conditional=re.fullmatch(r'This creature gets \\+([0-9]+)/\\+([0-9]+) as long as you have ([1-9][0-9]*) or more life\\.',text)
+    stat_conditional=re.fullmatch(r'This creature gets \+([0-9]+)/\+([0-9]+) as long as you have ([1-9][0-9]*) or more life\.',text)
     if stat_conditional:
         return StaticEffect(Selector(self_only=True,creature=True),int(stat_conditional[1]),int(stat_conditional[2]),life_min=int(stat_conditional[3]))
     life_conditional=re.fullmatch(r'As long as you have ([1-9][0-9]*) or more life, this creature gets \+([0-9]+)/\+([0-9]+) and has (.+)\.',text)
@@ -202,7 +202,7 @@ def compile_abilities(text, name=''):
             threshold={'one':1,'two':2,'three':3,'four':4,'five':5,'six':6,'seven':7,'eight':8,'nine':9}.get(condition[2])
             devotion=({'white':'W','blue':'U','black':'B','red':'R','green':'G'}[condition[1]],threshold or int(condition[2]))
             continue
-        addition=re.fullmatch(r'If you would gain life, you gain that much life plus ([1-9][0-9]*) instead\\.',line)
+        addition=re.fullmatch(r'If you would gain life, you gain that much life plus ([1-9][0-9]*) instead\.',line)
         if addition:
             if life_addition:return None
             life_addition=int(addition[1]);continue
