@@ -803,9 +803,30 @@ class Game:
             for kind,value,scope,condition in source.definition.token_replacements:
                 if scope=='controlled' and source.controller!=controller:continue
                 if condition=='effect' and not by_effect:continue
+                if kind=='creature_as':continue  # Characteristics are replaced separately.
                 if kind!='double':raise NeedsRules('Unknown token replacement')
                 amount*=value
         return amount
+
+    def replace_creature_token_spec(self, controller: int, spec: dict) -> dict:
+        """Apply token-characteristic replacements to a single creation event.
+
+        The token count is handled by token_amount; changing a token's
+        characteristics must not mutate its source template or make an
+        opponent's tokens into Angels. A noncreature token is not affected.
+        """
+        result=dict(spec)
+        if result.get('creature',True) is False:return result
+        for source in self.battlefield.values():
+            for kind,value,scope,condition in source.definition.token_replacements:
+                if kind!='creature_as':continue
+                if scope=='controlled' and source.controller!=controller:continue
+                if condition not in ('any','effect'):raise NeedsRules('Unknown token replacement condition')
+                result.update(value)
+                result['land']=False
+                result['enchantment']=False
+                result['contribution_bonus']=0
+        return result
 
     def counter_amount(self, target_id: str, amount: int, *,
                        counter_type: str = '+1/+1', by_effect: bool = True, sources=None) -> int:
