@@ -2,6 +2,7 @@
 import sys
 import unittest
 from pathlib import Path
+from dataclasses import replace
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import simulator as s
 import mana_pool
@@ -84,7 +85,7 @@ class CostReductionChecks(unittest.TestCase):
         self.put(sim,cards['Pearl Medallion'])
         self.limit(sim,3)
         for permanent in sim.players[0].battlefield:
-            if permanent.card.kind=='land':permanent.card.mask=16
+            if permanent.card.kind=='land':permanent.card=replace(permanent.card,mask=16)
         spell=self.spell('white-spell','{2}{W}',('Enchantment',),('White',))
         self.assertFalse(sim.payment(spell,seat=0)['paid'])
         sim.invariant()
@@ -95,7 +96,7 @@ class CostReductionChecks(unittest.TestCase):
         self.limit(sim,3)
         green=self.spell('commander','{G}',('Creature',),('Green',))
         self.assertTrue(sim.payment(green,tax=1,seat=0)['paid'])
-        self.limit(sim,2)
+        self.limit(sim,1)
         self.assertFalse(sim.payment(green,tax=1,seat=0)['paid'])
         # Unrelated activated costs are never discounted.
         self.assertFalse(sim.payment(self.spell('cost','{2}{G}',('Creature',),('Green',)),
@@ -108,4 +109,4 @@ class CostReductionChecks(unittest.TestCase):
         self.assertEqual(mana_pool.reduce_generic_cost('{X}{G}',2,x=1),'{G}{0}')
         self.assertEqual(mana_pool.reduce_generic_cost('{X}{G}',2,x=None),'{X}{G}')
         self.assertEqual(mana_pool.reduce_generic_cost('{W}{G}',9),'{W}{G}{0}')
-        self.assertIsNone(mana_pool.requirements('{W/U}{1}',None) if False else None)
+        self.assertEqual(mana_pool.requirements('{W/U}{1}'),(3,63))
