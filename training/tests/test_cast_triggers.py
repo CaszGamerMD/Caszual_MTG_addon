@@ -98,12 +98,15 @@ class CastTriggerChecks(unittest.TestCase):
         sim.players[0].hand.append(mixed)
         sim.cast_spell(0,mixed)
         self.assertEqual(len(sim.stack.items),2)
+        sim.pass_priority(0);sim.pass_priority(1)
+        sim.pass_priority(0);sim.pass_priority(1)
+        self.assertFalse(sim.stack.items)
         # Opponent's enchantment is not our cast.
         sim.active=1;sim.stack.active=1;sim.stack.priority=1
         rival=self.spell('rival')
         sim.players[1].hand.append(rival)
         sim.cast_spell(1,rival)
-        self.assertEqual(sum(f.payload[0]['operation']=='ordered_effects' for f in sim.stack.items),1)
+        self.assertEqual(sum(f.payload[0]['operation']=='ordered_effects' for f in sim.stack.items),0)
 
     def test_generic_spell_subtypes_and_sequence_parse(self):
         for phrase in ('a spell','a creature spell','a noncreature spell',
