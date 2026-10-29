@@ -99,7 +99,7 @@ class TokenLeaveChecks(unittest.TestCase):
     def test_aura_role_token_and_host_both_leaving_are_counted(self):
         sim,cards=self.fixture(["Nadier's Nightblade",'Ellivere of the Wild Court'])
         self.put(sim,cards["Nadier's Nightblade"])
-        host=self.token(sim,'host')
+        host=self.token(sim,'host',power=9,toughness=9)
         self.put(sim,cards['Ellivere of the Wild Court'])
         self.drain(sim)
         roles=[p for p in sim.players[0].battlefield
