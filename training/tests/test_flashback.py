@@ -18,7 +18,7 @@ class FlashbackRulesChecks(unittest.TestCase):
         parsed=s.import_diagnostic_card(self.rules,raw,0,'squirrel',{'Green'})
         self.assertEqual((parsed.kind,parsed.flashback_cost),('token_spell','{1}{G}'))
         self.assertEqual(parsed.token_count,1)
-        self.assertEqual(parsed.token_definition.colors,frozenset({'G'}))
+        self.assertEqual(parsed.token_definition.colors,frozenset({'Green'}))
         self.assertIn('Squirrel',parsed.token_definition.subtypes)
         alternate=dict(raw,name='Unknown flashback tokens',
                        oracleText='Create two 2/3 blue Drake creature tokens with flying.\nFlashback {2}{U}{U}')
