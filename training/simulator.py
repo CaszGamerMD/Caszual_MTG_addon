@@ -1104,6 +1104,15 @@ class Simulator(AdvancedRules):
                 self.outcome()
                 if self.finished:return
                 continue
+            if event.get('operation')=='opponent_optional_basic_search':
+                # Ability controller does not search; only opponents do.
+                # Under the current two-seat diagnostic model this is one
+                # opponent, but the rule is represented independently of its
+                # source's name or whether the source survives resolution.
+                for opponent in range(len(self.players)):
+                    if opponent!=event['controller']:
+                        self.search_basic_land_tapped(opponent,card)
+                continue
             if event.get('operation')=='transport':
                 source=next((p for player in self.players for p in player.battlefield if p.card.id==event['source']),None)
                 if source:
