@@ -1,3 +1,27 @@
+## Conditional life rules: end-step tokens and continuous effects
+
+Two additional Oracle-language families are implemented without card-name
+dispatch. `At the beginning of your end step, if you gained N or more life this
+turn, ...` uses **total life actually gained that turn** (not net life
+change) and queues the parsed effect on the priority stack. Combat lifelink,
+spell lifegain, and supported triggered lifegain contribute to that history.
+The recorded amount resets at the start of each turn; only the active player's
+end-step abilities are examined. Griffin Aerie is the imported fixture, but
+the threshold, token characteristics, and effect are parsed from its text.
+
+`As long as you have N or more life, this creature gets +P/+T and has
+[keywords].` evaluates against the **current controller's life total** on
+every stats/keyword query. Losing life can remove the bonus immediately,
+and regaining life restores it; Serra Ascendant is the imported fixture.
+Unfamiliar names with equivalent language are accepted, while unparsed
+additional instructions still make the card unsupported.
+
+Regressions live in `training/tests/test_end_step_lifegain.py` and
+`training/tests/test_life_threshold_stats.py`. The engine is still a
+restricted diagnostic, not a Commander rules-complete or live golem runtime.
+Old published gauntlet numbers and coverage counts are retained as historical
+baselines; they have **not** been revalidated against this change.
+
 ## Cast-trigger grammar (Sythis and unfamiliar matching cards)
 
 The Oracle compiler now recognizes `Whenever you cast a/an [type] spell, ...`
