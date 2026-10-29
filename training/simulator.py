@@ -1433,7 +1433,7 @@ class Simulator(AdvancedRules):
                 game = self.event_game("main")
                 affected = []
                 for identifier,permanent in game.battlefield.items():
-                    if permanent.controller == event["controller"] and game.creature(permanent):
+                    if permanent.controller == event["controller"] and (event["counterSubtype"] in permanent.definition.subtypes if event.get("counterSubtype") else game.creature(permanent)):
                         permanent.counters += game.counter_amount(identifier,event["amount"])
                         affected.append(identifier)
                 self.sync_events(game)

@@ -63,6 +63,7 @@ class Effect:
     library_filter: tuple = ()
     steps: tuple = ()
     optional: bool = False
+    counter_subtype: str = ""
 
 @dataclass(frozen=True)
 class Trigger:
@@ -198,6 +199,8 @@ def effect(text):
     if library_filter:return Effect('reveal_creatures',library_filter[0],library_filter=library_filter)
     token=parse_token_creation(text[:1].upper()+text[1:])
     if token: return Effect('create_tokens',token.amount,token=token)
+    tribal=re.fullmatch(r'put (a|[1-9][0-9]*) \+1/\+1 counters? on each ([A-Z][a-z]+) you control\.',text)
+    if tribal:return Effect('add_counters',1 if tribal[1]=='a' else int(tribal[1]),'controlled subtype',counter_subtype=tribal[2])
     m=re.fullmatch(r'put (a|[1-9][0-9]*) \+1/\+1 counters? on each creature you control\.',text)
     if m: return Effect('add_counters',1 if m[1]=='a' else int(m[1]),'controlled creatures')
     m=re.fullmatch(r'(each opponent|target player) loses ([1-9][0-9]*) life(?: and you gain ([1-9][0-9]*) life)?\.',text)
@@ -308,7 +311,7 @@ def compile_abilities(text, name=''):
         life_event=re.fullmatch(r'Whenever you gain life, (.+)',line)
         if life_event:
             action=effect(life_event[1])
-            if action is None or action.operation not in ('lose_life','gain_life','draw_cards'):
+            if action is None or action.operation not in ('lose_life','gain_life','draw_cards','add_counters'):
                 return None
             triggers.append(Trigger('gain_life',Selector(self_only=True),action))
             continue
@@ -388,7 +391,7 @@ def event_data(trigger, source, subject):
             'reveal_creatures':f'reveal {e.amount} cards and put matching creatures onto the battlefield',
             'damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
             'damage':f'deal {e.amount} damage to each opponent','scry':'scry',
-            'add_counters':f'put {e.amount} +1/+1 counters on each creature you control',
+            'add_counters':f'put {e.amount} +1/+1 counters on each {e.counter_subtype or "creature"} you control',
             'create_tokens':f'create {e.amount} creature tokens',
             'opponent_optional_basic_search':'each opponent may find a tapped basic land and shuffle',
             'optional_subtype_search_hand':'controller may tutor a subtype card to hand and shuffle',
@@ -398,7 +401,7 @@ def event_data(trigger, source, subject):
     if e.gain: label+=f'; controller gains {e.gain} life'
     return {'source':source.id,'name':source.definition.name,'controller':source.controller,
             'effect':label,'operation':e.operation,'recipient':e.recipient,'sourceColors':sorted(source.definition.colors),
-            'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
+            'counterSubtype':e.counter_subtype,'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
             'optional':e.optional,
             **({'minLands':trigger.lands_controlled_at_least} if trigger.lands_controlled_at_least else {}),
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
