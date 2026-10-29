@@ -476,6 +476,14 @@ class Simulator(AdvancedRules):
                 if definition.life_multiplier!=1:gained*=definition.life_multiplier
         self.players[seat].life+=gained
         self.life_gained_turn[seat]+=gained
+        if gained:
+            # Queue once for this event even if a replacement doubled it.
+            # Resolving the stack flushes these snapshots in APNAP order.
+            watchers=self.event_game('main').life_gain_triggers(seat,gained)
+            self._waiting_triggers.extend(
+                (trigger,next(p.card for p in self.players[seat].battlefield
+                              if p.card.id==trigger['source']))
+                for trigger in watchers)
         if gained!=amount:self.log('life_replacement','Life-gain replacement modifies the event.',actor=seat,original=amount,gained=gained)
 
     def event_game(self, phase: str) -> EventGame:
