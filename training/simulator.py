@@ -1002,7 +1002,8 @@ class Simulator(AdvancedRules):
         if card.kind == "token_spell":
             for resolution in range(1):
                 token_triggers = []
-                for _ in range(card.token_count):
+                created=self.event_game('main').token_amount(controller,card.token_count)
+                for _ in range(created):
                     self.token_sequence += 1
                     definition = card.token_definition
                     if definition is None: raise RuntimeError("Missing parsed token characteristics")
@@ -1146,7 +1147,9 @@ class Simulator(AdvancedRules):
                 owner=self.players[event["controller"]]
                 pending=[]
                 owner.life -= event.get("controllerLoss",0)
-                for _ in range(spec["amount"]):
+                created=self.event_game('main').token_amount(event['controller'],spec['amount'])
+                event=dict(event,tokenSpec=dict(spec,amount=created))
+                for _ in range(created):
                     self.token_sequence+=1
                     definition=EventDefinition(" ".join(spec["subtypes"]),frozenset({"Creature"}|({"Land"} if spec.get("land") else set())|({"Enchantment"} if spec.get("enchantment") else set())),frozenset(spec["subtypes"]),
                         False,spec["power"],spec["toughness"],frozenset(spec["keywords"]),colors=frozenset(spec["colors"]),pilot_bonus=spec.get("contribution_bonus",0))
@@ -1896,7 +1899,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace"} & event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.opponent_creatures_enter_tapped or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace"} & event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.token_replacements or event_definition.opponent_creatures_enter_tapped or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):
