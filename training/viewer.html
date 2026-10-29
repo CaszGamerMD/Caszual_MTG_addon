@@ -1,110 +1,210 @@
 <!doctype html>
-<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Commander Golem • Turn Review</title>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101816">
+<title>Commander Golem | Match Theater</title>
 <style>
-:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#10151d;color:#edf2f8}
-*{box-sizing:border-box}body{margin:0 auto;max-width:1250px;padding:20px}h1{font-size:1.65rem;margin:0 0 8px}
-h2{font-size:1.1rem}p{line-height:1.5;color:#b8c6d8}header{display:flex;gap:18px;justify-content:space-between;align-items:center;flex-wrap:wrap}
-button,.upload{border:1px solid #44556c;border-radius:9px;padding:10px 15px;background:#243449;color:#fff;cursor:pointer;font:inherit}
-button:disabled{opacity:.4;cursor:default}.upload input{display:none}.badge{display:inline-block;padding:5px 10px;border-radius:15px;background:#34412d;color:#c5f4a1;font-size:.8rem}
-.notice{border-left:3px solid #e6b657;padding:10px 14px;background:#29251d;color:#f1d9aa;border-radius:5px;margin:18px 0}
-nav,.controls{display:flex;gap:8px;flex-wrap:wrap;margin:15px 0}button.selected{background:#315e84;border-color:#80b8e0}
-.panel{background:#192331;border:1px solid #304257;border-radius:12px;padding:18px;margin-bottom:16px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.stats{display:flex;gap:14px;flex-wrap:wrap}.life{font-size:2rem;color:#c5f4a1;font-weight:700}
-.cards{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}.card{padding:10px;border:1px solid #59697f;border-radius:8px;background:#263b4c;min-width:120px;font-size:.85rem}
-.card.land{background:#284234}.card.tapped{opacity:.65;transform:rotate(5deg)}small{display:block;color:#bac7d8;margin-top:4px}
-input[type=range]{width:100%;accent-color:#c5f4a1}input[type=search],textarea{width:100%;font:inherit;color:#fff;background:#101923;border:1px solid #45576e;border-radius:7px;padding:10px}
-textarea{min-height:75px;resize:vertical}#log{max-height:420px;overflow:auto}.event{padding:10px;border-bottom:1px solid #314257;cursor:pointer}.event.active{background:#2f4b62;border-radius:6px}
-.meta{color:#a8bdd5;font-size:.8rem}.question{border-left:3px solid #e6b657;margin:12px 0;padding:14px;background:#202c3b;border-radius:8px}
-pre{white-space:pre-wrap;font-family:inherit;color:#c2cfdf}details{margin:12px 0}#empty{text-align:center;padding:55px 20px}
-footer{font-size:.8rem;color:#91a3ba;margin:24px 0}[hidden]{display:none!important}
-@media(max-width:650px){body{padding:12px}.grid{grid-template-columns:1fr}.panel{padding:13px}.card{min-width:100px}.controls button{padding:10px}}
+:root{color-scheme:dark;--bg:#090f10;--felt:#142723;--felt2:#1b332c;--panel:#17201f;--line:#38524a;--muted:#a7b9af;--text:#f7f0df;--gold:#e4be77;--green:#9dd7b7;--red:#f4a58b;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text);background:var(--bg)}
+*{box-sizing:border-box}body{margin:0;min-width:320px;background:radial-gradient(ellipse at 50% 2%,#24443a 0,#0b1413 52%,#080d0f 100%);min-height:100vh}
+button,input,select,textarea{font:inherit}button{color:var(--text);border:1px solid #52685b;background:#23332e;padding:9px 13px;border-radius:9px;cursor:pointer;transition:background .15s,border-color .15s}
+button:hover:not(:disabled){background:#375148;border-color:var(--gold)}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+button:disabled{opacity:.42;cursor:default}button.primary{background:#74552c;border-color:#d4a760;color:#fff4d8;font-weight:700}
+button.active{background:#3d594c;border-color:#e4be77}.tiny{font-size:12px;padding:6px 9px}.muted{color:var(--muted)}
+.shell{max-width:1600px;margin:0 auto;padding:14px 18px 30px}
+header{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:3px 4px 13px}
+.brand{display:flex;align-items:center;gap:13px}.sigil{height:43px;width:43px;display:grid;place-items:center;border:2px solid var(--gold);border-radius:12px;box-shadow:0 0 15px #c38b3d3b;font-family:Georgia,serif;font-size:24px;font-weight:700;color:var(--gold)}
+h1{font:700 clamp(19px,2.4vw,26px)/1.1 Georgia,serif;letter-spacing:.03em;margin:0}.eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:800}.headActions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.fileButton{position:relative;overflow:hidden;display:inline-block;border:1px solid var(--gold);color:#fff2d2;background:#69512d;border-radius:9px;padding:10px 13px;font-weight:700;cursor:pointer}.fileButton input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.notice{border:1px solid #706044;background:#342c1f;color:#ead7b0;padding:9px 13px;border-radius:9px;margin:0 0 12px;font-size:12px;line-height:1.55}
+.viewTabs{display:flex;gap:8px;margin:0 0 12px}.viewTabs button{font-size:12px;letter-spacing:.07em;text-transform:uppercase;font-weight:800}
+#empty{min-height:360px;display:grid;place-content:center;text-align:center;border-radius:22px;border:1px dashed #648478;background:linear-gradient(150deg,#1c342f,#101a19);padding:30px}
+#empty h2{font:700 30px Georgia,serif;margin:12px 0}#empty p{max-width:510px;color:var(--muted);line-height:1.6}
+.theater{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;align-items:start}
+.arena{min-width:0;border:1px solid #557166;border-radius:17px;background:radial-gradient(ellipse at center,#24443a 0%,#1b352f 45%,#10231f 100%);box-shadow:inset 0 0 80px #040c0c80,0 10px 50px #0007;overflow:hidden;position:relative}
+.arena:before{content:"";pointer-events:none;position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0,transparent 41px,#e9d49b04 42px),repeating-linear-gradient(90deg,transparent 0,transparent 41px,#e9d49b04 42px);opacity:.6}
+.arena > *{position:relative}.playerRow{padding:12px 14px 6px;min-height:235px}
+.playerRow.top{background:linear-gradient(180deg,#0b1717af,transparent 70%);border-bottom:1px solid #819d8742}
+.playerRow.bottom{background:linear-gradient(0deg,#0b1717bf,transparent 70%);border-top:1px solid #819d8742}
+.identity{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.identityInfo{display:flex;align-items:center;gap:10px;min-width:0}.seat{font:700 18px Georgia,serif;white-space:nowrap;max-width:390px;overflow:hidden;text-overflow:ellipsis}
+.turnTag{font-size:10px;text-transform:uppercase;letter-spacing:.07em;background:#58705a;color:#fff5de;border:1px solid #b5c78a;padding:4px 8px;border-radius:15px}
+.lifeWheel{display:flex;align-items:center;gap:8px}.lifeNumber{min-width:50px;text-align:center;font:700 32px Georgia,serif;color:#f5e5b6;text-shadow:0 0 12px #ffcc6333}.lifeShift{font-size:13px;font-weight:800}.lifeShift.positive{color:var(--green)}.lifeShift.negative{color:var(--red)}
+.detailLine{display:flex;flex-wrap:wrap;gap:12px;margin:7px 0 9px;color:#c4d6ca;font-size:11px}
+.field{display:flex;flex-direction:column;gap:10px;min-height:165px}.zone{min-height:66px}.zoneLabel{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#bad1c2;margin-bottom:7px;border-bottom:1px solid #93af9d38;padding-bottom:4px}.zoneLabel span:last-child{font-size:10px;color:#88a297}
+.cardTrack{display:flex;gap:7px;overflow-x:auto;overflow-y:visible;padding:4px 3px 10px;scrollbar-width:thin;scrollbar-color:#6e8f7b transparent}.cardTrack:empty:after{content:"Empty zone";font-size:11px;color:#90a99a;padding:16px 8px;font-style:italic}
+.gameCard{position:relative;display:flex;flex-direction:column;flex:0 0 110px;width:110px;height:145px;padding:6px;border:2px solid #c2b99c;border-radius:9px;background:linear-gradient(135deg,#b9a97d,#d7c9a4 18%,#bba982 38%,#d6c89f 80%,#a68a60);color:#17211c;box-shadow:2px 4px 10px #0008;cursor:pointer;transition:transform .16s,box-shadow .16s}
+.gameCard:hover{z-index:3;transform:translateY(-5px);box-shadow:0 5px 18px #e4c38a55}.gameCard.tapped{transform:rotate(8deg) scale(.94);opacity:.78}.gameCard.tapped:hover{transform:rotate(8deg) translateY(-5px)}
+.gameCard.entered{animation:materialize .65s ease-out both;box-shadow:0 0 14px #ceec9caa}.gameCard.changed{box-shadow:0 0 0 2px #ebd391,0 0 12px #f9d68895}
+.gameCard.creature{border-color:#b8c7ad}.gameCard.land{border-color:#79a087;background:linear-gradient(130deg,#a4c3a6,#dce0bb 22%,#91b8a2 84%)}.gameCard.artifact,.gameCard.equipment,.gameCard.mana_artifact{border-color:#a9bcc1;background:linear-gradient(130deg,#97adb3,#e5e4d7 30%,#a7bbc0)}.gameCard.enchantment,.gameCard.aura{border-color:#bba1d2;background:linear-gradient(130deg,#b7a0cc,#e0cce3 30%,#b4a1c9)}
+.gameCard .cardName{font-size:10px;font-weight:800;line-height:1.15;min-height:22px;max-height:26px;overflow:hidden;word-break:break-word;padding:1px 3px}.cardIllustration{flex:1;min-height:38px;position:relative;border:2px solid #24392b66;border-radius:4px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 40% 32%,#a3c4ab,#3d6555 53%,#213e35);overflow:hidden}
+.cardIllustration:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent 0 16px,#ffffff0b 17px 18px)}
+.gameCard.land .cardIllustration{background:radial-gradient(ellipse at 42% 40%,#d4bb88,#658b68 55%,#304e45)}.gameCard.artifact .cardIllustration,.gameCard.equipment .cardIllustration,.gameCard.mana_artifact .cardIllustration{background:radial-gradient(ellipse at 35% 30%,#9bc3c5,#536d77 60%,#304354)}.gameCard.enchantment .cardIllustration,.gameCard.aura .cardIllustration{background:radial-gradient(ellipse at 35% 30%,#d8c5e0,#816da0 60%,#494063)}
+.artSymbol{position:relative;font:700 34px Georgia,serif;color:#fbefd8;text-shadow:0 3px 10px #0009}.cardType{font-size:9px;font-weight:700;border-top:1px solid #3b4d4088;margin-top:4px;padding:3px 2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:capitalize}
+.cardStats{position:absolute;bottom:7px;right:7px;background:#e2d4a8;border:1px solid #555c4b;border-radius:4px;padding:1px 4px;font:700 11px Georgia,serif}.cardMeta{position:absolute;bottom:7px;left:7px;font-size:8px;font-weight:700;max-width:64px;overflow:hidden}
+.cardMark{position:absolute;top:-8px;right:-6px;background:#352b17;border:1px solid #e1b96c;border-radius:50%;font-size:10px;font-weight:800;color:#ffe7a5;min-width:22px;min-height:22px;display:grid;place-items:center;z-index:2}
+.landStack{display:flex;gap:6px;flex-wrap:wrap}.landStack .gameCard{height:72px;width:93px;flex-basis:93px}.landStack .cardIllustration{min-height:16px}.landStack .artSymbol{font-size:19px}.landStack .cardName{min-height:13px;font-size:10px;white-space:nowrap}.landStack .cardType,.landStack .cardStats{display:none}.landStack .cardMeta{bottom:6px}
+.centerBand{position:relative;padding:14px;border-block:1px solid #a9c69965;background:linear-gradient(90deg,#081514bd,#1c3831ec,#081514bd);text-align:center;min-height:112px}
+.phaseRail{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin:0 auto 11px}.phasePill{border:1px solid #527263;border-radius:20px;font-size:9px;color:#a4bcae;font-weight:800;letter-spacing:.07em;padding:5px 8px;text-transform:uppercase}.phasePill.current{border-color:var(--gold);color:#ffde9c;background:#75552b66;box-shadow:0 0 12px #e2b36025}
+.turnHeadline{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}.turnCount{font-size:11px;color:var(--gold);font-weight:900;letter-spacing:.15em;text-transform:uppercase}.eventHeadline{font:700 clamp(15px,1.9vw,23px) Georgia,serif;line-height:1.25;max-width:740px;margin:0 auto}.eventKind{font-size:10px;letter-spacing:.14em;font-weight:900;color:#c2d9ca;text-transform:uppercase}
+.glowCombat .eventHeadline{color:#f8b99b;text-shadow:0 0 16px #d4554e55}.glowLife .eventHeadline{color:#cce9b1}.glowCast .eventHeadline{color:#f4dda4}
+.handLine{display:flex;gap:5px;align-items:center;min-height:35px;flex-wrap:wrap;margin-top:7px}.backCard{width:23px;height:33px;border:2px solid #d3ad6f;border-radius:4px;background:radial-gradient(ellipse at center,#b88b4e 0,#5d3e27 40%,#172423 80%);box-shadow:1px 2px 4px #0008;flex:none;transform:rotate(-5deg)}.backCard:nth-child(2n){transform:rotate(5deg)}.hiddenCount{font-size:11px;color:#c7d5cb;margin-left:5px}
+.bottom .handLine{justify-content:center}
+.sidebar{display:flex;flex-direction:column;gap:12px;min-width:0}.sidePanel{background:#16231f;border:1px solid #466457;border-radius:12px;overflow:hidden}.sideHead{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #425b4e;padding:10px 12px;font:700 13px Georgia,serif;color:#f0dfb6}
+.stackCards{display:flex;flex-direction:column;gap:7px;padding:11px;max-height:220px;overflow:auto}.stackItem{padding:9px 11px;border-radius:8px;border:1px solid #8f784e;background:linear-gradient(100deg,#4b3825,#2a2b25);font-size:12px}.stackItem:first-child{border-color:var(--gold);box-shadow:0 0 12px #dbb66e33}.stackOwner{display:block;color:#d6bd81;font-size:10px;margin-top:4px}.emptyStack{color:#a9bdaf;font-size:12px;text-align:center;padding:14px 4px}
+.sideTools{display:flex;gap:7px;padding:9px;flex-wrap:wrap}.logSearch{width:calc(100% - 20px);margin:10px;border:1px solid #5a7668;background:#0e1715;color:#f8eddc;border-radius:8px;padding:9px}.eventFeed{padding:0 7px 10px;max-height:440px;overflow:auto;scrollbar-width:thin}.feedItem{text-align:left;border:0;border-left:2px solid #3a594a;width:100%;background:transparent;padding:8px 8px 8px 12px;border-radius:0;font-size:11px;line-height:1.45}.feedItem:hover{background:#2a3e34}.feedItem.on{border-left-color:var(--gold);background:#364335;color:#fff3cf}.feedMeta{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#b5c5b7;margin-bottom:2px}.feedEmpty{padding:14px;font-size:12px;color:var(--muted)}
+.controls{margin-top:12px;border:1px solid #4b685c;background:#14201d;border-radius:13px;padding:13px 16px}.controlsRow{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:7px}.controlsRow .spacer{flex:1}.controlsRow label{font-size:11px;color:#b4c7b8}
+.controls input[type=range]{width:100%;accent-color:var(--gold);margin:10px 0 4px;cursor:pointer}.timelineLegend{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--muted)}
+select{background:#23372f;border:1px solid #5b7366;color:var(--text);padding:9px;border-radius:8px}#questions{max-width:1000px;margin:auto}.questionCard{border:1px solid #61513b;background:#24281e;padding:18px;border-radius:12px;margin-bottom:14px}.questionCard h3{margin:0 0 8px;font:700 18px Georgia,serif}.questionCard p{font-size:13px;line-height:1.5}.questionCard pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#e2d6bd}
+textarea{background:#101c18;border:1px solid #547063;border-radius:8px;color:var(--text);padding:10px;width:100%;min-height:72px;resize:vertical}
+dialog{border:1px solid var(--gold);border-radius:15px;background:#172620;color:var(--text);padding:22px;max-width:min(470px,92vw);box-shadow:0 20px 80px #000d}dialog::backdrop{background:#020908c9}dialog h2{font:700 23px Georgia,serif;margin:0 0 8px}.modalLabels{line-height:1.75;font-size:13px;color:#d4e4d5}
+.footer{font-size:11px;color:#98b2a3;text-align:center;padding:18px 4px;line-height:1.6}
+[hidden]{display:none!important}
+@keyframes materialize{from{transform:translateY(18px) scale(.85);opacity:.35}to{transform:translateY(0) scale(1);opacity:1}}
+@media(max-width:1060px){.theater{grid-template-columns:minmax(0,1fr) 250px}.gameCard{width:96px;flex-basis:96px;height:138px}}
+@media(max-width:790px){.theater{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:1fr 1fr;gap:9px}.eventFeed{max-height:290px}.playerRow{min-height:0}.arena{border-radius:12px}}
+@media(max-width:520px){.shell{padding:10px 8px}header{align-items:flex-start}.sigil{height:34px;width:34px;font-size:18px}.headActions{justify-content:flex-end}.headActions button{padding:7px;font-size:11px}.fileButton{padding:8px;font-size:11px}h1{font-size:18px}.sidebar{grid-template-columns:1fr}.gameCard{flex-basis:89px;width:89px;height:126px}.landStack .gameCard{height:66px;flex-basis:78px;width:78px}.gameCard .cardName{font-size:9px}.lifeNumber{font-size:27px}.seat{font-size:15px;max-width:235px}.centerBand{padding:11px 6px}.phasePill{font-size:8px;padding:3px 5px}.controls{padding:10px 8px}.controlsRow button{padding:8px 9px;font-size:11px}.playerRow{padding:9px}.cardTrack{padding-bottom:7px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 </style>
-<header><div><h1>Commander Golem</h1><span class="badge">Turn & rules review</span></div><label class="upload">Open replay / questions<input id="file" type="file" accept=".json,application/json"></label></header>
-<div id="notice" class="notice">Open a replay or deck review JSON file. No internet connection is needed.</div>
-<nav><button id="turnTab" class="selected">Turn simulator</button><button id="questionTab">Questions <span id="count">0</span></button></nav>
-<div id="empty" class="panel"><h2>Review every turn</h2><p>Step through decisions, combat and life totals, or answer flagged rules questions.</p></div>
+</head>
+<body>
+<div class="shell">
+<header>
+  <div class="brand"><div class="sigil" aria-hidden="true">M</div><div><div class="eyebrow">Commander Golem · Simulator</div><h1>Match Theater</h1></div></div>
+  <div class="headActions"><button id="fullscreen" type="button" title="Toggle fullscreen">⛶ Fullscreen</button><label class="fileButton">Open replay<input type="file" id="file" accept=".json,application/json"></label></div>
+</header>
+<div id="notice" class="notice" role="status">Offline replay theater. Choose a saved replay JSON, or open a generated match HTML with its replay already included. This does not show private hands.</div>
+<nav class="viewTabs" aria-label="Viewer pages"><button id="turnTab" class="active">▶ The match</button><button id="questionTab">◇ Rules questions <span id="count">0</span></button></nav>
+<div id="empty"><div class="eyebrow">The table is ready</div><h2>Watch a match unfold</h2><p>Load a replay to follow each turn, see cards enter the battlefield, inspect attacks and life changes, and watch spells move through the public stack. No card images or internet required.</p><p>Drag and drop a replay JSON anywhere on this page.</p></div>
 <main id="turns" hidden>
-<section class="panel"><div id="heading"></div><div class="controls"><button id="prev">← Previous</button><button id="play">Play</button><button id="next">Next →</button><button id="nextTurn">Next turn</button></div><input id="slider" aria-label="Replay event" type="range" min="0" max="0" value="0"><p id="message"></p></section>
-<div id="players" class="grid"></div>
-<section class="panel"><h2>Play log</h2><input id="search" type="search" placeholder="Filter log by card, action or phase…" aria-label="Filter play log"><div id="log"></div></section>
+ <section class="theater" aria-label="Match battlefield">
+  <div class="arena" id="arena">
+   <div class="playerRow top" id="opponent"></div>
+   <div class="centerBand" id="centerBand"><div class="phaseRail" id="phaseRail"></div><div class="turnCount" id="turnCount"></div><div class="eventKind" id="eventKind"></div><div class="eventHeadline" id="eventHeadline" aria-live="polite"></div></div>
+   <div class="playerRow bottom" id="you"></div>
+  </div>
+  <aside class="sidebar">
+   <section class="sidePanel"><div class="sideHead">The stack <span id="stackCount" class="muted">0</span></div><div id="stack" class="stackCards"></div><div class="sideTools"><button id="zones0" class="tiny">Player 1 zones</button><button id="zones1" class="tiny">Player 2 zones</button></div></section>
+   <section class="sidePanel"><div class="sideHead">Match commentary <span id="eventNumber" class="muted"></span></div><input id="search" class="logSearch" type="search" placeholder="Find cards or actions…" aria-label="Search replay log"><div class="eventFeed" id="log"></div></section>
+  </aside>
+ </section>
+ <section class="controls" aria-label="Playback controls">
+  <div class="controlsRow">
+   <button id="backTurn" title="Previous turn">⟵ Turn</button><button id="prev" title="Previous event (left arrow)">‹ Event</button>
+   <button id="play" class="primary" title="Play or pause (space)">▶ Play</button>
+   <button id="next" title="Next event (right arrow)">Event ›</button><button id="nextTurn" title="Next turn">Turn ⟶</button>
+   <span class="spacer"></span><label for="speed">Speed</label><select id="speed"><option value="1400">0.5×</option><option value="750" selected>1×</option><option value="375">2×</option><option value="180">4×</option></select>
+   <button id="highlights" title="Auto-play only key events, with all events still available">All events</button>
+  </div>
+  <input id="slider" type="range" min="0" max="0" value="0" aria-label="Replay timeline">
+  <div class="timelineLegend"><span id="timelineStart">Turn 0</span><span id="timelinePosition">Event 0 / 0</span><span id="timelineEnd">Turn 0</span></div>
+ </section>
 </main>
-<section id="questions" hidden class="panel"><h2>Questions for human review</h2><p>A blocking question pauses the match. Written answers are review notes; the rule must be implemented and tested before it can be used for learning.</p><button id="saveAnswers">Download review answers</button><div id="questionList"></div></section>
-<footer>Public review: draw events show counts, not private card identities. Sandbox replays are labeled separately from full matches.</footer>
+<section id="questions" hidden><div class="sidePanel" style="padding:18px;margin-bottom:14px"><h2 style="font:700 22px Georgia,serif;margin-top:0">Rules questions</h2><p class="muted" style="font-size:13px">Rules-review notes are not game rulings until implemented and tested. Unsupported cards stay unplayable.</p><button id="saveAnswers" type="button">Download review answers</button></div><div id="questionList"></div></section>
+<div class="footer">Standalone diagnostic replay • Not a complete Commander game • Public zones only • Card faces use offline placeholders rather than invented art • Keyboard: ← / → / Space</div>
+</div>
+<dialog id="modal" aria-label="Card and zone details"><h2 id="modalTitle"></h2><div class="modalLabels" id="modalBody"></div><div style="margin-top:16px;text-align:right"><button id="closeModal">Close</button></div></dialog>
 <script>
 "use strict";
-let data=/*EMBEDDED_REPLAY*/null, position=0, timer=null, activeTab="turns";
+let data=/*EMBEDDED_REPLAY*/null;
+let position=0,timer=null,tab="turns",onlyHighlights=false;
 const $=id=>document.getElementById(id);
-function node(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n}
-function stop(){if(timer)clearInterval(timer);timer=null;$("play").textContent="Play"}
-function selectTab(tab){activeTab=tab;$("turns").hidden=tab!=="turns"||!data?.events?.length;$("questions").hidden=tab!=="questions"||!data;
- $("turnTab").classList.toggle("selected",tab==="turns");$("questionTab").classList.toggle("selected",tab==="questions")}
-function render(){
- if(!data)return;
- $("empty").hidden=true;const events=data.events||[],questions=data.questions||[];
- $("count").textContent=questions.length;
- $("notice").textContent=data.notice||(data.kind==="rules-review"?"Deck review paused: "+questions.length+" blocking questions. No match results were used for learning.":"Review log");
- if(data.kind==="turn-replay")$("notice").textContent+=" Result: "+data.result+(data.winner===null?"":" · Player "+(data.winner+1));
- $("slider").max=Math.max(0,events.length-1);$("slider").value=position;
- $("prev").disabled=position===0;$("next").disabled=position>=events.length-1;
- if(events.length){
-  const e=events[position],state=e.state;
-  $("heading").textContent="Turn "+e.turn+" · "+e.phase+" · Event "+(position+1)+" / "+events.length;
-  $("message").textContent=e.message;
-  $("players").replaceChildren(...state.players.map(p=>{
-   const panel=node("section",undefined,"panel");panel.append(node("h2","Player "+(p.seat+1)+(data.deckNames?" · "+data.deckNames[p.seat]:"")+(state.active===p.seat?" · Active":"")));
-   if(data.commanders)panel.append(node("small","Commander: "+data.commanders[p.seat]+(p.commanderInZone?" · Command zone":" · In play or another zone")));
-   const stats=node("div",undefined,"stats");stats.append(node("span",p.life+" life","life"),node("span","Hand: "+p.handCount),node("span","Library: "+p.libraryCount));
-   const damage=Object.values(p.commanderDamage||{});if(damage.length)stats.append(node("span","Commander damage: "+damage.join(", ")));panel.append(stats);
-   const cards=node("div",undefined,"cards");
-   for(const c of p.battlefield){const el=node("div",c.name,"card "+c.kind+(c.tapped?" tapped":""));el.append(node("small",c.kind==="creature"?c.power+" / "+c.toughness+(c.fresh?" · New":"")+(c.saddled?" · Saddled":"")+(c.counters?" · +"+c.counters+" counters":""):(c.kind==="land"?"Land":c.kind==="enchantment"?"Enchantment":c.kind)),node("small",c.tapped?"Tapped":"Untapped"));cards.append(el)}
-   if(!p.battlefield.length)cards.append(node("p","Empty battlefield"));panel.append(cards);
-   const grave=node("details");grave.append(node("summary","Graveyard ("+p.graveyard.length+")"),node("p",p.graveyard.map(c=>c.name).join(", ")||"Empty"));panel.append(grave);return panel;
-  }));
- }
- renderLog();selectTab(activeTab);
+const make=(tag,content,cls)=>{const n=document.createElement(tag);if(content!==undefined&&content!==null)n.textContent=String(content);if(cls)n.className=cls;return n};
+const phases=["untap","upkeep","draw","land","main","attack","block","damage","second_main","end_step","cleanup"];
+const importance=new Set(["cast","stack_push","stack_resolve","attack","attackers","block","blockers","damage","combat","combat_damage","destroy","damage_deaths","death","token","trigger","exile","land","result","win","role_created","life_replacement","end_step_life_loss","search_reveal","search_basic","question"]);
+function stop(){if(timer!==null)clearInterval(timer);timer=null;$("play").textContent="▶ Play"}
+function stepDirection(delta){const events=data?.events||[];if(!events.length)return;position=Math.max(0,Math.min(events.length-1,position+delta));render()}
+function nextInteresting(from){const events=data?.events||[];for(let i=from+1;i<events.length;i++){if(important(events[i],events[i-1]))return i}return -1}
+function important(e,prev){if(!e)return false;if(importance.has(e.kind))return true;if(e.kind==="draw"||e.kind==="untap")return false;const ps=e.state?.players||[],old=prev?.state?.players||[];return ps.some((p,s)=>p.life!==old[s]?.life||p.battlefield?.length!==old[s]?.battlefield?.length)}
+function tick(){const events=data?.events||[];const n=onlyHighlights?nextInteresting(position):position+1;if(n<0||n>=events.length){stop();return}position=n;render()}
+function play(){if(timer!==null){stop();return}if(!data?.events?.length)return;if(position===data.events.length-1)position=0;$("play").textContent="❚❚ Pause";timer=setInterval(tick,Number($("speed").value));render()}
+function seekTurn(direction){stop();const e=data?.events||[];if(!e.length)return;const current=e[position].turn;if(direction>0){const n=e.findIndex((v,i)=>i>position&&v.turn>current);if(n>=0)position=n}else{const n=e.findIndex(v=>v.turn===current);if(n>=0&&n<position)position=n;else{const prev=e.slice(0,n).map(x=>x.turn).filter(t=>t<current).pop();if(prev!==undefined)position=e.findIndex(x=>x.turn===prev)}}render()}
+function setTab(value){tab=value;$("turnTab").classList.toggle("active",value==="turns");$("questionTab").classList.toggle("active",value==="questions");$("turns").hidden=value!=="turns"||!data?.events?.length;$("questions").hidden=value!=="questions"||!data}
+function eventStyle(e){const k=(e?.kind||"").toLowerCase();if(/damage|attack|block|destroy|death|exile/.test(k))return "glowCombat";if(/life|gain|heal|draw/.test(k))return "glowLife";if(/cast|stack|token|land|trigger/.test(k))return "glowCast";return ""}
+function renderPhase(phase){const rail=$("phaseRail");rail.replaceChildren();for(const p of phases){const text=p.replace("_"," ");const chip=make("span",text,"phasePill"+(p===phase?" current":""));rail.append(chip)}}
+function cardType(c){return c.kind==="land"?"land":c.isCreature||c.kind==="creature"?"creature":c.kind||"permanent"}
+function makeCard(c,previous){const kind=cardType(c);const root=make("button",undefined,"gameCard "+kind+(c.tapped?" tapped":""));
+ root.type="button";root.title="Inspect "+c.name;root.setAttribute("aria-label",c.name+(c.tapped?", tapped":""));
+ if(!previous)root.classList.add("entered");else if(previous.tapped!==c.tapped||previous.counters!==c.counters||previous.power!==c.power||previous.toughness!==c.toughness)root.classList.add("changed");
+ root.append(make("div",c.name,"cardName"));
+ const art=make("div",undefined,"cardIllustration");const sigils={creature:"✦",land:"♧",artifact:"◈",equipment:"⚒",mana_artifact:"◇",enchantment:"✧",aura:"✧",planeswalker:"✶",vehicle:"⚙"};art.append(make("span",sigils[kind]||"◇","artSymbol"));root.append(art);
+ root.append(make("div",kind==="creature"?"Creature":kind,"cardType"));
+ if(kind==="creature")root.append(make("span",String(c.power)+" / "+String(c.toughness),"cardStats"));
+ const detail=[];if(c.tapped)detail.push("TAPPED");if(c.fresh)detail.push("NEW");if(c.saddled)detail.push("SADDLED");
+ if(c.loyalty!==null&&c.loyalty!==undefined)detail.push("L:"+c.loyalty);if(c.chargeCounters)detail.push("CH:"+c.chargeCounters);
+ if(detail.length)root.append(make("span",detail.join(" · "),"cardMeta"));
+ if(c.counters)root.append(make("span","+"+c.counters,"cardMark"));
+ root.addEventListener("click",()=>inspectCard(c));return root
 }
-function renderLog(){
- const filter=$("search").value.toLowerCase();$("log").replaceChildren();
- for(const [i,e] of (data?.events||[]).entries()){
-  if(!(e.message+" "+e.phase+" "+e.kind).toLowerCase().includes(filter))continue;
-  const el=node("div",undefined,"event"+(i===position?" active":""));
-  el.append(node("div","Turn "+e.turn+" · "+e.phase+" · Player "+(e.actor+1),"meta"),node("div",e.message));
-  el.onclick=()=>{stop();position=i;render()};$("log").append(el);
- }
+function kindOf(c){const k=cardType(c);return k==="land"?"land":k==="creature"?"creature":"other"}
+function groupCards(p,prev,kind){const list=make("div",undefined,"cardTrack"+(kind==="land"?" landStack":""));const cards=(p.battlefield||[]).filter(c=>kindOf(c)===kind);const old=new Map((prev?.battlefield||[]).map(c=>[c.id,c]));for(const c of cards)list.append(makeCard(c,old.get(c.id)));return list}
+function nameFor(seat){return data?.deckNames?.[seat]||("Player "+(seat+1))}
+function playerPanel(seat,e,prev){const p=e.state.players[seat],past=prev?.state?.players?.[seat];const panel=make("div");
+ const header=make("div",undefined,"identity");const info=make("div",undefined,"identityInfo");info.append(make("div",nameFor(seat),"seat"));if(e.state.active===seat)info.append(make("span","Active player","turnTag"));header.append(info);
+ const life=make("div",undefined,"lifeWheel");const change=p.life-(past?.life??p.life);if(change)life.append(make("span",(change>0?"+":"")+change,"lifeShift "+(change>0?"positive":"negative")));life.append(make("span",p.life,"lifeNumber"));life.append(make("span","♥","muted"));header.append(life);panel.append(header);
+ const details=make("div",undefined,"detailLine");details.append(make("span","◆ Library "+p.libraryCount),make("span","▣ Hand "+p.handCount),make("span","† Grave "+(p.graveyard||[]).length),make("span","⬡ Exile "+(p.exile||[]).length));
+ if(data?.commanders?.[seat])details.append(make("span","Commander: "+data.commanders[seat]+(p.commanderInZone?" (command zone)":"")));
+ if(Object.keys(p.commanderDamage||{}).length)details.append(make("span","Commander dmg: "+Object.values(p.commanderDamage).join("/")));
+ if((p.manaPool||[]).some(Boolean))details.append(make("span","Mana pool: "+p.manaPool.join("/")));
+ panel.append(details);
+ const field=make("div",undefined,"field");
+ for(const [k,title] of [["creature","Creatures"],["other","Other permanents"],["land","Lands"]]){const zone=make("section",undefined,"zone");const total=(p.battlefield||[]).filter(c=>kindOf(c)===k).length;const label=make("div",undefined,"zoneLabel");label.append(make("span",title),make("span",total));zone.append(label,groupCards(p,past,k));field.append(zone)}
+ panel.append(field);const backs=make("div",undefined,"handLine");for(let i=0;i<Math.min(p.handCount,10);i++)backs.append(make("span",undefined,"backCard"));backs.append(make("span",p.handCount>10?"+ "+(p.handCount-10)+" more hidden cards":"Hand hidden · "+p.handCount+" cards","hiddenCount"));panel.append(backs);
+ return panel
 }
-function renderQuestions(){
- $("questionList").replaceChildren();
- for(const q of data.questions||[]){
-  const el=node("article",undefined,"question");el.append(node("h2",q.card||q.reason),node("p",q.question));
-  if(q.deck)el.append(node("small","Deck: "+q.deck+(q.alsoInDecks?.length?" / "+q.alsoInDecks.join(" / "):"")));
-  if(q.diagnosticSupport)el.append(node("small",q.supportNote));
-  if(q.ruleAnswer)el.append(node("p","Validated diagnostic ruling: "+q.ruleAnswer));
-  if(q.parsedAbilities)el.append(node("pre",JSON.stringify(q.parsedAbilities,null,2)));
-  if(q.oracleText){const details=node("details");details.append(node("summary","Card rules text"),node("pre",q.oracleText));el.append(details)}
-  const answer=node("textarea");answer.placeholder="Human review notes / proposed ruling";answer.value=q.answer||"";answer.setAttribute("aria-label","Answer for "+(q.card||q.reason));answer.oninput=()=>q.answer=answer.value;
-  el.append(answer,node("small",q.diagnosticSupport ? "Diagnostic subset implemented · Full-game integration still open" : "Open · Blocking · Needs implementation and tests"));$("questionList").append(el);
- }
- if(!(data.questions||[]).length)$("questionList").append(node("p","No open rules questions in this replay."));
+function renderStack(state){const items=state.stack;$("stack").replaceChildren();if(!Array.isArray(items)){$("stack").append(make("div","Stack not recorded in this older replay.","emptyStack"));$("stackCount").textContent="—";return}
+ $("stackCount").textContent=String(items.length);if(!items.length){$("stack").append(make("div","The stack is empty","emptyStack"));return}
+ for(const [index,item] of items.slice().reverse().entries()){const node=make("div",undefined,"stackItem");node.append(make("strong",(index===0?"↑ Next · ":"")+item.label));node.append(make("span","Controlled by "+nameFor(item.controller),"stackOwner"));$("stack").append(node)}
 }
-function unpack(value){
- if(value.packedReplay!==1)return value;
- const catalog=value.cardCatalog;
- value.events=value.compactEvents.map(e=>({index:e[0],turn:e[1],phase:e[2],actor:e[3],kind:e[4],message:e[5],details:e[6],
- state:{active:e[7][0],turn:e[7][1],phase:e[7][2],players:e[7][3].map((p,seat)=>({seat,life:p[0],handCount:p[1],libraryCount:p[2],
- battlefield:p[3].map(c=>({...catalog[c[0]],tapped:!!c[1],fresh:!!c[2],power:c.length>3?c[3]:catalog[c[0]].power,toughness:c.length>4?c[4]:catalog[c[0]].toughness,traits:c.length>5?c[5]:catalog[c[0]].traits,saddled:!!c[6],counters:c[7]||0})),graveyard:p[4].map(c=>({id:catalog[c].id,name:catalog[c].name})),commanderInZone:!!p[5],commanderDamage:p[6]||{}}))}}));
- return value;
-}
-function load(value){stop();if(!value||value.schemaVersion!==1||!["turn-replay","rules-review"].includes(value.kind))throw Error("Unsupported review file");
- data=unpack(value);position=0;activeTab=value.events?.length?"turns":"questions";renderQuestions();render()}
-$("file").onchange=async e=>{try{load(JSON.parse(await e.target.files[0].text()))}catch(err){$("notice").textContent="Could not open file: "+err.message}};
-$("prev").onclick=()=>{stop();position=Math.max(0,position-1);render()};
-$("next").onclick=()=>{position=Math.min((data.events||[]).length-1,position+1);render()};
-$("nextTurn").onclick=()=>{stop();const events=data.events||[];const turn=events[position]?.turn;const i=events.findIndex((e,i)=>i>position&&e.turn>turn);if(i>=0){position=i;render()}};
-$("slider").oninput=e=>{stop();position=Number(e.target.value);render()};
-$("play").onclick=()=>{if(timer){stop();return}if(!data?.events?.length)return;$("play").textContent="Pause";timer=setInterval(()=>{if(position>=data.events.length-1){stop();return}position++;render()},800)};
-$("turnTab").onclick=()=>selectTab("turns");$("questionTab").onclick=()=>{stop();selectTab("questions")};
-$("search").oninput=renderLog;
-$("saveAnswers").onclick=()=>{if(!data)return;const blob=new Blob([JSON.stringify({schemaVersion:1,kind:"rules-review",status:"pending-review",questions:data.questions||[]},null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=node("a");a.href=url;a.download="golem-review-answers.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
-if(data)load(data);
-</script></html>
+function inspectCard(c){$("modalTitle").textContent=c.name;const d=$("modalBody");d.replaceChildren();
+ const fields=[["Object ID",c.id],["Permanent type",c.kind],["Tapped",c.tapped?"Yes":"No"],["Fresh",c.fresh?"Yes":"No"],["Power / toughness",(c.isCreature||c.kind==="creature")?String(c.power)+" / "+String(c.toughness):"Not a creature"],["Counters",c.counters||0],["Charge counters",c.chargeCounters||0],["Loyalty",c.loyalty??"—"],["Attached to",c.attachedTo||"—"],["Bestowed",c.bestowed?"Yes":"No"],["Hexproof",c.hexproof?"Yes":"No"],["Ward",Array.isArray(c.wardCosts)?c.wardCosts.join(", ")||"None":"Not recorded"],["Traits",c.traits||"Not recorded"]];
+ for(const [key,value] of fields){const line=make("div");line.append(make("strong",key+": "),make("span",value));d.append(line)}$("modal").showModal()}
+function showZones(seat){if(!data?.events?.length)return;const p=data.events[position].state.players[seat];$("modalTitle").textContent=nameFor(seat)+" · Public zones";const d=$("modalBody");d.replaceChildren();
+ for(const [name,items] of [["Graveyard",p.graveyard||[]],["Exile",p.exile||[]]]){d.append(make("strong",name+" ("+items.length+")"));d.append(make("div",items.length?items.map(c=>c.name).join(" · "):"Empty","muted"))}
+ d.append(make("p","Hand identities and library order are private and not available in public replay data.","muted"));$("modal").showModal()}
+function renderLog(){const box=$("log");box.replaceChildren();const events=data?.events||[];if(!events.length)return;const filter=$("search").value.toLocaleLowerCase().trim();
+ let selected=[];if(filter){for(let i=0;i<events.length;i++)if((events[i].message+" "+events[i].kind+" "+events[i].phase).toLocaleLowerCase().includes(filter))selected.push(i);if(selected.length>150)selected=selected.slice(0,150)}else{for(let i=Math.max(0,position-13);i<=Math.min(events.length-1,position+13);i++)selected.push(i)}
+ if(!selected.length){box.append(make("div","No matching events.","feedEmpty"));return}
+ for(const i of selected){const e=events[i];const item=make("button",undefined,"feedItem"+(i===position?" on":""));item.type="button";item.append(make("span","T"+e.turn+" · "+e.phase+" · "+(e.actor>=0?nameFor(e.actor):"System"),"feedMeta"),make("span",e.message));item.onclick=()=>{stop();position=i;render()};box.append(item)}
+ const active=box.querySelector(".feedItem.on");if(active&& !filter)active.scrollIntoView({block:"nearest"})}
+function render(){if(!data)return;const events=data.events||[];$("count").textContent=String((data.questions||[]).length);$("empty").hidden=true;
+ const explanation=data.notice||"Review replay";$("notice").textContent=explanation+(data.kind==="turn-replay"?" · Result: "+(data.result||"unknown"):"");
+ position=Math.min(Math.max(position,0),Math.max(events.length-1,0));$("slider").max=Math.max(0,events.length-1);$("slider").value=position;
+ $("prev").disabled=position<=0;$("next").disabled=position>=events.length-1;$("backTurn").disabled=position<=0;$("nextTurn").disabled=position>=events.length-1;
+ $("timelineEnd").textContent=events.length?"Turn "+events[events.length-1].turn:"No events";$("timelineStart").textContent=events.length?"Turn "+events[0].turn:"";
+ $("timelinePosition").textContent=events.length?"Event "+(position+1)+" / "+events.length:"No events";$("eventNumber").textContent=(position+1)+" / "+events.length;
+ if(events.length){const e=events[position],prev=events[position-1],state=e.state;renderPhase(e.phase);
+  $("turnCount").textContent="Turn "+e.turn+" · "+(e.state.active===0?"Player 1":"Player 2")+" active";
+  $("eventKind").textContent=e.kind.replaceAll("_"," ");$("eventHeadline").textContent=e.message;
+  $("centerBand").className="centerBand "+eventStyle(e);
+  $("opponent").replaceChildren(playerPanel(1,e,prev));$("you").replaceChildren(playerPanel(0,e,prev));renderStack(state)}
+ renderLog();setTab(tab)}
+function renderQuestions(){const list=$("questionList");list.replaceChildren();for(const q of data.questions||[]){const article=make("article",undefined,"questionCard");article.append(make("h3",q.card||q.reason||"Rules question"),make("p",q.question||q.reason||""));
+ if(q.deck)article.append(make("div","Deck: "+q.deck,"muted"));if(q.diagnosticSupport)article.append(make("div",q.supportNote||"Diagnostic subset supported","muted"));
+ if(q.ruleAnswer)article.append(make("p","Validated diagnostic ruling: "+q.ruleAnswer));if(q.oracleText){const details=make("details");details.append(make("summary","Oracle text"),make("pre",q.oracleText));article.append(details)}
+ if(q.parsedAbilities){const details=make("details");details.append(make("summary","Parsed abilities"),make("pre",JSON.stringify(q.parsedAbilities,null,2)));article.append(details)}
+ const answer=make("textarea");answer.value=q.answer||"";answer.placeholder="Proposed ruling / reviewer notes";answer.setAttribute("aria-label","Review notes for "+(q.card||q.reason));answer.oninput=()=>q.answer=answer.value;article.append(answer);list.append(article)}
+ if(!(data.questions||[]).length)list.append(make("div","No open rules questions in this replay.","questionCard"))}
+function unpack(value){if(value.packedReplay!==1)return value;const catalog=value.cardCatalog||[];
+ value.events=(value.compactEvents||[]).map(e=>{const snap=e[7];return {index:e[0],turn:e[1],phase:e[2],actor:e[3],kind:e[4],message:e[5],details:e[6],
+ state:{active:snap[0],turn:snap[1],phase:snap[2],stack:snap.length>4?snap[4]:undefined,priority:snap.length>5?snap[5]:undefined,players:snap[3].map((p,seat)=>({seat,life:p[0],handCount:p[1],libraryCount:p[2],battlefield:p[3].map(c=>({...catalog[c[0]],tapped:!!c[1],fresh:!!c[2],power:c.length>3?c[3]:catalog[c[0]].power,toughness:c.length>4?c[4]:catalog[c[0]].toughness,traits:c.length>5?c[5]:catalog[c[0]].traits,saddled:!!c[6],counters:c[7]||0})),graveyard:p[4].map(c=>({id:catalog[c].id,name:catalog[c].name})),commanderInZone:!!p[5],commanderDamage:p[6]||{},exile:(p[7]||[]).map(c=>({id:catalog[c].id,name:catalog[c].name})),manaPool:p[8]||[]}))}}});return value}
+function load(value){if(!value||value.schemaVersion!==1||!["turn-replay","rules-review"].includes(value.kind))throw Error("Unsupported replay file or version");
+ stop();data=unpack(value);if(data.events?.length&&!data.events.every(e=>e.state?.players?.length===2))throw Error("This replay has an unsupported player-state format");
+ position=0;tab=data.events?.length?"turns":"questions";$("search").value="";renderQuestions();render()}
+async function loadFile(file){if(!file)return;try{load(JSON.parse(await file.text()));$("notice").textContent="Loaded "+file.name}catch(error){$("notice").textContent="Cannot load replay: "+error.message}}
+$("file").addEventListener("change",e=>loadFile(e.target.files[0]));document.addEventListener("dragover",e=>e.preventDefault());
+document.addEventListener("drop",e=>{e.preventDefault();loadFile(e.dataTransfer?.files[0])});
+$("prev").onclick=()=>{stop();stepDirection(-1)};$("next").onclick=()=>{stop();stepDirection(1)};$("play").onclick=play;
+$("backTurn").onclick=()=>seekTurn(-1);$("nextTurn").onclick=()=>seekTurn(1);
+$("slider").oninput=e=>{stop();position=Number(e.target.value);render()};$("speed").onchange=()=>{if(timer!==null){stop();play()}};
+$("highlights").onclick=()=>{onlyHighlights=!onlyHighlights;$("highlights").classList.toggle("active",onlyHighlights);$("highlights").textContent=onlyHighlights?"★ Highlights":"All events"};
+$("turnTab").onclick=()=>{stop();setTab("turns")};$("questionTab").onclick=()=>{stop();setTab("questions")};$("search").oninput=renderLog;
+$("zones0").onclick=()=>showZones(0);$("zones1").onclick=()=>showZones(1);
+$("closeModal").onclick=()=>$("modal").close();$("fullscreen").onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen?.()};
+$("saveAnswers").onclick=()=>{if(!data)return;const payload={schemaVersion:1,kind:"rules-review",status:"pending-review",questions:data.questions||[]};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=make("a");a.href=url;a.download="golem-review-answers.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),5000)};
+document.addEventListener("keydown",e=>{if(!data?.events?.length||$("modal").open||/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||""))return;if(e.code==="Space"){e.preventDefault();play()}else if(e.code==="ArrowRight"){e.preventDefault();stop();stepDirection(1)}else if(e.code==="ArrowLeft"){e.preventDefault();stop();stepDirection(-1)}});
+if(data){try{load(data)}catch(e){$("notice").textContent="Embedded replay error: "+e.message}}
+</script>
+</body>
+</html>
