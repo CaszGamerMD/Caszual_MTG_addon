@@ -1215,13 +1215,22 @@ class Simulator(AdvancedRules):
                 self.log('damage_board',f"{event['name']} deals {amount} damage to the opposing player and their creatures and planeswalkers.",
                          actor=event['controller'],damaged=[item.card.id for _,item in targets],amount=amount,
                          prevented=sorted(prevented),loyaltyAfter={item.card.id:item.loyalty for _,item in targets if 'Planeswalker' in game.battlefield[item.card.id].definition.types})
+                aura_damage=[dict(source=event['source'],target=None,amount=amount)]
+                aura_damage.extend(dict(source=event['source'],target=item.card.id,amount=amount)
+                                   for _,item in targets if item.card.id not in prevented)
+                pending_aura=game.aura_damage_triggers(aura_damage,opponent)
                 self.destroy_batch(dead,card,reason='damage_deaths')
+                if pending_aura:self.resolve_entry_triggers(pending_aura,card)
                 self.outcome()
                 if self.finished:return
                 continue
             elif event.get("operation") == "damage":
                 target = 1-event["controller"]
                 self.players[target].life -= event["amount"]
+                if event["amount"]>0:
+                    game=self.event_game('main')
+                    aura_events=game.aura_damage_triggers([dict(source=event['source'],target=None,amount=event['amount'])],target)
+                    if aura_events:self.resolve_entry_triggers(aura_events,card)
                 # Noncombat damage: never contributes to commander combat damage.
                 message = f"{event['name']} deals {event['amount']} damage to Player {target+1}."
             elif event.get("operation") == "gain_life":
