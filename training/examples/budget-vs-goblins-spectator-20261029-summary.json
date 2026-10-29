@@ -11,17 +11,22 @@
   ],
   "turnLimitPerPlayer": 10,
   "turnsCompleted": [
-    10,
-    9
+    4,
+    4
   ],
   "result": "win",
-  "winner": 1,
+  "winner": 0,
   "lifeTotals": [
-    -10,
-    46
+    40,
+    16
   ],
-  "eventCount": 458,
+  "eventCount": 217,
   "flaggedQuestions": 133,
+  "openingMulligans": [
+    11,
+    16
+  ],
+  "openingDrawEvents": 29,
   "spectatorHands": true,
   "scryfallImages": true,
   "learningEligible": false,
