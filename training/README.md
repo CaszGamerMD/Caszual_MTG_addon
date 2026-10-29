@@ -709,3 +709,34 @@ policies, not changes to official Commander mulligan rules.
 The ideal remains 3–4 lands and two distinct spells on a three-turn
 schedule; this relaxed rule prevents unrealistic 16-mulligan loops in
 partially supported decks.
+
+
+## Additional unseen Oracle programs: blink controller and flashback (2026-10-29)
+
+The experimental diagnostic now accepts the **complete** one-instruction
+instant pattern "Exile target creature you control, then return it/that card
+to the battlefield under your/its owner's control", with optional standalone
+**Rebound**. A parsed return destination keeps a creature's *physical owner*
+distinct from its new *controller*. This supports **Cloudshift** without
+hard-coding the card's name, and retains **Ephemerate**'s existing
+owner-return/rebound behavior. Legal targeting, temporary state reset, new
+object identity and token non-return use the existing blink implementation.
+
+A reusable token-sorcery pattern now composes fixed-characteristic
+"Create ..." with a standalone **Flashback {mana cost}** line. The full
+printed cost is used from hand; the flashback cost is paid when casting
+from the controller's graveyard at sorcery timing. The same physical card
+moves to exile after resolution or if countered, and cannot flash back
+again from exile. Legal graveyard casts are included in the agent's
+decision candidates. **Chatter of the Squirrel** and renamed/token-variant
+fixtures exercise this grammar. Additional unrecognized instructions
+reject the *whole* program instead of being silently ignored.
+
+These are deliberately narrow, testable rule families: flashback
+on other spell-effect families, delayed blink, optional targets,
+alternate casting timing, multiplayer control replacement, and arbitrary
+Oracle language remain unsupported. Matches are diagnostic only and
+do not change the live Minecraft golem or training eligibility.
+
+Regression tests: `tests/test_blink_variants.py` and
+`tests/test_flashback.py`.
