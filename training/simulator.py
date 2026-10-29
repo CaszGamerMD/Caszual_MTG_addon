@@ -1303,6 +1303,27 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='attacker_loses_flying':
+                game=self.event_game('combat');target=game.battlefield.get(event.get('target'))
+                if target:
+                    target.lost_abilities['flying']=game.timestamp()
+                    self.sync_events(game)
+                self.log('flying_removed','A flying attacker loses flying until end of turn.',
+                         actor=event['controller'],targetPermanent=event.get('target'),source=event['source'])
+                continue
+            if event.get('operation')=='attacker_damage':
+                game=self.event_game('combat');target=game.battlefield.get(event.get('target'))
+                amount=event['amount'];dealt=0
+                if target and not game.protected(target,event.get('sourceColors',())):
+                    item=next((p for player in self.players for p in player.battlefield
+                               if p.card.id==target.id),None)
+                    if item:
+                        item.marked_damage+=amount;dealt=amount
+                self.log('attacker_damage','An enchantment damages a flying attacker.',
+                         actor=event['controller'],targetPermanent=event.get('target'),
+                         amount=dealt,source=event['source'])
+                self.resolve_entry_triggers(self.state_based_actions(),card)
+                continue
             if event.get('operation')=='return_controlled_land':
                 player=self.players[event['controller']]
                 lands=[p for p in player.battlefield if p.card.kind=='land' or p.card.event_definition and 'Land' in p.card.event_definition.types]
@@ -2339,7 +2360,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):

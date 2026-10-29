@@ -90,6 +90,7 @@ class Program:
     token_action_triggers: tuple = ()
     token_leave_triggers: tuple = ()
     entry_counter_grants: tuple = ()
+    attack_watchers: tuple = ()
 
 def static_effect(text):
     # Global lords affect matching creature types even when an opponent
@@ -282,10 +283,23 @@ def compile_abilities(text, name=''):
         text=text.replace(name,'this creature')
         if ',' in name:
             text=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= isn't a creature| enters| attacks|\'s power)",'this creature',text)
-    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0;cost_reductions=[];counter_replacements=[];token_replacements=[];token_action_triggers=[];token_leave_triggers=[];entry_counter_grants=[]
+    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0;cost_reductions=[];counter_replacements=[];token_replacements=[];token_action_triggers=[];token_leave_triggers=[];entry_counter_grants=[];attack_watchers=[]
     for line in text.splitlines():
         line=line.strip()
         if not line: continue
+        flying_attacks=re.fullmatch(
+            r'Whenever a creature with flying attacks( you)?, (it loses flying until end of turn|this enchantment deals ([1-9][0-9]*) damage to it)\.',
+            line)
+        if flying_attacks:
+            # Attack triggers require the attacked player's identity. No
+            # opponent-specific card names are embedded in this grammar.
+            if flying_attacks[1]:
+                if flying_attacks[3] is None:return None
+                attack_watchers.append(('controller_defending','attacker_damage',int(flying_attacks[3])))
+            else:
+                if flying_attacks[3] is not None:return None
+                attack_watchers.append(('any','attacker_loses_flying',0))
+            continue
         entry_counters=re.fullmatch(
             r'Each other ([A-Z][a-z]+) creature you control enters with (an|one|two|three|[1-9][0-9]*) additional \+1/\+1 counters? on it\.',
             line)
@@ -447,7 +461,7 @@ def compile_abilities(text, name=''):
         if action.operation=='create_tokens' and not subject.self_only:
             return None  # Repeating token engines need bounded stack/loop handling.
         triggers.append(Trigger(event,subject,action))
-    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers),tuple(token_leave_triggers),tuple(entry_counter_grants)) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers or token_leave_triggers or entry_counter_grants or keywords else None
+    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers),tuple(token_leave_triggers),tuple(entry_counter_grants),tuple(attack_watchers)) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers or token_leave_triggers or entry_counter_grants or attack_watchers or keywords else None
 
 def matches(subject, source, entered, is_creature):
     return ((not subject.self_only or source.id==entered.id)

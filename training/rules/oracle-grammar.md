@@ -287,3 +287,21 @@ does not model active regeneration shields; the prohibition does not
 extend the set of destruction outcomes. Oxidize is an actual deck test,
 but unknown card names and either wording use the same parser.
 Regression: `training/tests/test_artifact_only_removal.py`.
+
+
+## Continuous anti-flying attack trigger programs
+
+"Whenever a creature with flying attacks, it loses flying until end
+of turn" and "Whenever a creature with flying attacks you, this
+enchantment deals N damage to it" now compile into reusable
+battlefield watchers, rather than a card-name switch. The first
+changes whether blockers without flying or reach may block after
+trigger resolution; the second damages the attacking creature if
+it is attacking the enchantment controller, respects protection
+and puts its death through normal state-based processing. Both use
+the priority stack. Attack qualification is checked at declaration;
+a creature losing flying before trigger resolution does not retroactively
+cancel its already-triggered event.
+
+Coverage: Gravity Well, Raking Canopy, renamed and changed-damage
+fixtures in `training/tests/test_flying_attack_watchers.py`.

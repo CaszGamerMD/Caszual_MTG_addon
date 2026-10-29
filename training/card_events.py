@@ -115,6 +115,7 @@ class Definition:
     double_attachment_counters_upkeep: bool = False
     role: str = ""
     entry_counter_grants: tuple = ()
+    attack_watchers: tuple = ()
 
 
 def parse_card(card: dict) -> Definition:
@@ -152,6 +153,7 @@ def parse_card(card: dict) -> Definition:
             life_addition=program.life_addition,cost_reductions=program.cost_reductions,
             counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
             token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers,
+            attack_watchers=program.attack_watchers,
             upkeep_attachment_counters=enchantments.upkeep_attachment_counters,
             entry_attachment_counters=enchantments.entry_attachment_counters,
             double_attachment_counters_upkeep=enchantments.double_attachment_counters_upkeep)
@@ -191,7 +193,7 @@ def parse_card(card: dict) -> Definition:
                           life_addition=program.life_addition,cost_reductions=program.cost_reductions,
                           counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
                           token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers,
-                          entry_counter_grants=program.entry_counter_grants)
+                          entry_counter_grants=program.entry_counter_grants,attack_watchers=program.attack_watchers)
     attack_text=text.replace(name,'this creature') if name else text
     if ',' in name:
         short=name.split(',')[0]
@@ -706,6 +708,16 @@ class Game:
         if not self.has(a,"vigilance"): a.tapped = True
         a.attacking = defending_player
         self.emit("attacks", id=a.id, defending=defending_player)
+        if self.has(a,'flying'):
+            for source in tuple(self.battlefield.values()):
+                for relation,operation,amount in source.definition.attack_watchers:
+                    if relation=='controller_defending' and source.controller!=defending_player:continue
+                    self.emit('trigger',operation=operation,source=source.id,
+                              name=source.definition.name,controller=source.controller,
+                              target=a.id,amount=amount,
+                              sourceColors=sorted(source.definition.colors),
+                              effect=('remove flying from attacker' if operation=='attacker_loses_flying'
+                                      else 'damage the attacking flying creature'))
         if 'attacks' in a.definition.role_events:
             self.emit('trigger',**self.role_trigger(a))
         for operation,power,toughness,keyword in a.definition.attack_effects:
