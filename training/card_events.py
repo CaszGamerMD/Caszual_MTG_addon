@@ -121,6 +121,7 @@ class Definition:
     aura_exile: bool = False  # Targeted ETB exile lasting until this Aura leaves.
     linked_exile: str = ''  # Separate ETB-exile and LTB-return triggers, with source identity.
     tribal_tap_tokens: tuple = ()  # (token spec, counted subtype), evaluated on resolution.
+    scaled_mana_tap: str = ''  # Tap for X mana of one chosen color, based on permanents.
     living_weapon: bool = False  # ETB create 0/0 Phyrexian Germ, then attach.
 
 
@@ -176,6 +177,11 @@ def parse_card(card: dict) -> Definition:
         r"When this \1 leaves the battlefield, return the exiled card to the battlefield under its owner's control\.",text)
     if linked and linked[1].title() in types:
         return Definition(**base,abilities=frozenset(),linked_exile='opponent' if linked[2] else 'any')
+    scaled_mana=re.fullmatch(
+        r'\{T\}: Add X mana of any one color, where X is the number of (enchantments|artifacts) you control\.',text)
+    if scaled_mana and types.intersection({'Creature','Artifact','Enchantment'}):
+        return Definition(**base,abilities=frozenset(),scaled_mana_tap={
+            'enchantments':'Enchantment','artifacts':'Artifact'}[scaled_mana[1]])
     from tribal_tap_tokens import parse as parse_tribal_tap_tokens
     tribal_tap=parse_tribal_tap_tokens(text,types)
     if tribal_tap:

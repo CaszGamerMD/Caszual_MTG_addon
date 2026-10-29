@@ -847,6 +847,30 @@ class Simulator(AdvancedRules):
                         features=features(power=count*spec.power,cost=0),label='Activate '+source.card.name))
         return result
 
+    def scaled_mana_choices(self,seat):
+        choices=[]
+        sources=dict(self.mana_sources(seat))
+        for item in self.players[seat].battlefield:
+            definition=item.card.event_definition
+            if not definition or not definition.scaled_mana_tap or item.card.id not in sources:continue
+            for color in range(5):
+                choices.append(Candidate(item.card.id+':mana:'+str(color),'activate_scaled_mana',item.card.id,
+                    features=features(power=.1),label='Tap '+item.card.name+' for '+mana_pool.COLORS[color],x_value=color))
+        return choices
+
+    def activate_scaled_mana(self,seat,source_id,color):
+        if self.stack.priority!=seat or type(color) is not int or not 0<=color<5:
+            raise ValueError('Illegal mana ability choice')
+        sources=dict(self.mana_sources(seat))
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        if not source or not source.card.event_definition or not source.card.event_definition.scaled_mana_tap or source_id not in sources:
+            raise ValueError('Illegal mana ability source')
+        amount=sources[source_id][color][color]
+        source.tapped=True
+        self.players[seat].mana_pool[color]+=amount
+        self.log('activate_scaled_mana','Player taps a permanent for one chosen color of scaled mana.',
+                 actor=seat,source=source_id,color=mana_pool.COLORS[color],amount=amount)
+
     def activate_tribal_tokens(self,seat,source_id):
         if self.stack.priority!=seat:raise ValueError('Player lacks priority')
         source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
@@ -1217,6 +1241,7 @@ class Simulator(AdvancedRules):
         else:actions.extend(crews)
         actions.extend(self.special_choices(seat))
         actions.extend(self.token_ability_choices(seat))
+        actions.extend(self.scaled_mana_choices(seat))
         actions.extend(self.strip_ability_choices(seat))
         for card in self.response_choices(seat):
             if card.blink:
@@ -1249,6 +1274,9 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_tribal_tokens':
             self.activate_tribal_tokens(seat,choice.card_id)
+            return 'activate'
+        if choice.kind=='activate_scaled_mana':
+            self.activate_scaled_mana(seat,choice.card_id,choice.x_value)
             return 'activate'
         card=next(c for c in self.players[seat].hand if c.id==choice.card_id)
         self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack)
@@ -2234,6 +2262,13 @@ class Simulator(AdvancedRules):
             elif mask:
                 options=tuple(tuple(int(i==color) for i in range(6)) for color in range(6) if mask&(1<<color))
             elif item.card.kind=='mana_artifact': options=(item.card.mana_production,)
+            elif definition and definition.scaled_mana_tap:
+                game=self.event_game('main');state=game.battlefield.get(item.card.id)
+                if state is None or (game.creature(state) and item.fresh and not game.has(state,'haste')):continue
+                count=sum(permanent.controller==seat and definition.scaled_mana_tap in permanent.definition.types
+                          for permanent in game.battlefield.values())
+                if not count:continue
+                options=tuple(tuple(count if index==color else 0 for index in range(6)) for color in range(5))
             else: continue
             sources.append((item.card.id,options))
         return sources
@@ -2308,6 +2343,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.special_choices(seat))
             actions.extend(self.equip_choices(seat))
             actions.extend(self.token_ability_choices(seat))
+        actions.extend(self.scaled_mana_choices(seat))
             actions.extend(self.strip_ability_choices(seat))
             if (self.diagnostic and p.command_zone and p.command_zone.kind == "creature"
                     and self.payment(p.command_zone, p.commander_casts)["paid"]):
@@ -2430,7 +2466,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
-                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens"):
+                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens","activate_scaled_mana"):
             self.turn_development[seat]=True
         return choice
 
@@ -2513,6 +2549,8 @@ class Simulator(AdvancedRules):
                 self.activate_tokens(self.active,choice.card_id,choice.activation_index)
             elif choice.kind=='activate_tribal_tokens':
                 self.activate_tribal_tokens(self.active,choice.card_id)
+            elif choice.kind=='activate_scaled_mana':
+                self.activate_scaled_mana(self.active,choice.card_id,choice.x_value)
             elif choice.kind=='equip':
                 self.activate_equip(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind in ('crew','saddle'):
@@ -2737,7 +2775,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):
