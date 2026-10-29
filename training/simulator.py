@@ -570,7 +570,8 @@ class Simulator(AdvancedRules):
         power, toughness = game.stats(state)
         keywords = {ability for ability in state.definition.abilities if ability not in ("hexproof","flash") and game.has(state,ability)}
         for ability in ("haste", "indestructible", "flying", "first strike", "double strike",
-                        "lifelink", "vigilance", "trample", "defender", "reach", "deathtouch", "menace"):
+                        "lifelink", "vigilance", "trample", "defender", "reach", "deathtouch", "menace",
+                        "shroud", "plainswalk", "islandwalk", "swampwalk", "mountainwalk", "forestwalk"):
             if game.has(state, ability): keywords.add(ability)
         return replace(item.card, kind="creature", power=power, toughness=toughness,
                        traits=f"{power};{toughness};"+",".join(sorted(keywords)))
