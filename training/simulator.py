@@ -2432,6 +2432,12 @@ class Simulator(AdvancedRules):
                 game=snapshot or self.event_game('main');state=game.battlefield.get(item.card.id)
                 if state:
                     event['lastLifelink']=game.has(state,'lifelink');event['lastDeathtouch']=game.has(state,'deathtouch')
+            if event.get('operation')=='mentor_counter' and event.get('source')==item.card.id:
+                # Mentor uses the source's last-known power if it leaves
+                # before the attack trigger resolves.
+                game=snapshot or self.event_game('main')
+                state=game.battlefield.get(item.card.id)
+                if state and game.creature(state):event['sourcePower']=game.stats(state)[0]
             if event.get('operation')=='counter_power_tokens'  and event.get('source')==item.card.id:
                 if snapshot and item.card.id in snapshot.battlefield:
                     event['lastPower']=snapshot.stats(snapshot.battlefield[item.card.id])[0]

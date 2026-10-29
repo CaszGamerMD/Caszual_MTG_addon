@@ -63,3 +63,18 @@ class MentorCombatChecks(unittest.TestCase):
         self.assertEqual(small.counters,3)
         self.assertTrue(any(e['kind']=='mentor_fizzle' for e in sim.events))
         sim.invariant()
+
+    def test_mentor_uses_source_last_known_power_if_source_leaves(self):
+        sim,cards=self.fixture(['Legion Warboss'])
+        source=self.put(sim,cards['Legion Warboss'])
+        small=self.token(sim,'small',power=1,toughness=2)
+        self.ready(sim)
+        sim.declare_attackers([source.card.id,small.card.id])
+        source.temporary_power=3
+        snapshot=sim.event_game('combat')
+        sim.send_to_destination(sim.players[0],source,snapshot=snapshot)
+        small.counters=2
+        self.drain(sim)
+        self.assertEqual(small.counters,3)
+        self.assertTrue(any(e['kind']=='mentor_counter' for e in sim.events))
+        sim.invariant()
