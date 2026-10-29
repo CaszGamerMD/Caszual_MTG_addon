@@ -838,7 +838,8 @@ class Simulator(AdvancedRules):
 
     def response_choices(self,seat):
         if seat!=self.stack.priority: return ()
-        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','token_spell','counter_spell','removal_spell','blink_spell')
+        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','token_spell','counter_spell','removal_spell','blink_spell',
+            'creature','enchantment','artifact','equipment','vehicle','station','planeswalker')
                      and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
 
@@ -3412,7 +3413,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
     return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),blink_to_controller=parsed.get("blink_to_controller",False),flashback_cost=parsed.get("flashback_cost",""),graveyard_return_subtype=parsed.get("graveyard_return_subtype",""),
-        instant="Instant" in definition.get("types",[]), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
+        instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),
         life=parsed.get("life", 0), land_rule=parsed.get("land_rule", ""),
