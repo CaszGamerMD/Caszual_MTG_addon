@@ -215,13 +215,22 @@ body:has(.shell.fitMatch){overflow:hidden}
 .shell.fitMatch .viewTabs,.shell.fitMatch .detailLine{display:none}
 .shell.fitMatch .centerBand{max-height:36px}
 }
+
+.zoomHint{font-size:10px;color:var(--gold);padding:0 5px;white-space:nowrap}
+#hoverZoom{position:fixed;z-index:10000;pointer-events:none;width:min(330px,43vw,calc(100vw - 24px));padding:10px;background:linear-gradient(140deg,#172821,#081310);border:1px solid #e4be77;border-radius:13px;box-shadow:0 20px 70px #000e;max-height:85vh;overflow:hidden}
+#hoverZoom[hidden],#zoomImage[hidden]{display:none!important}
+#zoomTitle{font:700 15px Georgia,serif;color:#ffe6aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
+#zoomImage{display:block;max-width:100%;width:auto;max-height:70vh;margin:auto;object-fit:contain;border:1px solid #b79f66;border-radius:8px}
+#zoomStatus{font-size:11px;text-align:center;color:#c9d7cd;padding:6px}
+#zoomFoot{font-size:10px;text-align:center;color:#d7c7a5;padding-top:6px}
+@media(max-width:700px){#hoverZoom{width:min(260px,calc(100vw - 18px));padding:6px}#zoomImage{max-height:60vh}.zoomHint{display:none}}
 </style>
 </head>
 <body>
 <div class="shell">
 <header>
   <div class="brand"><div class="sigil" aria-hidden="true">M</div><div><div class="eyebrow">Commander Golem · Simulator</div><h1>Match Theater</h1></div></div>
-  <div class="headActions"><button id="toggleHands" type="button" title="Show or hide both players' hands">Hide hands</button><button id="toggleArt" type="button" title="Enable or disable online Scryfall card artwork">Art: On</button><button id="sideToggle" type="button" title="Toggle stack and commentary" aria-expanded="false">☷ Stack / log</button><button id="swapSeats" type="button" title="Swap upper and lower player positions">⇅ Seats</button><button id="fullscreen" type="button" title="Toggle fullscreen">⛶ Fullscreen</button><label class="fileButton">Open replay<input type="file" id="file" accept=".json,application/json"></label></div>
+  <div class="headActions"><button id="toggleHands" type="button" title="Show or hide both players' hands">Hide hands</button><button id="toggleArt" type="button" title="Enable or disable online Scryfall card artwork">Art: On</button><span class="zoomHint">Z + hover = zoom</span><button id="sideToggle" type="button" title="Toggle stack and commentary" aria-expanded="false">☷ Stack / log</button><button id="swapSeats" type="button" title="Swap upper and lower player positions">⇅ Seats</button><button id="fullscreen" type="button" title="Toggle fullscreen">⛶ Fullscreen</button><label class="fileButton">Open replay<input type="file" id="file" accept=".json,application/json"></label></div>
 </header>
 <div id="notice" class="notice" role="status">Saved spectator replays show both hands. Card faces load from Scryfall when online; placeholders work offline.</div>
 <div class="artStatus" id="artStatus">Artwork: Scryfall online lookup enabled · paced requests, cached by card name · viewer only</div>
@@ -252,8 +261,9 @@ body:has(.shell.fitMatch){overflow:hidden}
  </section>
 </main>
 <section id="questions" hidden><div class="sidePanel" style="padding:18px;margin-bottom:14px"><h2 style="font:700 22px Georgia,serif;margin-top:0">Rules questions</h2><p class="muted" style="font-size:13px">Rules-review notes are not game rulings until implemented and tested. Unsupported cards stay unplayable.</p><button id="saveAnswers" type="button">Download review answers</button></div><div id="questionList"></div></section>
-<div class="footer">Diagnostic spectator mode reveals both saved hands, not library order · Card images and data provided by Scryfall (requires internet) · No Scryfall affiliation · Incomplete Commander rules · Keyboard: ← / → / Space</div>
+<div class="footer">Diagnostic spectator mode reveals both saved hands, not library order · Card images and data provided by Scryfall (requires internet) · No Scryfall affiliation · Incomplete Commander rules · Keyboard: ← / → / Space · Hold Z + hover to magnify · F to flip face</div>
 </div>
+<div id="hoverZoom" role="tooltip" aria-hidden="true" hidden><div id="zoomTitle"></div><img id="zoomImage" alt="" hidden><div id="zoomStatus">Loading artwork…</div><div id="zoomFoot">Hold Z and hover · F flips double-faced cards</div></div>
 <dialog id="modal" aria-label="Card and zone details"><h2 id="modalTitle"></h2><div class="modalLabels" id="modalBody"></div><div style="margin-top:16px;text-align:right"><button id="closeModal">Close</button></div></dialog>
 <script>
 "use strict";
@@ -297,13 +307,21 @@ function lookupCardImages(name){
  return safe;
 }
 function appendCardFace(element,name){
- if(!artEnabled||!name)return;
+ if(!artEnabled||!name||element.querySelector(".cardFace")||element._artPending===name)return;
+ element._artPending=name;
  lookupCardImages(name).then(art=>{
-   if(!artEnabled||!art?.faces?.length||!element.isConnected)return;
-   const img=make("img",undefined,"cardFace");
-   img.loading="lazy";img.decoding="async";img.alt="Scryfall card face: "+name;
-   img.onerror=()=>img.remove();img.src=art.faces[0].small;element.append(img);
- });
+  if(element._artPending!==name)return;
+  if(!artEnabled||!art?.faces?.length){element._artPending=null;return}
+  const img=make("img",undefined,"cardFace");
+  img.decoding="async";img.alt="Scryfall card face: "+name;
+  img.onload=()=>{
+   if(element._artPending!==name||!artEnabled||!element.isConnected)return;
+   element.querySelector(".cardFace")?.remove();element.append(img)
+  };
+  img.onerror=()=>{if(element._artPending===name)element._artPending=null};
+  img.src=art.faces[0].small;
+  if(img.complete&&img.naturalWidth)img.onload()
+ })
 }
 function modalCardImage(name){
  if(!artEnabled)return;
@@ -329,6 +347,67 @@ function modalCardImage(name){
    }
  });
 }
+
+let zoomHeld=false,zoomTarget=null,zoomName="",zoomFaces=[],zoomFaceIndex=0,zoomRequest=0,zoomPointer={x:0,y:0};
+function hideCardZoom(){
+ zoomTarget=null;zoomName="";zoomFaces=[];zoomFaceIndex=0;zoomRequest++;
+ $("hoverZoom").hidden=true;$("hoverZoom").setAttribute("aria-hidden","true")
+}
+function zoomCardTarget(element){
+ const card=element?.closest?.(".gameCard,.stackPreview");
+ return card&&(card._card||card._zoomCard||card.dataset.cardName)?card:null
+}
+function positionCardZoom(){
+ const zoom=$("hoverZoom");if(zoom.hidden||!zoomTarget)return;
+ const rect=zoomTarget.getBoundingClientRect(),x=zoomPointer.x||rect.right,y=zoomPointer.y||rect.top;
+ const w=zoom.offsetWidth||300,h=zoom.offsetHeight||420;
+ const left=x+w+20>window.innerWidth?x-w-20:x+20;
+ zoom.style.left=Math.max(6,Math.min(window.innerWidth-w-6,left))+"px";
+ zoom.style.top=Math.max(6,Math.min(window.innerHeight-h-6,y-h/3))+"px"
+}
+function showZoomFace(){
+ const face=zoomFaces[zoomFaceIndex];if(!face)return;
+ const url=face.normal||face.small;if(!url)return;
+ const ticket=++zoomRequest,image=new Image();
+ image.alt=zoomName+" · face "+(zoomFaceIndex+1);
+ image.onload=()=>{
+  if(ticket!==zoomRequest||!zoomHeld||$("hoverZoom").hidden)return;
+  const previous=$("zoomImage");image.id="zoomImage";image.hidden=false;previous.replaceWith(image);
+  $("zoomStatus").textContent=zoomFaces.length>1?"Face "+(zoomFaceIndex+1)+" / "+zoomFaces.length+" · F to flip":"";
+  positionCardZoom()
+ };
+ image.onerror=()=>{if(ticket===zoomRequest)$("zoomStatus").textContent="Artwork unavailable · Click for details"};
+ image.src=url;
+ if(image.complete&&image.naturalWidth)image.onload()
+}
+function showCardZoom(target){
+ if(!zoomHeld||!target?.isConnected||!artEnabled||$("modal").open){hideCardZoom();return}
+ const card=target._card||target._zoomCard||{name:target.dataset.cardName};
+ if(!card?.name){hideCardZoom();return}
+ if(target===zoomTarget&&zoomName===card.name){positionCardZoom();return}
+ zoomTarget=target;zoomName=card.name;zoomFaces=[];zoomFaceIndex=0;
+ const ticket=++zoomRequest;
+ $("zoomTitle").textContent=card.name;$("zoomStatus").textContent="Loading artwork…";
+ $("zoomImage").hidden=true;$("hoverZoom").hidden=false;$("hoverZoom").setAttribute("aria-hidden","false");
+ positionCardZoom();
+ lookupCardImages(card.name).then(art=>{
+  if(ticket!==zoomRequest||!zoomHeld||zoomName!==card.name)return;
+  if(!art?.faces?.length){$("zoomStatus").textContent="Artwork unavailable · Click for details";return}
+  zoomFaces=art.faces;showZoomFace()
+ })
+}
+function refreshCardZoom(){
+ if(!zoomHeld||!zoomTarget||!zoomTarget.isConnected){hideCardZoom();return}
+ showCardZoom(zoomTarget)
+}
+document.addEventListener("pointermove",event=>{
+ zoomPointer={x:event.clientX,y:event.clientY};
+ if(zoomHeld)showCardZoom(zoomCardTarget(event.target))
+});
+document.addEventListener("focusin",event=>{if(zoomHeld)showCardZoom(zoomCardTarget(event.target))});
+document.addEventListener("keyup",event=>{if(event.code==="KeyZ"){zoomHeld=false;hideCardZoom()}});
+window.addEventListener("blur",()=>{zoomHeld=false;hideCardZoom()});
+
 const phases=["untap","upkeep","draw","land","main","attack","block","damage","second_main","end_step","cleanup"];
 const importance=new Set(["opening_hand","mulligan","keep_hand","cast","stack_push","stack_resolve","attack","attackers","block","blockers","damage","combat","combat_damage","destroy","damage_deaths","death","token","trigger","exile","land","result","win","role_created","life_replacement","end_step_life_loss","search_reveal","search_basic","question"]);
 function stop(){if(timer!==null)clearInterval(timer);timer=null;$("play").textContent="▶ Play"}
@@ -342,21 +421,56 @@ function setTab(value){tab=value;document.querySelector(".shell").classList.togg
 function eventStyle(e){const k=(e?.kind||"").toLowerCase();if(/damage|attack|block|destroy|death|exile/.test(k))return "glowCombat";if(/life|gain|heal|draw/.test(k))return "glowLife";if(/cast|stack|token|land|trigger/.test(k))return "glowCast";return ""}
 function renderPhase(phase){const rail=$("phaseRail");rail.replaceChildren();for(const p of phases){const text=p.replace("_"," ");const chip=make("span",text,"phasePill"+(p===phase?" current":""));rail.append(chip)}}
 function cardType(c){return c.kind==="land"?"land":c.isCreature||c.kind==="creature"?"creature":c.kind||"permanent"}
-function makeCard(c,previous,combat){const kind=cardType(c);const attackers=combat?.details?.attackers||combat?.details?.attackIds||[];
- const isAttacker=(combat?.details?.attacker===c.id||(Array.isArray(attackers)&&attackers.includes(c.id)))&&/attack|combat/.test(combat?.kind||"");
- const isBlocker=(combat?.details?.blocker===c.id)&&/block|combat/.test(combat?.kind||"");
- const root=make("button",undefined,"gameCard "+kind+(c.tapped?" tapped":"")+(isAttacker?" attacking":"")+(isBlocker?" blocking":""));
- root.type="button";root.title="Inspect "+c.name;root.setAttribute("aria-label",c.name+(c.tapped?", tapped":""));
- if(!previous)root.classList.add("entered");else if(previous.tapped!==c.tapped||previous.counters!==c.counters||previous.power!==c.power||previous.toughness!==c.toughness)root.classList.add("changed");
- root.append(make("div",c.name,"cardName"));
- const art=make("div",undefined,"cardIllustration");const sigils={creature:"✦",land:"♧",artifact:"◈",equipment:"⚒",mana_artifact:"◇",enchantment:"✧",aura:"✧",planeswalker:"✶",vehicle:"⚙"};art.append(make("span",sigils[kind]||"◇","artSymbol"));root.append(art);
- root.append(make("div",kind==="creature"?"Creature":kind,"cardType"));
- if(kind==="creature")root.append(make("span",String(c.power)+" / "+String(c.toughness),"cardStats"));
- const detail=[];if(c.tapped)detail.push("TAPPED");if(c.fresh)detail.push("NEW");if(c.saddled)detail.push("SADDLED");
- if(c.loyalty!==null&&c.loyalty!==undefined)detail.push("L:"+c.loyalty);if(c.chargeCounters)detail.push("CH:"+c.chargeCounters);
- if(detail.length)root.append(make("span",detail.join(" · "),"cardMeta"));
- if(c.counters)root.append(make("span","+"+c.counters,"cardMark"));
- appendCardFace(root,c.name);root.addEventListener("click",()=>inspectCard(c));return root
+function cardSignature(c,combat){
+ const a=combat?.details?.attackers||combat?.details?.attackIds||[];
+ const attack=(combat?.details?.attacker===c.id||(Array.isArray(a)&&a.includes(c.id)))&&/attack|combat/.test(combat?.kind||"");
+ const block=combat?.details?.blocker===c.id&&/block|combat/.test(combat?.kind||"");
+ return JSON.stringify([c.name,cardType(c),!!c.tapped,!!c.fresh,!!c.saddled,c.counters||0,c.power,c.toughness,c.loyalty,c.chargeCounters,attack,block])
+}
+function updateCard(root,c,previous,combat){
+ const signature=cardSignature(c,combat);
+ if(root._signature===signature){
+  root._card=c;
+  if(!artEnabled){root._artPending=null;root.querySelector(".cardFace")?.remove()}
+  else appendCardFace(root,c.name);
+  return root
+ }
+ const fresh=!root._signature,old=root._card,type=cardType(c);
+ const attackers=combat?.details?.attackers||combat?.details?.attackIds||[];
+ const attacking=(combat?.details?.attacker===c.id||(Array.isArray(attackers)&&attackers.includes(c.id)))&&/attack|combat/.test(combat?.kind||"");
+ const blocking=combat?.details?.blocker===c.id&&/block|combat/.test(combat?.kind||"");
+ root.className="gameCard "+type+(c.tapped?" tapped":"")+(attacking?" attacking":"")+(blocking?" blocking":"");
+ if(fresh&&!previous)root.classList.add("entered");
+ else if(old&&(old.tapped!==c.tapped||old.counters!==c.counters||old.power!==c.power||old.toughness!==c.toughness))root.classList.add("changed");
+ root.title="Inspect "+c.name+" · Hold Z and hover to magnify";root.setAttribute("aria-label",c.name+(c.tapped?", tapped":""));
+ root.querySelector(".cardName").textContent=c.name;
+ root.querySelector(".cardType").textContent=type==="creature"?"Creature":type;
+ const sigils={creature:"✦",land:"♧",artifact:"◈",equipment:"⚒",mana_artifact:"◇",enchantment:"✧",aura:"✧",planeswalker:"✶",vehicle:"⚙"};
+ root.querySelector(".artSymbol").textContent=sigils[type]||"◇";
+ let stats=root.querySelector(".cardStats");
+ if(type==="creature"){if(!stats){stats=make("span",undefined,"cardStats");root.append(stats)}stats.textContent=String(c.power)+" / "+String(c.toughness)}
+ else stats?.remove();
+ const details=[];if(c.tapped)details.push("TAPPED");if(c.fresh)details.push("NEW");if(c.saddled)details.push("SADDLED");
+ if(c.loyalty!=null)details.push("L:"+c.loyalty);
+ if(c.chargeCounters)details.push("CH:"+c.chargeCounters);
+ let meta=root.querySelector(".cardMeta");
+ if(details.length){if(!meta){meta=make("span",undefined,"cardMeta");root.append(meta)}meta.textContent=details.join(" · ")}
+ else meta?.remove();
+ let counter=root.querySelector(".cardMark");
+ if(c.counters){if(!counter){counter=make("span",undefined,"cardMark");root.append(counter)}counter.textContent="+"+c.counters}
+ else counter?.remove();
+ if(root.dataset.cardName!==c.name){root.dataset.cardName=c.name;root._artPending=null;root.querySelector(".cardFace")?.remove()}
+ if(!artEnabled){root._artPending=null;root.querySelector(".cardFace")?.remove()}
+ else appendCardFace(root,c.name);
+ root._card=c;root._signature=signature;return root
+}
+function makeCard(c,previous,combat){
+ const root=make("button",undefined,"gameCard");root.type="button";
+ root.append(make("div",undefined,"cardName"));
+ const illustration=make("div",undefined,"cardIllustration");illustration.append(make("span",undefined,"artSymbol"));root.append(illustration);
+ root.append(make("div",undefined,"cardType"));
+ root.onclick=()=>inspectCard(root._card);
+ return updateCard(root,c,previous,combat)
 }
 let printedNames=[];
 function indexPrintedNames(){
@@ -389,8 +503,15 @@ function stackPrintedName(text){
  const lower=String(text||"").toLocaleLowerCase();
  return printedNames.find(name=>lower===name.toLocaleLowerCase()||lower.startsWith(name.toLocaleLowerCase()+" "))||null;
 }
+let lastSpotlightName=null;
 function renderSpotlight(event){
  const target=$("spotlight"),name=printedNameWithin(event?.message);
+ if(name===lastSpotlightName){
+  const caption=target.querySelector(".spotlightInfo span");
+  if(caption)caption.textContent="On camera · "+event.kind.replaceAll("_"," ");
+  return
+ }
+ lastSpotlightName=name;
  target.replaceChildren();target.hidden=!name;
  if(!name)return;
  const card={id:"spotlight-card",name,kind:"card",tapped:false,fresh:false,counters:0};
@@ -400,8 +521,26 @@ function renderSpotlight(event){
  target.append(caption);
 }
 function kindOf(c){const k=cardType(c);return k==="land"?"land":k==="creature"?"creature":"other"}
-function groupCards(p,prev,kind,event){const list=make("div",undefined,"cardTrack"+(kind==="land"?" landStack":""));const cards=(p.battlefield||[]).filter(c=>kindOf(c)===kind);list._allCards=cards;list._collectionName=kind==="creature"?"Creatures":kind==="land"?"Lands":"Other permanents";const old=new Map((prev?.battlefield||[]).map(c=>[c.id,c]));for(const c of cards)list.append(makeCard(c,old.get(c.id),event));return list}
-
+function syncCardTrack(track,cards,previous,event){
+ track._allCards=cards;
+ track.querySelector(".overflowTile")?.remove();
+ const nodes=track._cardNodes||(track._cardNodes=new Map()),prior=new Map((previous||[]).map(c=>[c.id,c])),used=new Set();
+ for(let i=0;i<cards.length;i++){
+  const card=cards[i];used.add(card.id);let node=nodes.get(card.id);
+  if(!node){node=makeCard(card,prior.get(card.id),event);nodes.set(card.id,node)}
+  else updateCard(node,card,prior.get(card.id),event);
+  node.hidden=false;
+  if(track.children[i]!==node)track.insertBefore(node,track.children[i]||null)
+ }
+ for(const [id,node] of nodes)if(!used.has(id)){node.remove();nodes.delete(id)}
+}
+function groupCards(p,prev,kind,event,track){
+ const list=track||make("div",undefined,"cardTrack"+(kind==="land"?" landStack":""));
+ list._collectionName=kind==="creature"?"Creatures":kind==="land"?"Lands":"Other permanents";
+ syncCardTrack(list,(p.battlefield||[]).filter(c=>kindOf(c)===kind),
+   (prev?.battlefield||[]).filter(c=>kindOf(c)===kind),event);
+ return list
+}
 let fitFrame=0;
 function showCollection(title,cards){
  $("modalTitle").textContent=title+" · "+cards.length+" cards";
@@ -453,44 +592,88 @@ function requestFit(){
 window.addEventListener("resize",requestFit);
 
 function nameFor(seat){return data?.deckNames?.[seat]||("Player "+(seat+1))}
-function playerPanel(seat,e,prev){const p=e.state.players[seat],past=prev?.state?.players?.[seat];const panel=make("div");
- const header=make("div",undefined,"identity");const info=make("div",undefined,"identityInfo");info.append(make("div",nameFor(seat),"seat"));if(e.state.active===seat)info.append(make("span","Active player","turnTag"));header.append(info);
- const life=make("div",undefined,"lifeWheel");const change=p.life-(past?.life??p.life);if(change)life.append(make("span",(change>0?"+":"")+change,"lifeShift "+(change>0?"positive":"negative")));life.append(make("span",p.life,"lifeNumber"));life.append(make("span","♥","muted"));header.append(life);panel.append(header);
- const details=make("div",undefined,"detailLine");details.append(make("span","◆ Library "+p.libraryCount),make("span","▣ Hand "+p.handCount),make("span","† Grave "+(p.graveyard||[]).length),make("span","⬡ Exile "+(p.exile||[]).length));
+const playerViews=new Map();
+function playerView(seat){
+ if(playerViews.has(seat))return playerViews.get(seat);
+ const panel=make("div"),header=make("div",undefined,"identity"),identity=make("div",undefined,"identityInfo");
+ const name=make("div",undefined,"seat"),active=make("span","Active player","turnTag");
+ identity.append(name,active);header.append(identity);
+ const life=make("div",undefined,"lifeWheel"),lifeShift=make("span",undefined,"lifeShift"),lifeNumber=make("span",undefined,"lifeNumber");
+ life.append(lifeShift,lifeNumber,make("span","♥","muted"));header.append(life);panel.append(header);
+ const details=make("div",undefined,"detailLine");panel.append(details);
+ const field=make("div",undefined,"field"),zones=new Map();
+ for(const [kind,title] of [["creature","Creatures"],["other","Other permanents"],["land","Lands"]]){
+  const zone=make("section",undefined,"zone"),label=make("div",undefined,"zoneLabel"),count=make("span","0");
+  label.append(make("span",title),count);zone.append(label);
+  const track=make("div",undefined,"cardTrack"+(kind==="land"?" landStack":""));
+  zone.append(track);field.append(zone);zones.set(kind,{track,count})
+ }
+ panel.append(field);
+ const commanderZone=make("section",undefined,"commandZone"),commander=data?.commanders?.[seat];
+ if(commander){
+  const card={id:"command-zone-"+seat,name:commander,kind:"legendary",tapped:false,fresh:false,counters:0};
+  commanderZone.append(makeCard(card,card,null));
+  const info=make("div",undefined,"commandInfo");
+  info.append(make("strong","COMMAND ZONE"),make("div",commander),make("div","Available to cast · spectator view"));
+  commanderZone.append(info);identity.append(commanderZone);
+ }
+ commanderZone.hidden=true;
+ const handLabel=make("div",undefined,"zoneLabel"),handTitle=make("span"),handCount=make("span");
+ handLabel.append(handTitle,handCount);panel.append(handLabel);
+ const hand=make("div",undefined,"handLine");panel.append(hand);
+ const view={panel,name,active,lifeShift,lifeNumber,details,zones,commanderZone,handTitle,handCount,hand};
+ playerViews.set(seat,view);return view
+}
+function playerPanel(seat,e,prev){
+ const p=e.state.players[seat],past=prev?.state?.players?.[seat],view=playerView(seat);
+ view.name.textContent=nameFor(seat);view.active.hidden=e.state.active!==seat;
+ const delta=p.life-(past?.life??p.life);
+ view.lifeShift.hidden=!delta;view.lifeShift.textContent=delta?(delta>0?"+":"")+delta:"";
+ view.lifeShift.className="lifeShift "+(delta>0?"positive":"negative");
+ view.lifeNumber.textContent=p.life;
+ const details=view.details;details.replaceChildren();
+ details.append(make("span","◆ Library "+p.libraryCount),make("span","▣ Hand "+p.handCount),make("span","† Grave "+(p.graveyard||[]).length),make("span","⬡ Exile "+(p.exile||[]).length));
  if(data?.commanders?.[seat])details.append(make("span","Commander: "+data.commanders[seat]+(p.commanderInZone?" (command zone)":"")));
  if(Object.keys(p.commanderDamage||{}).length)details.append(make("span","Commander dmg: "+Object.values(p.commanderDamage).join("/")));
  if((p.manaPool||[]).some(Boolean))details.append(make("span","Mana pool: "+p.manaPool.join("/")));
- panel.append(details);
- const field=make("div",undefined,"field");
- for(const [k,title] of [["creature","Creatures"],["other","Other permanents"],["land","Lands"]]){const zone=make("section",undefined,"zone");const total=(p.battlefield||[]).filter(c=>kindOf(c)===k).length;const label=make("div",undefined,"zoneLabel");label.append(make("span",title),make("span",total));zone.append(label,groupCards(p,past,k,e));field.append(zone)}
- panel.append(field);
- if(p.commanderInZone&&data?.commanders?.[seat]){
-  const zone=make("section",undefined,"commandZone");
-  const commander={id:"command-zone-"+seat,name:data.commanders[seat],kind:"legendary",tapped:false,fresh:false,counters:0};
-  zone.append(makeCard(commander,commander,null));
-  const info=make("div",undefined,"commandInfo");
-  info.append(make("strong","COMMAND ZONE"),make("div",data.commanders[seat]),make("div","Available to cast · spectator view"));
-  zone.append(info);header.querySelector(".identityInfo").append(zone);
+ for(const [kind,{track,count}] of view.zones){
+  count.textContent=(p.battlefield||[]).filter(c=>kindOf(c)===kind).length;
+  groupCards(p,past,kind,e,track)
  }
+ view.commanderZone.hidden=!p.commanderInZone;
  const snapshot=e.spectatorHands?.[seat],show=revealHands&&Array.isArray(snapshot);
- const label=make("div",undefined,"zoneLabel");label.append(make("span",show?"Hand · spectator view":"Hand · hidden"),make("span",p.handCount));panel.append(label);
- const backs=make("div",undefined,"handLine"+(show?" revealed":""));
+ view.handTitle.textContent=show?"Hand · spectator view":"Hand · hidden";
+ view.handCount.textContent=p.handCount;
+ view.hand.classList.toggle("revealed",show);
  if(show){
-   backs._allCards=snapshot;backs._collectionName=nameFor(seat)+" · Hand";
-   for(const c of snapshot)backs.append(makeCard({...c,kind:c.kind||"card",tapped:false,fresh:false},null,null));
-   if(!snapshot.length)backs.append(make("span","No cards in hand","hiddenCount"));
+  view.hand._emptyNotice?.remove();view.hand._emptyNotice=null;
+  view.hand._collectionName=nameFor(seat)+" · Hand";
+  syncCardTrack(view.hand,snapshot.map(card=>({...card,kind:card.kind||"card",tapped:false,fresh:false})),null,null);
+  if(!snapshot.length){
+   const notice=make("span","No cards in hand","hiddenCount");
+   view.hand.append(notice);view.hand._emptyNotice=notice
+  }
  }else{
-   for(let i=0;i<Math.min(p.handCount,10);i++)backs.append(make("span",undefined,"backCard"));
-   backs.append(make("span",Array.isArray(snapshot)?"Hand concealed · "+p.handCount+" cards":"Older replay · identities not recorded","hiddenCount"));
+  // Only tear down hand contents when switching visibility, not every turn.
+  if(!view.hand._hiddenHand||view.hand._hiddenHand!==p.handCount||view.hand._cardNodes?.size){
+   view.hand._cardNodes?.clear();view.hand.replaceChildren();view.hand._emptyNotice=null;
+   for(let i=0;i<Math.min(p.handCount,10);i++)view.hand.append(make("span",undefined,"backCard"));
+   view.hand.append(make("span",Array.isArray(snapshot)?"Hand concealed · "+p.handCount+" cards":"Older replay · identities not recorded","hiddenCount"))
+  }
  }
- panel.append(backs);
- return panel
+ view.hand._hiddenHand=show?null:p.handCount;
+ return view.panel;
 }
-function renderStack(state){const items=state.stack;$("stack").replaceChildren();if(!Array.isArray(items)){$("stack").append(make("div","Stack not recorded in this older replay.","emptyStack"));$("stackCount").textContent="—";return}
+let lastStackSignature=null;
+function renderStack(state){
+ const signature=JSON.stringify(state.stack??null);
+ if(signature===lastStackSignature)return;
+ lastStackSignature=signature;
+ const items=state.stack;$("stack").replaceChildren();if(!Array.isArray(items)){$("stack").append(make("div","Stack not recorded in this older replay.","emptyStack"));$("stackCount").textContent="—";return}
  $("stackCount").textContent=String(items.length);if(!items.length){$("stack").append(make("div","The stack is empty","emptyStack"));return}
  for(const [index,item] of items.slice().reverse().entries()){
   const node=make("div",undefined,"stackItem"),card=stackPrintedName(item.label);
-  if(card){const preview=make("button",undefined,"stackPreview");preview.type="button";preview.style.padding="0";preview.title="Inspect "+card;preview.setAttribute("aria-label","Inspect "+card);appendCardFace(preview,card);preview.onclick=()=>inspectCard({id:"stack-"+item.id,name:card,kind:"stack",tapped:false,fresh:false});node.append(preview)}
+  if(card){const preview=make("button",undefined,"stackPreview");preview.type="button";preview.style.padding="0";preview.title="Inspect "+card;preview.setAttribute("aria-label","Inspect "+card);appendCardFace(preview,card);preview._zoomCard={id:"stack-"+item.id,name:card,kind:"stack",tapped:false,fresh:false};preview.onclick=()=>inspectCard(preview._zoomCard);node.append(preview)}
   const label=make("div",undefined,"stackDescription");
   label.append(make("strong",(index===0?"↑ Next · ":"")+item.label),make("span","Controlled by "+nameFor(item.controller),"stackOwner"));
   node.append(label);$("stack").append(node);
@@ -524,8 +707,11 @@ function render(){if(!data)return;const events=data.events||[];$("count").textCo
   $("turnCount").textContent="Turn "+e.turn+" · "+(e.state.active===0?"Player 1":"Player 2")+" active";
   $("eventKind").textContent=e.kind.replaceAll("_"," ");$("eventHeadline").textContent=e.message;
   $("centerBand").className="centerBand "+eventStyle(e);
-  $(`opponent`).replaceChildren(playerPanel(flippedSeats?0:1,e,prev));$(`you`).replaceChildren(playerPanel(flippedSeats?1:0,e,prev));renderStack(state);renderSpotlight(e)}
- renderLog();setTab(tab);requestFit()}
+  const top=playerPanel(flippedSeats?0:1,e,prev),bottom=playerPanel(flippedSeats?1:0,e,prev);
+  if($("opponent").firstElementChild!==top)$("opponent").replaceChildren(top);
+  if($("you").firstElementChild!==bottom)$("you").replaceChildren(bottom);
+  renderStack(state);renderSpotlight(e)}
+ renderLog();setTab(tab);requestFit();refreshCardZoom()}
 function renderQuestions(){const list=$("questionList");list.replaceChildren();for(const q of data.questions||[]){const article=make("article",undefined,"questionCard");article.append(make("h3",q.card||q.reason||"Rules question"),make("p",q.question||q.reason||""));
  if(q.deck)article.append(make("div","Deck: "+q.deck,"muted"));if(q.diagnosticSupport)article.append(make("div",q.supportNote||"Diagnostic subset supported","muted"));
  if(q.ruleAnswer)article.append(make("p","Validated diagnostic ruling: "+q.ruleAnswer));if(q.oracleText){const details=make("details");details.append(make("summary","Oracle text"),make("pre",q.oracleText));article.append(details)}
@@ -544,7 +730,7 @@ function unpack(value){if(value.packedReplay!==1)return value;const catalog=valu
  wardCosts:c.length>14?c[14]:catalog[c[0]].wardCosts,
  bestowed:c.length>15?c[15]:catalog[c[0]].bestowed})),graveyard:p[4].map(c=>({id:catalog[c].id,name:catalog[c].name})),commanderInZone:!!p[5],commanderDamage:p[6]||{},exile:(p[7]||[]).map(c=>({id:catalog[c].id,name:catalog[c].name})),manaPool:p[8]||[]}))}}});return value}
 function load(value){if(!value||value.schemaVersion!==1||!["turn-replay","rules-review"].includes(value.kind))throw Error("Unsupported replay file or version");
- stop();data=unpack(value);$("toggleHands").textContent=revealHands?"Hide hands":"Show hands";if(data.events?.length&&!data.events.every(e=>e.state?.players?.length===2))throw Error("This replay has an unsupported player-state format");
+ stop();hideCardZoom();playerViews.clear();lastStackSignature=null;lastSpotlightName=null;data=unpack(value);$("toggleHands").textContent=revealHands?"Hide hands":"Show hands";if(data.events?.length&&!data.events.every(e=>e.state?.players?.length===2))throw Error("This replay has an unsupported player-state format");
  indexPrintedNames();position=0;tab=data.events?.length?"turns":"questions";$("search").value="";renderQuestions();render()}
 async function loadFile(file){if(!file)return;try{load(JSON.parse(await file.text()));$("notice").textContent="Loaded "+file.name}catch(error){$("notice").textContent="Cannot load replay: "+error.message}}
 $("file").addEventListener("change",e=>loadFile(e.target.files[0]));document.addEventListener("dragover",e=>e.preventDefault());
@@ -562,11 +748,23 @@ $("turnTab").onclick=()=>{stop();setTab("turns")};$("questionTab").onclick=()=>{
 $("zones0").onclick=()=>showZones(0);$("zones1").onclick=()=>showZones(1);
 $("sideToggle").onclick=()=>{const opened=$("sidePanel").classList.toggle("open");$("sideToggle").setAttribute("aria-expanded",String(opened))};
 $("toggleHands").onclick=()=>{revealHands=!revealHands;$("toggleHands").textContent=revealHands?"Hide hands":"Show hands";render()};
-$("toggleArt").onclick=()=>{artEnabled=!artEnabled;$("toggleArt").textContent=artEnabled?"Art: On":"Art: Off";
+$("toggleArt").onclick=()=>{artEnabled=!artEnabled;if(!artEnabled)hideCardZoom();$("toggleArt").textContent=artEnabled?"Art: On":"Art: Off";
  $("artStatus").textContent=artEnabled?"Artwork: Scryfall online lookup enabled · unique card names cached":"Artwork disabled · offline card placeholders";render()};
 $("closeModal").onclick=()=>$("modal").close();$("fullscreen").onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen?.()};
 $("saveAnswers").onclick=()=>{if(!data)return;const payload={schemaVersion:1,kind:"rules-review",status:"pending-review",questions:data.questions||[]};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=make("a");a.href=url;a.download="golem-review-answers.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),5000)};
-document.addEventListener("keydown",e=>{if(!data?.events?.length||$("modal").open||/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||""))return;if(e.code==="Space"){e.preventDefault();play()}else if(e.code==="ArrowRight"){e.preventDefault();stop();stepDirection(1)}else if(e.code==="ArrowLeft"){e.preventDefault();stop();stepDirection(-1)}});
+document.addEventListener("keydown",e=>{
+ if(!data?.events?.length||$("modal").open||/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||""))return;
+ if(e.code==="KeyZ"&&!e.ctrlKey&&!e.altKey&&!e.metaKey){
+  e.preventDefault();zoomHeld=true;
+  const focused=zoomCardTarget(document.activeElement);
+  const pointed=zoomCardTarget(document.elementFromPoint(zoomPointer.x,zoomPointer.y));
+  showCardZoom(pointed||focused);return
+ }
+ if(e.code==="KeyF"&&zoomHeld&&zoomFaces.length>1){e.preventDefault();zoomFaceIndex=(zoomFaceIndex+1)%zoomFaces.length;showZoomFace();return}
+ if(e.code==="Space"){e.preventDefault();play()}
+ else if(e.code==="ArrowRight"){e.preventDefault();stop();stepDirection(1)}
+ else if(e.code==="ArrowLeft"){e.preventDefault();stop();stepDirection(-1)}
+});
 if(data){try{load(data)}catch(e){$("notice").textContent="Embedded replay error: "+e.message}}
 </script>
 </body>

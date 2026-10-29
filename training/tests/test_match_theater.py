@@ -139,13 +139,32 @@ class MatchTheaterChecks(unittest.TestCase):
                        'grid-template-rows:minmax(0,1fr) auto minmax(0,1fr)',
                        'function fitTrack(track)', 'function showCollection(title,cards)',
                        'id="sideToggle"', 'id="sidePanel"', 'track._allCards=cards',
-                       'backs._allCards=snapshot', 'window.addEventListener("resize",requestFit)'):
+                       'syncCardTrack(view.hand,snapshot.map', 'window.addEventListener("resize",requestFit)'):
             self.assertIn(marker,template)
         for relative in ("examples/match-theater-real-decks.html",
                          "examples/budget-vs-goblins-spectator-20261029.html"):
             sample=(HERE/relative).read_text(encoding="utf-8")
             self.assertIn('function fitTrack(track)',sample)
             self.assertIn('body:has(.shell.fitMatch){overflow:hidden}',sample)
+
+    def test_persistent_cards_and_hold_z_magnifier(self):
+        template=(HERE/"viewer.html").read_text(encoding="utf-8")
+        for code in ('const playerViews=new Map()', 'function syncCardTrack(track,cards,previous,event)',
+                     'function updateCard(root,c,previous,combat)', 'if(root._signature===signature)',
+                     'if(track.children[i]!==node)track.insertBefore(', 'img.onload=',
+                     'element._artPending===name', 'let lastStackSignature=null',
+                     'let lastSpotlightName=null', 'id="hoverZoom"', 'function showCardZoom(target)',
+                     'e.code==="KeyZ"', 'e.code==="KeyF"', 'function hideCardZoom()'):
+            self.assertIn(code,template)
+        self.assertIn('if($("opponent").firstElementChild!==top)',template)
+        self.assertIn('if($("you").firstElementChild!==bottom)',template)
+        self.assertNotIn("innerHTML",template)
+        for relative in ("examples/match-theater-real-decks.html",
+                         "examples/budget-vs-goblins-spectator-20261029.html"):
+            saved=(HERE/relative).read_text(encoding="utf-8")
+            self.assertIn('function syncCardTrack(track,cards,previous,event)',saved)
+            self.assertIn('id="hoverZoom"',saved)
+            self.assertIn('e.code==="KeyZ"',saved)
 
     def test_html_export_still_embeds_without_script_injection(self):
         report=dict(schemaVersion=1,kind="rules-review",

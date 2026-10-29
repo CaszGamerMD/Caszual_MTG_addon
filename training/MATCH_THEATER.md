@@ -78,3 +78,23 @@ The viewer intentionally has **no network dependencies** and uses text nodes to 
 This is still a **two-player diagnostic approximation**, not a complete Commander engine. Visual flourishes never substitute for simulator decisions. The viewer does not change the engine's scoring or training and is not an AI player.
 
 Regression checks are in \`training/tests/test_match_theater.py\`. The JavaScript is syntax-checked when Node.js is available, and the self-contained sample is checked for valid, nonempty replay data.
+
+## Smooth card updates and quick face magnifier
+
+The viewer now retains each player's battlefield and hand DOM nodes between
+replay events, keyed by individual card IDs. Ordinary turn updates no longer
+discard and recreate unchanged cards or their loaded Scryfall images. Artwork
+is only attached after the image finishes loading. The stack and spotlight
+also avoid unnecessary redraws when their contents are unchanged.
+
+**Hold Z and hover any card** in the battlefield, hand, zone gallery, or
+stack to see a large, fully readable Scryfall card face above the table.
+Releasing Z hides the preview. When a card has multiple image faces, press
+**F while holding Z** to cycle through them. Keyboard focus on a card
+also works with Z, and clicking a card still opens the detailed inspector.
+This feature uses the same safe, paced Scryfall lookups and remains unavailable
+if online artwork is turned off or unavailable.
+
+Card changes, new cards entering, and combat highlights still animate;
+the fix removes only redraws of unchanged cards. It does not move this
+experimental simulator into Minecraft.
