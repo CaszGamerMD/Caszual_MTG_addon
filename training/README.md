@@ -19,6 +19,15 @@ leaving. See `training/tests/test_token_leaves.py`. This is not a
 general sacrifice-cost parser; arbitrary sacrifice costs and multiplayer
 choices remain pending. The only supported diagnostic match is two-player.
 
+Token replacement now also applies to the **number of Virtuous Role
+Aura tokens** created by supported Role triggers. When two Roles from the
+same controller would remain on the same host, the ordinary Role
+state-based restriction removes the older Role token. That departure
+generates an independent token-leaves event; creation still triggers
+once for each token before the older Role leaves. The interaction is
+covered by `test_doubled_roles_count_creation_then_extra_role_leaves`
+in `training/tests/test_token_action_triggers.py`.
+
 These are experimental standalone rules, not Minecraft integration.
 
 ## Optional basic-land search after exile; per-token triggers
