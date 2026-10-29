@@ -70,6 +70,7 @@ class Trigger:
     subject: Selector
     effect: Effect
     life_gained_at_least: int = 0
+    lands_controlled_at_least: int = 0
 
 @dataclass(frozen=True)
 class Program:
@@ -315,6 +316,16 @@ def compile_abilities(text, name=''):
         upkeep=re.fullmatch(r'At the beginning of your upkeep, (.+)',line)
         if upkeep:
             clause=upkeep[1]
+            lands=re.fullmatch(r'if you control (one|two|three|four|five|six|seven|eight|nine|[1-9][0-9]*) or more lands, (.+)',clause)
+            if lands:
+                count={'one':1,'two':2,'three':3,'four':4,'five':5,'six':6,
+                       'seven':7,'eight':8,'nine':9}.get(lands[1])
+                if count is None:count=int(lands[1])
+                action=effect(lands[2])
+                if action is None:return None
+                triggers.append(Trigger('upkeep',Selector(self_only=True),action,
+                                        lands_controlled_at_least=count))
+                continue
             loss=re.fullmatch(r'you lose ([1-9][0-9]*) life and (create .+)',clause)
             action=effect(loss[2] if loss else clause)
             if action is None: return None
@@ -371,6 +382,7 @@ def event_data(trigger, source, subject):
             'effect':label,'operation':e.operation,'recipient':e.recipient,'sourceColors':sorted(source.definition.colors),
             'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
             'optional':e.optional,
+            **({'minLands':trigger.lands_controlled_at_least} if trigger.lands_controlled_at_least else {}),
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             **({'libraryFilter':e.library_filter} if e.library_filter else {}),
             **({'steps':[{'operation':step.operation,'amount':step.amount,'recipient':step.recipient,'gain':step.gain} for step in e.steps]} if e.steps else {}),
