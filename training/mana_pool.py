@@ -55,3 +55,30 @@ def plan(cost, pool, sources, x=None):
     if answer is None: return {'paid':False}
     chosen,left=answer
     return {'paid':True,'sources':list(chosen),'pool':list(left)}
+
+def reduce_generic_cost(cost, reduction, x=None):
+    """Reduce the *generic* part of a symbolized mana cost without changing
+    colored, hybrid or true colorless symbol requirements. Preserve X's
+    declared choice by computing it before applying the reduction.
+    """
+    if not reduction: return cost
+    if not isinstance(reduction,int) or reduction<0:raise ValueError('Invalid reduction')
+    symbols=re.findall(r'\{([^{}]+)\}',cost)
+    if not symbols or ''.join('{'+symbol+'}' for symbol in symbols)!=cost:return cost
+    generic=0;strict=[]
+    for symbol in symbols:
+        if symbol.isdigit() and len(symbol)<=2:
+            generic+=int(symbol)
+        elif symbol=='X':
+            if not isinstance(x,int) or x<0:return cost
+            generic+=x
+        else:strict.append(symbol)
+    generic=max(0,generic-reduction)
+    return ''.join('{'+symbol+'}' for symbol in strict)+''.join(
+        '{'+str(min(99,remaining))+'}' for remaining in _generic_chunks(generic)) if generic else ''.join(
+        '{'+symbol+'}' for symbol in strict)+'{0}'
+
+def _generic_chunks(total):
+    while total>0:
+        yield total
+        total-=min(99,total)
