@@ -199,6 +199,7 @@ class Card:
     blink: bool = False
     rebound: bool = False
     blink_to_controller: bool = False
+    flashback_cost: str = ""
 
 
 
@@ -289,7 +290,7 @@ class Policy:
         if not observation.legal_actions:
             raise ValueError("No legal action")
         # Identical observations give identical decisions. No access to the engine or replay.
-        development={"cast","cast_commander","bestow","equip","station",
+        development={"cast","cast_commander","cast_flashback","bestow","equip","station",
                      "history_tokens","activate_tokens","activate_strip"}
         def utility(action):
             score=sum(w*f for w,f in zip(self.weights,action.features))
@@ -993,6 +994,7 @@ class Simulator(AdvancedRules):
         if removed and removed.payload[0].get('operation')=='spell' and not removed.payload[0].get('copy'):
             owner=self.players[removed.controller];countered=removed.payload[1]
             if root(countered)==owner.commander_id:owner.command_zone=countered
+            elif removed.payload[0].get('flashback'):owner.exile.append(countered)
             else:owner.graveyard.append(countered)
         return removed
 
@@ -1059,7 +1061,7 @@ class Simulator(AdvancedRules):
         self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack)
         return 'cast'
 
-    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False):
+    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False):
         player=self.players[seat]
         if not card.instant and seat!=self.stack.priority: raise ValueError('Player lacks priority')
         if self.stack.items:
@@ -1067,7 +1069,10 @@ class Simulator(AdvancedRules):
         elif seat!=self.active or self.phase not in ('main','second_main'):
             if not card.instant or seat!=self.stack.priority: raise ValueError('Spell timing invalid')
         if rebound and self._rebound_permission!=(seat,root(card)):raise ValueError('No rebound casting permission')
-        if not commander and card not in (player.exile if rebound else player.hand): raise ValueError('Card not in casting zone')
+        if flashback and (commander or rebound or bestow or not card.flashback_cost):
+            raise ValueError('No supported flashback permission')
+        casting_zone=player.exile if rebound else player.graveyard if flashback else player.hand
+        if not commander and card not in casting_zone: raise ValueError('Card not in casting zone')
         if bestow and (not card.event_definition or not card.event_definition.bestow):raise ValueError('Card has no supported bestow ability')
         if (card.kind=='aura' or bestow) and target not in {p.card.id for _,p in self.creature_targets(seat,card)}:raise ValueError('Illegal Aura target')
         if card.kind=='removal_spell' and card.removal not in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min') and target not in {item.card.id for _,item in self.removal_targets(seat,card)}:
@@ -1077,18 +1082,19 @@ class Simulator(AdvancedRules):
         if card.blink and target not in {p.card.id for owner,p in self.creature_targets(seat,card) if owner==seat}:raise ValueError('Blink requires own legal creature')
         payment_card=replace(card,mana_cost=card.event_definition.bestow[0]) if bestow else card
         if rebound:payment_card=replace(payment_card,mana_cost='{0}')
+        elif flashback:payment_card=replace(payment_card,mana_cost=card.flashback_cost)
         payment=self.payment(payment_card,player.commander_casts if commander else 0,x=x,seat=seat)
         if not payment['paid']: raise ValueError('Cannot pay spell cost')
         for source in player.battlefield:
             if source.card.id in payment['sources']:source.tapped=True
         player.mana_pool=list(payment['pool'])
         if commander:player.command_zone=None;player.commander_casts+=1
-        else:(player.exile if rebound else player.hand).remove(card)
+        else:casting_zone.remove(card)
         prior=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)
         self.stack.active=self.active
-        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'fromHand':not rebound and not commander},card),card.name)
+        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'fromHand':not rebound and not flashback and not commander},card),card.name)
         self.log('cast',f'Player {seat+1} casts {card.name}.',actor=seat,card=card.name,
-                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,bestow=bestow,rebound=rebound,targetStack=target if card.kind=='counter_spell' else None,
+                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,bestow=bestow,rebound=rebound,flashback=flashback,targetStack=target if card.kind=='counter_spell' else None,
                  targetPermanent=target if card.kind=='removal_spell' else None)
         self.stack.priority=seat
         self.log('stack_push',f'{card.name} goes on the stack.',stackId=frame.id,controller=seat)
@@ -1145,7 +1151,8 @@ class Simulator(AdvancedRules):
             triggers=self.enter_creature(card,p)
             self.resolve_entry_triggers(triggers,card)
         elif card.kind=='mana_artifact': p.battlefield.append(Permanent(card))
-        elif not event.get('copy'): p.graveyard.append(original)
+        elif not event.get('copy'):
+            (p.exile if event.get('flashback') else p.graveyard).append(original)
         if card.kind=='removal_spell':
             if card.removal in ('destroy_all_creatures','destroy_toughness_min'):
                 threshold=card.removal_min_toughness if card.removal=='destroy_toughness_min' else 0
@@ -1826,6 +1833,14 @@ class Simulator(AdvancedRules):
                     features(power=c.power, toughness=c.toughness, haste=int(c.name == "Zurgo Helmsmasher"),
                              cost=len(self.payment(c, p.commander_casts).get("sources", []))),
                     "Cast commander " + c.name))
+            for c in p.graveyard:
+                if c.flashback_cost and c.kind=='token_spell':
+                    payment=self.payment(replace(c,mana_cost=c.flashback_cost),seat=seat)
+                    if payment['paid']:
+                        actions.append(Candidate(c.id+':flashback','cast_flashback',c.id,
+                            features(power=c.token_count*(c.token_definition.power if c.token_definition else 1),
+                                      cost=len(payment.get('sources',[]))),
+                            label='Flashback '+c.name))
             for c in p.hand:
                 if c.blink and self.payment(c)['paid']:
                     actions.extend(self.blink_choices(seat,c,'cast'));continue
@@ -1925,7 +1940,7 @@ class Simulator(AdvancedRules):
             raise RuntimeError("Agent attempted an illegal action")
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
-        if choice.kind in ("cast","cast_commander","bestow","equip","station",
+        if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
                            "history_tokens","activate_tokens","activate_strip"):
             self.turn_development[seat]=True
         return choice
@@ -2008,7 +2023,9 @@ class Simulator(AdvancedRules):
             elif choice.kind in ('crew','saddle'):
                 self.activate_transport(self.active,choice.kind,choice.card_id,choice.tap_ids)
             else:
-                card = p.command_zone if choice.kind == "cast_commander" else next(c for c in p.hand if c.id == choice.card_id)
+                card = (p.command_zone if choice.kind == "cast_commander" else
+                        next(c for c in (p.graveyard if choice.kind == "cast_flashback" else p.hand)
+                             if c.id == choice.card_id))
                 if card is None: raise RuntimeError("Commander is no longer in command zone")
                 if choice.kind == "land":
                     p.hand.remove(card)
@@ -2018,7 +2035,9 @@ class Simulator(AdvancedRules):
                     self.log("land", f"Player {self.active + 1} plays {card.name}.", card=card.name)
                     self.resolve_entry_triggers(pending,card)
                 else:
-                    self.cast_spell(self.active,card,choice.x_value,choice.kind=='cast_commander',target=choice.target_permanent or choice.target_stack,bestow=choice.kind=='bestow')
+                    self.cast_spell(self.active,card,choice.x_value,choice.kind=='cast_commander',
+                        target=choice.target_permanent or choice.target_stack,
+                        bestow=choice.kind=='bestow',flashback=choice.kind=='cast_flashback')
         elif self.phase == "attack":
             choice = self.decide(self.active)
             if choice.kind=='attack_group':
@@ -2250,6 +2269,19 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     storm_text=rule_text(definition.get('oracleText',''))
     storm_lines=storm_text.splitlines()
     if (parsed['kind']=='unsupported' and definition.get('types')==['Sorcery'] and len(storm_lines)==2
+            and rules.query('cost',cost)['supported']):
+        # Flashback is an alternate graveyard-casting permission, not a second
+        # token effect. Require the full two-line Oracle program to be known.
+        flashback=re.fullmatch(r'Flashback ((?:\\{[^{}]+\\})+)',storm_lines[1])
+        spec=parse_token_creation(storm_lines[0]) if flashback else None
+        if flashback and spec and rules.query('cost',flashback[1])['supported']:
+            template=EventDefinition(' '.join(spec.subtypes),
+                frozenset({'Creature'}|({'Land'} if spec.land else set())|({'Enchantment'} if spec.enchantment else set())),
+                frozenset(spec.subtypes),False,spec.power,spec.toughness,spec.keywords,colors=frozenset(spec.colors))
+            parsed={'kind':'token_spell','token_count':spec.amount,
+                    'token_definition':template,'token_tapped':spec.tapped,
+                    'flashback_cost':flashback[1]}
+    if (parsed['kind']=='unsupported' and definition.get('types')==['Sorcery'] and len(storm_lines)==2
             and storm_lines[1]=='Storm' and rules.query('cost',cost)['supported']):
         spec=parse_token_creation(storm_lines[0])
         if spec:
@@ -2326,7 +2358,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     if (parsed["kind"]=="unsupported" and definition.get("types")==["Artifact"]
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
-    return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),blink_to_controller=parsed.get("blink_to_controller",False),
+    return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),blink_to_controller=parsed.get("blink_to_controller",False),flashback_cost=parsed.get("flashback_cost",""),
         instant="Instant" in definition.get("types",[]), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),
