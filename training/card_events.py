@@ -475,6 +475,21 @@ class Game:
                     result.append(event_data(trigger,watcher,spell))
         return result
 
+    def life_gain_triggers(self, controller: int, gained: int) -> list[dict]:
+        """Snapshot one trigger per life-gain EVENT, never per life point.
+
+        Trigger discovery happens after replacements have changed the amount.
+        In particular, life lost is not life gained, and zero gain is no event.
+        """
+        if gained<=0:return []
+        result=[]
+        for source in self.battlefield.values():
+            if source.controller!=controller:continue
+            for trigger in source.definition.triggers:
+                if trigger.event=='gain_life':
+                    result.append(event_data(trigger,source,source))
+        return result
+
     def upkeep_triggers(self, land_counts=None) -> list[dict]:
         """One trigger per eligible controlled permanent at upkeep start.
 
