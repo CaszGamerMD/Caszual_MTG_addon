@@ -396,6 +396,7 @@ class Simulator(AdvancedRules):
         self._resolving_stack=False
         self._waiting_triggers=[]
         self.aura_exiles={}  # Aura object id -> (owner seat, physical card) still in exile.
+        self.linked_exiles={}  # (source id, entry identity) -> cards exiled by its ETB trigger.
         self.life_gained_turn=[0,0]
         self._end_step_triggers_queued=False
         self.token_sequence = 0
@@ -760,6 +761,12 @@ class Simulator(AdvancedRules):
                     # not when it resolves. Opposing hexproof and protection apply.
                     candidates=[item for owner,item in self.creature_targets(controller,origin)
                                 if owner!=controller]
+                    if not candidates:continue
+                    chosen=max(candidates,key=lambda item:(self.effective_card(item).power,item.card.id))
+                    event=dict(event,target=chosen.card.id)
+                if event.get('operation')=='linked_exile_entry':
+                    candidates=[item for owner,item in self.creature_targets(controller,origin)
+                                if event['targetRestriction']!='opponent' or owner!=controller]
                     if not candidates:continue
                     chosen=max(candidates,key=lambda item:(self.effective_card(item).power,item.card.id))
                     event=dict(event,target=chosen.card.id)
@@ -1463,6 +1470,36 @@ class Simulator(AdvancedRules):
                          actor=event['controller'],source=event['source'],targetPermanent=item.card.id)
                 self.resolve_entry_triggers(self.state_based_actions(),card)
                 continue
+            if event.get('operation')=='linked_exile_entry':
+                game=self.event_game('main')
+                legal=next(((owner,item) for owner,item in self.creature_targets(event['controller'],card)
+                            if item.card.id==event.get('target')
+                            and (event['targetRestriction']!='opponent' or owner!=event['controller'])),None)
+                if legal is None:
+                    self.log('linked_exile_fizzle','Linked exile trigger has no legal target.',
+                             source=event['source'],targetPermanent=event.get('target'))
+                    continue
+                owner,item=legal
+                self.send_to_destination(self.players[owner],item,snapshot=game,to_exile=True)
+                physical_owner=self.card_owners.get(root(item.card),owner)
+                if item.card in self.players[physical_owner].exile:
+                    key=(event['source'],event['sourceEntry'])
+                    self.linked_exiles.setdefault(key,[]).append((physical_owner,item.card))
+                self.log('linked_exile','ETB trigger exiles a creature.',
+                         actor=event['controller'],source=event['source'],targetPermanent=item.card.id)
+                self.resolve_entry_triggers(self.state_based_actions(),card)
+                continue
+            if event.get('operation')=='linked_exile_return':
+                key=(event['source'],event['sourceEntry'])
+                for owner_seat,exiled_card in self.linked_exiles.pop(key,()):
+                    owner=self.players[owner_seat]
+                    if exiled_card in owner.exile:
+                        owner.exile.remove(exiled_card)
+                        pending=self.enter_creature(exiled_card,owner)
+                        self.resolve_entry_triggers(pending,exiled_card)
+                self.log('linked_exile_return','Linked leave trigger returns any exiled card.',
+                         source=event['source'])
+                continue
             if event.get('operation')=='damage_any_target':
                 if event.get('optional') and not self.choose_optional_damage(event):
                     self.log('damage_declined','Controller declines optional triggered damage.',
@@ -2044,6 +2081,11 @@ class Simulator(AdvancedRules):
                     for trigger in watcher.definition.triggers:
                         if trigger.event=='graveyard' and matches(trigger.subject,watcher,moved,before.creature(moved)):
                             self._waiting_triggers.append((event_data(trigger,watcher,moved),item.card))
+        if item.card.event_definition and item.card.event_definition.linked_exile:
+            controller=next(seat for seat,owner in enumerate(self.players) if owner is player)
+            self._waiting_triggers.append((dict(operation='linked_exile_return',
+                source=item.card.id,sourceEntry=item.entered_at,controller=controller,
+                name=item.card.name),item.card))
         if item.card.is_token:
             game=snapshot or self.event_game('main')
             controller=next(i for i,p in enumerate(self.players) if item in p.battlefield)

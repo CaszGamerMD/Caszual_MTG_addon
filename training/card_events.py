@@ -119,6 +119,7 @@ class Definition:
     attack_watchers: tuple = ()
     chosen_type_entry: bool = False
     aura_exile: bool = False  # Targeted ETB exile lasting until this Aura leaves.
+    linked_exile: str = ''  # Separate ETB-exile and LTB-return triggers, with source identity.
     living_weapon: bool = False  # ETB create 0/0 Phyrexian Germ, then attach.
 
 
@@ -167,6 +168,13 @@ def parse_card(card: dict) -> Definition:
     land_exile=parse_land_aura_exile(text,types,subtypes)
     if land_exile:
         return Definition(**base,abilities=frozenset(),attachment=land_exile,aura_exile=True)
+    # Unlike an "until" effect, two separately triggered exile/return abilities
+    # can exile permanently if the source leaves before its ETB resolves.
+    linked=re.fullmatch(
+        r"When this (enchantment|artifact) enters, exile target creature( an opponent controls)?\\.\\n"
+        r"When this \\1 leaves the battlefield, return the exiled card to the battlefield under its owner's control\\.",text)
+    if linked and linked[1].title() in types:
+        return Definition(**base,abilities=frozenset(),linked_exile='opponent' if linked[2] else 'any')
     from advanced_abilities import station,history,equipped_attacks
     levels=station(text,types,subtypes)
     if levels:return Definition(**base,abilities=frozenset(),station=levels)
@@ -495,6 +503,11 @@ class Game:
                           source=permanent.id,name=permanent.definition.name,
                           controller=permanent.controller,sourceEntry=permanent.entered_at,
                           sourceColors=sorted(permanent.definition.colors))
+            if permanent.definition.linked_exile:
+                self.emit('trigger',operation='linked_exile_entry',
+                          source=permanent.id,name=permanent.definition.name,
+                          controller=permanent.controller,sourceEntry=permanent.entered_at,
+                          targetRestriction=permanent.definition.linked_exile)
             if permanent.definition.living_weapon:
                 self.emit('trigger',operation='living_weapon',
                           source=permanent.id,name=permanent.definition.name,
