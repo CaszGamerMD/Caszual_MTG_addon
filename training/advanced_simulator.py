@@ -277,12 +277,15 @@ class AdvancedRules:
    if toughness<=0 or ('Planeswalker' in state.definition.types and p.loyalty==0) or (p.marked_damage>=toughness or identifier in touch) and not g.has(state,'indestructible'):
     dead.append((state.controller,p))
   pending=g.aura_damage_triggers(dealt,1-self.active)
-  from oracle_abilities import matches
-  for identifier in set(player_hits):
+  from oracle_abilities import matches,event_data
+  for identifier in player_hits:
    pending.extend(g.combat_draw_triggers(identifier))
    for source in g.battlefield.values():
     for trigger in source.definition.triggers:
-     if trigger.event=='combat_damage' and matches(trigger.subject,source,g.battlefield[identifier],True):pending.append(dict(operation='discard',effect='discard',controller=source.controller,name=source.definition.name,source=source.id,target=1-self.active))
+     if trigger.event=='combat_damage' and matches(trigger.subject,source,g.battlefield[identifier],True):
+      pending.append(dict(operation='discard',effect='discard',controller=source.controller,name=source.definition.name,source=source.id,target=1-self.active))
+     elif trigger.event=='deals_player_damage' and source.id==identifier and matches(trigger.subject,source,g.battlefield[identifier],True):
+      pending.append(event_data(trigger,source,g.battlefield[identifier]))
   for _,victim in dead:
    for identifier in damagers.get(victim.card.id,()):
     if live[identifier].card.name=='Zurgo Helmsmasher':pending.append(dict(operation='self_counter',effect='add counter',source=identifier,name=live[identifier].card.name,controller=g.battlefield[identifier].controller,amount=1))

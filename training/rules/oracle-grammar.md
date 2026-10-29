@@ -212,3 +212,26 @@ unfamiliar card names and different thresholds use the same grammar.
 This is deliberately limited to power-threshold blocking; it is not
 protection, hexproof, shroud, or an arbitrary evasion parser. Focused
 tests: `training/tests/test_blocker_power.py`.
+
+
+## Goblin-style combat-damage hand deployment (2026-10-29)
+
+A full Oracle grammar recognizes "Whenever this creature deals damage
+to a player/an opponent, you may put a [subtype] creature/permanent card
+from your hand onto the battlefield." Goblin Lackey and Warren
+Instigator use this rule without their names selecting the behavior.
+The event is queued at damage, survives removal of its source before
+resolution, and chooses an eligible card from the controller's own
+hand only **when the trigger resolves**. It enters without being cast,
+and its entry triggers can go onto the stack normally. No mana cost is
+paid. Declining is legal. An attacker blocked before dealing player
+damage causes no such trigger.
+
+Double strike causes independent player-damage events and therefore
+two triggers, each with a separate resolution and choice. The current
+diagnostic activates this family on combat damage to the opposing
+player; handling other noncombat player-damage events is pending.
+Unknown extra Oracle clauses reject the entire card instead of
+ignoring their remainder.
+
+Coverage: `training/tests/test_put_from_hand_damage.py`.

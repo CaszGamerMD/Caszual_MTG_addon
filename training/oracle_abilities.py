@@ -356,6 +356,15 @@ def compile_abilities(text, name=''):
         static=static_effect(line)
         if static:
             static_effects.extend(static if isinstance(static,tuple) else (static,)); continue
+        damage_hand=re.fullmatch(
+            r'Whenever this creature deals damage to (a player|an opponent), you may put a ([A-Z][a-z]+) (creature|permanent) card from your hand onto the battlefield\.',
+            line)
+        if damage_hand:
+            # Not hard-coded to Goblins; classify the type of eligible card.
+            action=Effect('optional_put_hand_permanent',0,optional=True,
+                          library_filter=('subtype',damage_hand[2],damage_hand[3]))
+            triggers.append(Trigger('deals_player_damage',Selector(self_only=True,creature=True),action))
+            continue
         combat=re.fullmatch(r'Whenever a ([A-Z][a-z]+) deals combat damage to a player, that player discards a card\.',line)
         if combat:
             triggers.append(Trigger('combat_damage',Selector(creature=True,subtype=combat[1]),Effect('discard',1,'damaged player')))
@@ -447,6 +456,7 @@ def event_data(trigger, source, subject):
             'create_tokens':f'create {e.amount} creature tokens',
             'opponent_optional_basic_search':'each opponent may find a tapped basic land and shuffle',
             'optional_subtype_search_hand':'controller may tutor a subtype card to hand and shuffle',
+            'optional_put_hand_permanent':'controller may put a matching permanent card from hand onto the battlefield',
             'opponent_loss_tapped_creatures':'each opponent loses life equal to controlled tapped creatures'}
     label='; then '.join(f'{part.operation} {part.amount}' for part in e.steps) if e.operation=='ordered_effects' else labels[e.operation]
     if e.controller_loss: label=f'controller loses {e.controller_loss} life; '+label
@@ -459,4 +469,4 @@ def event_data(trigger, source, subject):
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             **({'libraryFilter':e.library_filter} if e.library_filter else {}),
             **({'steps':[{'operation':step.operation,'amount':step.amount,'recipient':step.recipient,'gain':step.gain} for step in e.steps]} if e.steps else {}),
-            {'enters':'entered','dies':'dead','upkeep':'permanent','end_step':'permanent','cast':'spell','gain_life':'permanent'}[trigger.event]:subject.id}
+            {'enters':'entered','dies':'dead','upkeep':'permanent','end_step':'permanent','cast':'spell','gain_life':'permanent','deals_player_damage':'damageSource'}[trigger.event]:subject.id}

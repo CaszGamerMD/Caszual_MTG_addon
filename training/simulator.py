@@ -894,6 +894,32 @@ class Simulator(AdvancedRules):
                    (card.event_definition and subtype in card.event_definition.subtypes)
                    for card in self.players[seat].library)
 
+    def legal_hand_put_cards(self,seat,subtype,kind):
+        """Filter the controller's private hand, never the opponent's hand."""
+        if kind not in ('creature','permanent'):raise ValueError('Unknown hand-put type')
+        result=[]
+        for card in self.players[seat].hand:
+            definition=card.event_definition
+            subtypes=set(card.land_subtypes)
+            if definition:subtypes.update(definition.subtypes)
+            if subtype not in subtypes or card.kind=='unsupported':continue
+            types=set(card.printed_types)
+            if definition:types.update(definition.types)
+            if kind=='creature' and 'Creature' not in types:continue
+            if kind=='permanent' and (types.intersection({'Instant','Sorcery'}) or card.kind not in
+                    ('creature','vehicle','enchantment','mana_artifact','equipment','planeswalker','station','artifact','land','aura')):
+                continue
+            result.append(card)
+        return tuple(result)
+
+    def choose_optional_hand_permanent(self,seat,subtype,kind,options):
+        """Diagnostic policy accepts the first legal matching card when available.
+
+        This is a decision at trigger resolution. No private candidate identities
+        are exposed through legal actions or the opponent's observation.
+        """
+        return options[0] if options else None
+
     def search_subtype_card_to_hand(self, seat, source, subtype):
         """Optional subtype-filtered search. The chosen card is revealed.
 
@@ -1291,6 +1317,26 @@ class Simulator(AdvancedRules):
                          actor=controller,source=event['source'],amount=amount)
                 self.outcome()
                 if self.finished:return
+                continue
+            if event.get('operation')=='optional_put_hand_permanent':
+                payload=event.get('libraryFilter',())
+                if len(payload)!=3 or payload[0]!='subtype':
+                    raise RuntimeError('Unknown hand-to-battlefield permission')
+                controller=event['controller'];subtype,kind=payload[1:]
+                options=self.legal_hand_put_cards(controller,subtype,kind)
+                selected=self.choose_optional_hand_permanent(controller,subtype,kind,options)
+                if selected is None:
+                    self.log('hand_put_declined','Player declines the optional hand-to-battlefield ability.',
+                             actor=controller,source=event['source'],subtype=subtype)
+                    continue
+                if selected not in options:raise ValueError('Illegal hand-to-battlefield choice')
+                player=self.players[controller]
+                player.hand.remove(selected)
+                pending=self.enter_creature(selected,player)
+                self.log('put_from_hand','A matching permanent enters from hand without being cast.',
+                         actor=controller,card=selected.name,source=event['source'],
+                         subtype=subtype,kind=kind,permanent=selected.id)
+                self.resolve_entry_triggers(pending,selected)
                 continue
             if event.get('operation')=='optional_subtype_search_hand':
                 search=event.get('libraryFilter',())
