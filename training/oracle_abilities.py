@@ -93,7 +93,9 @@ def static_effect(text):
         return (StaticEffect(subject,int(subtype_anthem[2]),int(subtype_anthem[3])),)+tuple(
             StaticEffect(subject,0,0,grant=word) for word in sorted(traits))
     subtype_keyword=re.fullmatch(r'([A-Z][a-z]+)s you control have (.+)\.',text)
-    if subtype_keyword:
+    # "Creatures you control" is the older general keyword-anthem grammar.
+    # Never treat "Creatures" as an unknown creature subtype.
+    if subtype_keyword and subtype_keyword[1]!='Creature':
         traits={w.strip() for w in re.split(r', | and ',subtype_keyword[2])}
         if not traits or not traits<=KEYWORDS:return None
         subject=Selector(relation='controller',creature=True,subtype=subtype_keyword[1])
