@@ -105,6 +105,7 @@ class Definition:
     opponent_creatures_enter_tapped: bool = False
     life_addition: int = 0
     cost_reductions: tuple = ()
+    counter_replacements: tuple = ()
     role: str = ""
 
 
@@ -140,7 +141,8 @@ def parse_card(card: dict) -> Definition:
             attachment_draw=enchantments.attachment_draw,damage_events=enchantments.damage_events,
             life_multiplier=program.life_multiplier,
             opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
-            life_addition=program.life_addition,cost_reductions=program.cost_reductions)
+            life_addition=program.life_addition,cost_reductions=program.cost_reductions,
+            counter_replacements=program.counter_replacements)
     from advanced_abilities import station,history,equipped_attacks
     levels=station(text,types,subtypes)
     if levels:return Definition(**base,abilities=frozenset(),station=levels)
@@ -174,7 +176,8 @@ def parse_card(card: dict) -> Definition:
         return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects,
                           activations=program.activations,devotion=program.devotion,life_multiplier=program.life_multiplier,
                           opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
-                          life_addition=program.life_addition,cost_reductions=program.cost_reductions)
+                          life_addition=program.life_addition,cost_reductions=program.cost_reductions,
+                          counter_replacements=program.counter_replacements)
     attack_text=text.replace(name,'this creature') if name else text
     if ',' in name:
         short=name.split(',')[0]
@@ -559,6 +562,25 @@ class Game:
             equipment.attachment_at=self.timestamp()
         self.emit("equip", equipment=equipment_id, target=creature_id, mana=2)
 
+    def counter_amount(self, target_id: str, amount: int) -> int:
+        """Apply supported +1/+1 counter replacements to a positive event.
+
+        The affected controller chooses the legal maximal result here:
+        additive effects before doubling effects. A separate choice policy
+        may select another ordering later.
+        """
+        if amount<=0:return max(0,amount)
+        target=self.battlefield[target_id]
+        if not self.creature(target):return amount
+        additions=[];multipliers=[]
+        for source in self.battlefield.values():
+            for kind,value,scope in source.definition.counter_replacements:
+                if scope!='controlled_creature' or source.controller!=target.controller:continue
+                (additions if kind=='plus' else multipliers).append(value)
+        for value in additions:amount+=value
+        for value in multipliers:amount*=value
+        return amount
+
     def attack(self, attacker_id: str, defending_player: int, defer=False):
         a = self.battlefield[attacker_id]
         if self.phase != "combat" or a.controller != self.turn_player or defending_player not in (0,1) or defending_player == a.controller:
@@ -574,11 +596,11 @@ class Game:
             if operation=='counter' and defer:
                 self.emit('trigger',operation='self_counter',source=a.id,name=a.definition.name,controller=a.controller,effect='add counter',amount=power)
             elif operation=='counter':
-                a.counters+=power
+                a.counters+=self.counter_amount(a.id,power)
                 self.emit('trigger',source=a.id,effect='add +1/+1 counter',target=a.id)
             elif operation=='counter_power_tokens':
                 last_power=self.stats(a)[0]
-                if not defer: a.counters+=power
+                if not defer: a.counters+=self.counter_amount(a.id,power)
                 amount=max(0,self.stats(a)[0])
                 spec=dict(asdict(keyword),amount=amount,keywords=sorted(keyword.keywords))
                 self.emit('trigger',source=a.id,name=a.definition.name,controller=a.controller,
