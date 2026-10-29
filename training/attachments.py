@@ -43,3 +43,18 @@ def parse_bestow(text,types):
     attachment=parse('\n'.join(['Enchant creature']+enchanted),{'Enchantment'},{'Aura'})
     if not attachment:return None
     return cost[1],frozenset(intrinsic),attachment
+
+def parse_equipment_removals(text,types,subtypes):
+    """Compose an equipment program with paid, temporary opposing ability loss."""
+    if not {'Artifact'}<=types or 'Equipment' not in subtypes:return None
+    lines=[];removals=[]
+    for line in text.splitlines():
+        line=line.strip()
+        m=re.fullmatch(r'((?:\{(?:[0-9]{1,2}|[WUBRGC])\})+): Permanents your opponents control lose (.+) until end of turn\.',line)
+        if not m:lines.append(line);continue
+        abilities=frozenset(re.split(r', | and ',m[2]))
+        if not abilities or not abilities<={'hexproof','indestructible'}:return None
+        if all(part=='0' for part in re.findall(r'\{([^}]+)\}',m[1])):return None
+        removals.append((m[1],abilities))
+    attachment=parse('\n'.join(lines),types,subtypes)
+    return (attachment,tuple(removals)) if attachment and removals else None

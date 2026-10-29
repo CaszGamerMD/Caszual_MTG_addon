@@ -13,3 +13,5 @@ Focused tests cover simultaneous Artist/Shambler deaths, nonlethal marks, indest
 Official reference: https://magic.wizards.com/en/news/feature/dominaria-release-notes
 
 Validation: 152 tests pass, including last-known lifelink/deathtouch after source departure. The seed-1142 replay completed without runtime questions but did not resolve a board-damage effect, so focused tests supply direct coverage. Summary: `training/examples/boarddamage-1142.json`. Twelve original cards remain completely blocked; Chainwhirler is enabled for the diagnostic player/creature model with planeswalker handling still pending.
+
+Follow-up: represented planeswalkers now lose loyalty to this instruction, zero-loyalty state-based actions ignore indestructible, and dual-type permanents are damaged once. See `ward-ability-loss-loyalty.md`. Arbitrary planeswalker abilities and attacks against planeswalkers remain unsupported.

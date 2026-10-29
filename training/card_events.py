@@ -7,7 +7,7 @@ rules raise NeedsRules rather than being treated as blank.
 from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 import re
-from attachments import parse as parse_attachment, parse_bestow
+from attachments import parse as parse_attachment, parse_bestow, parse_equipment_removals
 from attack_abilities import compile as compile_attacks
 from oracle_abilities import Trigger, StaticEffect, compile_abilities, matches, event_data
 
@@ -65,7 +65,7 @@ INSTIGATOR = "When this creature enters, create a 1/1 red Goblin creature token.
 MUSTANG = """Whenever this creature attacks while saddled, untap it and put a +1/+1 counter on it.
 Saddle 1"""
 SIMPLE_ABILITIES = {"flying", "first strike", "double strike", "lifelink", "vigilance",
-                    "trample", "haste", "defender", "reach", "deathtouch", "indestructible"}
+                    "trample", "haste", "defender", "reach", "deathtouch", "indestructible", "hexproof"}
 
 
 @dataclass(frozen=True)
@@ -90,6 +90,8 @@ class Definition:
     devotion: tuple = ()
     mana_cost: str = ""
     bestow: tuple = ()
+    ability_removals: tuple = ()
+    loyalty: int | None = None
 
 
 def parse_card(card: dict) -> Definition:
@@ -102,13 +104,21 @@ def parse_card(card: dict) -> Definition:
     except ValueError:
         return Definition(name, types, subtypes, False, 0, 0, frozenset(), supported=False,
                           reason="Variable power or toughness")
+    loyalty=None
+    if 'Planeswalker' in types:
+        printed=str(card.get('loyalty',''))
+        if not re.fullmatch(r'[0-9]+',printed):
+            return Definition(name,types,subtypes,False,power,toughness,frozenset(),supported=False,reason='Missing or variable loyalty')
+        loyalty=int(printed)
     base = dict(name=name, types=types, subtypes=subtypes,
                 legendary="Legendary" in (card.get("superTypes") or []), power=power, toughness=toughness,
-                colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "")
+                colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes) and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
     bestow=parse_bestow(text,types)
     if bestow:return Definition(**base,abilities=bestow[1],bestow=bestow)
+    removal_program=parse_equipment_removals(text,types,subtypes)
+    if removal_program:return Definition(**base,abilities=frozenset(),attachment=removal_program[0],ability_removals=removal_program[1])
     attachment=parse_attachment(text,types,subtypes)
     if attachment:return Definition(**base,abilities=frozenset(),attachment=attachment)
     normalized=text.replace(name,'this creature') if name else text
@@ -174,7 +184,7 @@ def parse_card(card: dict) -> Definition:
             continue
         return Definition(**base, abilities=frozenset(), supported=False,
                           reason="Unsupported ability: " + raw.strip())
-    if not ("Creature" in types or "Vehicle" in subtypes):
+    if not ("Creature" in types or "Vehicle" in subtypes or "Planeswalker" in types):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Unsupported permanent type")
     return Definition(**base, abilities=frozenset(abilities), crew=crew, saddle=saddle)
 
@@ -195,6 +205,11 @@ class Permanent:
     temporary_power: int = 0
     temporary_toughness: int = 0
     temporary_abilities: frozenset[str] = frozenset()
+    entered_at: int = 0
+    attachment_at: int = 0
+    lost_abilities: dict[str,int] = field(default_factory=dict)
+    temporary_ability_times: dict[str,int] = field(default_factory=dict)
+    loyalty: int | None = None
 
 
 @dataclass
@@ -206,6 +221,23 @@ class Game:
     phase: str = "main"
     mana: dict[int, int] = field(default_factory=lambda: {0:0, 1:0})
     _next_token: int = 0
+    clock: int = 0
+
+    def timestamp(self):
+        self.clock+=1
+        return self.clock
+
+    def lose_opposing_abilities(self,controller,abilities):
+        timestamp=self.timestamp();affected=[]
+        for permanent in self.battlefield.values():
+            if permanent.controller==controller:continue
+            for ability in abilities:permanent.lost_abilities[ability]=timestamp
+            affected.append(permanent.id)
+        return affected
+
+    def grant_temporary(self,permanent,ability):
+        permanent.temporary_abilities=permanent.temporary_abilities|{ability}
+        permanent.temporary_ability_times[ability]=self.timestamp()
 
     def emit(self, kind: str, **data):
         self.events.append({"kind":kind, **data})
@@ -240,19 +272,25 @@ class Game:
         return (p.definition.power + p.counters + 3*bonus + power_bonus,
                 p.definition.toughness + p.counters + bonus + toughness_bonus)
 
+    def ward_costs(self,p):
+        return tuple(effect.ward_cost for source in self.battlefield.values() for effect in source.definition.static_effects
+                     if effect.ward_cost and matches(effect.subject,source,p,self.creature(p)))
+
     def has(self, p: Permanent, ability: str) -> bool:
-        if ability in p.definition.abilities or ability in p.temporary_abilities: return True
-        if any(source.attached_to==p.id and source.definition.attachment and ability in source.definition.attachment[2]
-               for source in self.battlefield.values()):return True
-        if any(effect.grant == ability and matches(effect.subject,source,p,self.creature(p))
-               for source in self.battlefield.values() for effect in source.definition.static_effects):
-            return True
-        if ability == "indestructible" and p.definition.name == "Zurgo Helmsmasher" and p.controller == self.turn_player:
-            return True
-        if ability == "haste" and ({"Mount","Vehicle"} & p.definition.subtypes):
-            return any(x.controller == p.controller and x.definition.name == "Kolodin, Triumph Caster"
-                       for x in self.battlefield.values())
-        return False
+        grants=[]
+        if ability in p.definition.abilities:grants.append(p.entered_at)
+        if ability in p.temporary_abilities:grants.append(p.temporary_ability_times.get(ability,p.entered_at))
+        for source in self.battlefield.values():
+            stamp=max(source.entered_at,source.attachment_at)
+            if source.attached_to==p.id and source.definition.attachment and ability in source.definition.attachment[2]:
+                grants.append(stamp)
+            if any(effect.grant==ability and matches(effect.subject,source,p,self.creature(p))
+                   for effect in source.definition.static_effects):grants.append(stamp)
+        if ability=='indestructible' and p.definition.name=='Zurgo Helmsmasher' and p.controller==self.turn_player:
+            grants.append(p.entered_at)
+        if ability=='haste' and ({'Mount','Vehicle'} & p.definition.subtypes):
+            grants.extend(x.entered_at for x in self.battlefield.values() if x.controller==p.controller and x.definition.name=='Kolodin, Triumph Caster')
+        return bool(grants) and max(grants)>p.lost_abilities.get(ability,-1)
 
     def enter(self, permanent: Permanent):
         self.enter_batch([permanent])
@@ -266,7 +304,11 @@ class Game:
                     "reason":permanent.definition.reason,
                     "question":"How should this ability be implemented and tested: " + permanent.definition.reason + "?"})
                 raise NeedsRules(permanent.definition.reason)
-        for permanent in permanents:self.battlefield[permanent.id]=permanent
+        for permanent in permanents:
+            permanent.entered_at=self.timestamp()
+            if 'Planeswalker' in permanent.definition.types and permanent.loyalty is None:permanent.loyalty=permanent.definition.loyalty
+            if permanent.attached_to:permanent.attachment_at=permanent.entered_at
+            self.battlefield[permanent.id]=permanent
         for permanent in permanents:
             self.emit("enters", id=permanent.id, name=permanent.definition.name,
                       controller=permanent.controller, types=sorted(permanent.definition.types),
@@ -371,7 +413,9 @@ class Game:
             raise IllegalAction("Equip requires a creature you control")
         if self.mana[actor] < 2: raise IllegalAction("Equip costs two generic mana")
         self.mana[actor] -= 2
-        equipment.attached_to = target.id
+        if equipment.attached_to!=target.id:
+            equipment.attached_to = target.id
+            equipment.attachment_at=self.timestamp()
         self.emit("equip", equipment=equipment_id, target=creature_id, mana=2)
 
     def attack(self, attacker_id: str, defending_player: int, defer=False):
@@ -405,7 +449,7 @@ class Game:
                     power=power,toughness=toughness,subtype=keyword)
             elif operation=='saddled_boost' and a.saddled:
                 a.temporary_power+=power;a.temporary_toughness+=toughness
-                a.temporary_abilities=a.temporary_abilities|{keyword}
+                self.grant_temporary(a,keyword)
                 self.emit('trigger',source=a.id,effect=f'+{power}/+{toughness} and {keyword} until end of turn',target=a.id)
         if a.definition.name == "Brightfield Mustang" and a.saddled:
             a.tapped = False
@@ -430,6 +474,7 @@ class Game:
         for p in self.battlefield.values():
             p.temporary_power=p.temporary_toughness=0
             p.temporary_abilities=frozenset()
+            p.temporary_ability_times.clear();p.lost_abilities.clear()
             p.saddled = False
             p.animated = False
             p.attacking = None

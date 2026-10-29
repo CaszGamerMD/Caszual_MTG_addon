@@ -1,0 +1,459 @@
+{
+  "testsPassed": 202,
+  "newlyImplemented": [
+    "Flowering of the White Tree",
+    "Shadowspear"
+  ],
+  "completedPendingInstruction": {
+    "Goblin Chainwhirler": "Damage now includes represented planeswalkers, loyalty loss and zero-loyalty state-based actions."
+  },
+  "remainingOriginalCards": [
+    "Akroma's Memorial",
+    "Captain's Claws",
+    "Cloudspire Coordinator",
+    "Ephemerate",
+    "Haazda Marshal",
+    "Lumen-Class Frigate",
+    "Skyknight Vanguard"
+  ],
+  "originalCardsCompletelyBlocked": 7,
+  "notice": "Partial diagnostic simulator, not strategy training or live Minecraft entity integration. Arbitrary planeswalker abilities and attacks against planeswalkers remain unsupported.",
+  "validationNote": "All six distinct deck pairings completed ten turns per player without runtime questions. These randomized games did not exercise ward payment, opposing ability loss or board damage; focused tests cover the new rule branches. Unsupported cards outside the original 23-card queue remain present in these decks.",
+  "focusedTests": [
+    "legendary/nonlegendary filtering",
+    "multiple ward triggers and resolution-time payment",
+    "ward source/original spell departure",
+    "hexproof at casting and resolution",
+    "temporary ability loss versus later grants and entrants",
+    "attachment timestamps and cleanup",
+    "planeswalker loyalty damage and indestructible at zero",
+    "dual-type damage/lifelink counted once",
+    "unsupported remainder and loyalty abilities remain blocked"
+  ],
+  "matches": [
+    {
+      "match": 1,
+      "seed": 1342,
+      "deckNames": [
+        "faeries",
+        "squirrels"
+      ],
+      "commanders": [
+        "Obyra, Dreaming Duelist",
+        "Chatterfang, Squirrel General"
+      ],
+      "deckIds": [
+        27521806,
+        8321184
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        38,
+        23
+      ],
+      "winner": null,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          46,
+          34
+        ],
+        "landsPlayed": 11,
+        "spellsCast": 4,
+        "triggerLogEntries": 1,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Bushy Bodyguard",
+          "Chitterspitter",
+          "Cloakwood Hermit",
+          "Dawn-Blessed Pennant",
+          "Deep Forest Hermit",
+          "Deranged Hermit",
+          "Eye Collector",
+          "Faerie Bladecrafter",
+          "Golgari Rot Farm",
+          "Guardian Gladewalker",
+          "Icon of Ancestry",
+          "Maskwood Nexus",
+          "Scion of Oona",
+          "Shadow Puppeteers",
+          "Spell Stutter",
+          "Thornvault Forager",
+          "Vinereap Mentor",
+          "Ygra, Eater of All"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "match": 2,
+      "seed": 1343,
+      "deckNames": [
+        "squirrels",
+        "Garbo Gobbos"
+      ],
+      "commanders": [
+        "Chatterfang, Squirrel General",
+        "Zurgo Helmsmasher"
+      ],
+      "deckIds": [
+        8321184,
+        5254666
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        29,
+        34
+      ],
+      "winner": null,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          34,
+          53
+        ],
+        "landsPlayed": 9,
+        "spellsCast": 3,
+        "triggerLogEntries": 10,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Adaptive Automaton",
+          "Beloved Princess",
+          "Blood Money",
+          "Boggart Birth Rite",
+          "Chitterspitter",
+          "Guardian Gladewalker",
+          "Herald's Horn",
+          "Mardu Ascendancy",
+          "Mirkwood Bats",
+          "Path to Exile",
+          "Primal Vigor",
+          "Rally the Ranks",
+          "Ravenous Squirrel",
+          "Squirrel Nest",
+          "Swords to Plowshares",
+          "Thornvault Forager",
+          "Tribute to the World Tree",
+          "Ygra, Eater of All"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "match": 3,
+      "seed": 1344,
+      "deckNames": [
+        "squirrels",
+        "Budget Deck"
+      ],
+      "commanders": [
+        "Chatterfang, Squirrel General",
+        "Kolodin, Triumph Caster"
+      ],
+      "deckIds": [
+        8321184,
+        14850373
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        24,
+        56
+      ],
+      "winner": null,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          34,
+          53
+        ],
+        "landsPlayed": 8,
+        "spellsCast": 2,
+        "triggerLogEntries": 1,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Bloodline Pretender",
+          "Bovine Intervention",
+          "Broodhatch Nantuko",
+          "Bulwark Ox",
+          "Captain's Claws",
+          "Charismatic Conqueror",
+          "Cloakwood Hermit",
+          "Creakwood Liege",
+          "Dragonmaster Outcast",
+          "Hazel of the Rootbloom",
+          "Murder Investigation",
+          "Ocelot Pride",
+          "Pitiless Plunderer",
+          "Primal Vigor",
+          "Securitron Squadron",
+          "Skyknight Vanguard",
+          "Sporeweb Weaver",
+          "Squirrel Nest",
+          "The Eternity Elevator",
+          "Urza's Incubator",
+          "Valley Rotcaller"
+        ],
+        "unsupportedCommanders": [
+          "Chatterfang, Squirrel General"
+        ]
+      }
+    },
+    {
+      "match": 4,
+      "seed": 1345,
+      "deckNames": [
+        "Garbo Gobbos",
+        "Budget Deck"
+      ],
+      "commanders": [
+        "Zurgo Helmsmasher",
+        "Kolodin, Triumph Caster"
+      ],
+      "deckIds": [
+        5254666,
+        14850373
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        43,
+        34
+      ],
+      "winner": null,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          53,
+          53
+        ],
+        "landsPlayed": 13,
+        "spellsCast": 11,
+        "triggerLogEntries": 10,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Blood Moon",
+          "Cloudspire Coordinator",
+          "Haazda Marshal",
+          "Legion Warboss",
+          "Legion's Landing // Adanto, the First Fort",
+          "Lumen-Class Frigate",
+          "Orcish Siegemaster",
+          "Path to Exile",
+          "Recon Craft Theta",
+          "Throne of the God-Pharaoh"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "match": 5,
+      "seed": 1346,
+      "deckNames": [
+        "Budget Deck",
+        "faeries"
+      ],
+      "commanders": [
+        "Kolodin, Triumph Caster",
+        "Obyra, Dreaming Duelist"
+      ],
+      "deckIds": [
+        14850373,
+        27521806
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        40,
+        26
+      ],
+      "winner": null,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          53,
+          46
+        ],
+        "landsPlayed": 15,
+        "spellsCast": 7,
+        "triggerLogEntries": 2,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Alchemist's Gift",
+          "Boot Nipper",
+          "Cloud of Faeries",
+          "Cloudspire Coordinator",
+          "Dino DNA",
+          "Dolmen Gate",
+          "Faerie Dreamthief",
+          "Goblin War Drums",
+          "Hanweir Militia Captain // Westvale Cult Leader",
+          "Legion's Landing // Adanto, the First Fort",
+          "Liliana, Heretical Healer // Liliana, Defiant Necromancer",
+          "Quilled Charger",
+          "Recon Craft Theta",
+          "Speaker of the Heavens",
+          "Talion, the Kindly Lord",
+          "Tegwyll's Scouring"
+        ],
+        "unsupportedCommanders": []
+      }
+    },
+    {
+      "match": 6,
+      "seed": 1347,
+      "deckNames": [
+        "Garbo Gobbos",
+        "faeries"
+      ],
+      "commanders": [
+        "Zurgo Helmsmasher",
+        "Obyra, Dreaming Duelist"
+      ],
+      "deckIds": [
+        5254666,
+        27521806
+      ],
+      "result": "diagnostic_window_complete",
+      "turnsCompleted": [
+        10,
+        10
+      ],
+      "life": [
+        23,
+        31
+      ],
+      "winner": null,
+      "learningEligible": false,
+      "rulesProgress": {
+        "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+        "cardsPlayableInDiagnostic": [
+          53,
+          46
+        ],
+        "landsPlayed": 14,
+        "spellsCast": 5,
+        "triggerLogEntries": 4,
+        "runtimeQuestions": [],
+        "unsupportedEncountered": [
+          "Auntie's Hovel",
+          "Chivalric Alliance",
+          "Citizen V, Helmut Zemo",
+          "Damnation",
+          "Divine Visitation",
+          "Faerie Dreamthief",
+          "Goblin King",
+          "Indulgent Aristocrat",
+          "Liliana, Heretical Healer // Liliana, Defiant Necromancer",
+          "Liliana, the Last Hope",
+          "Mauh\u00far, Uruk-hai Captain",
+          "Nectar Faerie",
+          "Path to Exile",
+          "Stonecoil Serpent",
+          "Sword of the Animist"
+        ],
+        "unsupportedCommanders": []
+      }
+    }
+  ],
+  "randomizedMechanicEvidence": [
+    {
+      "match": "match-001",
+      "mechanicCounts": {
+        "ward_paid": 0,
+        "ward_counter": 0,
+        "ward_no_target": 0,
+        "activate_strip": 0,
+        "lose_abilities": 0,
+        "damage_board": 0
+      },
+      "relevantCasts": []
+    },
+    {
+      "match": "match-002",
+      "mechanicCounts": {
+        "ward_paid": 0,
+        "ward_counter": 0,
+        "ward_no_target": 0,
+        "activate_strip": 0,
+        "lose_abilities": 0,
+        "damage_board": 0
+      },
+      "relevantCasts": []
+    },
+    {
+      "match": "match-003",
+      "mechanicCounts": {
+        "ward_paid": 0,
+        "ward_counter": 0,
+        "ward_no_target": 0,
+        "activate_strip": 0,
+        "lose_abilities": 0,
+        "damage_board": 0
+      },
+      "relevantCasts": []
+    },
+    {
+      "match": "match-004",
+      "mechanicCounts": {
+        "ward_paid": 0,
+        "ward_counter": 0,
+        "ward_no_target": 0,
+        "activate_strip": 0,
+        "lose_abilities": 0,
+        "damage_board": 0
+      },
+      "relevantCasts": []
+    },
+    {
+      "match": "match-005",
+      "mechanicCounts": {
+        "ward_paid": 0,
+        "ward_counter": 0,
+        "ward_no_target": 0,
+        "activate_strip": 0,
+        "lose_abilities": 0,
+        "damage_board": 0
+      },
+      "relevantCasts": []
+    },
+    {
+      "match": "match-006",
+      "mechanicCounts": {
+        "ward_paid": 0,
+        "ward_counter": 0,
+        "ward_no_target": 0,
+        "activate_strip": 0,
+        "lose_abilities": 0,
+        "damage_board": 0
+      },
+      "relevantCasts": []
+    }
+  ]
+}

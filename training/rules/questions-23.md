@@ -12,8 +12,8 @@ Three resolved through reusable parsing: Honor of the Pure (capitalized color se
 | Cloudspire Coordinator | Turn history, variable activated token creation, crew/saddle contribution replacement |
 | Empty the Warrens | Implemented in diagnostic simulator |
 | Ephemerate | Instant priority, exile/return object identity, rebound |
-| Flowering of the White Tree | Legendary selectors and ward payments |
-| Goblin Chainwhirler | Implemented for diagnostic player/creature boards: simultaneous damage and death triggers |
+| Flowering of the White Tree | Implemented in diagnostic: disjoint legendary/nonlegendary bonuses, separate stack-based mana ward payments and countering |
+| Goblin Chainwhirler | Implemented in diagnostic: simultaneous player/creature/planeswalker damage, loyalty loss and state-based deaths |
 | Haazda Marshal | Multiple attackers and attack-group conditions |
 | Heliod, God of the Sun | Implemented in diagnostic: generic devotion, conditional creature type, vigilance, paid enchantment-creature token activation |
 | Honor of the Pure | Implemented in diagnostic simulator |
@@ -24,7 +24,7 @@ Three resolved through reusable parsing: Honor of the Pure (capitalized color se
 | Muxus, Goblin Grandee | Implemented in diagnostic: generic reveal/filter by printed type/mana value, simultaneous entry, random bottom order, resolving subtype-count attack bonus |
 | Radiant Summit | Implemented in diagnostic simulator |
 | Ruinous Ultimatum | Implemented in diagnostic: opponent nonland sweep, indestructible and simultaneous death-trigger discovery |
-| Shadowspear | Equipment, activated ability removal and duration |
+| Shadowspear | Implemented in diagnostic: equipment, mana activation, opposing hexproof/indestructible loss, timestamps and cleanup |
 | Skyknight Vanguard | Tapped attacking tokens and multiple-attacker combat |
 | Untethered Express | Implemented: composable crew plus generic attack-triggered self counters |
 
@@ -53,3 +53,7 @@ Added cascading creature deaths from lost toughness bonuses, deferred all waitin
 ## Devotion, filtered library entry and Bestow
 
 Heliod, Muxus and Hopeful Eidolon now compile all printed instructions using reusable grammar. Nine original cards remain completely blocked, plus Chainwhirler's pending planeswalker portion. Unsupported creatures revealed by Muxus produce a human-review question before the batch moves. See `devotion-library-bestow.md` for validation and explicit boundaries.
+
+## Ward, temporary ability loss and loyalty damage
+
+Flowering and Shadowspear now compile their printed instructions, and Chainwhirler's pending planeswalker damage is handled for represented planeswalker objects. Seven original cards remain completely blocked: Akroma's Memorial, Captain's Claws, Cloudspire Coordinator, Ephemerate, Haazda Marshal, Lumen-Class Frigate and Skyknight Vanguard. General planeswalker abilities, multi-attacker combat and other global limitations remain unfinished. See `ward-ability-loss-loyalty.md` for test evidence and exact scope.

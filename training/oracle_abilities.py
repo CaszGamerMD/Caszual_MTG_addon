@@ -34,6 +34,7 @@ class Selector:
     creature: bool = False
     subtype: str = ''
     color: str = ''
+    legendary: bool | None = None
 
 @dataclass(frozen=True)
 class StaticEffect:
@@ -43,6 +44,7 @@ class StaticEffect:
     count: Selector | None = None
     condition: Selector | None = None
     grant: str = ''
+    ward_cost: str = ''
 
 @dataclass(frozen=True)
 class Effect:
@@ -69,7 +71,13 @@ class Program:
     devotion: tuple = ()
 
 def static_effect(text):
-    m=re.fullmatch(r'(Other )?(?:([Ww]hite|[Bb]lue|[Bb]lack|[Rr]ed|[Gg]reen) )?[Cc]reatures you control have (flying|first strike|double strike|lifelink|vigilance|trample|haste|defender|reach|deathtouch|indestructible)\.',text)
+    cost=r'((?:\{(?:[0-9]{1,2}|[WUBRGC])\})+)'
+    intrinsic=re.fullmatch(r'Ward '+cost,text)
+    if intrinsic:return StaticEffect(Selector(self_only=True),0,0,ward_cost=intrinsic[1])
+    m=re.fullmatch(r'(Legendary|Nonlegendary) creatures you control get \+([0-9]+)/\+([0-9]+)(?: and have ward '+cost+r')?\.',text)
+    if m:return StaticEffect(Selector(relation='controller',creature=True,legendary=m[1]=='Legendary'),
+                             int(m[2]),int(m[3]),ward_cost=m[4] or '')
+    m=re.fullmatch(r'(Other )?(?:([Ww]hite|[Bb]lue|[Bb]lack|[Rr]ed|[Gg]reen) )?[Cc]reatures you control have (flying|first strike|double strike|lifelink|vigilance|trample|haste|defender|reach|deathtouch|indestructible|hexproof)\.',text)
     if m: return StaticEffect(Selector(relation='controller',other=bool(m[1]),creature=True,color=(m[2] or '').title()),0,0,grant=m[3])
     m=re.fullmatch(r'(Other )?(?:([Ww]hite|[Bb]lue|[Bb]lack|[Rr]ed|[Gg]reen) )?[Cc]reatures you control get \+([0-9]+)/\+([0-9]+)\.',text)
     if m: return StaticEffect(Selector(relation='controller',other=bool(m[1]),creature=True,
@@ -93,7 +101,7 @@ def static_effect(text):
     return None
 
 KEYWORDS = {'flash','flying','first strike','double strike','lifelink','vigilance',
-            'trample','haste','defender','reach','deathtouch','indestructible'}
+            'trample','haste','defender','reach','deathtouch','indestructible','hexproof'}
 
 def selector(text):
     if text == 'this creature': return Selector(self_only=True,creature=True)
@@ -188,6 +196,7 @@ def matches(subject, source, entered, is_creature):
         and (not subject.other or source.id!=entered.id)
         and (subject.relation!='controller' or source.controller==entered.controller)
         and (not subject.creature or is_creature)
+        and (subject.legendary is None or subject.legendary==entered.definition.legendary)
         and (not subject.color or subject.color in entered.definition.colors)
         and (not subject.subtype or subject.subtype in entered.definition.subtypes))
 
