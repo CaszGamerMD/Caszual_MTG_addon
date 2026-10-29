@@ -18,14 +18,18 @@ class AdvancedRules:
   if target is None:
    self.log('role_illegal_target','The Role trigger has no remaining legal target.',source=event['source'],target=event['target'])
    return
-  self.token_sequence+=1
+  count=self.event_game('main').token_amount(event['controller'],1)
   d=s.EventDefinition('Virtuous Role',frozenset({'Enchantment'}),frozenset({'Aura','Role'}),False,0,0,frozenset(),
    attachment=('aura',None,frozenset(),0,0),attachment_scale=(1,1,('Enchantment',)),role='Virtuous')
-  token=s.Card('token-'+str(self.token_sequence),d.name,'aura',event_definition=d,is_token=True,printed_types=('Enchantment',))
-  pending=self.enter_creature(token,self.players[event['controller']],attached_to=target.card.id)
-  self.log('role_created','A Virtuous Role enters attached to another creature.',actor=event['controller'],source=event['source'],target=target.card.id,token=token.id)
-  pending.extend(self.event_game('main').token_action_events('create',event['controller'],1))
-  self.resolve_entry_triggers(pending,token)
+  pending=[];created=[]
+  for _ in range(count):
+   self.token_sequence+=1
+   token=s.Card('token-'+str(self.token_sequence),d.name,'aura',event_definition=d,is_token=True,printed_types=('Enchantment',))
+   pending.extend(self.enter_creature(token,self.players[event['controller']],attached_to=target.card.id))
+   created.append(token)
+  self.log('role_created','Virtuous Role tokens enter attached to a creature.',actor=event['controller'],source=event['source'],target=target.card.id,tokens=[token.id for token in created])
+  pending.extend(self.event_game('main').token_action_events('create',event['controller'],count))
+  self.resolve_entry_triggers(pending,created[0])
  def choose_optional_draw(self,event):
   s=model(self);seat=event['controller']
   choices=(s.Candidate('draw','optional_draw',features=s.features(draw=1,power=0 if self.players[seat].library else -1000),label='Draw a card'),
