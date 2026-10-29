@@ -103,6 +103,7 @@ class Definition:
     damage_events: tuple = ()
     life_multiplier: int = 1
     opponent_creatures_enter_tapped: bool = False
+    life_addition: int = 0
     role: str = ""
 
 
@@ -137,7 +138,8 @@ def parse_card(card: dict) -> Definition:
             role_events=enchantments.role_events,enchanted_draw=enchantments.enchanted_draw,
             attachment_draw=enchantments.attachment_draw,damage_events=enchantments.damage_events,
             life_multiplier=program.life_multiplier,
-            opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped)
+            opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
+            life_addition=program.life_addition)
     from advanced_abilities import station,history,equipped_attacks
     levels=station(text,types,subtypes)
     if levels:return Definition(**base,abilities=frozenset(),station=levels)
@@ -170,7 +172,8 @@ def parse_card(card: dict) -> Definition:
             return Definition(**base,abilities=frozenset(),supported=False,reason='Unsupported devotion type transition')
         return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects,
                           activations=program.activations,devotion=program.devotion,life_multiplier=program.life_multiplier,
-                          opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped)
+                          opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
+                          life_addition=program.life_addition)
     attack_text=text.replace(name,'this creature') if name else text
     if ',' in name:
         short=name.split(',')[0]
