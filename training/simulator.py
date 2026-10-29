@@ -351,6 +351,7 @@ class Simulator:
         self.manual_priority=False
         self._draining_priority=False
         self._resolving_stack=False
+        self._waiting_triggers=[]
         self.token_sequence = 0
         self.log("setup", "Two independent agents use frozen policies; sandbox rules apply.")
         for player in self.players:
@@ -492,17 +493,49 @@ class Simulator:
         self.sync_events(game)
         return [event for event in game.events if event["kind"] == "trigger"]
 
+    def state_based_actions(self):
+        """Collect creature deaths in repeated simultaneous batches before priority."""
+        pending=[]
+        while True:
+            game=self.event_game('main')
+            dead=[]
+            for owner,player in enumerate(self.players):
+                for item in player.battlefield:
+                    state=game.battlefield.get(item.card.id)
+                    if state is None or not game.creature(state):continue
+                    toughness=game.stats(state)[1]
+                    if toughness<=0 or (item.marked_damage>0 and item.marked_damage>=toughness
+                                        and not game.has(state,'indestructible')):
+                        dead.append((owner,item))
+            if not dead:break
+            # Every watcher sees the same pre-death snapshot, once per batch.
+            pending.extend(game.death_triggers([item.card.id for _,item in dead]))
+            for owner,item in dead:
+                if item in self.players[owner].battlefield:self.send_to_destination(self.players[owner],item,snapshot=game)
+            self.log('state_based_deaths','Creature state-based actions happen simultaneously.',
+                     deaths=[item.card.id for _,item in dead])
+        return pending
+
     def resolve_entry_triggers(self, triggers: list[dict], card: Card):
-        # APNAP placement: active controller first, nonactive on top. Each controller
-        # uses reverse discovery order on placement to preserve discovery resolution order.
+        self._waiting_triggers.extend((event,card) for event in triggers)
+        if self._resolving_stack:return
+        self._waiting_triggers.extend((event,card) for event in self.state_based_actions())
+        if not self.finished:self.outcome()
+        if self.finished:
+            self._waiting_triggers.clear()
+            return
+        waiting,self._waiting_triggers=self._waiting_triggers,[]
+        # All waiting triggers, including later death batches, use one APNAP placement.
         self.stack.active=self.active
         for controller in (self.active,1-self.active):
-            for event in reversed([e for e in triggers if e.get('controller',self.active)==controller]):
-                item=self.stack.push(controller,(event,card),event.get('name',card.name))
+            for event,origin in reversed([(e,c) for e,c in waiting if e.get('controller',self.active)==controller]):
+                if event.get('effect')=='create tapped Squirrels':
+                    event=dict(event,operation='create_tokens',tokenSpec=dict(amount=event['amount'],power=1,toughness=1,
+                        colors=['Green'],subtypes=['Squirrel'],keywords=[],tapped=True,land=False))
+                item=self.stack.push(controller,(event,origin),event.get('name',origin.name))
                 self.log('stack_push',f'{item.label} ability goes on the stack.',stackId=item.id,controller=controller)
-        if not self._resolving_stack: self.stack.priority=self.active
-        if not self.manual_priority and not self._resolving_stack:
-            self.drain_priority()
+        self.stack.priority=self.active
+        if not self.manual_priority:self.drain_priority()
 
     def drain_priority(self,empty_window=False):
         if self._draining_priority: return
@@ -536,6 +569,7 @@ class Simulator:
             finally:
                 self._resolving_stack=False
                 self._current_spell=None
+            self.resolve_entry_triggers([],item.payload[1])
             self.stack.priority=self.active
         return status
 
@@ -596,7 +630,7 @@ class Simulator:
         creatures=[item.card.id for _,item in targets if item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id])]
         triggers=game.death_triggers(creatures)
         for owner,item in targets:
-            if item in self.players[owner].battlefield:self.send_to_destination(self.players[owner],item)
+            if item in self.players[owner].battlefield:self.send_to_destination(self.players[owner],item,snapshot=game)
         self.log(reason,f'{card.name}: {len(targets)} permanents leave simultaneously.',destroyed=[item.card.id for _,item in targets])
         self.outcome()
         if self.finished:return
@@ -910,16 +944,18 @@ class Simulator:
         if first:self.phase='regular_damage'
         else:self.phase='second_main';self.pending=None;self.combat_context=None
 
-    def send_to_destination(self, player: Player, item: Permanent):
-        for frame in self.stack.items:
-            event,_=frame.payload
+    def send_to_destination(self, player: Player, item: Permanent, snapshot=None):
+        for event,_ in [frame.payload for frame in self.stack.items]+self._waiting_triggers:
             if event.get('operation')=='damage_board' and event.get('source')==item.card.id:
-                game=self.event_game('main');state=game.battlefield.get(item.card.id)
+                game=snapshot or self.event_game('main');state=game.battlefield.get(item.card.id)
                 if state:
                     event['lastLifelink']=game.has(state,'lifelink');event['lastDeathtouch']=game.has(state,'deathtouch')
             if event.get('operation')=='counter_power_tokens'  and event.get('source')==item.card.id:
-                effective=self.effective_card(item)
-                if effective: event['lastPower']=effective.power
+                if snapshot and item.card.id in snapshot.battlefield:
+                    event['lastPower']=snapshot.stats(snapshot.battlefield[item.card.id])[0]
+                else:
+                    effective=self.effective_card(item)
+                    if effective:event['lastPower']=effective.power
         for owner in self.players:
             for attached in list(owner.battlefield):
                 if attached.attached_to==item.card.id:
@@ -1276,6 +1312,13 @@ class Simulator:
             death_triggers = self.event_game("combat").death_triggers(dead_ids)
             self.log("block", choice.label, actor=1-self.active,
                      blocker=b.card.id if b else None)
+            if b:
+                a.marked_damage+=max(0,effective_blocker.power)
+                dealt=max(0,effective_attacker.power)
+                abilities=effective_attacker.traits.split(';')[-1].split(',')
+                if 'trample' in abilities:
+                    dealt=min(dealt,1 if 'deathtouch' in abilities else max(0,effective_blocker.toughness))
+                b.marked_damage+=dealt
             p.life += d["gainA"]
             defender.life += d["gainB"] - d["damage"]
             if a.card.id == p.commander_id and d["damage"] > 0:
@@ -1293,30 +1336,7 @@ class Simulator:
             self.outcome()
             if not self.finished:
                 death_triggers.extend(dict(t,operation='discard',effect='discard') for t in damage_triggers)
-                # APNAP: triggers of the nonactive player resolve first. Within a
-                # controller's set, discovery order is a deterministic legal choice.
-                for trigger in sorted(death_triggers, key=lambda t: t["controller"] == self.active):
-                    controller = trigger["controller"]
-                    if trigger["effect"] == "create tapped Squirrels":
-                        entry_triggers = []
-                        for _ in range(trigger["amount"]):
-                            self.token_sequence += 1
-                            definition = EventDefinition("Squirrel",frozenset({"Creature"}),frozenset({"Squirrel"}),
-                                False,1,1,frozenset(),colors=frozenset({"Green"}))
-                            token = Card(f"token-{self.token_sequence}","Squirrel","creature",traits="1;1;",
-                                         power=1,toughness=1,event_definition=definition,is_token=True)
-                            owner = self.players[controller]
-                            entry_triggers.extend(self.enter_creature(token,owner))
-                            next(p for p in owner.battlefield if p.card.id == token.id).tapped = True
-                        self.log("trigger", f"Nested Shambler creates {trigger['amount']} tapped Squirrel tokens.", actor=controller, **trigger)
-                        # Newly triggered abilities wait until this whole ability finishes.
-                        if entry_triggers: self.resolve_entry_triggers(entry_triggers, token)
-                        if self.finished: break
-                        continue
-                    # Use the same effect interpreter for entry, upkeep, and death.
-                    # The event retains its controller even after its source leaves.
-                    self.resolve_entry_triggers([trigger],a.card)
-                    if self.finished: break
+                self.resolve_entry_triggers(death_triggers,a.card)
             if not self.finished: self.phase = "second_main"
         elif self.phase == "cleanup":
             # Deterministic discard is a declared sandbox rule, not a learned policy.
@@ -1334,6 +1354,7 @@ class Simulator:
                     if attached.card.kind=='aura' and not attached.attached_to:
                         owner.battlefield.remove(attached)
                         if not attached.card.is_token:owner.graveyard.append(attached.card)
+            self.resolve_entry_triggers([],Card('cleanup','Cleanup','spell'))
             self.phase = "end"
             self.log("end", f"Player {self.active+1} ends the turn.")
         else:

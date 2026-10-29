@@ -1,0 +1,31 @@
+{
+  "seed": 1142,
+  "result": "win",
+  "winner": 1,
+  "turns": 18,
+  "rulesProgress": {
+    "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+    "cardsPlayableInDiagnostic": [
+      51,
+      50
+    ],
+    "landsPlayed": 10,
+    "spellsCast": 10,
+    "triggerLogEntries": 10,
+    "runtimeQuestions": [],
+    "unsupportedEncountered": [
+      "Akroma's Memorial",
+      "Ephemerate",
+      "Flowering of the White Tree",
+      "Haazda Marshal",
+      "Heliod, God of the Sun",
+      "Hopeful Eidolon",
+      "Lumen-Class Frigate",
+      "Shadowspear",
+      "Skyknight Vanguard"
+    ],
+    "unsupportedCommanders": []
+  },
+  "stateBasedDeathBatches": 0,
+  "validationNote": "Seeded replay did not encounter a cascade; focused state-based-action tests provide that coverage. Still a partial diagnostic, not a training-eligible full Commander game."
+}

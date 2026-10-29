@@ -45,3 +45,7 @@ Sweep follow-up: a whole-text opponent-nonland destruction grammar now covers Ru
 Attachment follow-up: Basilisk Collar and Lifelink now compile using whole-text attachment grammars. Thirteen original cards remain blocked. Equipment with additional triggered/activated abilities, Bestow, and tapped attacking token creation are not silently enabled.
 
 Board-damage follow-up: Goblin Chainwhirler now compiles through a generic fixed-damage trigger grammar with First strike retained. Twelve original cards remain blocked. Planeswalker objects and loyalty are not yet supported by the simulator; this is not full coverage of that portion of the card text.
+
+## Repeated creature state-based checks
+
+Added cascading creature deaths from lost toughness bonuses, deferred all waiting death triggers until those batches finish, and preserved ordinary-combat damage marks through the turn. This is shared rules infrastructure, not an additional completed card: 12 original cards remain completely blocked, with Goblin Chainwhirler still partial pending planeswalker loyalty damage. See `state-based-actions.md` for scope and limitations.

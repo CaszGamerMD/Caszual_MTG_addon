@@ -101,7 +101,7 @@ def parse_card(card: dict) -> Definition:
     base = dict(name=name, types=types, subtypes=subtypes,
                 legendary="Legendary" in (card.get("superTypes") or []), power=power, toughness=toughness,
                 colors=frozenset(card.get("colors") or []))
-    if ("Creature" in types or "Vehicle" in subtypes) and (power < 0 or toughness <= 0):
+    if ("Creature" in types or "Vehicle" in subtypes) and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
     attachment=parse_attachment(text,types,subtypes)
     if attachment:return Definition(**base,abilities=frozenset(),attachment=attachment)
