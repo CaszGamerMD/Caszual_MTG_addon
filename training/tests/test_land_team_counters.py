@@ -68,3 +68,16 @@ class LandTeamCounterChecks(unittest.TestCase):
         self.assertEqual(sim.players[0].mana_pool,[0]*6)
         self.drain(sim)
         sim.invariant()
+
+    def test_existing_counter_replacement_doubles_each_creature_counter(self):
+        sim,land,source=self.prepare()
+        a=self.token(sim,'a');b=self.token(sim,'b')
+        definition=s.EventDefinition('Unseen counter doubler',frozenset({'Enchantment'}),
+            frozenset(),False,0,0,frozenset(),counter_replacements=(('double',2,'controlled_creature'),))
+        replacement=s.Card('doubler','Unseen counter doubler','enchantment',
+                           event_definition=definition,is_token=True)
+        sim.enter_creature(replacement,sim.players[0])
+        sim.activate_land_counters(0,land.id)
+        self.drain(sim)
+        self.assertEqual((a.counters,b.counters),(2,2))
+        sim.invariant()
