@@ -56,6 +56,7 @@ jobs:
             flaggedQuestions=len(game.get('questions',[])),
             openingMulligans=game.get('openingMulligans',[0,0]),
             openingDrawEvents=len(opening),
+            openingStrategy='Ideal: three lands and two early spells; after six free mulligans accept a playable backup hand',
             spectatorHands=True,scryfallImages=True,
             learningEligible=game['learningEligible'],productionEligible=game['productionEligible'],
             viewer='budget-vs-goblins-spectator-20261029.html')
