@@ -102,6 +102,7 @@ class Definition:
     attachment_draw: bool = False
     damage_events: tuple = ()
     life_multiplier: int = 1
+    opponent_creatures_enter_tapped: bool = False
     role: str = ""
 
 
@@ -135,7 +136,8 @@ def parse_card(card: dict) -> Definition:
             attachment=enchantments.attachment,attachment_scale=enchantments.scale,
             role_events=enchantments.role_events,enchanted_draw=enchantments.enchanted_draw,
             attachment_draw=enchantments.attachment_draw,damage_events=enchantments.damage_events,
-            life_multiplier=program.life_multiplier)
+            life_multiplier=program.life_multiplier,
+            opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped)
     from advanced_abilities import station,history,equipped_attacks
     levels=station(text,types,subtypes)
     if levels:return Definition(**base,abilities=frozenset(),station=levels)
@@ -167,7 +169,8 @@ def parse_card(card: dict) -> Definition:
         if program.devotion and not {'Creature','Enchantment'}<=types:
             return Definition(**base,abilities=frozenset(),supported=False,reason='Unsupported devotion type transition')
         return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects,
-                          activations=program.activations,devotion=program.devotion,life_multiplier=program.life_multiplier)
+                          activations=program.activations,devotion=program.devotion,life_multiplier=program.life_multiplier,
+                          opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped)
     attack_text=text.replace(name,'this creature') if name else text
     if ',' in name:
         short=name.split(',')[0]
@@ -402,7 +405,14 @@ class Game:
                     "reason":permanent.definition.reason,
                     "question":"How should this ability be implemented and tested: " + permanent.definition.reason + "?"})
                 raise NeedsRules(permanent.definition.reason)
+        # Entry replacements must exist on the battlefield before the event;
+        # two permanents entering simultaneously cannot apply replacements
+        # granted by either of the entering permanents.
+        incumbents=tuple(self.battlefield.values())
         for permanent in permanents:
+            if 'Creature' in permanent.definition.types and any(
+                source.controller!=permanent.controller and source.definition.opponent_creatures_enter_tapped
+                for source in incumbents):permanent.tapped=True
             permanent.entered_at=self.timestamp()
             if 'Planeswalker' in permanent.definition.types and permanent.loyalty is None:permanent.loyalty=permanent.definition.loyalty
             if permanent.attached_to:permanent.attachment_at=permanent.entered_at
