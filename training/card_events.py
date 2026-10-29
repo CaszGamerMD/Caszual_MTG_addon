@@ -171,8 +171,8 @@ def parse_card(card: dict) -> Definition:
     # Unlike an "until" effect, two separately triggered exile/return abilities
     # can exile permanently if the source leaves before its ETB resolves.
     linked=re.fullmatch(
-        r"When this (enchantment|artifact) enters, exile target creature( an opponent controls)?\\.\\n"
-        r"When this \\1 leaves the battlefield, return the exiled card to the battlefield under its owner's control\\.",text)
+        r"When this (enchantment|artifact) enters, exile target creature( an opponent controls)?\.\n"
+        r"When this \1 leaves the battlefield, return the exiled card to the battlefield under its owner's control\.",text)
     if linked and linked[1].title() in types:
         return Definition(**base,abilities=frozenset(),linked_exile='opponent' if linked[2] else 'any')
     from advanced_abilities import station,history,equipped_attacks
