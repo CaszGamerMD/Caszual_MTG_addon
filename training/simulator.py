@@ -191,6 +191,7 @@ class Card:
     instant: bool = False
     counter_filter: str = ""
     removal: str = ""
+    removal_min_toughness: int = 0
     printed_types: tuple[str, ...] = ()
     printed_mana_value: int | None = None
     physical_id: str = ""
@@ -394,7 +395,7 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.kind == "x_spell" and card.x_effect in ("tokens","draw","life"):
                     continue
-                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_artifact_creature_token","exile_creature_life","exile_creature_basic_land","destroy_all_creatures","destroy_toughness_4"):
+                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_artifact_creature_token","exile_creature_life","exile_creature_basic_land","destroy_all_creatures","destroy_toughness_min"):
                     continue
                 if self.diagnostic and card.blink:continue
                 if self.diagnostic and card.kind=="counter_spell" and card.counter_filter in ("any","creature","noncreature"):
@@ -876,11 +877,11 @@ class Simulator(AdvancedRules):
         return tuple(targets)
 
     def removal_choices(self,seat,card,kind):
-        if card.removal in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_4'):
+        if card.removal in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min'):
             count=(len(self.nonland_destruction_set(seat))
                    if card.removal=='opponent_nonlands'
                    else len(self.creature_board_destruction_set(
-                       4 if card.removal=='destroy_toughness_4' else 0)))
+                       card.removal_min_toughness if card.removal=='destroy_toughness_min' else 0)))
             return (Candidate(card.id,kind,card.id,features=features(power=count,cost=len(self.payment(card,seat=seat).get('sources',[]))),label='Cast '+card.name),)
         game=self.event_game('main')
         choices=[]
@@ -1011,7 +1012,7 @@ class Simulator(AdvancedRules):
         if not commander and card not in (player.exile if rebound else player.hand): raise ValueError('Card not in casting zone')
         if bestow and (not card.event_definition or not card.event_definition.bestow):raise ValueError('Card has no supported bestow ability')
         if (card.kind=='aura' or bestow) and target not in {p.card.id for _,p in self.creature_targets(seat,card)}:raise ValueError('Illegal Aura target')
-        if card.kind=='removal_spell' and card.removal not in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_4') and target not in {item.card.id for _,item in self.removal_targets(seat,card)}:
+        if card.kind=='removal_spell' and card.removal not in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min') and target not in {item.card.id for _,item in self.removal_targets(seat,card)}:
             raise ValueError('Removal requires a legal permanent target')
         if card.kind=='counter_spell' and target not in {f.id for f in self.counter_targets(card)}:
             raise ValueError('Counterspell requires a legal spell target')
@@ -1088,8 +1089,8 @@ class Simulator(AdvancedRules):
         elif card.kind=='mana_artifact': p.battlefield.append(Permanent(card))
         elif not event.get('copy'): p.graveyard.append(original)
         if card.kind=='removal_spell':
-            if card.removal in ('destroy_all_creatures','destroy_toughness_4'):
-                threshold=4 if card.removal=='destroy_toughness_4' else 0
+            if card.removal in ('destroy_all_creatures','destroy_toughness_min'):
+                threshold=card.removal_min_toughness if card.removal=='destroy_toughness_min' else 0
                 self.destroy_batch(self.creature_board_destruction_set(threshold),card)
                 return
             if card.removal=='opponent_nonlands':
@@ -2174,8 +2175,11 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         if destruction in ('Destroy all creatures.',
                            "Destroy all creatures. They can't be regenerated."):
             parsed={'kind':'removal_spell','removal':'destroy_all_creatures'}
-        elif destruction=='Destroy all creatures with toughness 4 or greater.':
-            parsed={'kind':'removal_spell','removal':'destroy_toughness_4'}
+        else:
+            minimum=re.fullmatch(r'Destroy all creatures with toughness ([1-9][0-9]*) or greater\.',destruction)
+            if minimum:
+                parsed={'kind':'removal_spell','removal':'destroy_toughness_min',
+                        'removal_min_toughness':int(minimum[1])}
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
             and rule_text(definition.get('oracleText',''))=='Destroy target creature.' and rules.query('cost',cost)['supported']):
         parsed={'kind':'removal_spell','removal':'destroy'}
@@ -2227,7 +2231,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
     return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),
-        instant="Instant" in definition.get("types",[]), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
+        instant="Instant" in definition.get("types",[]), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),
         life=parsed.get("life", 0), land_rule=parsed.get("land_rule", ""),
