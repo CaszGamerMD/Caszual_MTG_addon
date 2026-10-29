@@ -448,7 +448,11 @@ class Simulator(AdvancedRules):
                      actor=seat,count=len(p.hand),attempt=attempt)
             review=opening_hand.assess(p.hand)
             self.opening_reviews[seat]=review
-            if review["keep"] or attempt==opening_hand.FRIENDLY_MULLIGAN_LIMIT:
+            # Pursue an ideal curve first; after six free redraws prefer any
+            # workable two-land/cheap-play start to a disastrous final hand.
+            if (review["keep"] or
+                    (attempt>=6 and opening_hand.fallback(p.hand)) or
+                    attempt==opening_hand.FRIENDLY_MULLIGAN_LIMIT):
                 self.opening_mulligans[seat]=attempt
                 self.log("keep_hand",f"Player {seat+1} keeps {len(p.hand)} cards.",
                          actor=seat,count=len(p.hand),mulligans=attempt)
