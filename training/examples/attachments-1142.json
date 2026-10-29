@@ -1,0 +1,32 @@
+{
+  "result": "win",
+  "winner": 1,
+  "turnsCompleted": [
+    9,
+    8
+  ],
+  "rulesProgress": {
+    "notice": "Observed rule execution, not evidence of learned strategy or complete Magic support.",
+    "cardsPlayableInDiagnostic": [
+      50,
+      50
+    ],
+    "landsPlayed": 10,
+    "spellsCast": 10,
+    "triggerLogEntries": 10,
+    "runtimeQuestions": [],
+    "unsupportedEncountered": [
+      "Akroma's Memorial",
+      "Ephemerate",
+      "Flowering of the White Tree",
+      "Goblin Chainwhirler",
+      "Haazda Marshal",
+      "Heliod, God of the Sun",
+      "Hopeful Eidolon",
+      "Lumen-Class Frigate",
+      "Shadowspear",
+      "Skyknight Vanguard"
+    ],
+    "unsupportedCommanders": []
+  }
+}

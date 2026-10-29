@@ -7,6 +7,7 @@ rules raise NeedsRules rather than being treated as blank.
 from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 import re
+from attachments import parse as parse_attachment
 from attack_abilities import compile as compile_attacks
 from oracle_abilities import Trigger, StaticEffect, compile_abilities, matches, event_data
 
@@ -84,6 +85,7 @@ class Definition:
     triggers: tuple[Trigger, ...] = ()
     static_effects: tuple[StaticEffect, ...] = ()
     attack_effects: tuple = ()
+    attachment: tuple = ()
 
 
 def parse_card(card: dict) -> Definition:
@@ -101,6 +103,8 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []))
     if ("Creature" in types or "Vehicle" in subtypes) and (power < 0 or toughness <= 0):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    attachment=parse_attachment(text,types,subtypes)
+    if attachment:return Definition(**base,abilities=frozenset(),attachment=attachment)
     program = compile_abilities(text,name)
     if program is not None and ("Creature" in types or "Enchantment" in types):
         return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects)
@@ -196,6 +200,8 @@ class Game:
                     if x.definition.name == "Andúril, Flame of the West" and x.attached_to == p.id)
         power_bonus, toughness_bonus = p.temporary_power, p.temporary_toughness
         for source in self.battlefield.values():
+            if source.attached_to==p.id and source.definition.attachment:
+                power_bonus+=source.definition.attachment[3];toughness_bonus+=source.definition.attachment[4]
             for effect in source.definition.static_effects:
                 if not matches(effect.subject,source,p,True): continue
                 if effect.condition and not any(matches(effect.condition,source,x,self.creature(x)) for x in self.battlefield.values()): continue
@@ -208,6 +214,8 @@ class Game:
 
     def has(self, p: Permanent, ability: str) -> bool:
         if ability in p.definition.abilities or ability in p.temporary_abilities: return True
+        if any(source.attached_to==p.id and source.definition.attachment and ability in source.definition.attachment[2]
+               for source in self.battlefield.values()):return True
         if any(effect.grant == ability and matches(effect.subject,source,p,self.creature(p))
                for source in self.battlefield.values() for effect in source.definition.static_effects):
             return True

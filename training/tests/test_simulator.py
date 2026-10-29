@@ -428,7 +428,7 @@ class SimulatorChecks(unittest.TestCase):
         self.assertFalse(report["productionEligible"])
         self.assertEqual(len(report["questions"]),133)
         self.assertTrue(next(q for q in report["questions"] if q.get("card")=="Kolodin, Triumph Caster")["diagnosticSupport"])
-        self.assertEqual([p["life"] for p in report["events"][-1]["state"]["players"]],[24,40])
+        self.assertEqual([p["life"] for p in report["events"][-1]["state"]["players"]],[28,40])
         self.assertEqual(report["events"][-1]["state"]["players"][0]["commanderDamage"],{"1-commander":14})
         self.assertEqual(len([e for e in report["events"] if e["kind"]=="token"]),2)
         self.assertTrue(any(e["kind"]=="cast" and e["details"]["card"]=="Dragon Fodder" for e in report["events"]))

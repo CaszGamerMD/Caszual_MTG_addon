@@ -212,6 +212,7 @@ class Permanent:
     animated: bool = False
     counters: int = 0
     marked_damage: int = 0
+    attached_to: str | None = None
     temporary_power: int = 0
     temporary_toughness: int = 0
     temporary_abilities: frozenset[str] = frozenset()
@@ -442,7 +443,7 @@ class Simulator:
                                                  colors=frozenset(card.colors))
                 game.battlefield[card.id] = EventPermanent(card.id, definition, seat, item.tapped,
                     item.fresh, item.saddled, item.animated, counters=item.counters, token=item.card.is_token,temporary_power=item.temporary_power,
-                    temporary_toughness=item.temporary_toughness,temporary_abilities=item.temporary_abilities)
+                    temporary_toughness=item.temporary_toughness,temporary_abilities=item.temporary_abilities,attached_to=item.attached_to)
         return game
 
     def sync_events(self, game: EventGame):
@@ -450,6 +451,7 @@ class Simulator:
             for item in player.battlefield:
                 state = game.battlefield.get(item.card.id)
                 if state:
+                    item.attached_to=state.attached_to
                     item.tapped, item.fresh = state.tapped, state.fresh
                     item.saddled, item.animated, item.counters = state.saddled, state.animated, state.counters
                     item.temporary_power,item.temporary_toughness,item.temporary_abilities=state.temporary_power,state.temporary_toughness,state.temporary_abilities
@@ -543,6 +545,29 @@ class Simulator:
                      and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
 
+    def equip_choices(self,seat):
+        choices=[]
+        for source in self.players[seat].battlefield:
+            if source.card.kind!='equipment' or source.attached_to:continue
+            cost=source.card.event_definition.attachment[1]
+            if not self.payment(replace(source.card,mana_cost=cost),seat=seat)['paid']:continue
+            for owner,target in self.creature_targets():
+                if owner==seat and source.attached_to!=target.card.id:
+                    choices.append(Candidate(source.card.id+':equip:'+target.card.id,'equip',source.card.id,
+                        features=features(power=.5),label='Equip '+source.card.name,target_permanent=target.card.id))
+        return choices
+
+    def activate_equip(self,seat,source_id,target):
+        if self.stack.items or self.stack.priority!=seat or seat!=self.active or self.phase not in ('main','second_main'):raise ValueError('Illegal equip timing')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id and p.card.kind=='equipment'),None)
+        if source is None or target not in {p.card.id for owner,p in self.creature_targets() if owner==seat}:raise ValueError('Illegal equip target')
+        payment=self.payment(replace(source.card,mana_cost=source.card.event_definition.attachment[1]),seat=seat)
+        if not payment['paid']:raise ValueError('Cannot pay equip')
+        for p in self.players[seat].battlefield:
+            if p.card.id in payment['sources']:p.tapped=True
+        self.players[seat].mana_pool=list(payment['pool'])
+        self.resolve_entry_triggers([dict(operation='attach',source=source_id,target=target,controller=seat,name=source.card.name)],source.card)
+
     def creature_targets(self):
         game=self.event_game('main')
         return tuple((seat,item) for seat,player in enumerate(self.players) for item in player.battlefield
@@ -570,7 +595,8 @@ class Simulator:
         game=self.event_game('main')
         creatures=[item.card.id for _,item in targets if item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id])]
         triggers=game.death_triggers(creatures)
-        for owner,item in targets:self.send_to_destination(self.players[owner],item)
+        for owner,item in targets:
+            if item in self.players[owner].battlefield:self.send_to_destination(self.players[owner],item)
         self.log('destroy',f'{card.name} destroys {len(targets)} permanents simultaneously.',destroyed=[item.card.id for _,item in targets])
         self.outcome()
         if self.finished:return
@@ -619,6 +645,7 @@ class Simulator:
         elif seat!=self.active or self.phase not in ('main','second_main'):
             if not card.instant or seat!=self.stack.priority: raise ValueError('Spell timing invalid')
         if not commander and card not in player.hand: raise ValueError('Card not in hand')
+        if card.kind=='aura' and target not in {p.card.id for _,p in self.creature_targets()}:raise ValueError('Illegal Aura target')
         if card.kind=='removal_spell' and card.removal=='destroy' and target not in {item.card.id for _,item in self.creature_targets()}:
             raise ValueError('Removal requires a legal creature target')
         if card.kind=='counter_spell' and target not in {f.id for f in self.counter_targets(card)}:
@@ -647,6 +674,18 @@ class Simulator:
     def resolve_spell(self,event,original):
         controller=event['controller'];p=self.players[controller];card=original
         if event.get('copy'): self.log('spell_copy',f'A copy of {card.name} resolves.',card=card.name)
+        if card.kind=='aura':
+            if event['target'] not in {p.card.id for _,p in self.creature_targets()}:
+                if not event.get('copy'):p.graveyard.append(card)
+                self.log('illegal_target',f'{card.name} has no legal Aura target.')
+                return
+            self.enter_creature(card,p)
+            next(item for item in p.battlefield if item.card.id==card.id).attached_to=event['target']
+            self.log('attach',f'{card.name} enchants a creature.',targetPermanent=event['target'])
+            return
+        if card.kind=='equipment':
+            self.enter_creature(card,p)
+            return
         if card.kind in ('creature','vehicle','enchantment'):
             triggers=self.enter_creature(card,p)
             self.resolve_entry_triggers(triggers,card)
@@ -740,6 +779,11 @@ class Simulator:
                 self.resolve_entry_triggers(pending,card)
                 if self.finished: return
                 continue
+            elif event.get('operation')=='attach':
+                source=next((p for p in self.players[event['controller']].battlefield if p.card.id==event['source']),None)
+                if source and event['target'] in {p.card.id for owner,p in self.creature_targets() if owner==event['controller']}:
+                    source.attached_to=event['target']
+                message=f"{event['name']}: equip ability resolves."
             elif event.get('operation')=='self_counter':
                 source=next((item for player in self.players for item in player.battlefield if item.card.id==event['source']),None)
                 if source:source.counters+=event['amount']
@@ -855,6 +899,13 @@ class Simulator:
             if event.get('operation')=='counter_power_tokens' and event.get('source')==item.card.id:
                 effective=self.effective_card(item)
                 if effective: event['lastPower']=effective.power
+        for owner in self.players:
+            for attached in list(owner.battlefield):
+                if attached.attached_to==item.card.id:
+                    attached.attached_to=None
+                    if attached.card.kind=='aura':
+                        owner.battlefield.remove(attached)
+                        if not attached.card.is_token:owner.graveyard.append(attached.card)
         player.battlefield.remove(item)
         if item.card.is_token:
             return  # Tokens cease to exist after leaving the battlefield.
@@ -968,6 +1019,7 @@ class Simulator:
                         actions.append(Candidate(c.id, "land", c.id, features(power=1), "Play " + c.name))
         elif self.phase in ("main", "second_main"):
             if self.diagnostic: actions.extend(self.activation_choices(seat, {"crew","saddle"}))
+            actions.extend(self.equip_choices(seat))
             if (self.diagnostic and p.command_zone and p.command_zone.kind == "creature"
                     and self.payment(p.command_zone, p.commander_casts)["paid"]):
                 c = p.command_zone
@@ -976,6 +1028,11 @@ class Simulator:
                              cost=len(self.payment(c, p.commander_casts).get("sources", []))),
                     "Cast commander " + c.name))
             for c in p.hand:
+                if c.kind=='aura' and self.payment(c)['paid']:
+                    actions.extend(Candidate(c.id+':aura:'+target.card.id,'cast',c.id,
+                        features=features(power=1 if owner==seat else -100),label='Cast '+c.name,target_permanent=target.card.id)
+                        for owner,target in self.creature_targets())
+                    continue
                 if c.kind=='removal_spell' and self.payment(c)['paid']:
                     actions.extend(self.removal_choices(seat,c,'cast'))
                     continue
@@ -990,7 +1047,7 @@ class Simulator:
                                      draw=x if c.x_effect=='draw' else 0,life=x if c.x_effect=='life' else 0,
                                      cost=len(payment['sources'])), 'Cast '+c.name+' with X='+str(x),x_value=x))
                     continue
-                if c.kind in ("creature", "vehicle", "enchantment", "spell", "token_spell", "mana_artifact") and self.payment(c)["paid"]:
+                if c.kind in ("creature", "vehicle", "enchantment", "spell", "token_spell", "mana_artifact", "equipment") and self.payment(c)["paid"]:
                     if c.draw and len(p.library) < c.draw:
                         continue  # never choose a known self-decking draw spell
                     keywords = c.traits.split(";")[-1].split(",") if c.traits else []
@@ -1115,6 +1172,8 @@ class Simulator:
             if choice.kind == "pass":
                 self.phase = {"land": "main", "main": "attack", "second_main": "cleanup"}[self.phase]
                 self.log("pass", choice.label)
+            elif choice.kind=='equip':
+                self.activate_equip(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind in ("crew","saddle"):
                 game = self.event_game("main")
                 getattr(game, choice.kind)(choice.card_id, list(choice.tap_ids), self.active)
@@ -1249,6 +1308,11 @@ class Simulator:
             game = self.event_game("cleanup")
             game.cleanup()
             self.sync_events(game)
+            for owner in self.players:
+                for attached in list(owner.battlefield):
+                    if attached.card.kind=='aura' and not attached.attached_to:
+                        owner.battlefield.remove(attached)
+                        if not attached.card.is_token:owner.graveyard.append(attached.card)
             self.phase = "end"
             self.log("end", f"Player {self.active+1} ends the turn.")
         else:
@@ -1302,13 +1366,14 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):
         keywords = sorted(event_definition.abilities)
         parsed = {"kind":("vehicle" if "Vehicle" in event_definition.subtypes else
-                          "creature" if "Creature" in event_definition.types else "enchantment"),
+                          "creature" if "Creature" in event_definition.types else
+                          event_definition.attachment[0] if event_definition.attachment else "enchantment"),
                   "power":event_definition.power,"toughness":event_definition.toughness,
                   "traits":f"{event_definition.power};{event_definition.toughness};"+",".join(keywords),
                   "event":event_definition}

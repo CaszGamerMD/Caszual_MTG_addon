@@ -5,7 +5,7 @@ Three resolved through reusable parsing: Honor of the Pure (capitalized color se
 | Card | Status / required mechanics |
 |---|---|
 | Akroma's Memorial | Protection, combined keyword grants, artifact static effects |
-| Basilisk Collar | Equip costs, attachment targets, granted abilities |
+| Basilisk Collar | Implemented in diagnostic: equip costs, stack targeting, deathtouch/lifelink grants |
 | Brightfield Glider | Implemented: generic saddled attack condition and temporary stats/keywords |
 | Cabal Slaver | Implemented: generic subtype combat-damage filtering and deterministic legal discard |
 | Captain's Claws | Equipment and tapped attacking token placement |
@@ -19,7 +19,7 @@ Three resolved through reusable parsing: Honor of the Pure (capitalized color se
 | Honor of the Pure | Implemented in diagnostic simulator |
 | Hopeful Eidolon | Bestow and Aura attachment/type transitions |
 | Krenko, Tin Street Kingpin | Implemented in diagnostic: counter then current-power token creation |
-| Lifelink | Aura targeting and attached ability grants |
+| Lifelink | Implemented in diagnostic: Aura targeting, lifelink grant and cleanup |
 | Lumen-Class Frigate | Station activation and counter thresholds |
 | Muxus, Goblin Grandee | Library reveal/filter, mana value, multiple entries, temporary attack stats |
 | Radiant Summit | Implemented in diagnostic simulator |
@@ -41,3 +41,5 @@ Combat-damage follow-up: generic subtype watchers discard only after positive pl
 Power-token follow-up: the whole attack instruction composes self-counter addition with parsed token characteristics and a current-power count. Self references normalize full and Oracle short names without behavior dispatch. Tokens resolve as a batch before their entry triggers and are not declared attackers. Full response windows and source departure while a trigger is on the stack remain unavailable in this diagnostic. Focused tests cover real Krenko and an unfamiliar 2/3 flying Drake producer, prior counters, repeated attacks, and rejection of unparsed trailing text. Sixteen original cards remain blocked.
 
 Sweep follow-up: a whole-text opponent-nonland destruction grammar now covers Ruinous Ultimatum and unfamiliar names. The single-target destroy path shares batch death discovery. Lands (including land creatures) and indestructible permanents survive; the caster’s permanents are untouched. Blood Artist sees simultaneous deaths even if it dies; Nested Shambler uses its power before a dying anthem leaves. Fifteen original cards remain blocked. Full cascading state-based actions and regeneration remain outside the current model.
+
+Attachment follow-up: Basilisk Collar and Lifelink now compile using whole-text attachment grammars. Thirteen original cards remain blocked. Equipment with additional triggered/activated abilities, Bestow, and tapped attacking token creation are not silently enabled.
