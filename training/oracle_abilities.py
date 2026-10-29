@@ -79,7 +79,7 @@ class Program:
     devotion: tuple = ()
 
 def static_effect(text):
-    life_conditional=re.fullmatch(r'As long as you have ([1-9][0-9]*) or more life, this creature gets \\+([0-9]+)/\\+([0-9]+) and has (.+)\\.',text)
+    life_conditional=re.fullmatch(r'As long as you have ([1-9][0-9]*) or more life, this creature gets \+([0-9]+)/\+([0-9]+) and has (.+)\.',text)
     if life_conditional:
         words={part.strip() for part in re.split(r', | and ',life_conditional[4])}
         if not words or not words<=KEYWORDS:return None
