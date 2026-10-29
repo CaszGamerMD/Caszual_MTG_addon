@@ -964,10 +964,15 @@ class Game:
                 self.emit('trigger',operation='create_tokens',source=equipment.id,name=equipment.definition.name,controller=equipment.controller,effect='two Spirits',tokenSpec=dict(amount=2,power=1,toughness=1,colors=['White'],subtypes=['Spirit'],keywords=['flying'],tapped=True,attacking=attacking is not None))
                 continue
             ids = []
+            spec=self.replace_creature_token_spec(equipment.controller,dict(
+                power=1,toughness=1,colors=('White',),subtypes=('Spirit',),
+                keywords=('flying',),tapped=True))
             for _ in range(self.token_amount(equipment.controller,2)):
                 self._next_token += 1
                 token_id = f"spirit-token-{self._next_token}"
-                token = Definition("Spirit",frozenset({"Creature"}),frozenset({"Spirit"}),False,1,1,frozenset({"flying"}),colors=frozenset({"White"}))
+                token = Definition(' '.join(spec['subtypes']),frozenset({'Creature'}),
+                    frozenset(spec['subtypes']),False,spec['power'],spec['toughness'],
+                    frozenset(spec['keywords']),colors=frozenset(spec['colors']))
                 self.enter(Permanent(token_id,token,equipment.controller,tapped=True,attacking=attacking,token=True))
                 ids.append(token_id)
             self.emit("trigger", source=equipment.id, effect="two tapped flying Spirit tokens",
