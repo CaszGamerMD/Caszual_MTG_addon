@@ -303,6 +303,13 @@ def compile_abilities(text, name=''):
         if combat:
             triggers.append(Trigger('combat_damage',Selector(creature=True,subtype=combat[1]),Effect('discard',1,'damaged player')))
             continue
+        life_event=re.fullmatch(r'Whenever you gain life, (.+)',line)
+        if life_event:
+            action=effect(life_event[1])
+            if action is None or action.operation not in ('lose_life','gain_life','draw_cards'):
+                return None
+            triggers.append(Trigger('gain_life',Selector(self_only=True),action))
+            continue
         casting=re.fullmatch(r'Whenever you cast (?:a|an) (?:(enchantment|artifact|creature|instant|sorcery|planeswalker|noncreature) )?spell, (.+)',line)
         if casting:
             action=effect(casting[2])
@@ -395,4 +402,4 @@ def event_data(trigger, source, subject):
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             **({'libraryFilter':e.library_filter} if e.library_filter else {}),
             **({'steps':[{'operation':step.operation,'amount':step.amount,'recipient':step.recipient,'gain':step.gain} for step in e.steps]} if e.steps else {}),
-            {'enters':'entered','dies':'dead','upkeep':'permanent','end_step':'permanent','cast':'spell'}[trigger.event]:subject.id}
+            {'enters':'entered','dies':'dead','upkeep':'permanent','end_step':'permanent','cast':'spell','gain_life':'permanent'}[trigger.event]:subject.id}
