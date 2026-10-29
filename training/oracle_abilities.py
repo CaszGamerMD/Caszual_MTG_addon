@@ -175,6 +175,8 @@ def selector(text):
                     subtype='' if noun=='creature' else noun.split()[0])
 
 def effect(text):
+    if text=='each opponent loses life equal to the number of tapped creatures you control.':
+        return Effect('opponent_loss_tapped_creatures',0,'each opponent')
     may=re.fullmatch(r'you may (create .+)',text)
     if may:
         spec=parse_token_creation(may[1][0].upper()+may[1][1:])
@@ -313,6 +315,12 @@ def compile_abilities(text, name=''):
             if action is None:return None
             triggers.append(Trigger('end_step',Selector(self_only=True),action,int(endstep[1])))
             continue
+        endstep_any=re.fullmatch(r'At the beginning of your end step, (.+)',line)
+        if endstep_any:
+            action=effect(endstep_any[1])
+            if action is None:return None
+            triggers.append(Trigger('end_step',Selector(self_only=True),action))
+            continue
         upkeep=re.fullmatch(r'At the beginning of your upkeep, (.+)',line)
         if upkeep:
             clause=upkeep[1]
@@ -374,7 +382,8 @@ def event_data(trigger, source, subject):
             'add_counters':f'put {e.amount} +1/+1 counters on each creature you control',
             'create_tokens':f'create {e.amount} creature tokens',
             'opponent_optional_basic_search':'each opponent may find a tapped basic land and shuffle',
-            'optional_subtype_search_hand':'controller may tutor a subtype card to hand and shuffle'}
+            'optional_subtype_search_hand':'controller may tutor a subtype card to hand and shuffle',
+            'opponent_loss_tapped_creatures':'each opponent loses life equal to controlled tapped creatures'}
     label='; then '.join(f'{part.operation} {part.amount}' for part in e.steps) if e.operation=='ordered_effects' else labels[e.operation]
     if e.controller_loss: label=f'controller loses {e.controller_loss} life; '+label
     if e.gain: label+=f'; controller gains {e.gain} life'
