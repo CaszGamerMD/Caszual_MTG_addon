@@ -2,6 +2,16 @@
 
 This is the standing work protocol for **the standalone Commander simulator only** on `experiment/commander-ai-golem`. Do **not** migrate this to Minecraft until separately requested. Each pass must work from the current repository head, never from remembered coverage totals.
 
+## Required multi-cycle session behavior
+
+**A scheduled session is a batch of learning cycles, not one cycle.** Aim for **at least three complete, meaningful iterations per session**, and continue for more whenever the available execution window permits. After finishing the first rule family, immediately select and work on another; do not end the session merely because one change was committed.
+
+- Begin with a **single baseline full-deck audit** and ranked queue. Within the same session, repeat **select family → implement generalized parser and rules behavior → add focused tests → run focused tests → reaudit the affected cards and whole deck collection → record delta** for successive independent families. A cycle counts only when it has substantive rules/grammar implementation and corresponding test/evidence; status checks, speculative plans and reruns alone are not learning cycles.
+- **Target 3–5 substantive cycles** in each run if the tool and execution limits permit. Use small self-contained rule families to maintain forward progress. If a family proves difficult, record the dependency, preserve a safe state and switch to a different feasible family rather than spending the entire run on one blocker.
+- Preserve correctness: **run affected regression tests after each cycle**, and full regression / Java checks at the end of a session (and before committing any change whose dependencies require the full suite). Reaudit after every successful cycle. Never reduce test rigor or silently accept unsupported extra text merely to hit a cycle count.
+- Commit verified independent increments safely as you go, synchronizing with the current GitHub branch head before writes. If work remains incomplete or unverified at the execution limit, do not claim success; leave an explicit next-action record for the next session.
+- Report **cycles completed this session**, the specific family and commit for each, per-cycle support deltas and tests, total support progress, and **why fewer than three happened** if blocked. Never label repeated analysis without tested implementation as a completed cycle.
+
 ## One iteration
 
 1. **Refresh and inventory.** Inspect new commits, CI outcomes, saved `training/decks/*.json`, and the previous cycle's unresolved items. Re-run the current diagnostic parser coverage and card-language grouping:
