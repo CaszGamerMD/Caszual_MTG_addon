@@ -1,3 +1,19 @@
+## Attached creature upkeep growth
+
+Forced Adaptation now supplies a reusable Aura-trigger grammar:
+`At the beginning of your upkeep, put N +1/+1 counters on enchanted creature.`
+The Aura's currently enchanted creature is resolved when the ability resolves,
+not guessed from a prior target. An Aura that leaves or has no current legal
+enchanted creature does not place counters, and reattachment before resolution
+redirects the instruction to its current host. Hardened Scales and Branching
+Evolution apply to the placed counters through the same generic replacement
+handler. The compiler supports different positive integer counts, rejects
+unparsed remainder text and does not dispatch on a card name.
+`training/tests/test_enchanted_upkeep.py` verifies timing and composition.
+
+This remains an **experimental standalone rules-system enhancement**, not
+Minecraft golem behavior.
+
 ## Generic creature +1/+1 counter replacements
 
 Hardened Scales and Branching Evolution now compile as whole-card Oracle
