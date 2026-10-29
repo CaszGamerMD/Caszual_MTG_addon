@@ -85,6 +85,19 @@ class Program:
     token_replacements: tuple = ()
 
 def static_effect(text):
+    subtype_anthem=re.fullmatch(r'Other ([A-Z][a-z]+) creatures you control get \\+([0-9]+)/\\+([0-9]+) and have (.+)\\.',text)
+    if subtype_anthem:
+        traits={w.strip() for w in re.split(r', | and ',subtype_anthem[4])}
+        if not traits or not traits<=KEYWORDS:return None
+        subject=Selector(relation='controller',other=True,creature=True,subtype=subtype_anthem[1])
+        return (StaticEffect(subject,int(subtype_anthem[2]),int(subtype_anthem[3])),)+tuple(
+            StaticEffect(subject,0,0,grant=word) for word in sorted(traits))
+    subtype_keyword=re.fullmatch(r'([A-Z][a-z]+)s you control have (.+)\\.',text)
+    if subtype_keyword:
+        traits={w.strip() for w in re.split(r', | and ',subtype_keyword[2])}
+        if not traits or not traits<=KEYWORDS:return None
+        subject=Selector(relation='controller',creature=True,subtype=subtype_keyword[1])
+        return tuple(StaticEffect(subject,0,0,grant=word) for word in sorted(traits))
     stat_conditional=re.fullmatch(r'This creature gets \+([0-9]+)/\+([0-9]+) as long as you have ([1-9][0-9]*) or more life\.',text)
     if stat_conditional:
         return StaticEffect(Selector(self_only=True,creature=True),int(stat_conditional[1]),int(stat_conditional[2]),life_min=int(stat_conditional[3]))
@@ -236,12 +249,18 @@ def compile_abilities(text, name=''):
             counter_replacements.append(('double' if counter[1]=='twice that many' else 'plus',2 if counter[1]=='twice that many' else 1,'controlled_creature'))
             continue
         discount=re.fullmatch(r'([A-Z][a-z]+(?: and [A-Za-z]+)?) spells you cast cost \{([1-9][0-9]*)\} less to cast\.',line)
-        if discount:
-            words=tuple(word.lower() for word in discount[1].split(' and '))
+        repeated=re.fullmatch(r'([A-Z][a-z]+) spells and ([A-Z][a-z]+) spells you cast cost \{([1-9][0-9]*)\} less to cast\.',line)
+        if discount or repeated:
+            words=tuple(word.lower() for word in (
+                discount[1].split(' and ') if discount else (repeated[1],repeated[2])))
             allowed={'white','blue','black','red','green','colorless',
                      'artifact','enchantment','creature','instant','sorcery','planeswalker','aura','equipment'}
-            if not words or not set(words)<=allowed:return None
-            cost_reductions.append((words,int(discount[2])))
+            # These are grammar categories, not per-card allowances.
+            subtypes={'goblin','rogue','elf','faerie','squirrel','zombie','vampire','warrior',
+                      'wizard','shaman','knight','dragon','merfolk','human','soldier','spirit'}
+            if not words or not set(words)<=allowed|subtypes:return None
+            filters=tuple('subtype:'+word if word in subtypes else word for word in words)
+            cost_reductions.append((filters,int(discount[2] if discount else repeated[3])))
             continue
         activated=re.fullmatch(r'((?:\{(?:[0-9]+|[WUBRGC])\})+): (Create .+)',line)
         if activated:
