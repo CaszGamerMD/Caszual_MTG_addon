@@ -206,7 +206,7 @@ function modalCardImage(name){
  });
 }
 const phases=["untap","upkeep","draw","land","main","attack","block","damage","second_main","end_step","cleanup"];
-const importance=new Set(["cast","stack_push","stack_resolve","attack","attackers","block","blockers","damage","combat","combat_damage","destroy","damage_deaths","death","token","trigger","exile","land","result","win","role_created","life_replacement","end_step_life_loss","search_reveal","search_basic","question"]);
+const importance=new Set(["opening_hand","mulligan","keep_hand","cast","stack_push","stack_resolve","attack","attackers","block","blockers","damage","combat","combat_damage","destroy","damage_deaths","death","token","trigger","exile","land","result","win","role_created","life_replacement","end_step_life_loss","search_reveal","search_basic","question"]);
 function stop(){if(timer!==null)clearInterval(timer);timer=null;$("play").textContent="▶ Play"}
 function stepDirection(delta){const events=data?.events||[];if(!events.length)return;position=Math.max(0,Math.min(events.length-1,position+delta));render()}
 function nextInteresting(from){const events=data?.events||[];for(let i=from+1;i<events.length;i++){if(important(events[i],events[i-1]))return i}return -1}
