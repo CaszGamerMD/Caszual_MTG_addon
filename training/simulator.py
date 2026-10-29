@@ -2476,10 +2476,15 @@ def pack_replay(report: dict) -> dict:
             field = [[reference(c),int(c["tapped"]),int(c["fresh"]),c["power"],c["toughness"],c["traits"],
                       c.get("saddled",False),c.get("counters",0)] for c in p["battlefield"]]
             grave = [reference(c) for c in p["graveyard"]]
+            # Append public fields rather than changing existing indices, so
+            # earlier packed fixture replays remain readable by the viewer.
+            exile = [reference(c) for c in p.get("exile",[])]
             players.append([p["life"],p["handCount"],p["libraryCount"],field,grave,
-                            p.get("commanderInZone",False),p.get("commanderDamage",{})])
+                            p.get("commanderInZone",False),p.get("commanderDamage",{}),
+                            exile,p.get("manaPool",[])])
         events.append([e["index"],e["turn"],e["phase"],e["actor"],e["kind"],e["message"],
-                       e["details"],[state["active"],state["turn"],state["phase"],players]])
+                       e["details"],[state["active"],state["turn"],state["phase"],players,
+                                     state.get("stack",[]),state.get("priority")]])
     return {**packed,"packedReplay":1,"cardCatalog":catalog,"compactEvents":events}
 
 
