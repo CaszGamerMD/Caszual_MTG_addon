@@ -465,8 +465,14 @@ class Simulator(AdvancedRules):
     def gain_life(self, seat: int, amount: int):
         """Track life gained, independent of damage/losses and total life change."""
         if amount<0:raise ValueError('Life gain amount must be nonnegative')
-        self.players[seat].life+=amount
-        self.life_gained_turn[seat]+=amount
+        gained=amount
+        for permanent in self.players[seat].battlefield:
+            definition=permanent.card.event_definition
+            if definition is not None and definition.life_multiplier!=1:
+                gained*=definition.life_multiplier
+        self.players[seat].life+=gained
+        self.life_gained_turn[seat]+=gained
+        if gained!=amount:self.log('life_replacement','Life-gain replacement modifies the event.',actor=seat,original=amount,gained=gained)
 
     def event_game(self, phase: str) -> EventGame:
         """Adapt public battlefield state to the shared type-aware event kernel."""
@@ -1842,7 +1848,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace"} & event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace"} & event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):
