@@ -1136,7 +1136,7 @@ class Simulator(AdvancedRules):
                 game=self.event_game('main')
                 source=game.battlefield.get(event['source'])
                 if source is not None:
-                    source.counters+=event['counterAmount']
+                    source.counters+=game.counter_amount(source.id,event['counterAmount'])
                     amount=max(0,game.stats(source)[0])
                     self.sync_events(game)
                 else: amount=max(0,event['lastPower'])
@@ -1174,7 +1174,9 @@ class Simulator(AdvancedRules):
                 message=f"{event['name']}: equip ability resolves."
             elif event.get('operation')=='self_counter':
                 source=next((item for player in self.players for item in player.battlefield if item.card.id==event['source']),None)
-                if source:source.counters+=event['amount']
+                if source:
+                    game=self.event_game('main')
+                    source.counters+=game.counter_amount(source.card.id,event['amount'])
                 message=f"{event['name']}: its surviving source receives a counter."
             elif event.get('operation')=='discard':
                 target=self.players[event['target']]
@@ -1188,7 +1190,7 @@ class Simulator(AdvancedRules):
                 affected = []
                 for identifier,permanent in game.battlefield.items():
                     if permanent.controller == event["controller"] and game.creature(permanent):
-                        permanent.counters += event["amount"]
+                        permanent.counters += game.counter_amount(identifier,event["amount"])
                         affected.append(identifier)
                 self.sync_events(game)
                 message = f"{event['name']} puts {event['amount']} +1/+1 counters on each of {len(affected)} creatures."
@@ -1783,7 +1785,7 @@ class Simulator(AdvancedRules):
             if b and d["blockerDies"]:
                 self.send_to_destination(defender, b)
                 if a.card.name == "Zurgo Helmsmasher" and not d["attackerDies"]:
-                    a.counters += 1
+                    a.counters += self.event_game('main').counter_amount(a.card.id,1)
                     self.log("trigger", "Zurgo gains a +1/+1 counter when the damaged creature dies.",
                              card=a.card.name, counters=a.counters)
             self.log("combat", "Combat damage resolves.", **d)
@@ -1881,7 +1883,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace"} & event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.opponent_creatures_enter_tapped or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace"} & event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.opponent_creatures_enter_tapped or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):
