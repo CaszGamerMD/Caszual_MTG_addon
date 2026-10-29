@@ -39,7 +39,7 @@ def compile(text, name, types, subtypes):
         if line=='Enchanted creature has "Whenever this creature deals combat damage to a player, you may draw a card."':
             if attachment_draw or mode!='aura':return None
             attachment_draw=True;continue
-        entry=re.fullmatch(r'When this Aura enters, put a \\+1/\\+1 counter on enchanted creature\\.',line)
+        entry=re.fullmatch(r'When this Aura enters, put a \+1/\+1 counter on enchanted creature\.',line)
         if entry:
             if mode!='aura' or entry_attachment_counters:return None
             entry_attachment_counters=1;continue
