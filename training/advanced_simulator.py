@@ -282,7 +282,8 @@ class AdvancedRules:
    pending.extend(g.combat_draw_triggers(identifier))
    for source in g.battlefield.values():
     for trigger in source.definition.triggers:
-     if trigger.event=='combat_damage' and matches(trigger.subject,source,g.battlefield[identifier],True):
+     if (trigger.event=='combat_damage' and matches(trigger.subject,source,g.battlefield[identifier],True)
+         and (not trigger.min_counters or g.battlefield[identifier].counters>=trigger.min_counters)):
       pending.append(dict(operation='discard',effect='discard',controller=source.controller,name=source.definition.name,source=source.id,target=1-self.active))
      elif trigger.event=='deals_player_damage' and source.id==identifier and matches(trigger.subject,source,g.battlefield[identifier],True):
       pending.append(event_data(trigger,source,g.battlefield[identifier]))

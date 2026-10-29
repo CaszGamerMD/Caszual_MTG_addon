@@ -235,3 +235,24 @@ Unknown extra Oracle clauses reject the entire card instead of
 ignoring their remainder.
 
 Coverage: `training/tests/test_put_from_hand_damage.py`.
+
+
+## Rogue counters on entry and conditional combat discard (2026-10-29)
+
+Oona's Blackguard now uses a fully parsed, reusable **entry replacement**:
+“Each other [subtype] creature you control enters with [N]
+additional +1/+1 counter(s) on it.” Counters are present as a creature
+enters, not queued as a delayed trigger. The replacement applies only
+from existing permanents; simultaneous entrants do not grant each other
+counters. Existing counter-doubling replacements are calculated from
+pre-existing sources.
+
+The independent combat-damage text “Whenever a creature you control
+with a +1/+1 counter on it deals combat damage to a player, that player
+discards a card” is checked against the combat-damage snapshot,
+including counter count and controller, not the creature's subtype.
+The discard is placed on the priority stack, and source departure does
+not undo an already-triggered event.
+
+Regressions: `training/tests/test_rogue_entry_counters.py`. This is
+diagnostic, not yet full multiplayer Commander rules or Minecraft work.

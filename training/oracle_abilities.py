@@ -72,6 +72,7 @@ class Trigger:
     effect: Effect
     life_gained_at_least: int = 0
     lands_controlled_at_least: int = 0
+    min_counters: int = 0
 
 @dataclass(frozen=True)
 class Program:
@@ -88,6 +89,7 @@ class Program:
     token_replacements: tuple = ()
     token_action_triggers: tuple = ()
     token_leave_triggers: tuple = ()
+    entry_counter_grants: tuple = ()
 
 def static_effect(text):
     # Global lords affect matching creature types even when an opponent
@@ -276,10 +278,18 @@ def compile_abilities(text, name=''):
         text=text.replace(name,'this creature')
         if ',' in name:
             text=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= isn't a creature| enters| attacks|\'s power)",'this creature',text)
-    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0;cost_reductions=[];counter_replacements=[];token_replacements=[];token_action_triggers=[];token_leave_triggers=[]
+    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0;cost_reductions=[];counter_replacements=[];token_replacements=[];token_action_triggers=[];token_leave_triggers=[];entry_counter_grants=[]
     for line in text.splitlines():
         line=line.strip()
         if not line: continue
+        entry_counters=re.fullmatch(
+            r'Each other ([A-Z][a-z]+) creature you control enters with (an|one|two|three|[1-9][0-9]*) additional \+1/\+1 counters? on it\.',
+            line)
+        if entry_counters:
+            word=entry_counters[2]
+            number={'an':1,'one':1,'two':2,'three':3}.get(word) or int(word)
+            entry_counter_grants.append((Selector(relation='controller',other=True,creature=True,subtype=entry_counters[1]),number))
+            continue
         condition=re.fullmatch(r"As long as your devotion to (white|blue|black|red|green) is less than (one|two|three|four|five|six|seven|eight|nine|[1-9][0-9]*), this creature isn't a creature\.",line)
         if condition:
             if devotion:return None
@@ -365,6 +375,13 @@ def compile_abilities(text, name=''):
                           library_filter=('subtype',damage_hand[2],damage_hand[3]))
             triggers.append(Trigger('deals_player_damage',Selector(self_only=True,creature=True),action))
             continue
+        counter_hit=re.fullmatch(
+            r'Whenever a creature you control with a \+1/\+1 counter on it deals combat damage to a player, that player discards a card\.',
+            line)
+        if counter_hit:
+            triggers.append(Trigger('combat_damage',Selector(relation='controller',creature=True),
+                                    Effect('discard',1,'damaged player'),min_counters=1))
+            continue
         combat=re.fullmatch(r'Whenever a ([A-Z][a-z]+) deals combat damage to a player, that player discards a card\.',line)
         if combat:
             triggers.append(Trigger('combat_damage',Selector(creature=True,subtype=combat[1]),Effect('discard',1,'damaged player')))
@@ -426,7 +443,7 @@ def compile_abilities(text, name=''):
         if action.operation=='create_tokens' and not subject.self_only:
             return None  # Repeating token engines need bounded stack/loop handling.
         triggers.append(Trigger(event,subject,action))
-    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers),tuple(token_leave_triggers)) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers or token_leave_triggers else None
+    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers),tuple(token_leave_triggers),tuple(entry_counter_grants)) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers or token_leave_triggers or entry_counter_grants else None
 
 def matches(subject, source, entered, is_creature):
     return ((not subject.self_only or source.id==entered.id)

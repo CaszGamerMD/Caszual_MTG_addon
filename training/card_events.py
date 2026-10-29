@@ -114,6 +114,7 @@ class Definition:
     entry_attachment_counters: int = 0
     double_attachment_counters_upkeep: bool = False
     role: str = ""
+    entry_counter_grants: tuple = ()
 
 
 def parse_card(card: dict) -> Definition:
@@ -189,7 +190,8 @@ def parse_card(card: dict) -> Definition:
                           opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
                           life_addition=program.life_addition,cost_reductions=program.cost_reductions,
                           counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
-                          token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers)
+                          token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers,
+                          entry_counter_grants=program.entry_counter_grants)
     attack_text=text.replace(name,'this creature') if name else text
     if ',' in name:
         short=name.split(',')[0]
@@ -428,14 +430,26 @@ class Game:
         # two permanents entering simultaneously cannot apply replacements
         # granted by either of the entering permanents.
         incumbents=tuple(self.battlefield.values())
+        entry_counters={}
         for permanent in permanents:
             if 'Creature' in permanent.definition.types and any(
                 source.controller!=permanent.controller and source.definition.opponent_creatures_enter_tapped
                 for source in incumbents):permanent.tapped=True
+            if 'Creature' in permanent.definition.types:
+                bonus=sum(amount for source in incumbents
+                          for selector,amount in source.definition.entry_counter_grants
+                          if matches(selector,source,permanent,True))
+                if bonus:entry_counters[permanent.id]=bonus
             permanent.entered_at=self.timestamp()
             if 'Planeswalker' in permanent.definition.types and permanent.loyalty is None:permanent.loyalty=permanent.definition.loyalty
             if permanent.attached_to:permanent.attachment_at=permanent.entered_at
             self.battlefield[permanent.id]=permanent
+        # Enter-with counters are replacement effects, not delayed ETB triggers.
+        # Use only pre-existing sources, never another simultaneous entrant.
+        for permanent in permanents:
+            bonus=entry_counters.get(permanent.id,0)
+            if bonus:
+                permanent.counters+=self.counter_amount(permanent.id,bonus,sources=incumbents)
         for permanent in permanents:
             self.emit("enters", id=permanent.id, name=permanent.definition.name,
                       controller=permanent.controller, types=sorted(permanent.definition.types),
@@ -658,7 +672,7 @@ class Game:
         return amount
 
     def counter_amount(self, target_id: str, amount: int, *,
-                       counter_type: str = '+1/+1', by_effect: bool = True) -> int:
+                       counter_type: str = '+1/+1', by_effect: bool = True, sources=None) -> int:
         """Apply counters replacement effects to a single counter-placement event.
 
         +1/+1 counters and all-counter permanent effects have different
@@ -669,7 +683,7 @@ class Game:
         target=self.battlefield[target_id]
         creature=self.creature(target)
         additions=[];multipliers=[]
-        for source in self.battlefield.values():
+        for source in (self.battlefield.values() if sources is None else sources):
             for replacement in source.definition.counter_replacements:
                 kind,value,scope=replacement[:3]
                 condition=replacement[3] if len(replacement)>3 else 'any'
