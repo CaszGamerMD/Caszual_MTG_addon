@@ -399,6 +399,7 @@ class Simulator(AdvancedRules):
         self.aura_exiles={}  # Aura object id -> (owner seat, physical card) still in exile.
         self.linked_exiles={}  # (source id, entry identity) -> cards exiled by its ETB trigger.
         self.life_gained_turn=[0,0]
+        self.damage_to_players=[set(),set()]  # Permanent identities that dealt positive damage to each player this turn.
         self._end_step_triggers_queued=False
         self.token_sequence = 0
         self.effect_clock = 0
@@ -416,7 +417,7 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.kind == "x_spell" and card.x_effect in ("tokens","draw","life"):
                     continue
-                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_artifact_creature_token","destroy_artifact","exile_creature_life","exile_creature_basic_land","destroy_all_creatures","destroy_toughness_min"):
+                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_artifact_creature_token","destroy_artifact","exile_creature_life","exile_creature_basic_land","exile_creature_damaged_you","destroy_all_creatures","destroy_toughness_min"):
                     continue
                 if self.diagnostic and card.kind=="graveyard_return_spell" and card.graveyard_return_subtype:
                     continue
@@ -1351,8 +1352,20 @@ class Simulator(AdvancedRules):
                  actor=seat,source=source.name,subtype=subtype,
                  revealed=found.name if found else None)
 
+    def record_player_damage(self,seat,source_id,amount):
+        """Remember damage sources for turn-scoped target legality, not life loss.
+
+        A source can leave the battlefield later; only a still-present creature
+        can be targeted by a spell requiring a creature that dealt damage.
+        """
+        if amount>0 and source_id:
+            self.damage_to_players[seat].add(source_id)
+
     def removal_targets(self,controller,source):
         """Only legal targets for an explicitly parsed targeted removal spell."""
+        if source.removal=='exile_creature_damaged_you':
+            return tuple((seat,item) for seat,item in self.creature_targets(controller,source)
+                         if item.card.id in self.damage_to_players[controller])
         if source.removal in ('destroy','exile_creature_life','exile_creature_basic_land'):return self.creature_targets(controller,source)
         if source.removal not in ('destroy_artifact_enchantment','destroy_artifact_creature_token','destroy_artifact'):return ()
         game=self.event_game('main')
@@ -1693,6 +1706,12 @@ class Simulator(AdvancedRules):
                 self._resolve_entry_effects([dict(operation='create_tokens',
                     effect='the target controller creates creature tokens',
                     source=card.id,controller=owner,name=card.name,tokenSpec=spec)],card)
+                return
+            if card.removal=='exile_creature_damaged_you':
+                self.send_to_destination(self.players[owner],item,snapshot=game,to_exile=True)
+                self.log('exile',f'{card.name} exiles a creature that damaged its caster this turn.',
+                         actor=controller,targetPermanent=item.card.id)
+                self.resolve_entry_triggers([],card)
                 return
             if card.removal=='exile_creature_basic_land':
                 self.send_to_destination(self.players[owner],item,snapshot=game,to_exile=True)
@@ -2325,6 +2344,7 @@ class Simulator(AdvancedRules):
                     self.pause('Cannot apply board damage without planeswalker loyalty',card);return
                 opponent=1-event['controller'];amount=event['amount']
                 self.players[opponent].life-=amount
+                self.record_player_damage(opponent,event.get('source'),amount)
                 prevented={item.card.id for _,item in targets if game.protected(game.battlefield[item.card.id],event.get('sourceColors',card.colors))}
                 for _,item in targets:
                     if item.card.id in prevented:continue
@@ -2353,6 +2373,7 @@ class Simulator(AdvancedRules):
             elif event.get("operation") == "damage":
                 target = 1-event["controller"]
                 self.players[target].life -= event["amount"]
+                self.record_player_damage(target,event.get("source"),event["amount"])
                 if event["amount"]>0:
                     game=self.event_game('main')
                     aura_events=game.aura_damage_triggers([dict(source=event['source'],target=None,amount=event['amount'])],target)
@@ -2410,6 +2431,7 @@ class Simulator(AdvancedRules):
         if has(a,'lifelink'):self.gain_life(self.active,to_blocker+to_player)
         if has(b,'lifelink'):self.gain_life(1-self.active,to_attacker)
         defender.life-=to_player
+        if attacker:self.record_player_damage(1-self.active,attacker.card.id,to_player)
         if attacker and root(attacker.card)==active.commander_id and to_player:
             defender.commander_damage[root(attacker.card)]=defender.commander_damage.get(root(attacker.card),0)+to_player
         game=self.event_game('combat');dead=[]
@@ -2857,6 +2879,7 @@ class Simulator(AdvancedRules):
             self.land_played = False
             self.turn_development[self.active]=False
             self.life_gained_turn=[0,0]
+            self.damage_to_players=[set(),set()]
             self._end_step_triggers_queued=False
             self.phase = "untap"
             p = self.players[self.active]
@@ -3219,6 +3242,10 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             and rule_text(definition.get('oracleText',''))=='Exile target creature. Its controller gains life equal to its power.'
             and rules.query('cost',cost)['supported']):
         parsed={'kind':'removal_spell','removal':'exile_creature_life'}
+    damage_removal=re.fullmatch(r'Exile target creature that dealt damage to you this turn\.',destruction)
+    if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
+            and damage_removal and rules.query('cost',cost)['supported']):
+        parsed={'kind':'removal_spell','removal':'exile_creature_damaged_you'}
     ox= re.fullmatch(r'Destroy target (artifact or creature|creature or artifact)\. Its controller creates (.+)\.',destruction)
     if parsed['kind']=='unsupported' and ox and definition.get('types') in (['Instant'],['Sorcery']) and rules.query('cost',cost)['supported']:
         spec=parse_token_creation('Create '+ox[2]+'.')
