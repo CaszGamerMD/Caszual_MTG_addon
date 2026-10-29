@@ -1153,6 +1153,19 @@ class Simulator(AdvancedRules):
                 self.outcome()
                 if self.finished:return
                 continue
+            if event.get('operation')=='opponent_loss_tapped_creatures':
+                game=self.event_game('main')
+                controller=event['controller']
+                amount=sum(item.tapped and item.card.id in game.battlefield and
+                           game.creature(game.battlefield[item.card.id])
+                           for item in self.players[controller].battlefield)
+                for opponent in range(len(self.players)):
+                    if opponent!=controller:self.players[opponent].life-=amount
+                self.log('end_step_life_loss','Tapped creatures determine end-step life loss.',
+                         actor=controller,source=event['source'],amount=amount)
+                self.outcome()
+                if self.finished:return
+                continue
             if event.get('operation')=='optional_subtype_search_hand':
                 search=event.get('libraryFilter',())
                 if len(search)!=2 or search[0]!='subtype':
