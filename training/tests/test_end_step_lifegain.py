@@ -53,7 +53,7 @@ class EndStepLifeGainChecks(unittest.TestCase):
         self.step_to_end(sim)
         self.assertEqual(sim.phase,'end_step')
         self.assertEqual(len(sim.stack.items),1)
-        with self.assertRaisesRegex(ValueError,'unresolved stack'):
+        with self.assertRaisesRegex(RuntimeError,'Pending stack objects'):
             sim.step()
         self.drain(sim)
         self.assertEqual(len(self.griffins(sim)),1)
