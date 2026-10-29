@@ -103,6 +103,21 @@ class CostReductionChecks(unittest.TestCase):
                                      seat=0,spell_cost=False)['paid'])
         sim.invariant()
 
+    def test_reducers_stack_and_stop_after_source_leaves(self):
+        sim,cards=self.fixture(['Emerald Medallion','Jukai Naturalist'])
+        emerald=self.put(sim,cards['Emerald Medallion'])
+        naturalist=self.put(sim,cards['Jukai Naturalist'])
+        self.limit(sim,2)
+        green_enchantment=self.spell('shared','{3}{G}',('Enchantment',),('Green',))
+        self.assertTrue(sim.payment(green_enchantment,seat=0)['paid'])
+        sim.send_to_destination(sim.players[0],naturalist)
+        self.assertFalse(sim.payment(green_enchantment,seat=0)['paid'])
+        self.limit(sim,3)
+        self.assertTrue(sim.payment(green_enchantment,seat=0)['paid'])
+        sim.send_to_destination(sim.players[0],emerald)
+        self.assertFalse(sim.payment(green_enchantment,seat=0)['paid'])
+        sim.invariant()
+
     def test_danitha_aura_equipment_and_ordinary_creature_filters(self):
         sim,cards=self.fixture(['Danitha Capashen, Paragon'])
         source=self.put(sim,cards['Danitha Capashen, Paragon'])
