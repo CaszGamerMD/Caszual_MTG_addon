@@ -20,12 +20,31 @@ class CreatureSweepChecks(unittest.TestCase):
 
     def test_real_damnation_and_citywide_bust_compile_without_card_names(self):
         for name,operation in (('Damnation','destroy_all_creatures'),
-                               ('Citywide Bust','destroy_toughness_4')):
+                               ('Citywide Bust','destroy_toughness_min')):
             raw=dict(self.lookup[name],name='Unknown board sweep')
             card=s.import_diagnostic_card(self.rules,raw,0,'sweep',{'Black','White'})
             self.assertEqual((card.kind,card.removal),('removal_spell',operation))
             raw['oracleText']+='\nEach player creates an unknown Mystery.'
             self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad',set()).kind,'unsupported')
+
+    def test_toughness_filter_numeric_value_is_not_card_specific(self):
+        raw=dict(self.lookup['Citywide Bust'],name='Unknown five-toughness sweep')
+        raw['oracleText']='Destroy all creatures with toughness 5 or greater.'
+        card=s.import_diagnostic_card(self.rules,raw,0,'new-sweep',{'White'})
+        self.assertEqual(card.removal,'destroy_toughness_min')
+        self.assertEqual(card.removal_min_toughness,5)
+        sim,cards=self.fixture(['Citywide Bust'])
+        threshold=self.token(sim,'threshold-4',power=2,toughness=4)
+        large=self.token(sim,'threshold-5',seat=1,power=2,toughness=5)
+        sim.players[0].library.append(card)
+        sim.card_owners[card.id]=0
+        sim.total_cards=tuple(n+(i==0) for i,n in enumerate(sim.total_cards))
+        sim.players[0].library.remove(card)
+        sim.players[0].hand.append(card)
+        self.sweep(sim,card)
+        self.assertIn(threshold,sim.players[0].battlefield)
+        self.assertNotIn(large,sim.players[1].battlefield)
+        sim.invariant()
 
     def test_damnation_destoys_both_players_creature_tokens(self):
         sim,cards=self.fixture(['Damnation'])
