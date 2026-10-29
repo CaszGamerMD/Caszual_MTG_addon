@@ -126,6 +126,8 @@ class Definition:
     sacrifice_ability: tuple = ()  # (effect, sacrificed subtype, effect parameter).
     land_counter_ability: str = ''  # Mana cost for tap-to-counter-each-controlled-creature.
     mentor: bool = False  # Attack trigger: counter on a lesser-power attacker.
+    attack_nontoken_tokens: tuple = ()  # Nontoken attacker creates a tapped attacking token.
+    sacrifice_team_boost: tuple = ()  # Self-sacrifice cost for a team-wide temporary boost.
 
 
 def parse_card(card: dict) -> Definition:
@@ -185,6 +187,11 @@ def parse_card(card: dict) -> Definition:
     if scaled_mana and types.intersection({'Creature','Artifact','Enchantment'}):
         return Definition(**base,abilities=frozenset(),scaled_mana_tap={
             'enchantments':'Enchantment','artifacts':'Artifact'}[scaled_mana[1]])
+    from attack_enchantment import parse as parse_attack_enchantment
+    attack_enchantment=parse_attack_enchantment(text,types)
+    if attack_enchantment:
+        return Definition(**base,abilities=frozenset(),attack_nontoken_tokens=(attack_enchantment[0],),
+                          sacrifice_team_boost=attack_enchantment[1])
     from mentor_abilities import parse as parse_mentor
     mentor_triggers=parse_mentor(text,types)
     if mentor_triggers is not None:

@@ -192,6 +192,15 @@ class AdvancedRules:
     if equipment.attached_to==identifier:
      for spec in equipment.definition.equipment_attacks:
       events.append(dict(operation='create_tokens',effect='equipped attack token creation',source=equipment.id,controller=equipment.controller,name=equipment.definition.name,tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords))))
+  # A nontoken attacker triggers each controlled watcher independently.
+  for watcher in g.battlefield.values():
+   if watcher.controller!=self.active:continue
+   for spec in watcher.definition.attack_nontoken_tokens:
+    for identifier in ids:
+     if not g.battlefield[identifier].token:
+      events.append(dict(operation='create_tokens',effect='nontoken creature attack token creation',
+                         source=watcher.id,controller=watcher.controller,name=watcher.definition.name,
+                         tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords))))
   # All attackers are declared simultaneously; mentor can target any lesser-power attacker.
   for identifier in ids:
    source=g.battlefield[identifier]

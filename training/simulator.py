@@ -869,6 +869,30 @@ class Simulator(AdvancedRules):
                             target_permanent=target.card.id))
         return choices
 
+    def sacrifice_team_choices(self,seat):
+        return [Candidate(item.card.id+':sacrifice-team','activate_sacrifice_team',item.card.id,
+                    features=features(power=.2,cost=1),label='Sacrifice '+item.card.name+' for a team boost')
+                for item in self.players[seat].battlefield if item.card.event_definition
+                and item.card.event_definition.sacrifice_team_boost]
+
+    def activate_sacrifice_team_boost(self,seat,source_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((item for item in self.players[seat].battlefield if item.card.id==source_id),None)
+        ability=source.card.event_definition.sacrifice_team_boost if source and source.card.event_definition else ()
+        if not ability:raise ValueError('No self-sacrifice team ability')
+        game=self.event_game('main');state=game.battlefield.get(source_id)
+        if not state or 'Enchantment' not in state.definition.types:raise ValueError('Invalid sacrifice source')
+        triggers=game.death_triggers([source_id]) if game.creature(state) else []
+        if source.card.is_token:triggers.extend(game.token_action_events('sacrifice',seat,1))
+        self.send_to_destination(self.players[seat],source,snapshot=game)
+        event=dict(operation='sacrifice_team_boost',effect='team temporary power and toughness',
+                   source=source_id,controller=seat,name=source.card.name,power=ability[0],toughness=ability[1])
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_sacrifice_team','Enchantment is sacrificed as the activation cost.',
+                 actor=seat,source=source_id,stackId=frame.id)
+        self.resolve_entry_triggers(triggers,source.card)
+
     def _pay_sacrifice_creature(self,seat,victim):
         # Cost is paid before the ability resolves, regardless of whether its
         # source survives. Indestructible does not prevent sacrifice.
@@ -1352,6 +1376,7 @@ class Simulator(AdvancedRules):
         actions.extend(self.token_ability_choices(seat))
         actions.extend(self.scaled_mana_choices(seat))
         actions.extend(self.sacrifice_choices(seat))
+        actions.extend(self.sacrifice_team_choices(seat))
         actions.extend(self.land_counter_choices(seat))
         actions.extend(self.strip_ability_choices(seat))
         for card in self.response_choices(seat):
@@ -1397,6 +1422,9 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_land_counters':
             self.activate_land_counters(seat,choice.card_id)
+            return 'activate'
+        if choice.kind=='activate_sacrifice_team':
+            self.activate_sacrifice_team_boost(seat,choice.card_id)
             return 'activate'
         card=next(c for c in self.players[seat].hand if c.id==choice.card_id)
         self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack)
@@ -1601,6 +1629,17 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='sacrifice_team_boost':
+                game=self.event_game('main');affected=[]
+                for target in game.battlefield.values():
+                    if target.controller==event['controller'] and game.creature(target):
+                        target.temporary_power+=event['power']
+                        target.temporary_toughness+=event['toughness']
+                        affected.append(target.id)
+                self.sync_events(game)
+                self.log('sacrifice_team_boost','Sacrificed enchantment boosts creatures controlled at resolution.',
+                         actor=event['controller'],source=event['source'],affected=affected)
+                continue
             if event.get('operation')=='mentor_counter':
                 game=self.event_game('combat')
                 source=game.battlefield.get(event['source'])
@@ -2512,6 +2551,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.token_ability_choices(seat))
             actions.extend(self.scaled_mana_choices(seat))
             actions.extend(self.sacrifice_choices(seat))
+            actions.extend(self.sacrifice_team_choices(seat))
             actions.extend(self.land_counter_choices(seat))
             actions.extend(self.strip_ability_choices(seat))
             if (self.diagnostic and p.command_zone and p.command_zone.kind == "creature"
@@ -2635,7 +2675,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
-                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana","activate_sacrifice_boost","activate_land_counters"):
+                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana","activate_sacrifice_boost","activate_land_counters","activate_sacrifice_team"):
             self.turn_development[seat]=True
         return choice
 
@@ -2726,6 +2766,8 @@ class Simulator(AdvancedRules):
                 self.activate_sacrifice_boost(self.active,choice.card_id,choice.tap_ids[0],choice.target_permanent)
             elif choice.kind=='activate_land_counters':
                 self.activate_land_counters(self.active,choice.card_id)
+            elif choice.kind=='activate_sacrifice_team':
+                self.activate_sacrifice_team_boost(self.active,choice.card_id)
             elif choice.kind=='equip':
                 self.activate_equip(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind in ('crew','saddle'):
@@ -2952,7 +2994,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.sacrifice_team_boost or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):
