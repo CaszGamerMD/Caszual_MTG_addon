@@ -75,6 +75,12 @@ class Program:
     devotion: tuple = ()
 
 def static_effect(text):
+    combined=re.fullmatch(r'(Creatures you control) get \+([0-9]+)/\+([0-9]+) and have (.+)\.',text)
+    if combined:
+        words=set(re.split(r', | and ',combined[4]))
+        if not words or not words<=KEYWORDS:return None
+        subject=Selector(relation='controller',creature=True)
+        return (StaticEffect(subject,int(combined[2]),int(combined[3])),)+tuple(StaticEffect(subject,0,0,grant=w) for w in sorted(words))
     multi=re.fullmatch(r'Creatures you control have (.+)\.',text)
     if multi and (',' in multi[1] or ' and ' in multi[1] or 'protection from ' in multi[1]):
         clause=multi[1].replace(' and from ',', protection from ').replace(', and ',', ').replace(' and ',', ')
@@ -127,6 +133,8 @@ def selector(text):
                     subtype='' if noun=='creature' else noun.split()[0])
 
 def effect(text):
+    gain=re.fullmatch(r'you gain ([1-9][0-9]*) life\.',text)
+    if gain:return Effect('gain_life',int(gain[1]))
     from library_effects import parse
     library_filter=parse(text)
     if library_filter:return Effect('reveal_creatures',library_filter[0],library_filter=library_filter)
@@ -214,7 +222,7 @@ def matches(subject, source, entered, is_creature):
 
 def event_data(trigger, source, subject):
     e=trigger.effect
-    label={'reveal_creatures':f'reveal {e.amount} cards and put matching creatures onto the battlefield','damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
+    label={'gain_life':f'controller gains {e.amount} life','reveal_creatures':f'reveal {e.amount} cards and put matching creatures onto the battlefield','damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
            'damage':f'deal {e.amount} damage to each opponent','scry':'scry',
            'add_counters':f'put {e.amount} +1/+1 counters on each creature you control',
            'create_tokens':f'create {e.amount} creature tokens'}[e.operation]

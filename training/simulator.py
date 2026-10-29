@@ -1202,6 +1202,10 @@ class Simulator(AdvancedRules):
                 self.players[target].life -= event["amount"]
                 # Noncombat damage: never contributes to commander combat damage.
                 message = f"{event['name']} deals {event['amount']} damage to Player {target+1}."
+            elif event.get("operation") == "gain_life":
+                source = event["controller"]
+                self.players[source].life += event["amount"]
+                message = f"{event['name']} triggers: Player {source+1} gains {event['amount']} life."
             elif event.get("operation") == "lose_life":
                 source = event["controller"]
                 target = 1-source  # This diagnostic is explicitly two-player.

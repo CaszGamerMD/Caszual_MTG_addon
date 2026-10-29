@@ -1,5 +1,11 @@
 # Commander self-play deck intake
 
+## Entry lifegain and combined anthem update
+
+Ajani's Welcome and Spidersilk Armor now use shared whole-text rules.
+The [new forty-game batch](examples/enchantments-gauntlet-entry-life-anthems/README.md)
+records 18 wins, 21 losses and 1 tie; focal unsupported cards fall from 62 to 60.
+
 ## Gauntlet scoring and enchantment rules update
 
 Future `gauntlet.py` runs decide a completed turn-limit game by **remaining
