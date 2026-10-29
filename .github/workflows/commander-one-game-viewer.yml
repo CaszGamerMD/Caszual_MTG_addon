@@ -1,0 +1,71 @@
+name: One-game MTG theater replay
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths: ['.github/workflows/commander-one-game-viewer.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  one-game:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: experiment/commander-ai-golem
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run exactly one Budget vs Goblins ten-turn game
+        run: |
+          python training/simulator.py diagnose \
+            --decks training/decks/14850373-budget-deck.json training/decks/5254666-garbo-gobbos.json \
+            --seed 20261029 --turns-per-player 10 \
+            --out training/reports/budget-vs-goblins-one-game.json
+      - name: Preserve one-game log and standalone viewer
+        run: |
+          mkdir -p training/examples
+          cp training/reports/budget-vs-goblins-one-game.html training/examples/budget-vs-goblins-one-game-20261029.html
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('training/reports/budget-vs-goblins-one-game.json')
+          game=json.loads(p.read_text())
+          if len(game['deckNames'])!=2 or not game['events']:
+              raise RuntimeError('One game did not produce valid replay events')
+          final=game['events'][-1]['state']['players']
+          result=dict(kind='one-game-diagnostic',seed=20261029,decks=game['deckNames'],
+            commanders=game.get('commanders',[]),
+            turnLimitPerPlayer=10,turnsCompleted=game.get('turnsCompleted'),
+            result=game['result'],winner=game['winner'],
+            lifeTotals=[p['life'] for p in final],eventCount=len(game['events']),
+            flaggedQuestions=len(game.get('questions',[])),
+            learningEligible=game['learningEligible'],productionEligible=game['productionEligible'],
+            viewer='budget-vs-goblins-one-game-20261029.html')
+          destination=Path('training/examples/budget-vs-goblins-one-game-20261029-summary.json')
+          destination.write_text(json.dumps(result,indent=2)+'\n')
+          print(json.dumps(result))
+          PY
+      - name: Upload one game, replay JSON, and offline HTML viewer
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-game-mtg-viewer-20261029
+          path: |
+            training/reports/budget-vs-goblins-one-game.json
+            training/examples/budget-vs-goblins-one-game-20261029.html
+            training/examples/budget-vs-goblins-one-game-20261029-summary.json
+          retention-days: 30
+      - name: Commit replay HTML and summary to experiment branch
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add training/examples/budget-vs-goblins-one-game-20261029.html training/examples/budget-vs-goblins-one-game-20261029-summary.json
+          git commit -m "Record one Budget vs Goblins diagnostic and theater replay"
+          git pull --rebase origin experiment/commander-ai-golem
+          git push origin HEAD:experiment/commander-ai-golem
