@@ -67,3 +67,22 @@ def assess(hand):
                         if _pay(first+second,turns[a]) if a==b else _pay(second,turns[b]):
                             return dict(result,keep=True)
     return result
+
+def fallback(hand):
+    """After several free attempts, accept a functional rather than perfect curve.
+
+    Two to five lands and at least one affordable early board-development
+    spell are enough to avoid an unplayable one-land safety-cap hand.
+    """
+    lands=[c for c in hand if c.kind=="land"]
+    if not 2<=len(lands)<=5:return False
+    candidates=[cost for c in hand if c.kind!="land"
+                if (cost:=_cost(c)) is not None]
+    if not candidates:return False
+    from itertools import combinations
+    for n in (2,3):
+        for group in combinations(lands,min(n,len(lands))):
+            sources=[(c.id,_sources(c)) for c in group if _sources(c)]
+            if any(_pay(cost,sources) for cost in candidates):
+                return True
+    return False
