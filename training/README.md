@@ -1,3 +1,26 @@
+## Typed instant removal: artifacts and enchantments
+
+Naturalize and Nature's Chant use the same strict instruction,
+`Destroy target artifact or enchantment.`, interpreted in the sandbox
+through a typed permanent-target enumerator. Legal targets include
+artifacts, enchantments and artifact creatures (including one's own),
+but not ordinary creatures. Hexproof, protection, ward, indestructibility
+and target legality at resolution are evaluated through existing shared
+rules rather than an on-cast permanent deletion. The destruction moves
+the permanent through its normal graveyard/state-based pathway, and
+the spell uses normal priority and stack resolution. Nature's Chant
+retains its green/white hybrid mana requirement.
+
+The whole-text import only activates this removal for the exact supported
+instruction with a supported cast cost. It does not silently treat extra
+clauses or other removal words as blanks. Noncreature artifact lands with
+unusual continuous abilities, regeneration and broader exile/search
+removal interactions remain outside the diagnostic's general rules.
+See `training/tests/test_targeted_removal.py`.
+
+This remains standalone experimental training code. No Minecraft
+integration has been performed.
+
 ## Token-doubling and subtype-effect progress
 
 Strict Oracle grammar now accepts reusable token-creation replacements:
