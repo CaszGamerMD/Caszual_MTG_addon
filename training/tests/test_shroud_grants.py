@@ -80,5 +80,6 @@ class ShroudGrantsChecks(unittest.TestCase):
         self.put(sim,cards['Scion of Oona'])
         self.assertEqual(next(p for p in sim.players[0].battlefield if p.card.id==collar.card.id).attached_to,target.card.id)
         self.assertIn('shroud',sim.effective_card(target).traits)
-        self.assertTrue(sim.attackable(0) or True) # Shroud never creates an attack restriction.
+        target.fresh=False
+        self.assertIn(target,sim.attackable(0)) # Shroud does not prevent attacking.
         sim.invariant()
