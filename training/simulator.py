@@ -198,6 +198,7 @@ class Card:
     physical_id: str = ""
     blink: bool = False
     rebound: bool = False
+    blink_to_controller: bool = False
 
 
 
@@ -1116,7 +1117,7 @@ class Simulator(AdvancedRules):
                 if card.rebound and event.get('fromHand'):
                     p.exile.append(original);self.rebound_pending.append(dict(controller=controller,card=root(original),afterTurn=self.turn))
                 else:p.graveyard.append(original)
-            self.blink_permanent(*target)
+            self.blink_permanent(*target,return_controller=controller if card.blink_to_controller else None)
             return
         if event.get('bestow'):
             if event['target'] in {target.card.id for _,target in self.creature_targets(controller,card)}:
@@ -2312,13 +2313,20 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                 False,spec.power,spec.toughness,spec.keywords,colors=frozenset(spec.colors))
             parsed['token_tapped']=spec.tapped
     blink_lines=rule_text(definition.get('oracleText','')).splitlines()
-    if definition.get('types')==['Instant'] and blink_lines and blink_lines[0]=="Exile target creature you control, then return it to the battlefield under its owner's control." and blink_lines[1:] in ([],['Rebound']):
-        if rules.query('cost',cost)['supported']:parsed={'kind':'blink_spell','blink':True,'rebound':len(blink_lines)==2}
+    if parsed['kind']=='unsupported' and definition.get('types')==['Instant'] and blink_lines and blink_lines[1:] in ([],['Rebound']):
+        # The zone-change instruction, object reference and return controller are
+        # parsed separately. A new printing/name with the same words still works.
+        blink_rule=re.fullmatch(
+            r"Exile target creature you control, then return (?:it|that card) to the battlefield under (its owner's|your) control\\.",
+            blink_lines[0])
+        if blink_rule and rules.query('cost',cost)['supported']:
+            parsed={'kind':'blink_spell','blink':True,'rebound':len(blink_lines)==2,
+                    'blink_to_controller':blink_rule[1]=='your'}
     output=mana_pool.production(definition.get("oracleText", ""))
     if (parsed["kind"]=="unsupported" and definition.get("types")==["Artifact"]
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
-    return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),
+    return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),blink_to_controller=parsed.get("blink_to_controller",False),
         instant="Instant" in definition.get("types",[]), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),

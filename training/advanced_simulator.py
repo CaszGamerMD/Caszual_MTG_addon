@@ -102,13 +102,18 @@ class AdvancedRules:
    if p.card.is_token:value=-100
    result.append(s.Candidate(card.id+':blink:'+p.card.id,kind,card.id,features=s.features(power=value,cost=0 if kind=='rebound_cast' else len(self.payment(card,seat=seat).get('sources',[]))),label='Blink '+p.card.name,target_permanent=p.card.id))
   return result
- def blink_permanent(self,owner,item):
-  s=model(self);old=item.card;physical=root(old);destination=self.card_owners.get(physical,owner)
+ def blink_permanent(self,owner,item,return_controller=None):
+  s=model(self);old=item.card;physical=root(old)
+  card_owner=self.card_owners.get(physical,owner)
+  destination=card_owner if return_controller is None else return_controller
+  if destination not in (0,1):raise ValueError('Invalid blink return controller')
   self.send_to_destination(self.players[owner],item)
   if old.is_token:
    self.log('blink_token','An exiled token cannot return.',actor=owner,oldObject=old.id);return
+  # The physical owner's zone and the new object's controller can differ.
+  owner_zone=self.players[card_owner]
+  if old in owner_zone.graveyard:owner_zone.graveyard.remove(old)
   p=self.players[destination]
-  if old in p.graveyard:p.graveyard.remove(old)
   if p.command_zone and root(p.command_zone)==physical:p.command_zone=None
   self.object_sequence+=1
   returned=replace(old,id=physical+'@'+str(self.object_sequence),physical_id=physical)
