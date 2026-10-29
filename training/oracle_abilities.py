@@ -407,6 +407,17 @@ def compile_abilities(text, name=''):
         if token_action:
             token_action_triggers.extend((action,'opponent_loss',int(token_action[1])) for action in ('create','sacrifice'))
             continue
+        creature_as=re.fullmatch(
+            r'If one or more creature tokens would be created under your control, that many ([1-9][0-9]*)/([1-9][0-9]*) (white|blue|black|red|green)(?: and (white|blue|black|red|green))? ([A-Z][a-z]+(?: [A-Z][a-z]+)*) creature tokens?(?: with (.+))? are created instead\.',line)
+        if creature_as:
+            grants=frozenset(re.split(r', | and ',creature_as[6] or ''))-{''}
+            if not grants <= KEYWORDS-{'flash'}:return None
+            token_replacements.append(('creature_as',dict(
+                power=int(creature_as[1]),toughness=int(creature_as[2]),
+                colors=tuple(c.title() for c in (creature_as[3],creature_as[4]) if c),
+                subtypes=tuple(creature_as[5].split()),keywords=tuple(sorted(grants))),
+                'controlled','any'))
+            continue
         token_controller=re.fullmatch(r'If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead\.',line)
         if token_controller:
             token_replacements.append(('double',2,'controlled','effect'))
