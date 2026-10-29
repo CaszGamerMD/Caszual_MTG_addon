@@ -1647,9 +1647,17 @@ class Simulator(AdvancedRules):
 
     def log(self, kind: str, message: str, **details):
         self.invariant()
-        self.events.append({"index": len(self.events), "turn": self.turn,
-                            "phase": self.phase, "actor": details.pop("actor", self.active),
-                            "kind": kind, "message": message, "details": details, "state": self.state()})
+        event={"index": len(self.events), "turn": self.turn,
+               "phase": self.phase, "actor": details.pop("actor", self.active),
+               "kind": kind, "message": message, "details": details, "state": self.state()}
+        if self.diagnostic:
+            # Spectator-only recording, NEVER returned by state(), policy
+            # observation, or legal-action generation. It intentionally
+            # reveals BOTH hands in a saved diagnostic replay, not libraries.
+            event["spectatorHands"]=[
+                [{"id":card.id,"name":card.name} for card in p.hand]
+                for p in self.players]
+        self.events.append(event)
 
     def pause(self, reason: str, card: Card | None = None):
         self.questions.append({"id": f"runtime-{self.turn}-{len(self.questions)}", "status": "open",
@@ -2382,6 +2390,8 @@ def diagnose(rules: RulesBridge, decks: list[dict], seed: int, turns_per_player:
             if q["card"] in DIAGNOSTIC_RULINGS:
                 q["ruleAnswer"] = DIAGNOSTIC_RULINGS[q["card"]]
     result.update(mode="real-deck-diagnostic", learningEligible=False, productionEligible=False,
+                  spectatorReplay=True,
+                  spectatorNotice="Omniscient saved replay: both players' hand identities are visible to the viewer only, never to the AI. Libraries remain hidden.",
                   notice="Diagnostic only: real decks and supported commanders are used; unsupported cards cannot be played and the rules are incomplete. Results are not a valid Commander game.",
                   deckNames=[d["name"] for d in decks],
                   deckIds=[d.get("sourceDeckId") for d in decks],
@@ -2524,9 +2534,14 @@ def pack_replay(report: dict) -> dict:
             players.append([p["life"],p["handCount"],p["libraryCount"],field,grave,
                             p.get("commanderInZone",False),p.get("commanderDamage",{}),
                             exile,p.get("manaPool",[])])
-        events.append([e["index"],e["turn"],e["phase"],e["actor"],e["kind"],e["message"],
-                       e["details"],[state["active"],state["turn"],state["phase"],players,
-                                     state.get("stack",[]),state.get("priority")]])
+        # The optional ninth slot is a deliberate omniscient SPECTATOR view.
+        # No hidden cards are added to public state or policy observations.
+        hands=[[reference(c) for c in cards] for cards in e["spectatorHands"]] if "spectatorHands" in e else None
+        compact=[e["index"],e["turn"],e["phase"],e["actor"],e["kind"],e["message"],
+                 e["details"],[state["active"],state["turn"],state["phase"],players,
+                               state.get("stack",[]),state.get("priority")]]
+        if hands is not None:compact.append(hands)
+        events.append(compact)
     return {**packed,"packedReplay":1,"cardCatalog":catalog,"compactEvents":events}
 
 
