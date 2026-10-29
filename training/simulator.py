@@ -376,6 +376,7 @@ class Simulator(AdvancedRules):
         self._draining_priority=False
         self._resolving_stack=False
         self._waiting_triggers=[]
+        self.life_gained_turn=[0,0]
         self.token_sequence = 0
         self.effect_clock = 0
         self.library_random_sequence = 0
@@ -460,6 +461,12 @@ class Simulator(AdvancedRules):
         # The supported bestow grammar has creature subtypes and no enchantment subtypes.
         return replace(definition,types=frozenset({'Enchantment'}),subtypes=frozenset({'Aura'}),
                        attachment=definition.bestow[2])
+
+    def gain_life(self, seat: int, amount: int):
+        """Track life gained, independent of damage/losses and total life change."""
+        if amount<0:raise ValueError('Life gain amount must be nonnegative')
+        self.players[seat].life+=amount
+        self.life_gained_turn[seat]+=amount
 
     def event_game(self, phase: str) -> EventGame:
         """Adapt public battlefield state to the shared type-aware event kernel."""
@@ -1001,7 +1008,7 @@ class Simulator(AdvancedRules):
                 if self.finished: return False
         if card.kind == "spell":
             for _ in range(card.draw): self.draw(controller)
-            p.life += card.life
+            self.gain_life(controller,card.life)
             self.log("resolve", f"{card.name} resolves.", lifeGain=card.life, drawn=card.draw)
             self.outcome()
 
@@ -1191,7 +1198,7 @@ class Simulator(AdvancedRules):
                     state=game.battlefield[item.card.id]
                     if game.creature(state):item.marked_damage+=amount
                     if 'Planeswalker' in state.definition.types:item.loyalty=max(0,item.loyalty-amount)
-                if lifelink:self.players[event['controller']].life+=amount*(len(targets)-len(prevented)+1)
+                if lifelink:self.gain_life(event['controller'],amount*(len(targets)-len(prevented)+1))
                 dead=[]
                 for owner,item in targets:
                     state=game.battlefield[item.card.id]
@@ -1212,13 +1219,13 @@ class Simulator(AdvancedRules):
                 message = f"{event['name']} deals {event['amount']} damage to Player {target+1}."
             elif event.get("operation") == "gain_life":
                 source = event["controller"]
-                self.players[source].life += event["amount"]
+                self.gain_life(source,event["amount"])
                 message = f"{event['name']} triggers: Player {source+1} gains {event['amount']} life."
             elif event.get("operation") == "lose_life":
                 source = event["controller"]
                 target = 1-source  # This diagnostic is explicitly two-player.
                 self.players[target].life -= event["amount"]
-                self.players[source].life += event.get("gain",0)
+                self.gain_life(source,event.get("gain",0))
                 message = f"{event['name']} triggers: Player {target+1} loses {event['amount']} life."
             elif event.get("effect") == "scry":
                 source = event["controller"]
@@ -1258,8 +1265,8 @@ class Simulator(AdvancedRules):
         if attacker:attacker.marked_damage+=to_attacker
         if blocker:blocker.marked_damage+=to_blocker
         active=self.players[self.active];defender=self.players[1-self.active]
-        if has(a,'lifelink'):active.life+=to_blocker+to_player
-        if has(b,'lifelink'):defender.life+=to_attacker
+        if has(a,'lifelink'):self.gain_life(self.active,to_blocker+to_player)
+        if has(b,'lifelink'):self.gain_life(1-self.active,to_attacker)
         defender.life-=to_player
         if attacker and root(attacker.card)==active.commander_id and to_player:
             defender.commander_damage[root(attacker.card)]=defender.commander_damage.get(root(attacker.card),0)+to_player
@@ -1575,6 +1582,7 @@ class Simulator(AdvancedRules):
             self.turn += 1
             self.stack.active=self.active;self.stack.priority=self.active
             self.land_played = False
+            self.life_gained_turn=[0,0]
             self.phase = "untap"
             p = self.players[self.active]
             for x in p.battlefield:
@@ -1608,7 +1616,7 @@ class Simulator(AdvancedRules):
         elif self.phase in ("land", "main", "second_main"):
             choice = self.decide(self.active)
             if choice.kind == "pass":
-                self.phase = {"land": "main", "main": "attack", "second_main": "cleanup"}[self.phase]
+                self.phase = {"land": "main", "main": "attack", "second_main": "end_step"}[self.phase]
                 self.log("pass", choice.label)
             elif choice.kind=='station':
                 self.activate_station(self.active,choice.card_id,choice.tap_ids[0])
@@ -1715,8 +1723,9 @@ class Simulator(AdvancedRules):
                 if 'trample' in abilities:
                     dealt=min(dealt,1 if 'deathtouch' in abilities else max(0,effective_blocker.toughness))
                 b.marked_damage+=dealt
-            p.life += d["gainA"]
-            defender.life += d["gainB"] - d["damage"]
+            self.gain_life(self.active,d["gainA"])
+            self.gain_life(1-self.active,d["gainB"])
+            defender.life -= d["damage"]
             if a.card.id == p.commander_id and d["damage"] > 0:
                 defender.commander_damage[a.card.id] = defender.commander_damage.get(a.card.id, 0) + d["damage"]
             if d["attackerDies"]:
@@ -1735,6 +1744,16 @@ class Simulator(AdvancedRules):
                 death_triggers.extend(combat_draws)
                 self.resolve_entry_triggers(death_triggers,a.card)
             if not self.finished: self.phase = "second_main"
+        elif self.phase == "end_step":
+            # The conditional trigger checks the full turn's life gain as the
+            # end step begins, including life gained before life was lost.
+            self.phase='cleanup'
+            game=self.event_game('end_step')
+            for event in game.end_step_triggers(self.life_gained_turn[self.active]):
+                source=next(item.card for item in self.players[self.active].battlefield if item.card.id==event['source'])
+                self._waiting_triggers.append((event,source))
+            self.resolve_entry_triggers([],Card('end-step','End step','spell'))
+            return True
         elif self.phase == "cleanup":
             # Deterministic discard is a declared sandbox rule, not a learned policy.
             while len(p.hand) > 7:
