@@ -158,7 +158,8 @@ class AdvancedRules:
    and not g.has(g.battlefield[p.card.id],'defender') and (not p.fresh or g.has(g.battlefield[p.card.id],'haste'))]
  def group_attack_choices(self,seat):
   s=model(self);available=self.attackable(seat);ids=[p.card.id for p in available]
-  required={p.card.id for p in available if p.card.name=='Zurgo Helmsmasher'}
+  g=self.event_game('combat')
+  required={p.card.id for p in available if g.must_attack(g.battlefield[p.card.id])}
   groups={tuple(ids)} if ids else set()
   groups.update((i,) for i in ids)
   if len(ids)<=6:
@@ -174,7 +175,8 @@ class AdvancedRules:
   if self.phase!='attack' or self.stack.items or self.stack.priority!=self.active:raise ValueError('Illegal attack timing')
   ids=list(identifiers);eligible={p.card.id:p for p in self.attackable(self.active)}
   if len(set(ids))!=len(ids) or any(i not in eligible for i in ids):raise ValueError('Illegal attack group')
-  required={p.card.id for p in eligible.values() if p.card.name=='Zurgo Helmsmasher'}
+  g=self.event_game('combat')
+  required={p.card.id for p in eligible.values() if g.must_attack(g.battlefield[p.card.id])}
   if not required<=set(ids):raise ValueError('Required attacker omitted')
   if not ids:self.phase='second_main';return
   self.group_combat=dict(attackers=list(ids),declared=list(ids),blocks={},blocked=set(),early=None)

@@ -386,6 +386,12 @@ class Game:
             grants.extend(x.entered_at for x in self.battlefield.values() if x.controller==p.controller and x.definition.name=='Kolodin, Triumph Caster')
         return bool(grants) and max(grants)>p.lost_abilities.get(ability,-1)
 
+    def must_attack(self, permanent):
+        """Only an eligible creature can be required; the caller checks eligibility."""
+        return self.creature(permanent) and (permanent.definition.name=='Zurgo Helmsmasher' or any(
+            effect.must_attack and matches(effect.subject,source,permanent,True)
+            for source in self.battlefield.values() for effect in self.static_effects(source)))
+
     def enchanted(self, permanent):
         return any(p.attached_to==permanent.id and 'Enchantment' in p.definition.types
                    and 'Aura' in p.definition.subtypes for p in self.battlefield.values())

@@ -55,6 +55,7 @@ class StaticEffect:
     life_min: int = 0
     suppress: str = ''  # Continuous 'can't have or gain' overrides all grants.
     share_types: bool = False  # Count other creatures sharing any creature subtype.
+    must_attack: bool = False  # Continuous requirement: attack each combat if able.
 
 @dataclass(frozen=True)
 class Effect:
@@ -102,6 +103,11 @@ class Program:
     chosen_type_entry: bool = False
 
 def static_effect(text):
+    must=re.fullmatch(r'(Other )?([A-Z][a-z]+) creatures( you control)? attack each combat if able\.',text)
+    if must:
+        return StaticEffect(Selector(relation='controller' if must[3] else 'any',
+                             other=bool(must[1]),creature=True,subtype=must[2]),
+                            0,0,must_attack=True)
     chosen=re.fullmatch(r'Creatures you control of the chosen type get \+([0-9]+)/\+([0-9]+)\.',text)
     if chosen:
         return StaticEffect(Selector(relation='controller',creature=True,chosen_subtype=True),
