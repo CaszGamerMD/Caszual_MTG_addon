@@ -503,8 +503,15 @@ function stackPrintedName(text){
  const lower=String(text||"").toLocaleLowerCase();
  return printedNames.find(name=>lower===name.toLocaleLowerCase()||lower.startsWith(name.toLocaleLowerCase()+" "))||null;
 }
+let lastSpotlightName=null;
 function renderSpotlight(event){
  const target=$("spotlight"),name=printedNameWithin(event?.message);
+ if(name===lastSpotlightName){
+  const caption=target.querySelector(".spotlightInfo span");
+  if(caption)caption.textContent="On camera · "+event.kind.replaceAll("_"," ");
+  return
+ }
+ lastSpotlightName=name;
  target.replaceChildren();target.hidden=!name;
  if(!name)return;
  const card={id:"spotlight-card",name,kind:"card",tapped:false,fresh:false,counters:0};
@@ -657,11 +664,16 @@ function playerPanel(seat,e,prev){
  view.hand._hiddenHand=show?null:p.handCount;
  return view.panel;
 }
-function renderStack(state){const items=state.stack;$("stack").replaceChildren();if(!Array.isArray(items)){$("stack").append(make("div","Stack not recorded in this older replay.","emptyStack"));$("stackCount").textContent="—";return}
+let lastStackSignature=null;
+function renderStack(state){
+ const signature=JSON.stringify(state.stack??null);
+ if(signature===lastStackSignature)return;
+ lastStackSignature=signature;
+ const items=state.stack;$("stack").replaceChildren();if(!Array.isArray(items)){$("stack").append(make("div","Stack not recorded in this older replay.","emptyStack"));$("stackCount").textContent="—";return}
  $("stackCount").textContent=String(items.length);if(!items.length){$("stack").append(make("div","The stack is empty","emptyStack"));return}
  for(const [index,item] of items.slice().reverse().entries()){
   const node=make("div",undefined,"stackItem"),card=stackPrintedName(item.label);
-  if(card){const preview=make("button",undefined,"stackPreview");preview.type="button";preview.style.padding="0";preview.title="Inspect "+card;preview.setAttribute("aria-label","Inspect "+card);appendCardFace(preview,card);preview.onclick=()=>inspectCard({id:"stack-"+item.id,name:card,kind:"stack",tapped:false,fresh:false});node.append(preview)}
+  if(card){const preview=make("button",undefined,"stackPreview");preview.type="button";preview.style.padding="0";preview.title="Inspect "+card;preview.setAttribute("aria-label","Inspect "+card);appendCardFace(preview,card);preview._zoomCard={id:"stack-"+item.id,name:card,kind:"stack",tapped:false,fresh:false};preview.onclick=()=>inspectCard(preview._zoomCard);node.append(preview)}
   const label=make("div",undefined,"stackDescription");
   label.append(make("strong",(index===0?"↑ Next · ":"")+item.label),make("span","Controlled by "+nameFor(item.controller),"stackOwner"));
   node.append(label);$("stack").append(node);
@@ -718,7 +730,7 @@ function unpack(value){if(value.packedReplay!==1)return value;const catalog=valu
  wardCosts:c.length>14?c[14]:catalog[c[0]].wardCosts,
  bestowed:c.length>15?c[15]:catalog[c[0]].bestowed})),graveyard:p[4].map(c=>({id:catalog[c].id,name:catalog[c].name})),commanderInZone:!!p[5],commanderDamage:p[6]||{},exile:(p[7]||[]).map(c=>({id:catalog[c].id,name:catalog[c].name})),manaPool:p[8]||[]}))}}});return value}
 function load(value){if(!value||value.schemaVersion!==1||!["turn-replay","rules-review"].includes(value.kind))throw Error("Unsupported replay file or version");
- stop();hideCardZoom();playerViews.clear();data=unpack(value);$("toggleHands").textContent=revealHands?"Hide hands":"Show hands";if(data.events?.length&&!data.events.every(e=>e.state?.players?.length===2))throw Error("This replay has an unsupported player-state format");
+ stop();hideCardZoom();playerViews.clear();lastStackSignature=null;lastSpotlightName=null;data=unpack(value);$("toggleHands").textContent=revealHands?"Hide hands":"Show hands";if(data.events?.length&&!data.events.every(e=>e.state?.players?.length===2))throw Error("This replay has an unsupported player-state format");
  indexPrintedNames();position=0;tab=data.events?.length?"turns":"questions";$("search").value="";renderQuestions();render()}
 async function loadFile(file){if(!file)return;try{load(JSON.parse(await file.text()));$("notice").textContent="Loaded "+file.name}catch(error){$("notice").textContent="Cannot load replay: "+error.message}}
 $("file").addEventListener("change",e=>loadFile(e.target.files[0]));document.addEventListener("dragover",e=>e.preventDefault());
