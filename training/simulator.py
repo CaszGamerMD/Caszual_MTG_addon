@@ -394,7 +394,7 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.kind == "x_spell" and card.x_effect in ("tokens","draw","life"):
                     continue
-                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","exile_creature_life"):
+                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","exile_creature_life","exile_creature_basic_land"):
                     continue
                 if self.diagnostic and card.blink:continue
                 if self.diagnostic and card.kind=="counter_spell" and card.counter_filter in ("any","creature","noncreature"):
@@ -776,9 +776,37 @@ class Simulator(AdvancedRules):
                      and (controller is None or seat==controller or not game.has(game.battlefield[item.card.id],'hexproof'))
                      and (source is None or not game.protected(game.battlefield[item.card.id],source.colors)))
 
+    def choose_optional_basic_search(self, seat, source):
+        """Deterministic diagnostic decision: take the optional search when useful.
+
+        This is a player choice, not a compulsory effect. Future agents may
+        supply their own hidden-information-safe decision policy.
+        """
+        return any(card.kind=='land' and card.basic_land for card in self.players[seat].library)
+
+    def search_basic_land_tapped(self, seat, source):
+        """Search the affected player's own private library and shuffle it.
+
+        For Path-style instructions, a player may decline. If they accept,
+        searching and shuffling happens even if no matching basic exists.
+        A searched land enters tapped without consuming the land play.
+        """
+        if not self.choose_optional_basic_search(seat,source):
+            self.log('search_declined','Player declines an optional basic-land search.',actor=seat,source=source.name)
+            return
+        player=self.players[seat]
+        basic=next((card for card in player.library if card.kind=='land' and card.basic_land),None)
+        if basic is not None:
+            player.library.remove(basic)
+            player.battlefield.append(Permanent(basic,tapped=True))
+        self.library_random_sequence+=1
+        random.Random(str(self.seed)+':library:'+str(self.library_random_sequence)).shuffle(player.library)
+        self.log('search_basic','Player searches their library for a basic land and shuffles.',
+                 actor=seat,source=source.name,found=bool(basic),land=basic.name if basic else None)
+
     def removal_targets(self,controller,source):
         """Only legal targets for an explicitly parsed targeted removal spell."""
-        if source.removal in ('destroy','exile_creature_life'):return self.creature_targets(controller,source)
+        if source.removal in ('destroy','exile_creature_life','exile_creature_basic_land'):return self.creature_targets(controller,source)
         if source.removal!='destroy_artifact_enchantment':return ()
         game=self.event_game('main')
         targets=[]
@@ -803,7 +831,7 @@ class Simulator(AdvancedRules):
             state=game.battlefield.get(item.card.id)
             wards=game.ward_costs(state) if state and owner!=seat else ()
             projected=self.payment(replace(card,mana_cost=card.mana_cost+''.join(wards)),seat=seat)
-            useful=owner!=seat and (card.removal=='exile_creature_life' or not (state and game.has(state,'indestructible'))) and projected['paid']
+            useful=owner!=seat and (card.removal in ('exile_creature_life','exile_creature_basic_land') or not (state and game.has(state,'indestructible'))) and projected['paid']
             choices.append(Candidate(card.id+':target='+item.card.id,kind,card.id,
                 features=features(power=2 if useful else -100,cost=len(projected.get('sources',[]))),
                 label='Cast '+card.name+' targeting '+item.card.name,target_permanent=item.card.id))
@@ -999,6 +1027,13 @@ class Simulator(AdvancedRules):
                 return
             owner,item=target;game=self.event_game('main')
             state=game.battlefield.get(item.card.id)
+            if card.removal=='exile_creature_basic_land':
+                self.send_to_destination(self.players[owner],item,snapshot=game,to_exile=True)
+                self.log('exile',f'{card.name} exiles {item.card.name}.',
+                         actor=controller,targetPermanent=item.card.id,gainController=owner)
+                self.search_basic_land_tapped(owner,card)
+                self.resolve_entry_triggers([],card)
+                return
             if card.removal=='exile_creature_life':
                 power=max(0,game.stats(state)[0])
                 self.send_to_destination(self.players[owner],item,snapshot=game,to_exile=True)
@@ -1970,6 +2005,10 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
             and rule_text(definition.get('oracleText',''))=='Destroy target creature.' and rules.query('cost',cost)['supported']):
         parsed={'kind':'removal_spell','removal':'destroy'}
+    if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
+            and rule_text(definition.get('oracleText',''))=="Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle."
+            and rules.query('cost',cost)['supported']):
+        parsed={'kind':'removal_spell','removal':'exile_creature_basic_land'}
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
             and rule_text(definition.get('oracleText',''))=='Exile target creature. Its controller gains life equal to its power.'
             and rules.query('cost',cost)['supported']):
