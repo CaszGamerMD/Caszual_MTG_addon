@@ -394,7 +394,7 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.kind == "x_spell" and card.x_effect in ("tokens","draw","life"):
                     continue
-                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands"):
+                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment"):
                     continue
                 if self.diagnostic and card.blink:continue
                 if self.diagnostic and card.kind=="counter_spell" and card.counter_filter in ("any","creature","noncreature"):
@@ -776,17 +776,34 @@ class Simulator(AdvancedRules):
                      and (controller is None or seat==controller or not game.has(game.battlefield[item.card.id],'hexproof'))
                      and (source is None or not game.protected(game.battlefield[item.card.id],source.colors)))
 
+    def removal_targets(self,controller,source):
+        """Only legal targets for an explicitly parsed targeted removal spell."""
+        if source.removal=='destroy':return self.creature_targets(controller,source)
+        if source.removal!='destroy_artifact_enchantment':return ()
+        game=self.event_game('main')
+        targets=[]
+        for seat,player in enumerate(self.players):
+            for item in player.battlefield:
+                types=set(item.card.printed_types)
+                if item.card.event_definition:types.update(item.card.event_definition.types)
+                if not types.intersection({'Artifact','Enchantment'}):continue
+                state=game.battlefield.get(item.card.id)
+                if state and seat!=controller and game.has(state,'hexproof'):continue
+                if state and game.protected(state,source.colors):continue
+                targets.append((seat,item))
+        return tuple(targets)
+
     def removal_choices(self,seat,card,kind):
         if card.removal=='opponent_nonlands':
             count=sum(1 for owner,item in self.nonland_destruction_set(seat))
             return (Candidate(card.id,kind,card.id,features=features(power=count,cost=len(self.payment(card,seat=seat).get('sources',[]))),label='Cast '+card.name),)
         game=self.event_game('main')
         choices=[]
-        for owner,item in self.creature_targets(seat,card):
-            state=game.battlefield[item.card.id]
-            wards=game.ward_costs(state) if owner!=seat else ()
+        for owner,item in self.removal_targets(seat,card):
+            state=game.battlefield.get(item.card.id)
+            wards=game.ward_costs(state) if state and owner!=seat else ()
             projected=self.payment(replace(card,mana_cost=card.mana_cost+''.join(wards)),seat=seat)
-            useful=owner!=seat and not game.has(state,'indestructible') and projected['paid']
+            useful=owner!=seat and not (state and game.has(state,'indestructible')) and projected['paid']
             choices.append(Candidate(card.id+':target='+item.card.id,kind,card.id,
                 features=features(power=2 if useful else -100,cost=len(projected.get('sources',[]))),
                 label='Cast '+card.name+' targeting '+item.card.name,target_permanent=item.card.id))
@@ -896,8 +913,8 @@ class Simulator(AdvancedRules):
         if not commander and card not in (player.exile if rebound else player.hand): raise ValueError('Card not in casting zone')
         if bestow and (not card.event_definition or not card.event_definition.bestow):raise ValueError('Card has no supported bestow ability')
         if (card.kind=='aura' or bestow) and target not in {p.card.id for _,p in self.creature_targets(seat,card)}:raise ValueError('Illegal Aura target')
-        if card.kind=='removal_spell' and card.removal=='destroy' and target not in {item.card.id for _,item in self.creature_targets(seat,card)}:
-            raise ValueError('Removal requires a legal creature target')
+        if card.kind=='removal_spell' and card.removal!='opponent_nonlands' and target not in {item.card.id for _,item in self.removal_targets(seat,card)}:
+            raise ValueError('Removal requires a legal permanent target')
         if card.kind=='counter_spell' and target not in {f.id for f in self.counter_targets(card)}:
             raise ValueError('Counterspell requires a legal spell target')
         if card.blink and target not in {p.card.id for owner,p in self.creature_targets(seat,card) if owner==seat}:raise ValueError('Blink requires own legal creature')
@@ -976,12 +993,13 @@ class Simulator(AdvancedRules):
             if card.removal=='opponent_nonlands':
                 self.destroy_batch(self.nonland_destruction_set(controller),card)
                 return
-            target=next(((seat,item) for seat,item in self.creature_targets(controller,card) if item.card.id==event['target']),None)
+            target=next(((seat,item) for seat,item in self.removal_targets(controller,card) if item.card.id==event['target']),None)
             if target is None:
-                self.log('illegal_target',f'{card.name} has no legal creature target.',targetPermanent=event['target'])
+                self.log('illegal_target',f'{card.name} has no legal permanent target.',targetPermanent=event['target'])
                 return
             owner,item=target;game=self.event_game('main')
-            if game.has(game.battlefield[item.card.id],'indestructible'):
+            state=game.battlefield.get(item.card.id)
+            if state and game.has(state,'indestructible'):
                 self.log('indestructible',f'{item.card.name} cannot be destroyed.',targetPermanent=item.card.id)
                 return
             self.destroy_batch(((owner,item),),card)
@@ -1942,6 +1960,10 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
             and rule_text(definition.get('oracleText',''))=='Destroy target creature.' and rules.query('cost',cost)['supported']):
         parsed={'kind':'removal_spell','removal':'destroy'}
+    if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
+            and rule_text(definition.get('oracleText',''))=='Destroy target artifact or enchantment.'
+            and rules.query('cost',cost)['supported']):
+        parsed={'kind':'removal_spell','removal':'destroy_artifact_enchantment'}
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
             and rule_text(definition.get('oracleText',''))=='Destroy all nonland permanents your opponents control.'
             and rules.query('cost',cost)['supported']):
