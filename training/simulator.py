@@ -2513,7 +2513,10 @@ def pack_replay(report: dict) -> dict:
         players = []
         for p in state["players"]:
             field = [[reference(c),int(c["tapped"]),int(c["fresh"]),c["power"],c["toughness"],c["traits"],
-                      c.get("saddled",False),c.get("counters",0)] for c in p["battlefield"]]
+                      c.get("saddled",False),c.get("counters",0),
+                      c.get("kind"),c.get("isCreature"),c.get("loyalty"),c.get("chargeCounters"),
+                      c.get("attachedTo"),c.get("hexproof"),c.get("wardCosts"),c.get("bestowed",False)]
+                     for c in p["battlefield"]]
             grave = [reference(c) for c in p["graveyard"]]
             # Append public fields rather than changing existing indices, so
             # earlier packed fixture replays remain readable by the viewer.
