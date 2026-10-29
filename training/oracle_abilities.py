@@ -207,7 +207,7 @@ def static_effect(text):
 
 KEYWORDS = {'flash','flying','first strike','double strike','lifelink','vigilance',
             'trample','haste','defender','reach','deathtouch','indestructible','hexproof','menace',
-            'plainswalk','islandwalk','swampwalk','mountainwalk','forestwalk','shroud'}
+            'plainswalk','islandwalk','swampwalk','mountainwalk','forestwalk','shroud','fear'}
 
 def selector(text):
     if text == 'this creature': return Selector(self_only=True,creature=True)
@@ -234,6 +234,10 @@ def effect(text):
     tutor=re.fullmatch(r'you may search your library for a ([A-Z][a-z]+) card, reveal that card, put it into your hand, then shuffle\.',text)
     if tutor:
         return Effect('optional_subtype_search_hand',0,library_filter=('subtype',tutor[1]))
+    return_graveyard=re.fullmatch(r'you may return target ([A-Z][a-z]+) card from your graveyard to your hand\.',text)
+    if return_graveyard:
+        return Effect('return_graveyard',1,optional=True,
+                      library_filter=('subtype',return_graveyard[1]))
     if text=='each opponent may search their library for a basic land card, put it onto the battlefield tapped, then shuffle.':
         return Effect('opponent_optional_basic_search',0,'each opponent')
     if text=="return a land you control to its owner's hand.":return Effect('return_controlled_land',1)
@@ -473,6 +477,7 @@ def event_data(trigger, source, subject):
             'create_tokens':f'create {e.amount} creature tokens',
             'opponent_optional_basic_search':'each opponent may find a tapped basic land and shuffle',
             'optional_subtype_search_hand':'controller may tutor a subtype card to hand and shuffle',
+            'return_graveyard':'controller may return target subtype card from graveyard to hand',
             'optional_put_hand_permanent':'controller may put a matching permanent card from hand onto the battlefield',
             'opponent_loss_tapped_creatures':'each opponent loses life equal to controlled tapped creatures'}
     label='; then '.join(f'{part.operation} {part.amount}' for part in e.steps) if e.operation=='ordered_effects' else labels[e.operation]

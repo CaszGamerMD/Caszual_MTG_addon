@@ -200,6 +200,7 @@ class Card:
     rebound: bool = False
     blink_to_controller: bool = False
     flashback_cost: str = ""
+    graveyard_return_subtype: str = ""
 
 
 
@@ -571,7 +572,7 @@ class Simulator(AdvancedRules):
         keywords = {ability for ability in state.definition.abilities if ability not in ("hexproof","flash") and game.has(state,ability)}
         for ability in ("haste", "indestructible", "flying", "first strike", "double strike",
                         "lifelink", "vigilance", "trample", "defender", "reach", "deathtouch", "menace",
-                        "shroud", "plainswalk", "islandwalk", "swampwalk", "mountainwalk", "forestwalk"):
+                        "shroud", "fear", "plainswalk", "islandwalk", "swampwalk", "mountainwalk", "forestwalk"):
             if game.has(state, ability): keywords.add(ability)
         return replace(item.card, kind="creature", power=power, toughness=toughness,
                        traits=f"{power};{toughness};"+",".join(sorted(keywords)))
@@ -697,6 +698,12 @@ class Simulator(AdvancedRules):
                 if event.get('effect')=='create tapped Squirrels':
                     event=dict(event,operation='create_tokens',tokenSpec=dict(amount=event['amount'],power=1,toughness=1,
                         colors=['Green'],subtypes=['Squirrel'],keywords=[],tapped=True,land=False))
+                if event.get('operation')=='return_graveyard':
+                    subtype=event.get('libraryFilter',())
+                    if len(subtype)!=2 or subtype[0]!='subtype':raise RuntimeError('Malformed graveyard trigger')
+                    targets=self.graveyard_subtype_targets(controller,subtype[1])
+                    if not targets:continue
+                    event=dict(event,target=targets[0].id)
                 if event.get('operation')=='create_role':
                     targets=self.role_targets(event)
                     chosen=next((p for p in targets if p.card.id==event.get('target')),None) if event.get('target') else max(targets,key=lambda p:(self.effective_card(p).power,p.card.id),default=None)
@@ -845,6 +852,15 @@ class Simulator(AdvancedRules):
                      and not game.has(game.battlefield[item.card.id],'shroud')
                      and (controller is None or seat==controller or not game.has(game.battlefield[item.card.id],'hexproof'))
                      and (source is None or not game.protected(game.battlefield[item.card.id],source.colors)))
+
+    def graveyard_subtype_targets(self,seat,subtype):
+        """Target the owner's public graveyard; never peek at other hidden zones."""
+        return tuple(c for c in self.players[seat].graveyard
+                     if subtype in (c.event_definition.subtypes if c.event_definition else c.land_subtypes))
+
+    def choose_optional_graveyard_return(self,seat,subtype,targets):
+        """Deterministic acceptance at resolution; can be replaced by a policy."""
+        return bool(targets)
 
     def controlled_land_count(self, seat):
         return sum(item.card.kind=='land' or
@@ -1106,6 +1122,8 @@ class Simulator(AdvancedRules):
         if (card.kind=='aura' or bestow) and target not in {p.card.id for _,p in self.creature_targets(seat,card)}:raise ValueError('Illegal Aura target')
         if card.kind=='removal_spell' and card.removal not in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min') and target not in {item.card.id for _,item in self.removal_targets(seat,card)}:
             raise ValueError('Removal requires a legal permanent target')
+        if card.kind=='graveyard_return_spell' and target not in {c.id for c in self.graveyard_subtype_targets(seat,card.graveyard_return_subtype)}:
+            raise ValueError('Graveyard return requires legal target')
         if card.kind=='counter_spell' and target not in {f.id for f in self.counter_targets(card)}:
             raise ValueError('Counterspell requires a legal spell target')
         if card.blink and target not in {p.card.id for owner,p in self.creature_targets(seat,card) if owner==seat}:raise ValueError('Blink requires own legal creature')
@@ -1182,6 +1200,15 @@ class Simulator(AdvancedRules):
         elif card.kind=='mana_artifact': p.battlefield.append(Permanent(card))
         elif not event.get('copy'):
             (p.exile if event.get('flashback') else p.graveyard).append(original)
+        if card.kind=='graveyard_return_spell':
+            target=next((c for c in self.graveyard_subtype_targets(controller,card.graveyard_return_subtype)
+                         if c.id==event.get('target')),None)
+            if target:
+                p.graveyard.remove(target);p.hand.append(target)
+                self.log('graveyard_return','A subtype card is returned from graveyard to hand.',
+                         actor=controller,card=target.name,source=card.name)
+            else:self.log('illegal_target','Graveyard-return target no longer exists.',actor=controller,source=card.name)
+            return
         if card.kind=='removal_spell':
             if card.removal in ('destroy_all_creatures','destroy_toughness_min'):
                 threshold=card.removal_min_toughness if card.removal=='destroy_toughness_min' else 0
@@ -1317,6 +1344,20 @@ class Simulator(AdvancedRules):
                          actor=controller,source=event['source'],amount=amount)
                 self.outcome()
                 if self.finished:return
+                continue
+            if event.get('operation')=='return_graveyard':
+                subtype=event.get('libraryFilter',())
+                if len(subtype)!=2 or subtype[0]!='subtype':raise RuntimeError('Malformed graveyard return trigger')
+                targets=self.graveyard_subtype_targets(event['controller'],subtype[1])
+                chosen=next((c for c in targets if c.id==event.get('target')),None)
+                if chosen and self.choose_optional_graveyard_return(event['controller'],subtype[1],targets):
+                    player=self.players[event['controller']]
+                    player.graveyard.remove(chosen);player.hand.append(chosen)
+                    self.log('graveyard_return','Upkeep returns a target subtype card from graveyard to hand.',
+                             actor=event['controller'],card=chosen.name,source=event['source'])
+                else:
+                    self.log('return_declined','Graveyard return declined or target illegal.',
+                             actor=event['controller'],source=event['source'])
                 continue
             if event.get('operation')=='optional_put_hand_permanent':
                 payload=event.get('libraryFilter',())
@@ -1891,6 +1932,12 @@ class Simulator(AdvancedRules):
                                       cost=len(payment.get('sources',[]))),
                             label='Flashback '+c.name))
             for c in p.hand:
+                if c.kind=='graveyard_return_spell' and self.payment(c)['paid']:
+                    actions.extend(Candidate(c.id+':graveyard:'+target.id,'cast',c.id,
+                        features=features(power=1),label='Return '+target.name,
+                        target_permanent=target.id)
+                        for target in self.graveyard_subtype_targets(seat,c.graveyard_return_subtype))
+                    continue
                 if c.blink and self.payment(c)['paid']:
                     actions.extend(self.blink_choices(seat,c,'cast'));continue
                 if c.event_definition and c.event_definition.bestow:
@@ -2403,11 +2450,16 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         if blink_rule and rules.query('cost',cost)['supported']:
             parsed={'kind':'blink_spell','blink':True,'rebound':len(blink_lines)==2,
                     'blink_to_controller':blink_rule[1]=='your'}
+    return_subtype=re.fullmatch(
+        r'Return target ([A-Z][a-z]+) card from your graveyard to your hand\.',
+        rule_text(definition.get('oracleText','')))
+    if parsed['kind']=='unsupported' and definition.get('types')==['Sorcery'] and return_subtype and rules.query('cost',cost)['supported']:
+        parsed={'kind':'graveyard_return_spell','graveyard_return_subtype':return_subtype[1]}
     output=mana_pool.production(definition.get("oracleText", ""))
     if (parsed["kind"]=="unsupported" and definition.get("types")==["Artifact"]
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
-    return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),blink_to_controller=parsed.get("blink_to_controller",False),flashback_cost=parsed.get("flashback_cost",""),
+    return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),blink_to_controller=parsed.get("blink_to_controller",False),flashback_cost=parsed.get("flashback_cost",""),graveyard_return_subtype=parsed.get("graveyard_return_subtype",""),
         instant="Instant" in definition.get("types",[]), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),

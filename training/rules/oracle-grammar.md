@@ -256,3 +256,22 @@ not undo an already-triggered event.
 
 Regressions: `training/tests/test_rogue_entry_counters.py`. This is
 diagnostic, not yet full multiplayer Commander rules or Minecraft work.
+
+
+## Graveyard return spell, upkeep and fear (focused deck drive)
+
+A strict spell-program parser handles “Return target [subtype] card from
+your graveyard to your hand.” Target identity and subtype are checked
+when cast and rechecked when the spell resolves; an invalid target
+does not get returned. The sorcery goes to its owner's graveyard as
+normal and never creates an extra copy of the returned card.
+
+The corresponding optional upkeep trigger “you may return target
+[subtype] card from your graveyard to your hand” chooses a public
+graveyard target when the ability is put onto the stack. The card's
+controller makes a separate acceptance choice on resolution.
+Fear prohibits blocks by creatures that are neither artifacts nor
+black. These mechanics are generic and cover Boggart Birth Rite and
+Wort, Boggart Auntie without card-name dispatch.
+
+Regression: `training/tests/test_graveyard_returns.py`.
