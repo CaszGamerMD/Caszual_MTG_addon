@@ -119,7 +119,16 @@ class SimulatorChecks(unittest.TestCase):
         events=[e for e in sim.events if e["details"].get("operation")=="scry"]
         self.assertEqual(len(events),1)
         self.assertIn("Player 2 scries 3",events[0]["message"])
-        self.assertFalse(any(c.id in json.dumps(events) for c in before[1]))
+        # Saved spectator events deliberately disclose both HANDS, but public
+        # state/decision observations and scry messages must not expose the
+        # player's secret library order or identities.
+        public=json.dumps([dict(message=e["message"],details=e["details"],state=e["state"])
+                           for e in events])
+        self.assertFalse(any(c.id in public for c in before[1]))
+        for e in events:
+            self.assertEqual(
+                [[c["id"] for c in hand] for hand in e["spectatorHands"]],
+                [[c.id for c in player.hand] for player in sim.players])
 
     def test_generic_death_counters_only_affect_surviving_controller_creatures(self):
         sim,actual=self.generic_death_fixture("When this creature dies, put 2 +1/+1 counters on each creature you control.")
