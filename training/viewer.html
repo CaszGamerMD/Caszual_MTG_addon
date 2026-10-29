@@ -509,38 +509,77 @@ function requestFit(){
 window.addEventListener("resize",requestFit);
 
 function nameFor(seat){return data?.deckNames?.[seat]||("Player "+(seat+1))}
-function playerPanel(seat,e,prev){const p=e.state.players[seat],past=prev?.state?.players?.[seat];const panel=make("div");
- const header=make("div",undefined,"identity");const info=make("div",undefined,"identityInfo");info.append(make("div",nameFor(seat),"seat"));if(e.state.active===seat)info.append(make("span","Active player","turnTag"));header.append(info);
- const life=make("div",undefined,"lifeWheel");const change=p.life-(past?.life??p.life);if(change)life.append(make("span",(change>0?"+":"")+change,"lifeShift "+(change>0?"positive":"negative")));life.append(make("span",p.life,"lifeNumber"));life.append(make("span","♥","muted"));header.append(life);panel.append(header);
- const details=make("div",undefined,"detailLine");details.append(make("span","◆ Library "+p.libraryCount),make("span","▣ Hand "+p.handCount),make("span","† Grave "+(p.graveyard||[]).length),make("span","⬡ Exile "+(p.exile||[]).length));
+const playerViews=new Map();
+function playerView(seat){
+ if(playerViews.has(seat))return playerViews.get(seat);
+ const panel=make("div"),header=make("div",undefined,"identity"),identity=make("div",undefined,"identityInfo");
+ const name=make("div",undefined,"seat"),active=make("span","Active player","turnTag");
+ identity.append(name,active);header.append(identity);
+ const life=make("div",undefined,"lifeWheel"),lifeShift=make("span",undefined,"lifeShift"),lifeNumber=make("span",undefined,"lifeNumber");
+ life.append(lifeShift,lifeNumber,make("span","♥","muted"));header.append(life);panel.append(header);
+ const details=make("div",undefined,"detailLine");panel.append(details);
+ const field=make("div",undefined,"field"),zones=new Map();
+ for(const [kind,title] of [["creature","Creatures"],["other","Other permanents"],["land","Lands"]]){
+  const zone=make("section",undefined,"zone"),label=make("div",undefined,"zoneLabel"),count=make("span","0");
+  label.append(make("span",title),count);zone.append(label);
+  const track=make("div",undefined,"cardTrack"+(kind==="land"?" landStack":""));
+  zone.append(track);field.append(zone);zones.set(kind,{track,count})
+ }
+ panel.append(field);
+ const commanderZone=make("section",undefined,"commandZone"),commander=data?.commanders?.[seat];
+ if(commander){
+  const card={id:"command-zone-"+seat,name:commander,kind:"legendary",tapped:false,fresh:false,counters:0};
+  commanderZone.append(makeCard(card,card,null));
+  const info=make("div",undefined,"commandInfo");
+  info.append(make("strong","COMMAND ZONE"),make("div",commander),make("div","Available to cast · spectator view"));
+  commanderZone.append(info);identity.append(commanderZone);
+ }
+ commanderZone.hidden=true;
+ const handLabel=make("div",undefined,"zoneLabel"),handTitle=make("span"),handCount=make("span");
+ handLabel.append(handTitle,handCount);panel.append(handLabel);
+ const hand=make("div",undefined,"handLine");panel.append(hand);
+ const view={panel,name,active,lifeShift,lifeNumber,details,zones,commanderZone,handTitle,handCount,hand};
+ playerViews.set(seat,view);return view
+}
+function playerPanel(seat,e,prev){
+ const p=e.state.players[seat],past=prev?.state?.players?.[seat],view=playerView(seat);
+ view.name.textContent=nameFor(seat);view.active.hidden=e.state.active!==seat;
+ const delta=p.life-(past?.life??p.life);
+ view.lifeShift.hidden=!delta;view.lifeShift.textContent=delta?(delta>0?"+":"")+delta:"";
+ view.lifeShift.className="lifeShift "+(delta>0?"positive":"negative");
+ view.lifeNumber.textContent=p.life;
+ const details=view.details;details.replaceChildren();
+ details.append(make("span","◆ Library "+p.libraryCount),make("span","▣ Hand "+p.handCount),make("span","† Grave "+(p.graveyard||[]).length),make("span","⬡ Exile "+(p.exile||[]).length));
  if(data?.commanders?.[seat])details.append(make("span","Commander: "+data.commanders[seat]+(p.commanderInZone?" (command zone)":"")));
  if(Object.keys(p.commanderDamage||{}).length)details.append(make("span","Commander dmg: "+Object.values(p.commanderDamage).join("/")));
  if((p.manaPool||[]).some(Boolean))details.append(make("span","Mana pool: "+p.manaPool.join("/")));
- panel.append(details);
- const field=make("div",undefined,"field");
- for(const [k,title] of [["creature","Creatures"],["other","Other permanents"],["land","Lands"]]){const zone=make("section",undefined,"zone");const total=(p.battlefield||[]).filter(c=>kindOf(c)===k).length;const label=make("div",undefined,"zoneLabel");label.append(make("span",title),make("span",total));zone.append(label,groupCards(p,past,k,e));field.append(zone)}
- panel.append(field);
- if(p.commanderInZone&&data?.commanders?.[seat]){
-  const zone=make("section",undefined,"commandZone");
-  const commander={id:"command-zone-"+seat,name:data.commanders[seat],kind:"legendary",tapped:false,fresh:false,counters:0};
-  zone.append(makeCard(commander,commander,null));
-  const info=make("div",undefined,"commandInfo");
-  info.append(make("strong","COMMAND ZONE"),make("div",data.commanders[seat]),make("div","Available to cast · spectator view"));
-  zone.append(info);header.querySelector(".identityInfo").append(zone);
+ for(const [kind,{track,count}] of view.zones){
+  count.textContent=(p.battlefield||[]).filter(c=>kindOf(c)===kind).length;
+  groupCards(p,past,kind,e,track)
  }
+ view.commanderZone.hidden=!p.commanderInZone;
  const snapshot=e.spectatorHands?.[seat],show=revealHands&&Array.isArray(snapshot);
- const label=make("div",undefined,"zoneLabel");label.append(make("span",show?"Hand · spectator view":"Hand · hidden"),make("span",p.handCount));panel.append(label);
- const backs=make("div",undefined,"handLine"+(show?" revealed":""));
+ view.handTitle.textContent=show?"Hand · spectator view":"Hand · hidden";
+ view.handCount.textContent=p.handCount;
+ view.hand.classList.toggle("revealed",show);
  if(show){
-   backs._allCards=snapshot;backs._collectionName=nameFor(seat)+" · Hand";
-   for(const c of snapshot)backs.append(makeCard({...c,kind:c.kind||"card",tapped:false,fresh:false},null,null));
-   if(!snapshot.length)backs.append(make("span","No cards in hand","hiddenCount"));
+  view.hand._emptyNotice?.remove();view.hand._emptyNotice=null;
+  view.hand._collectionName=nameFor(seat)+" · Hand";
+  syncCardTrack(view.hand,snapshot.map(card=>({...card,kind:card.kind||"card",tapped:false,fresh:false})),null,null);
+  if(!snapshot.length){
+   const notice=make("span","No cards in hand","hiddenCount");
+   view.hand.append(notice);view.hand._emptyNotice=notice
+  }
  }else{
-   for(let i=0;i<Math.min(p.handCount,10);i++)backs.append(make("span",undefined,"backCard"));
-   backs.append(make("span",Array.isArray(snapshot)?"Hand concealed · "+p.handCount+" cards":"Older replay · identities not recorded","hiddenCount"));
+  // Only tear down hand contents when switching visibility, not every turn.
+  if(!view.hand._hiddenHand||view.hand._hiddenHand!==p.handCount||view.hand._cardNodes?.size){
+   view.hand._cardNodes?.clear();view.hand.replaceChildren();view.hand._emptyNotice=null;
+   for(let i=0;i<Math.min(p.handCount,10);i++)view.hand.append(make("span",undefined,"backCard"));
+   view.hand.append(make("span",Array.isArray(snapshot)?"Hand concealed · "+p.handCount+" cards":"Older replay · identities not recorded","hiddenCount"))
+  }
  }
- panel.append(backs);
- return panel
+ view.hand._hiddenHand=show?null:p.handCount;
+ return view.panel;
 }
 function renderStack(state){const items=state.stack;$("stack").replaceChildren();if(!Array.isArray(items)){$("stack").append(make("div","Stack not recorded in this older replay.","emptyStack"));$("stackCount").textContent="—";return}
  $("stackCount").textContent=String(items.length);if(!items.length){$("stack").append(make("div","The stack is empty","emptyStack"));return}
@@ -580,7 +619,10 @@ function render(){if(!data)return;const events=data.events||[];$("count").textCo
   $("turnCount").textContent="Turn "+e.turn+" · "+(e.state.active===0?"Player 1":"Player 2")+" active";
   $("eventKind").textContent=e.kind.replaceAll("_"," ");$("eventHeadline").textContent=e.message;
   $("centerBand").className="centerBand "+eventStyle(e);
-  $(`opponent`).replaceChildren(playerPanel(flippedSeats?0:1,e,prev));$(`you`).replaceChildren(playerPanel(flippedSeats?1:0,e,prev));renderStack(state);renderSpotlight(e)}
+  const top=playerPanel(flippedSeats?0:1,e,prev),bottom=playerPanel(flippedSeats?1:0,e,prev);
+  if($("opponent").firstElementChild!==top)$("opponent").replaceChildren(top);
+  if($("you").firstElementChild!==bottom)$("you").replaceChildren(bottom);
+  renderStack(state);renderSpotlight(e)}
  renderLog();setTab(tab);requestFit()}
 function renderQuestions(){const list=$("questionList");list.replaceChildren();for(const q of data.questions||[]){const article=make("article",undefined,"questionCard");article.append(make("h3",q.card||q.reason||"Rules question"),make("p",q.question||q.reason||""));
  if(q.deck)article.append(make("div","Deck: "+q.deck,"muted"));if(q.diagnosticSupport)article.append(make("div",q.supportNote||"Diagnostic subset supported","muted"));
@@ -600,7 +642,7 @@ function unpack(value){if(value.packedReplay!==1)return value;const catalog=valu
  wardCosts:c.length>14?c[14]:catalog[c[0]].wardCosts,
  bestowed:c.length>15?c[15]:catalog[c[0]].bestowed})),graveyard:p[4].map(c=>({id:catalog[c].id,name:catalog[c].name})),commanderInZone:!!p[5],commanderDamage:p[6]||{},exile:(p[7]||[]).map(c=>({id:catalog[c].id,name:catalog[c].name})),manaPool:p[8]||[]}))}}});return value}
 function load(value){if(!value||value.schemaVersion!==1||!["turn-replay","rules-review"].includes(value.kind))throw Error("Unsupported replay file or version");
- stop();data=unpack(value);$("toggleHands").textContent=revealHands?"Hide hands":"Show hands";if(data.events?.length&&!data.events.every(e=>e.state?.players?.length===2))throw Error("This replay has an unsupported player-state format");
+ stop();playerViews.clear();data=unpack(value);$("toggleHands").textContent=revealHands?"Hide hands":"Show hands";if(data.events?.length&&!data.events.every(e=>e.state?.players?.length===2))throw Error("This replay has an unsupported player-state format");
  indexPrintedNames();position=0;tab=data.events?.length?"turns":"questions";$("search").value="";renderQuestions();render()}
 async function loadFile(file){if(!file)return;try{load(JSON.parse(await file.text()));$("notice").textContent="Loaded "+file.name}catch(error){$("notice").textContent="Cannot load replay: "+error.message}}
 $("file").addEventListener("change",e=>loadFile(e.target.files[0]));document.addEventListener("dragover",e=>e.preventDefault());
