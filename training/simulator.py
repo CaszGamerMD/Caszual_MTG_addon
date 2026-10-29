@@ -411,7 +411,9 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.kind == "x_spell" and card.x_effect in ("tokens","draw","life"):
                     continue
-                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_artifact_creature_token","exile_creature_life","exile_creature_basic_land","destroy_all_creatures","destroy_toughness_min"):
+                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_artifact_creature_token","destroy_artifact","exile_creature_life","exile_creature_basic_land","destroy_all_creatures","destroy_toughness_min"):
+                    continue
+                if self.diagnostic and card.kind=="graveyard_return_spell" and card.graveyard_return_subtype:
                     continue
                 if self.diagnostic and card.blink:continue
                 if self.diagnostic and card.kind=="counter_spell" and card.counter_filter in ("any","creature","noncreature"):
