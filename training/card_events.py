@@ -9,7 +9,7 @@ from dataclasses import dataclass, field, asdict
 import re
 from attachments import parse as parse_attachment, parse_bestow, parse_equipment_removals
 from attack_abilities import compile as compile_attacks
-from oracle_abilities import Trigger, StaticEffect, compile_abilities, matches, event_data
+from oracle_abilities import Trigger, StaticEffect, compile_abilities, matches, event_data, cast_matches
 
 
 class NeedsRules(ValueError):
@@ -397,6 +397,19 @@ class Game:
                 permanent.animated = True
                 self.emit("trigger", source="Kolodin, Triumph Caster", effect="animated", target=permanent.id)
 
+
+    def cast_triggers(self, spell, controller: int) -> list[dict]:
+        """Gather spell-cast triggers at cast time, before the spell can resolve.
+
+        The caller puts these above the spell on the priority stack. They remain
+        independent even if the spell or the triggering permanent later leaves.
+        """
+        result=[]
+        for watcher in self.battlefield.values():
+            for trigger in watcher.definition.triggers:
+                if cast_matches(trigger,watcher,spell,controller):
+                    result.append(event_data(trigger,watcher,spell))
+        return result
 
     def upkeep_triggers(self) -> list[dict]:
         """One trigger per supported permanent controlled by the active player."""
