@@ -788,6 +788,17 @@ class Game:
                 self.emit('trigger',source=a.id,name=a.definition.name,controller=a.controller,target=a.id,
                     operation='subtype_count_boost',effect='temporary boost per controlled subtype',
                     power=power,toughness=toughness,subtype=keyword)
+            elif operation=='attacking_subtype_boost':
+                count=sum(other.id!=a.id and other.attacking is not None and
+                          self.creature(other) and keyword in other.definition.subtypes
+                          for other in self.battlefield.values())
+                if not defer:
+                    a.temporary_power+=power*count
+                    a.temporary_toughness+=toughness*count
+                self.emit('trigger',source=a.id,name=a.definition.name,controller=a.controller,
+                          target=a.id,operation='attacking_subtype_boost',
+                          effect='temporary bonus for each other attacking creature of a subtype',
+                          power=power,toughness=toughness,subtype=keyword)
             elif operation=='attack_target_keywords':
                 # Choose legal targets at trigger placement; later recheck at resolution.
                 candidates=[other for other in self.battlefield.values()

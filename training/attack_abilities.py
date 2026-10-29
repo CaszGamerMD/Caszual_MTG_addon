@@ -45,6 +45,11 @@ def compile(text):
             if 'X' not in greatest.groups():return None
             effects.append(('greatest_power_boost',int(greatest[1]=='X'),
                             int(greatest[2]=='X'),''));continue
+        attacking=re.fullmatch(
+            r'Whenever this creature attacks, it gets \+([0-9]+)/\+([0-9]+) until end of turn for each other attacking ([A-Z][a-z]+)\.',line)
+        if attacking:
+            effects.append(('attacking_subtype_boost',int(attacking[1]),int(attacking[2]),attacking[3]))
+            continue
         m=re.fullmatch(r'Whenever this creature attacks, it gets \+([0-9]+)/\+([0-9]+) until end of turn for each other ([A-Z][a-z]+) you control\.',line)
         if m:effects.append(('subtype_count_boost',int(m[1]),int(m[2]),m[3]));continue
         m=re.fullmatch(r'(Crew|Saddle) ([1-9][0-9]*)',line)

@@ -497,6 +497,12 @@ def compile_abilities(text, name=''):
             if action is None:return None
             triggers.append(Trigger('end_step',Selector(self_only=True),action))
             continue
+        combat_tokens=re.fullmatch(r'At the beginning of combat on your turn, (create .+)',line)
+        if combat_tokens:
+            action=effect(combat_tokens[1])
+            if action is None or action.operation!='create_tokens':return None
+            triggers.append(Trigger('begin_combat',Selector(self_only=True),action))
+            continue
         combat_boost=re.fullmatch(
             r'At the beginning of combat on your turn, target enchanted creature or enchantment creature you control gets \+([0-9]+)/\+([0-9]+) and gains ([a-z ]+) until end of turn\.',line)
         if combat_boost:

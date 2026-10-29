@@ -1675,6 +1675,19 @@ class Simulator(AdvancedRules):
                     self.sync_events(game)
                 self.log('subtype_count_boost',f"{event['name']} resolves its temporary attack bonus.",source=event['source'])
                 continue
+            if event.get('operation')=='attacking_subtype_boost':
+                game=self.event_game('combat');source=game.battlefield.get(event['source'])
+                count=0
+                if source:
+                    count=sum(other.id!=source.id and other.attacking is not None and
+                              game.creature(other) and event['subtype'] in other.definition.subtypes
+                              for other in game.battlefield.values())
+                    source.temporary_power+=event['power']*count
+                    source.temporary_toughness+=event['toughness']*count
+                    self.sync_events(game)
+                self.log('attacking_subtype_boost','Attack bonus resolves using other attacking creatures.',
+                         source=event['source'],count=count,subtype=event['subtype'])
+                continue
             if event.get('operation')=='counter_power_tokens':
                 game=self.event_game('main')
                 source=game.battlefield.get(event['source'])
@@ -2358,7 +2371,7 @@ class Simulator(AdvancedRules):
                          attacker=x.card.id)
                 for event in game.events:
                     if event["kind"] == "trigger":
-                        if event.get('operation') in ('create_tokens','counter_power_tokens','subtype_count_boost'):
+                        if event.get('operation') in ('create_tokens','counter_power_tokens','subtype_count_boost','attacking_subtype_boost'):
                             self.resolve_entry_triggers([event],x.card)
                             if self.finished: return False
                             continue
