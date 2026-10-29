@@ -321,3 +321,17 @@ add-then-multiply order, while zero remains zero.
 Mauhúr, Uruk-hai Captain is the real-deck fixture; renamed card
 and changed-tribe patterns and strict program rejection have tests:
 `training/tests/test_subtype_counter_replacements.py`.
+
+
+## Attack-triggered temporary team keywords
+
+Generic full-text “Whenever this creature attacks, creatures you
+control gain [keyword and keyword] until end of turn” now queues a
+trigger, grants temporary keyword layers when it resolves, affects
+the controller's current battlefield (including creatures entering
+between declaration and resolution), and expires at turn cleanup.
+The trigger survives removal of the source.
+
+Ankle Shanker is the saved-deck fixture. Renaming the card or changing
+recognized keywords uses the same grammar. Regression:
+`training/tests/test_attack_team_keywords.py`.

@@ -1305,6 +1305,19 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='grant_team_keywords':
+                keywords=event.get('keywords',[])
+                from oracle_abilities import KEYWORDS
+                if not keywords or any(k not in KEYWORDS for k in keywords):
+                    raise RuntimeError('Malformed team keyword grant')
+                game=self.event_game('combat')
+                for member in game.battlefield.values():
+                    if member.controller==event['controller'] and game.creature(member):
+                        for ability in keywords:game.grant_temporary(member,ability)
+                self.sync_events(game)
+                self.log('team_keywords','Attack grants keywords to controlled creatures.',
+                         actor=event['controller'],source=event['source'],keywords=keywords)
+                continue
             if event.get('operation')=='attacker_loses_flying':
                 game=self.event_game('combat');target=game.battlefield.get(event.get('target'))
                 if target:

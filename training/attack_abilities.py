@@ -18,6 +18,14 @@ def compile(text):
             if not spec:return None
             minimum=({'one':1,'two':2,'three':3}.get(group[1]) or int(group[1])) if group else 0
             effects.append(('group_tokens' if group else 'saddled_tokens' if saddled else 'attack_tokens',minimum,0,spec));continue
+        team_grant=re.fullmatch(
+            r'Whenever this creature attacks, creatures you control gain (.+) until end of turn\.',
+            line)
+        if team_grant:
+            words=tuple(sorted(set(w.strip() for w in re.split(r', | and ',team_grant[1]))))
+            if not words or not set(words)<=KEYWORDS:return None
+            effects.append(('attack_team_keywords',0,0,words))
+            continue
         m=re.fullmatch(r"Whenever this creature attacks, put a \+1/\+1 counter on it, then create a number of (.+) equal to this creature's power\.",line)
         if m:
             token=parse_token_creation('Create a '+m[1]+'.')

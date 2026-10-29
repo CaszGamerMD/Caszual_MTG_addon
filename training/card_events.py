@@ -743,6 +743,17 @@ class Game:
                 self.emit('trigger',source=a.id,name=a.definition.name,controller=a.controller,target=a.id,
                     operation='subtype_count_boost',effect='temporary boost per controlled subtype',
                     power=power,toughness=toughness,subtype=keyword)
+            elif operation=='attack_team_keywords':
+                if defer:
+                    self.emit('trigger',operation='grant_team_keywords',source=a.id,name=a.definition.name,
+                              controller=a.controller,keywords=list(keyword),
+                              effect='grant team combat keywords until end of turn')
+                else:
+                    for member in self.battlefield.values():
+                        if member.controller==a.controller and self.creature(member):
+                            for ability in keyword:self.grant_temporary(member,ability)
+                    self.emit('trigger',source=a.id,effect='grant team keywords until end of turn',
+                              keywords=list(keyword))
             elif operation=='saddled_boost' and a.saddled and defer:
                 self.emit('trigger',operation='saddled_boost',source=a.id,name=a.definition.name,controller=a.controller,effect='saddled boost',power=power,toughness=toughness,keyword=keyword)
             elif operation=='saddled_boost' and a.saddled:
