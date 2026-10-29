@@ -12,4 +12,7 @@ def parse(text, types):
     mana = re.fullmatch(r'Sacrifice an? ([A-Z][a-z]+): Add \{([WUBRGC])\}\.', text)
     if mana:
         return ('mana', mana[1], mana[2])
+    boost = re.fullmatch(r'Sacrifice an? ([A-Z][a-z]+): Target creature gets \+([0-9]+)/\+([0-9]+) until end of turn\.', text)
+    if boost:
+        return ('boost', boost[1], int(boost[2]), int(boost[3]))
     return None

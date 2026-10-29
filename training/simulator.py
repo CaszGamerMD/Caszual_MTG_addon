@@ -852,7 +852,7 @@ class Simulator(AdvancedRules):
         for source in self.players[seat].battlefield:
             definition=source.card.event_definition
             if not definition or not definition.sacrifice_ability:continue
-            operation,subtype,parameter=definition.sacrifice_ability
+            operation,subtype,*parameters=definition.sacrifice_ability
             for victim in self.players[seat].battlefield:
                 state=game.battlefield.get(victim.card.id)
                 if state is None or not game.creature(state) or subtype not in state.definition.subtypes:continue
@@ -860,6 +860,13 @@ class Simulator(AdvancedRules):
                     choices.append(Candidate(source.card.id+':sacrifice:'+victim.card.id,'activate_sacrifice_mana',
                         source.card.id,features=features(power=.05,cost=1),label='Sacrifice '+victim.card.name+
                         ' for '+source.card.name,tap_ids=(victim.card.id,)))
+                elif operation=='boost':
+                    for _,target in self.creature_targets(seat,source.card):
+                        choices.append(Candidate(source.card.id+':sacrifice:'+victim.card.id+':target:'+target.card.id,
+                            'activate_sacrifice_boost',source.card.id,
+                            features=features(power=.3,cost=1),label='Sacrifice '+victim.card.name+
+                            ' to boost '+target.card.name,tap_ids=(victim.card.id,),
+                            target_permanent=target.card.id))
         return choices
 
     def _pay_sacrifice_creature(self,seat,victim):
@@ -889,6 +896,28 @@ class Simulator(AdvancedRules):
         color=mana_pool.COLORS.index(ability[2]);self.players[seat].mana_pool[color]+=1
         self.log('sacrifice_mana','Sacrifice mana ability resolves without using the stack.',
                  actor=seat,source=source_id,color=ability[2],victim=victim_id)
+        self.resolve_entry_triggers(triggers,source.card)
+
+    def activate_sacrifice_boost(self,seat,source_id,victim_id,target_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        ability=source.card.event_definition.sacrifice_ability if source and source.card.event_definition else ()
+        if not ability or ability[0]!='boost':raise ValueError('Illegal sacrifice boost ability')
+        victim=next((p for p in self.players[seat].battlefield if p.card.id==victim_id),None)
+        game=self.event_game('main');state=game.battlefield.get(victim_id)
+        if victim is None or state is None or not game.creature(state) or ability[1] not in state.definition.subtypes:
+            raise ValueError('Sacrifice cost requires a matching creature')
+        if target_id not in {p.card.id for _,p in self.creature_targets(seat,source.card)}:
+            raise ValueError('Illegal sacrifice boost target')
+        triggers=self._pay_sacrifice_creature(seat,victim)
+        event=dict(operation='sacrifice_target_boost',effect='temporary target creature boost',
+                   source=source_id,controller=seat,name=source.card.name,target=target_id,
+                   power=ability[2],toughness=ability[3],sourceColors=tuple(source.card.colors))
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.log('activate_sacrifice_boost','Creature sacrificed to activate a targeted temporary boost.',
+                 actor=seat,source=source_id,target=target_id,victim=victim_id,stackId=frame.id)
+        for ward in self.target_triggers(frame,target_id):
+            self.stack.push(ward['controller'],(ward,source.card),ward['name'])
         self.resolve_entry_triggers(triggers,source.card)
 
     def scaled_mana_choices(self,seat):
@@ -1326,6 +1355,9 @@ class Simulator(AdvancedRules):
         if choice.kind=='activate_sacrifice_mana':
             self.activate_sacrifice_mana(seat,choice.card_id,choice.tap_ids[0])
             return 'activate'
+        if choice.kind=='activate_sacrifice_boost':
+            self.activate_sacrifice_boost(seat,choice.card_id,choice.tap_ids[0],choice.target_permanent)
+            return 'activate'
         card=next(c for c in self.players[seat].hand if c.id==choice.card_id)
         self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack)
         return 'cast'
@@ -1529,6 +1561,19 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='sacrifice_target_boost':
+                game=self.event_game('main');target=game.battlefield.get(event['target'])
+                legal=bool(target and game.creature(target) and not game.has(target,'shroud')
+                           and (target.controller==event['controller'] or not game.has(target,'hexproof'))
+                           and not game.protected(target,event.get('sourceColors',())))
+                if legal:
+                    target.temporary_power+=event['power']
+                    target.temporary_toughness+=event['toughness']
+                    self.sync_events(game)
+                self.log('sacrifice_boost' if legal else 'sacrifice_boost_fizzle',
+                         'Sacrifice boost resolves.' if legal else 'Sacrifice boost target is illegal.',
+                         actor=event['controller'],target=event['target'],source=event['source'])
+                continue
             if event.get('operation')=='living_weapon':
                 # Create tokens first, attach one while state-based actions
                 # are not checked, then let any unattached 0/0 Germs die.
@@ -2515,7 +2560,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
-                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana"):
+                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana","activate_sacrifice_boost"):
             self.turn_development[seat]=True
         return choice
 
@@ -2602,6 +2647,8 @@ class Simulator(AdvancedRules):
                 self.activate_scaled_mana(self.active,choice.card_id,choice.x_value)
             elif choice.kind=='activate_sacrifice_mana':
                 self.activate_sacrifice_mana(self.active,choice.card_id,choice.tap_ids[0])
+            elif choice.kind=='activate_sacrifice_boost':
+                self.activate_sacrifice_boost(self.active,choice.card_id,choice.tap_ids[0],choice.target_permanent)
             elif choice.kind=='equip':
                 self.activate_equip(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind in ('crew','saddle'):
