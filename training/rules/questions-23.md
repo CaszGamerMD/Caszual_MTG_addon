@@ -23,7 +23,7 @@ Three resolved through reusable parsing: Honor of the Pure (capitalized color se
 | Lumen-Class Frigate | Station activation and counter thresholds |
 | Muxus, Goblin Grandee | Library reveal/filter, mana value, multiple entries, temporary attack stats |
 | Radiant Summit | Implemented in diagnostic simulator |
-| Ruinous Ultimatum | Simultaneous destruction, indestructible and full death/SBA processing |
+| Ruinous Ultimatum | Implemented in diagnostic: opponent nonland sweep, indestructible and simultaneous death-trigger discovery |
 | Shadowspear | Equipment, activated ability removal and duration |
 | Skyknight Vanguard | Tapped attacking tokens and multiple-attacker combat |
 | Untethered Express | Implemented: composable crew plus generic attack-triggered self counters |
@@ -39,3 +39,5 @@ Attack follow-up: 116 tests cover these two cards, unfamiliar names and amounts,
 Combat-damage follow-up: generic subtype watchers discard only after positive player combat damage. The damaged player chooses their last card deterministically, without a hidden-hand observation by the attacking AI. Empty hands do nothing. Damage and death triggers use controller ordering together; first/double-strike interleaving remains a blocking question. 117 tests cover normal damage and zero damage in addition to prior regressions.
 
 Power-token follow-up: the whole attack instruction composes self-counter addition with parsed token characteristics and a current-power count. Self references normalize full and Oracle short names without behavior dispatch. Tokens resolve as a batch before their entry triggers and are not declared attackers. Full response windows and source departure while a trigger is on the stack remain unavailable in this diagnostic. Focused tests cover real Krenko and an unfamiliar 2/3 flying Drake producer, prior counters, repeated attacks, and rejection of unparsed trailing text. Sixteen original cards remain blocked.
+
+Sweep follow-up: a whole-text opponent-nonland destruction grammar now covers Ruinous Ultimatum and unfamiliar names. The single-target destroy path shares batch death discovery. Lands (including land creatures) and indestructible permanents survive; the caster’s permanents are untouched. Blood Artist sees simultaneous deaths even if it dies; Nested Shambler uses its power before a dying anthem leaves. Fifteen original cards remain blocked. Full cascading state-based actions and regeneration remain outside the current model.

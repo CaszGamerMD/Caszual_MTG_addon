@@ -364,7 +364,7 @@ class Simulator:
                     continue
                 if self.diagnostic and card.kind == "x_spell" and card.x_effect in ("tokens","draw","life"):
                     continue
-                if self.diagnostic and card.kind=="removal_spell" and card.removal=="destroy":
+                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands"):
                     continue
                 if self.diagnostic and card.kind=="counter_spell" and card.counter_filter in ("any","creature","noncreature"):
                     continue
@@ -549,12 +549,36 @@ class Simulator:
                      if item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id]))
 
     def removal_choices(self,seat,card,kind):
+        if card.removal=='opponent_nonlands':
+            count=sum(1 for owner,item in self.nonland_destruction_set(seat))
+            return (Candidate(card.id,kind,card.id,features=features(power=count,cost=len(self.payment(card,seat=seat).get('sources',[]))),label='Cast '+card.name),)
         game=self.event_game('main')
         return tuple(Candidate(card.id+':target='+item.card.id,kind,card.id,
                     features=features(power=(2 if owner!=seat else -100) if not game.has(game.battlefield[item.card.id],'indestructible') else -100,
                                       cost=len(self.payment(card,seat=seat).get('sources',[]))),
                     label='Cast '+card.name+' targeting '+item.card.name,target_permanent=item.card.id)
                      for owner,item in self.creature_targets())
+
+    def nonland_destruction_set(self,controller):
+        game=self.event_game('main')
+        return tuple((owner,item) for owner,player in enumerate(self.players) if owner!=controller
+                     for item in player.battlefield if item.card.kind!='land'
+                     and not (item.card.event_definition and 'Land' in item.card.event_definition.types)
+                     and not (item.card.id in game.battlefield and game.has(game.battlefield[item.card.id],'indestructible')))
+
+    def destroy_batch(self,targets,card):
+        game=self.event_game('main')
+        creatures=[item.card.id for _,item in targets if item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id])]
+        triggers=game.death_triggers(creatures)
+        for owner,item in targets:self.send_to_destination(self.players[owner],item)
+        self.log('destroy',f'{card.name} destroys {len(targets)} permanents simultaneously.',destroyed=[item.card.id for _,item in targets])
+        self.outcome()
+        if self.finished:return
+        for trigger in triggers:
+            if trigger['effect']=='create tapped Squirrels':
+                trigger.update(operation='create_tokens',tokenSpec=dict(amount=trigger['amount'],power=1,toughness=1,
+                    colors=['Green'],subtypes=['Squirrel'],keywords=[],tapped=True,land=False))
+        self.resolve_entry_triggers(triggers,card)
 
     def counter_targets(self,card):
         if card.kind!='counter_spell': return ()
@@ -595,7 +619,7 @@ class Simulator:
         elif seat!=self.active or self.phase not in ('main','second_main'):
             if not card.instant or seat!=self.stack.priority: raise ValueError('Spell timing invalid')
         if not commander and card not in player.hand: raise ValueError('Card not in hand')
-        if card.kind=='removal_spell' and target not in {item.card.id for _,item in self.creature_targets()}:
+        if card.kind=='removal_spell' and card.removal=='destroy' and target not in {item.card.id for _,item in self.creature_targets()}:
             raise ValueError('Removal requires a legal creature target')
         if card.kind=='counter_spell' and target not in {f.id for f in self.counter_targets(card)}:
             raise ValueError('Counterspell requires a legal spell target')
@@ -629,6 +653,9 @@ class Simulator:
         elif card.kind=='mana_artifact': p.battlefield.append(Permanent(card))
         elif not event.get('copy'): p.graveyard.append(original)
         if card.kind=='removal_spell':
+            if card.removal=='opponent_nonlands':
+                self.destroy_batch(self.nonland_destruction_set(controller),card)
+                return
             target=next(((seat,item) for seat,item in self.creature_targets() if item.card.id==event['target']),None)
             if target is None:
                 self.log('illegal_target',f'{card.name} has no legal creature target.',targetPermanent=event['target'])
@@ -637,16 +664,7 @@ class Simulator:
             if game.has(game.battlefield[item.card.id],'indestructible'):
                 self.log('indestructible',f'{item.card.name} cannot be destroyed.',targetPermanent=item.card.id)
                 return
-            triggers=game.death_triggers([item.card.id])
-            self.send_to_destination(self.players[owner],item)
-            self.log('destroy',f'{card.name} destroys {item.card.name}.',targetPermanent=item.card.id)
-            self.outcome()
-            if self.finished:return
-            for trigger in triggers:
-                if trigger['effect']=='create tapped Squirrels':
-                    trigger.update(operation='create_tokens',tokenSpec=dict(amount=trigger['amount'],power=1,toughness=1,
-                        colors=['Green'],subtypes=['Squirrel'],keywords=[],tapped=True,land=False))
-            self.resolve_entry_triggers(triggers,card)
+            self.destroy_batch(((owner,item),),card)
             return
         if card.kind=='counter_spell':
             frame=next((f for f in self.counter_targets(card) if f.id==event['target']),None)
@@ -1316,6 +1334,10 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
             and rule_text(definition.get('oracleText',''))=='Destroy target creature.' and rules.query('cost',cost)['supported']):
         parsed={'kind':'removal_spell','removal':'destroy'}
+    if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
+            and rule_text(definition.get('oracleText',''))=='Destroy all nonland permanents your opponents control.'
+            and rules.query('cost',cost)['supported']):
+        parsed={'kind':'removal_spell','removal':'opponent_nonlands'}
     counter=re.fullmatch(r'Counter target (?:(creature|noncreature) )?spell\.',rule_text(definition.get('oracleText','')))
     if (parsed['kind']=='unsupported' and definition.get('types')==['Instant'] and counter
             and rules.query('cost',cost)['supported']):

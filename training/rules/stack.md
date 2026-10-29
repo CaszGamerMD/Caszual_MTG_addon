@@ -51,3 +51,11 @@ Focused tests cover cast-time validation, deferred destruction, death-trigger st
 Rules reference: Wizards keyword glossary (indestructible): https://magic.wizards.com/en/keyword-glossary
 
 Validation for removal: 136 tests pass. Seeds 1342–1347 ran all six distinct deck pairings. Five completed ten turns per player; one stopped after three turns each on the existing first-strike/death-trigger separate-damage-step question. No removal spell resolved in the random batch, so focused tests are the direct coverage. Summary: `training/examples/removal-1342.json`.
+
+## Opponent nonland sweeps
+
+Whole-text “Destroy all nonland permanents your opponents control.” now compiles to an untargeted sweep. The affected set is selected on resolution. Land/creature tokens remain lands, ordinary nonland artifacts and enchantments are included, and indestructible is respected. Death triggers inspect the pre-destruction battlefield; all affected objects leave before any resulting trigger resolves. Single-target removal shares the batch helper. No card name selects this behavior. Additional rules still reject the whole card.
+
+Focused coverage casts the actual Ruinous Ultimatum with its seven colored requirements and checks simultaneous Blood Artist/Shambler/anthem deaths, last-known power, protected lands/land creatures, an indestructible survivor, and the caster's unchanged board. Full cascading state-based actions, regeneration, and destruction replacement effects remain unsupported.
+
+Sweep validation: 145 tests pass. Seed 1142 completed without runtime questions; Ruinous Ultimatum became playable but was not cast in that replay. Direct resolution coverage is from the focused tests. Summary: `training/examples/sweep-1142.json`.
