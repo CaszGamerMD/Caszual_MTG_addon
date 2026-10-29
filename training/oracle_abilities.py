@@ -479,8 +479,8 @@ def compile_abilities(text, name=''):
             line)
         if to_graveyard:
             scope=to_graveyard[1]
-            selector=Selector(relation='controller',permanent_type='Enchantment') if scope=='enchantment' else Selector(relation='controller',subtype=scope)
-            triggers.append(Trigger('graveyard',selector,
+            death_subject=Selector(relation='controller',permanent_type='Enchantment') if scope=='enchantment' else Selector(relation='controller',subtype=scope)
+            triggers.append(Trigger('graveyard',death_subject,
                                     Effect('self_counter',1,optional=bool(to_graveyard[2]))))
             continue
         m=re.fullmatch(r'(?:When|Whenever) (.+) (enters(?: the battlefield)?|dies), (.+)',line)
