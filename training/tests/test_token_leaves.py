@@ -96,6 +96,24 @@ class TokenLeaveChecks(unittest.TestCase):
         self.assertEqual([p.life for p in sim.players],[43,39])
         sim.invariant()
 
+    def test_aura_role_token_and_host_both_leaving_are_counted(self):
+        sim,cards=self.fixture(["Nadier's Nightblade",'Ellivere of the Wild Court'])
+        self.put(sim,cards["Nadier's Nightblade"])
+        host=self.token(sim,'host')
+        self.put(sim,cards['Ellivere of the Wild Court'])
+        self.drain(sim)
+        roles=[p for p in sim.players[0].battlefield
+               if p.card.event_definition and p.card.event_definition.role]
+        self.assertEqual(len(roles),1)
+        sim.send_to_destination(sim.players[0],host)
+        sim.resolve_entry_triggers([],host.card)
+        self.assertEqual(len(sim.stack.items),2)
+        self.drain(sim)
+        self.assertEqual([p.life for p in sim.players],[42,38])
+        self.assertFalse(any(p.card.event_definition and p.card.event_definition.role
+                             for p in sim.players[0].battlefield))
+        sim.invariant()
+
     def test_watcher_leaving_does_not_undo_previously_queued_trigger(self):
         sim,cards=self.fixture(["Nadier's Nightblade"])
         watcher=self.put(sim,cards["Nadier's Nightblade"])
