@@ -1051,8 +1051,12 @@ class Simulator(AdvancedRules):
             if event.get('operation')=='station':
                 game=self.event_game('main');station=game.battlefield.get(event['source']);helper=game.battlefield.get(event['helper'])
                 amount=max(0,(game.stats(helper)[0] if game.creature(helper) else 0) if helper else event['lastPower'])
-                if station:station.charge_counters+=amount;self.sync_events(game)
-                self.log('station','Station adds charge counters.',source=event['source'],amount=amount)
+                if station:
+                    added=game.counter_amount(station.id,amount,counter_type='charge')
+                    station.charge_counters+=added
+                    self.sync_events(game)
+                else:added=0
+                self.log('station','Station adds charge counters.',source=event['source'],amount=added)
                 continue
             if event.get('operation')=='history_tokens':
                 amount=self.history_count(event['controller'],event['watch'])
