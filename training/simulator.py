@@ -235,6 +235,7 @@ class Permanent:
     temporary_ability_times: dict[str,int] = field(default_factory=dict)
     loyalty: int | None = None
     charge_counters: int = 0
+    chosen_subtype: str = ''
 
 
 @dataclass
@@ -548,7 +549,7 @@ class Simulator(AdvancedRules):
                     item.fresh, item.saddled, item.animated, counters=item.counters, token=item.card.is_token,temporary_power=item.temporary_power,
                     temporary_toughness=item.temporary_toughness,temporary_abilities=item.temporary_abilities,attached_to=item.attached_to,
                     entered_at=item.entered_at,attachment_at=item.attachment_at,lost_abilities=dict(item.lost_abilities),
-                    temporary_ability_times=dict(item.temporary_ability_times),loyalty=item.loyalty,charge_counters=item.charge_counters)
+                    temporary_ability_times=dict(item.temporary_ability_times),loyalty=item.loyalty,charge_counters=item.charge_counters,chosen_subtype=item.chosen_subtype)
         return game
 
     def sync_events(self, game: EventGame):
@@ -561,6 +562,7 @@ class Simulator(AdvancedRules):
                     item.entered_at,item.attachment_at=state.entered_at,state.attachment_at
                     item.loyalty=state.loyalty
                     item.charge_counters=state.charge_counters
+                    item.chosen_subtype=state.chosen_subtype
                     item.lost_abilities=dict(state.lost_abilities);item.temporary_ability_times=dict(state.temporary_ability_times)
                     item.tapped, item.fresh = state.tapped, state.fresh
                     item.saddled, item.animated, item.counters = state.saddled, state.animated, state.counters
@@ -598,6 +600,16 @@ class Simulator(AdvancedRules):
                for p in player.battlefield if p.card.kind=='land' or p.card.event_definition and 'Land' in p.card.event_definition.types]
         return land_enters_tapped(card,lands)
 
+    def choose_creature_type(self, controller, definition, game):
+        """Deterministic diagnostic choice; future agent policy may override it."""
+        counts={}
+        for creature in game.battlefield.values():
+            if creature.controller!=controller or not game.creature(creature):continue
+            for subtype in creature.definition.subtypes:
+                counts[subtype]=counts.get(subtype,0)+1
+        # Human is a valid creature type when no existing controlled creature offers a choice.
+        return min(counts,key=lambda kind:(-counts[kind],kind)) if counts else 'Human'
+
     def enter_creature(self, card: Card, player: Player, attached_to=None):
         return self.enter_creatures([card],player,attached_targets={card.id:attached_to} if attached_to else None)
 
@@ -606,7 +618,7 @@ class Simulator(AdvancedRules):
         game._next_token=self.token_sequence
         known=set(game.battlefield)
         controller=next(i for i,candidate in enumerate(self.players) if candidate is player)
-        entrants=[];entry_logs=[]
+        entrants=[];entry_logs=[];chosen_types={}
         bestowed_targets=bestowed_targets or {}
         attached_targets=dict(attached_targets or {},**bestowed_targets)
         for card in cards:
@@ -617,12 +629,15 @@ class Simulator(AdvancedRules):
                     colors=frozenset(card.colors))
             if card.id in bestowed_targets:definition=self.bestowed_definition(definition)
             enters_tapped=self.land_entry_tapped(card,controller,entry_logs) if card.kind=='land' else card.enters_tapped
+            if definition.chosen_type_entry:
+                chosen_types[card.id]=self.choose_creature_type(controller,definition,game)
             entrants.append(EventPermanent(card.id,replace(definition,mana_cost=card.mana_cost),controller,tapped=enters_tapped,
-                                           attached_to=attached_targets.get(card.id)))
+                                           attached_to=attached_targets.get(card.id),chosen_subtype=chosen_types.get(card.id,'')))
         game.life_totals={seat:p.life for seat,p in enumerate(self.players)}
         game.enter_batch(entrants)
         self.entry_history.extend(dict(turn=self.turn,controller=controller,subtypes=sorted(p.definition.subtypes)) for p in entrants)
-        player.battlefield.extend(Permanent(card,attached_to=attached_targets.get(card.id),bestowed=card.id in bestowed_targets) for card in cards)
+        player.battlefield.extend(Permanent(card,attached_to=attached_targets.get(card.id),bestowed=card.id in bestowed_targets,
+                                           chosen_subtype=chosen_types.get(card.id,'')) for card in cards)
         for token_id in game.battlefield.keys()-known-{card.id for card in cards}:
             token_state=game.battlefield[token_id]
             if not token_state.token:raise RuntimeError('Unknown event-created permanent')

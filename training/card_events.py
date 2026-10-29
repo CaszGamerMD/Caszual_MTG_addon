@@ -116,6 +116,7 @@ class Definition:
     role: str = ""
     entry_counter_grants: tuple = ()
     attack_watchers: tuple = ()
+    chosen_type_entry: bool = False
 
 
 def parse_card(card: dict) -> Definition:
@@ -153,7 +154,7 @@ def parse_card(card: dict) -> Definition:
             life_addition=program.life_addition,cost_reductions=program.cost_reductions,
             counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
             token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers,
-            attack_watchers=program.attack_watchers,
+            attack_watchers=program.attack_watchers,chosen_type_entry=program.chosen_type_entry,
             upkeep_attachment_counters=enchantments.upkeep_attachment_counters,
             entry_attachment_counters=enchantments.entry_attachment_counters,
             double_attachment_counters_upkeep=enchantments.double_attachment_counters_upkeep)
@@ -193,7 +194,8 @@ def parse_card(card: dict) -> Definition:
                           life_addition=program.life_addition,cost_reductions=program.cost_reductions,
                           counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
                           token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers,
-                          entry_counter_grants=program.entry_counter_grants,attack_watchers=program.attack_watchers)
+                          entry_counter_grants=program.entry_counter_grants,attack_watchers=program.attack_watchers,
+                          chosen_type_entry=program.chosen_type_entry)
     attack_text=text.replace(name,'this creature') if name else text
     if ',' in name:
         short=name.split(',')[0]
@@ -267,6 +269,7 @@ class Permanent:
     temporary_ability_times: dict[str,int] = field(default_factory=dict)
     loyalty: int | None = None
     charge_counters: int = 0
+    chosen_subtype: str = ''
 
 
 @dataclass
@@ -435,6 +438,8 @@ class Game:
         if len({p.id for p in permanents})!=len(permanents):raise IllegalAction('Duplicate permanent ID')
         for permanent in permanents:
             if permanent.id in self.battlefield: raise IllegalAction("Duplicate permanent ID")
+            if permanent.definition.chosen_type_entry and not permanent.chosen_subtype:
+                raise NeedsRules('Creature-type choice required before entry')
             if not permanent.definition.supported:
                 self.questions.append({"card":permanent.definition.name, "blocking":True,
                     "reason":permanent.definition.reason,
