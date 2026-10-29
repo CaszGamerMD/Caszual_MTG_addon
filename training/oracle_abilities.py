@@ -79,8 +79,12 @@ class Program:
     devotion: tuple = ()
     life_multiplier: int = 1
     opponent_creatures_enter_tapped: bool = False
+    life_addition: int = 0
 
 def static_effect(text):
+    stat_conditional=re.fullmatch(r'This creature gets \\+([0-9]+)/\\+([0-9]+) as long as you have ([1-9][0-9]*) or more life\\.',text)
+    if stat_conditional:
+        return StaticEffect(Selector(self_only=True,creature=True),int(stat_conditional[1]),int(stat_conditional[2]),life_min=int(stat_conditional[3]))
     life_conditional=re.fullmatch(r'As long as you have ([1-9][0-9]*) or more life, this creature gets \+([0-9]+)/\+([0-9]+) and has (.+)\.',text)
     if life_conditional:
         words={part.strip() for part in re.split(r', | and ',life_conditional[4])}
@@ -188,7 +192,7 @@ def compile_abilities(text, name=''):
         text=text.replace(name,'this creature')
         if ',' in name:
             text=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= isn't a creature| enters| attacks|\'s power)",'this creature',text)
-    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False
+    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0
     for line in text.splitlines():
         line=line.strip()
         if not line: continue
@@ -198,6 +202,10 @@ def compile_abilities(text, name=''):
             threshold={'one':1,'two':2,'three':3,'four':4,'five':5,'six':6,'seven':7,'eight':8,'nine':9}.get(condition[2])
             devotion=({'white':'W','blue':'U','black':'B','red':'R','green':'G'}[condition[1]],threshold or int(condition[2]))
             continue
+        addition=re.fullmatch(r'If you would gain life, you gain that much life plus ([1-9][0-9]*) instead\\.',line)
+        if addition:
+            if life_addition:return None
+            life_addition=int(addition[1]);continue
         if line=='Creatures your opponents control enter tapped.':
             if opponent_creatures_enter_tapped:return None
             opponent_creatures_enter_tapped=True;continue
@@ -253,7 +261,7 @@ def compile_abilities(text, name=''):
         if action.operation=='create_tokens' and not subject.self_only:
             return None  # Repeating token engines need bounded stack/loop handling.
         triggers.append(Trigger(event,subject,action))
-    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped else None
+    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition else None
 
 def matches(subject, source, entered, is_creature):
     return ((not subject.self_only or source.id==entered.id)
