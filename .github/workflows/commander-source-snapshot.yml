@@ -18,6 +18,10 @@ jobs:
         run: |
           tar -czf /tmp/commander-rules-source.tar.gz \
             training/*.py training/tests training/decks training/java \
+            training/viewer.html \
+            training/examples/match-theater-real-decks.html \
+            training/examples/budget-vs-goblins-spectator-20261029.html \
+            training/examples/budget-vs-goblins-spectator-20261029-summary.json \
             src/main/java/dev/casz/caszualmtg/CommanderOracle.java \
             src/main/java/dev/casz/caszualmtg/CommanderMana.java \
             src/main/java/dev/casz/caszualmtg/CommanderSimpleCards.java \
