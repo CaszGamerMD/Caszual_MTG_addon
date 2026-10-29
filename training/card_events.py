@@ -622,7 +622,7 @@ class Game:
                 self.emit('trigger',source=a.id,effect=f'+{power}/+{toughness} and {keyword} until end of turn',target=a.id)
         if a.definition.name == "Brightfield Mustang" and a.saddled:
             a.tapped = False
-            a.counters += 1
+            a.counters += self.counter_amount(a.id,1)
             self.emit("trigger", source=a.id, effect="untap and add +1/+1 counter", target=a.id)
         # Tokens enter tapped; they do not trigger 'whenever this attacks' abilities.
         for equipment in list(self.battlefield.values()):
