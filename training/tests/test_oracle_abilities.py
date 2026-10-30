@@ -7,6 +7,33 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class BudgetFaeriesChoiceRegression(unittest.TestCase):
+    def test_entry_keyword_choice_is_generic_and_validated(self):
+        from card_events import NeedsRules
+        raw=dict(name='Unseen Counter Beast',types=['Creature'],
+                 colors=['Black'],power='2',toughness='1',
+                 oracleText='This creature enters with your choice of a deathtouch counter or a lifelink counter on it.')
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported)
+        self.assertEqual(set(definition.entry_keyword_choices),{'deathtouch','lifelink'})
+        game=Game()
+        chosen=Permanent('chosen',definition,0,keyword_counters=frozenset({'lifelink'}))
+        game.enter(chosen)
+        self.assertTrue(game.has(chosen,'lifelink'))
+        self.assertFalse(game.has(chosen,'deathtouch'))
+        with self.assertRaises(NeedsRules):
+            Game().enter(Permanent('missing',definition,0))
+        with self.assertRaises(NeedsRules):
+            Game().enter(Permanent('invalid',definition,0,keyword_counters=frozenset({'flying'})))
+
+    def test_targeted_keyword_choice_spell_compiles_without_card_name(self):
+        from targeted_modifiers import parse
+        oracle='Target creature gets +1/+1 and gains your choice of deathtouch or lifelink until end of turn.'
+        self.assertEqual(parse(oracle,['Instant']),(1,1,('deathtouch','lifelink'),''))
+        self.assertIsNone(parse(oracle+' Draw a card.',['Instant']))
+        self.assertIsNone(parse(oracle,['Creature']))
+
+
 class ColoredWitnessGrammarChecks(unittest.TestCase):
     def test_unseen_colored_witness_is_live_and_excludes_self(self):
         for color in ('white','blue','black','red','green'):
