@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import simulator as s
 from deck_adaptive_strategy import analyze_deck, AdaptiveDeckPolicy
-from strategy_building_blocks import parse_card_blocks, map_mechanics, compose_routes
+from strategy_building_blocks import parse_card_blocks, map_mechanics, compose_routes, dependency_links
 
 DECKS=Path(__file__).resolve().parents[1] / 'decks'
 
@@ -77,7 +77,23 @@ class MechanicsTests(unittest.TestCase):
         self.assertEqual([r.steps for r in compose_routes(map_mechanics(goblin2))],
                          [r.steps for r in gr])
 
-    def test_rules-text_facts_do_not_assert_executability(self):
+    def test_links_connect_rule_production_to_unseen_payoff(self):
+        trigger=raw('Seer',types=('Creature',),
+                text='Whenever another creature enters the battlefield under your control, draw a card.')
+        maker=raw('Visitor',types=('Sorcery',),
+                  text='Create two 1/1 blue Faerie creature tokens.')
+        supplier=parse_card_blocks(maker)
+        consumer=parse_card_blocks(trigger)
+        self.assertIn('token_supply',supplier.blocks)
+        self.assertIn(('Visitor','creature_entry','Seer'),
+                      dependency_links((supplier,consumer)))
+        self.assertIn('card_engine',consumer.blocks)
+        # Not tied to a fixed creature-subtype vocabulary.
+        other=raw('Anon',types=('Sorcery',),
+                  text='Create two 1/1 green Ooze creature tokens.')
+        self.assertEqual(parse_card_blocks(other).blocks,supplier.blocks)
+
+    def test_rules_text_facts_do_not_assert_executability(self):
         # Treasure is not a creature token.
         treasury=parse_card_blocks(raw('Untitled',types=('Sorcery',),
                     text='Create two Treasure tokens.'))
@@ -102,6 +118,8 @@ class MechanicsTests(unittest.TestCase):
         self.assertTrue(wp.routes)
         self.assertTrue(all(r.score>=0 for r in gp.routes+wp.routes))
         self.assertIn('strategyRoutes',gp.describe())
+        self.assertGreater(len(gp.links),0)
+        self.assertIn('strategyDependencies',gp.describe())
         self.assertGreater(len(gp.card_roles),20)
         self.assertGreater(len(wp.card_roles),20)
         self.assertIn('tribal_swarm',(gp.primary,gp.secondary))
