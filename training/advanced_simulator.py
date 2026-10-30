@@ -31,6 +31,9 @@ class AdvancedRules:
   self.log('role_created','Virtuous Role tokens enter attached to a creature.',actor=event['controller'],source=event['source'],target=target.card.id,tokens=[token.id for token in created])
   pending.extend(self.event_game('main').token_action_events('create',event['controller'],count))
   self.resolve_entry_triggers(pending,created[0])
+ def choose_scry_bottom(self,seat,top_card):
+  # Private input, never included in another player's policy observation.
+  return False
  def choose_role_kind(self,event,options):
   # Deterministic policy; later agents can choose according to board context.
   return 'Royal' if 'Royal' in options else options[0]
