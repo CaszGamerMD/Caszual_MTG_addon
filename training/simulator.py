@@ -1497,6 +1497,9 @@ class Simulator(AdvancedRules):
             if not definition or not definition.scaled_mana_tap or item.card.id not in sources or (
                     item.card.id in game.battlefield and getattr(game.battlefield[item.card.id],'land_overridden',False)):continue
             for color in range(5):
+                # Single-color self-power abilities must never offer other colors.
+                if not any(option[color]>0 for option in sources[item.card.id]):
+                    continue
                 choices.append(Candidate(item.card.id+':mana:'+str(color),'activate_scaled_mana',item.card.id,
                     features=features(power=.1),label='Tap '+item.card.name+' for '+mana_pool.COLORS[color],x_value=color))
         return choices
@@ -1510,7 +1513,9 @@ class Simulator(AdvancedRules):
         if not source or not source.card.event_definition or not source.card.event_definition.scaled_mana_tap or source_id not in sources or (
                 state and getattr(state,'land_overridden',False)):
             raise ValueError('Illegal mana ability source')
-        amount=sources[source_id][color][color]
+        values=[option[color] for option in sources[source_id] if option[color]>0]
+        if not values:raise ValueError('Mana ability cannot produce chosen color')
+        amount=max(values)
         source.tapped=True
         self.players[seat].mana_pool[color]+=amount
         self.log('activate_scaled_mana','Player taps a permanent for one chosen color of scaled mana.',
@@ -4074,10 +4079,24 @@ class Simulator(AdvancedRules):
             elif definition and definition.scaled_mana_tap:
                 game=self.event_game('main');state=game.battlefield.get(item.card.id)
                 if state is None or (game.creature(state) and item.fresh and not game.has(state,'haste')):continue
-                count=sum(permanent.controller==seat and definition.scaled_mana_tap in permanent.definition.types
-                          for permanent in game.battlefield.values())
-                if not count:continue
-                options=tuple(tuple(count if index==color else 0 for index in range(6)) for color in range(5))
+                if definition.scaled_mana_tap.startswith('power:'):
+                    symbol=definition.scaled_mana_tap.removeprefix('power:')
+                    if symbol not in mana_pool.COLORS[:5]:
+                        raise RuntimeError('Unsupported self-power mana color')
+                    # Effective P/T includes counters, anthems and continuous
+                    # effects at the instant the mana ability is activated.
+                    count=max(0,game.stats(state)[0])
+                    if not count:continue
+                    color=mana_pool.COLORS.index(symbol)
+                    options=(tuple(count if index==color else 0
+                                   for index in range(6)),)
+                else:
+                    count=sum(permanent.controller==seat and
+                              definition.scaled_mana_tap in permanent.definition.types
+                              for permanent in game.battlefield.values())
+                    if not count:continue
+                    options=tuple(tuple(count if index==color else 0
+                                        for index in range(6)) for color in range(5))
             else: continue
             sources.append((item.card.id,options))
         return sources
