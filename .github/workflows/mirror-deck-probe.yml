@@ -1,0 +1,28 @@
+name: Inspect paired Archidekt teaching decks
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - training/probe_mirror_decks.py
+      - .github/workflows/mirror-deck-probe.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fetch-teaching-decks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Request both user-supplied deck lists and print card inventory
+        run: python training/probe_mirror_decks.py
+      - name: Upload full source evidence and any network errors
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goblin-elf-teaching-deck-source
+          path: training/reports/mirror-deck-probe/
+          retention-days: 14
