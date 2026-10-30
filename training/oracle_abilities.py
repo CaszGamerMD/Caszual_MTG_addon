@@ -818,7 +818,8 @@ def cast_matches(trigger, source, spell, controller):
     types=set(spell.printed_types)
     if kind=='any':return True
     if kind=='subtype':
-        return trigger.subject.subtype in getattr(getattr(spell,'event_definition',None),'subtypes',())
+        definition=getattr(spell,'event_definition',None)
+        return bool(definition and has_subtype(definition,trigger.subject.subtype))
     if kind=='noncreature':return 'Creature' not in types
     return kind.title() in types
 
