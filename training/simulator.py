@@ -205,6 +205,7 @@ class Card:
     graveyard_return_subtype: str = ""
     target_modifier: tuple = ()  # (power, toughness, keyword choices, conditional draw subtype).
     modal_sweeps: tuple = ()  # Ordered destroy modes, with two indices selected on casting.
+    sweep_reward: tuple = ()  # (nontoken only, Treasures per destroyed creature, tapped).
 
 
 
@@ -425,7 +426,7 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.kind=='modifier_spell' and card.target_modifier:
                     continue
-                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_artifact_creature_token","destroy_artifact","exile_creature_life","exile_creature_basic_land","exile_creature_damaged_you","destroy_all_creatures","destroy_toughness_min","modal_sweep"):
+                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_artifact_creature_token","destroy_artifact","exile_creature_life","exile_creature_basic_land","exile_creature_damaged_you","destroy_all_creatures","destroy_toughness_min","destroy_creatures_reward","modal_sweep"):
                     continue
                 if self.diagnostic and card.kind=="graveyard_return_spell" and card.graveyard_return_subtype:
                     continue
@@ -1482,7 +1483,7 @@ class Simulator(AdvancedRules):
                 label='Cast '+card.name+' choosing modes '+str(i+1)+' and '+str(j+1),
                 modal_modes=(i,j))
                 for i,j in itertools.combinations(range(len(card.modal_sweeps)),2))
-        if card.removal in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min'):
+        if card.removal in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min','destroy_creatures_reward'):
             count=(len(self.nonland_destruction_set(seat))
                    if card.removal=='opponent_nonlands'
                    else len(self.creature_board_destruction_set(
@@ -1566,7 +1567,7 @@ class Simulator(AdvancedRules):
                  protected=item.card.id,aura=aura.card.id,controller=aura_owner)
         return True
 
-    def destroy_batch(self,targets,card,reason="destroy",defer_triggers=False):
+    def destroy_batch(self,targets,card,reason="destroy",defer_triggers=False,return_destroyed=False):
         game=self.event_game('main')
         targets=[(owner,item) for owner,item in targets
                  if not self.replace_umbra_destruction(owner,item,game)
@@ -1582,7 +1583,7 @@ class Simulator(AdvancedRules):
             if trigger['effect']=='create tapped Squirrels':
                 trigger.update(operation='create_tokens',tokenSpec=dict(amount=trigger['amount'],power=1,toughness=1,
                     colors=['Green'],subtypes=['Squirrel'],keywords=[],tapped=True,land=False))
-        if defer_triggers:return triggers
+        if defer_triggers:return (triggers,tuple(targets)) if return_destroyed else triggers
         self.resolve_entry_triggers(triggers,card)
 
     def counter_stack_item(self,frame):
@@ -1712,7 +1713,7 @@ class Simulator(AdvancedRules):
             raise ValueError('Temporary modifier requires a legal creature target')
         if card.kind=='modifier_spell' and keyword_choice is not None and keyword_choice not in card.target_modifier[2]:
             raise ValueError('Unknown keyword choice')
-        if card.kind=='removal_spell' and card.removal not in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min','modal_sweep') and target not in {item.card.id for _,item in self.removal_targets(seat,card)}:
+        if card.kind=='removal_spell' and card.removal not in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min','destroy_creatures_reward','modal_sweep') and target not in {item.card.id for _,item in self.removal_targets(seat,card)}:
             raise ValueError('Removal requires a legal permanent target')
         if card.modal_sweeps:
             if len(modal_modes)!=2 or tuple(sorted(set(modal_modes)))!=tuple(modal_modes) or any(
@@ -1843,9 +1844,17 @@ class Simulator(AdvancedRules):
                     if self.finished:break
                 if not self.finished:self.resolve_entry_triggers(pending,card)
                 return
-            if card.removal in ('destroy_all_creatures','destroy_toughness_min'):
+            if card.removal in ('destroy_all_creatures','destroy_toughness_min','destroy_creatures_reward'):
                 threshold=card.removal_min_toughness if card.removal=='destroy_toughness_min' else 0
-                self.destroy_batch(self.creature_board_destruction_set(threshold),card)
+                if card.removal=='destroy_creatures_reward':
+                    result=self.destroy_batch(self.creature_board_destruction_set(),card,
+                                              defer_triggers=True,return_destroyed=True)
+                    if result is None:return
+                    triggers,destroyed=result
+                    nontoken,per_creature,tapped=card.sweep_reward
+                    count=sum(not nontoken or not item.card.is_token for _,item in destroyed)
+                    self.create_treasures(controller,count*per_creature,tapped,card,triggers)
+                else:self.destroy_batch(self.creature_board_destruction_set(threshold),card)
                 return
             if card.removal=='opponent_nonlands':
                 self.destroy_batch(self.nonland_destruction_set(controller),card)
@@ -2698,6 +2707,38 @@ class Simulator(AdvancedRules):
         if first:self.phase='regular_damage'
         else:self.phase='second_main';self.pending=None;self.combat_context=None
 
+    def create_treasures(self,seat,amount,tapped,source,triggers=()):
+        """One noncreature-token event, with replacement count and token-action triggers."""
+        game=self.event_game('main')
+        created=game.token_amount(seat,amount)
+        pending=list(triggers)
+        for _ in range(created):
+            self.token_sequence+=1
+            definition=EventDefinition('Treasure',frozenset({'Artifact'}),
+                frozenset({'Treasure'}),False,0,0,frozenset())
+            token=Card(f'token-{self.token_sequence}','Treasure','artifact',
+                       event_definition=definition,is_token=True)
+            pending.extend(self.enter_creature(token,self.players[seat]))
+            next(p for p in self.players[seat].battlefield if p.card.id==token.id).tapped=tapped
+        pending.extend(self.event_game('main').token_action_events('create',seat,created))
+        self.log('treasure_creation','Create Treasure artifact tokens after destruction.',
+                 actor=seat,source=source.name,created=created,tapped=tapped)
+        self.resolve_entry_triggers(pending,source)
+
+    def activate_treasure_mana(self,seat,token_id,color):
+        """Sacrifice an untapped Treasure as a mana ability, without using the stack."""
+        if self.stack.priority!=seat or type(color) is not int or not 0<=color<5:
+            raise ValueError('Illegal Treasure mana activation')
+        token=next((p for p in self.players[seat].battlefield if p.card.id==token_id),None)
+        if not token or token.tapped or not token.card.is_token or not token.card.event_definition or (
+                'Artifact' not in token.card.event_definition.types or
+                'Treasure' not in token.card.event_definition.subtypes):
+            raise ValueError('Illegal Treasure mana source')
+        self.sacrifice_token(seat,token_id)
+        self.players[seat].mana_pool[color]+=1
+        self.log('treasure_mana','Sacrificed a Treasure for one mana of the chosen color.',
+                 actor=seat,source=token_id,color=mana_pool.COLORS[color])
+
     def sacrifice_token(self, seat: int, token_id: str):
         """Execute a token sacrifice AFTER a legal ability has paid its cost.
 
@@ -3461,6 +3502,10 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     destruction=rule_text(definition.get('oracleText',''))
     from modal_sweeps import parse as parse_modal_sweeps
     modal=parse_modal_sweeps(destruction,definition.get('types',[]))
+    from sweep_rewards import parse as parse_sweep_rewards
+    sweep_reward=parse_sweep_rewards(destruction,definition.get('types',[]))
+    if parsed['kind']=='unsupported' and sweep_reward and rules.query('cost',cost)['supported']:
+        parsed={'kind':'removal_spell','removal':'destroy_creatures_reward','sweep_reward':sweep_reward}
     if parsed['kind']=='unsupported' and modal and rules.query('cost',cost)['supported']:
         parsed={'kind':'removal_spell','removal':'modal_sweep','modal_sweeps':modal}
     if (parsed['kind']=='unsupported' and definition.get('types')==['Sorcery']
@@ -3554,7 +3599,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
     return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),blink_to_controller=parsed.get("blink_to_controller",False),flashback_cost=parsed.get("flashback_cost",""),graveyard_return_subtype=parsed.get("graveyard_return_subtype",""),
-        target_modifier=parsed.get('target_modifier',()),modal_sweeps=parsed.get('modal_sweeps',()),
+        target_modifier=parsed.get('target_modifier',()),modal_sweeps=parsed.get('modal_sweeps',()),sweep_reward=parsed.get('sweep_reward',()),
         instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),
