@@ -18,8 +18,12 @@ class LivingWeaponChecks(unittest.TestCase):
             self.assertTrue(card.event_definition.living_weapon)
             raw['oracleText']+='\nDo something mysterious.'
             self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad',set()).kind,'unsupported')
-        self.assertEqual(s.import_diagnostic_card(self.rules,self.lookup["Bitterthorn, Nissa's Animus"],
-                         0,'bitter',set()).kind,'unsupported')
+        # The equipped-attacker basic-land search family is now implemented.
+        bitter=s.import_diagnostic_card(self.rules,self.lookup["Bitterthorn, Nissa's Animus"],
+                                        0,'bitter',set())
+        self.assertEqual(bitter.kind,'equipment')
+        self.assertTrue(bitter.event_definition.living_weapon)
+        self.assertTrue(bitter.event_definition.equipment_basic_search)
 
     def test_cast_creates_germ_after_trigger_and_equips_before_state_actions(self):
         sim,cards=self.fixture(['Batterbone'])

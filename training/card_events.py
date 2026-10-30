@@ -139,6 +139,7 @@ class Definition:
     combat_limits: tuple[int, int] = ()  # Attack-triggered block cap, tapped-source attack cap.
     upkeep_token_rule: tuple = ()  # (each/your, condition, counted subtype, divisor, TokenSpec).
     land_type_effect: tuple = ()  # (scope, replace/add, basic land subtypes).
+    equipment_basic_search: bool = False  # Equipped attacker searches for tapped basic land.
 
 
 def parse_card(card: dict) -> Definition:
@@ -169,6 +170,11 @@ def parse_card(card: dict) -> Definition:
     land_type_effect=parse_land_type_effect(text,types)
     if land_type_effect:
         return Definition(**base,abilities=frozenset(),land_type_effect=land_type_effect)
+    from equipment_land_search import parse as parse_equipment_land_search
+    equipment_search=parse_equipment_land_search(text,types,subtypes)
+    if equipment_search:
+        return Definition(**base,abilities=frozenset(),attachment=equipment_search[0],
+                          living_weapon=equipment_search[1],equipment_basic_search=True)
     from upkeep_token_rules import parse_enchanted, parse_scaled
     upkeep_tokens=parse_enchanted(text,types) or parse_scaled(text,types)
     if upkeep_tokens:
@@ -1002,6 +1008,13 @@ class Game:
             a.tapped = False
             a.counters += self.counter_amount(a.id,1)
             self.emit("trigger", source=a.id, effect="untap and add +1/+1 counter", target=a.id)
+        # The controller of Equipment controls its attack trigger, even when
+        # another player controls the equipped creature. It survives source removal.
+        for equipment in tuple(self.battlefield.values()):
+            if equipment.attached_to==a.id and equipment.definition.equipment_basic_search:
+                self.emit('trigger',operation='equipment_basic_search',source=equipment.id,
+                          name=equipment.definition.name,controller=equipment.controller,
+                          effect='optional tapped basic-land search on equipped attack')
         # Tokens enter tapped; they do not trigger 'whenever this attacks' abilities.
         for equipment in list(self.battlefield.values()):
             if equipment.definition.name != "Andúril, Flame of the West" or equipment.attached_to != a.id:
