@@ -92,15 +92,15 @@ def fetch_random():
         return data
 
 
-def sample(count: int, rounds: int, fetch=fetch_random, sleep=time.sleep):
+def sample(count: int, rounds: int, fetch=fetch_random, sleep=time.sleep, excluded=()):
     """Collect only distinct original Oracle identities. Never fudge missing draws."""
     if count<1 or rounds<1 or count*rounds>100:
         raise ValueError('Exam needs 1..100 cards in positive rounds')
     draws=[]
-    seen=set()
+    seen=set(excluded)
     needed=count*rounds
     # Network random endpoint can yield repeated printings; bound attempts.
-    max_tries=needed*5
+    max_tries=needed*8
     for attempt in range(max_tries):
         if len(draws)>=needed:
             break
@@ -169,6 +169,7 @@ def main():
     p.add_argument('--count',type=int,default=5)
     p.add_argument('--rounds',type=int,default=1)
     p.add_argument('--source',type=Path,help='Re-examine a saved scryfall-source.json without redrawing cards')
+    p.add_argument('--exclude-source',type=Path,help='Previously examined Scryfall source cards to exclude from fresh random draws')
     p.add_argument('--out',type=Path,default=HERE/'reports/random-commander-exam')
     a=p.parse_args()
     if a.source:
@@ -179,7 +180,13 @@ def main():
         if len({x.get('oracle_id') or x['id'] for x,_ in draws})!=len(draws):
             raise ValueError('Saved source contains duplicate card identities')
     else:
-        draws=sample(a.count,a.rounds)
+        excluded=set()
+        if a.exclude_source:
+            previous=json.loads(a.exclude_source.read_text(encoding='utf-8'))
+            if not isinstance(previous,list) or not all(isinstance(x,dict) and x.get('id') for x in previous):
+                raise ValueError('Excluded source must contain Scryfall card objects with IDs')
+            excluded={x.get('oracle_id') or x['id'] for x in previous}
+        draws=sample(a.count,a.rounds,excluded=excluded)
     a.out.mkdir(parents=True,exist_ok=True)
     s.write_json(a.out/'scryfall-source.json',[source for source,_ in draws])
     with s.RulesBridge() as rules:
