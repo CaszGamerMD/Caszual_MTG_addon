@@ -20,7 +20,7 @@ class SessionLearningModalRoles(unittest.TestCase):
     def test_real_unseen_and_strict_unknown_oracle(self):
         raw=dict(self.lookup[NAME])
         card=s.import_diagnostic_card(self.rules,raw,0,'real',{'White','Green'})
-        self.assertNotEqual(card.kind,'unsupported')
+        self.assertNotEqual(card.kind,'unsupported',repr(raw['oracleText']))
         self.assertEqual(card.event_definition.modal_role_choices,('Royal','Sorcerer','Monster'))
         raw['name']='Unseen Theater Director'
         raw['oracleText']=raw['oracleText'].replace(NAME,'Unseen Theater Director')
