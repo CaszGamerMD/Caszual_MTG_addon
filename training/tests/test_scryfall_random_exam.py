@@ -63,6 +63,11 @@ class ScryfallRandomExamTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,'only 1/5'):
             e.sample(5,1,fetch=lambda:fixture(),sleep=lambda _:None)
 
+    def test_fresh_sample_excludes_previous_oracle_id_even_new_printing(self):
+        feed=iter([fixture(1,id='reprinted-one'),fixture(2),fixture(3)])
+        draws=e.sample(2,1,fetch=lambda:next(feed),sleep=lambda _:None,excluded={'oracle-1'})
+        self.assertEqual([x['oracle_id'] for x,_ in draws],['oracle-2','oracle-3'])
+
     def test_unknown_rules_do_not_become_executable_from_heuristic_hit(self):
         source=fixture(9,oracle_text='Create two 1/1 green Elf creature tokens and transcend time.')
         raw=e.convert_scryfall(source)
