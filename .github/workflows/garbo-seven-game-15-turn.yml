@@ -1,0 +1,41 @@
+name: Garbo vs Wilds - 7 games x 15 turns
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - training/seven_game_garbo.py
+      - training/tests/test_seven_game_garbo.py
+      - .github/workflows/garbo-seven-game-15-turn.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: garbo-7x15-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  matchup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify seven-game strategy, seating, and fail-closed tests
+        run: |
+          python -m unittest discover -s training/tests -p test_garbo_strategy.py -v
+          python -m unittest discover -s training/tests -p test_seven_game_garbo.py -v
+      - name: Run seven games at fifteen turns per player
+        run: |
+          python training/seven_game_garbo.py --games 7 --turns 15 --seed 5189995 --out training/reports/garbo-wilds-7x15
+      - name: Save results and spectator replays
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: garbo-wilds-7-games-15-turns
+          path: training/reports/garbo-wilds-7x15/
+          retention-days: 14
