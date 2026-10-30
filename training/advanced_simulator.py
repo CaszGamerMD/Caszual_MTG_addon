@@ -1,6 +1,7 @@
 """Reusable group combat, station/history actions, and blink/rebound operations."""
 from dataclasses import replace,asdict
 from itertools import combinations
+from creature_types import has_subtype
 import sys
 import json
 
@@ -256,6 +257,16 @@ class AdvancedRules:
       events.append(dict(operation='create_tokens',effect='nontoken creature attack token creation',
                          source=watcher.id,controller=watcher.controller,name=watcher.definition.name,
                          tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords))))
+  # A subtype-wide attack watcher also fires only once for a full attack
+  # group. Use the printed/Changeling creature-type rules for each declarer.
+  for watcher in g.battlefield.values():
+   if watcher.controller!=self.active:continue
+   for subtype,spec in watcher.definition.group_attack_subtype_tokens:
+    if any(has_subtype(g.battlefield[identifier].definition,subtype)
+           for identifier in ids):
+     events.append(dict(operation='create_tokens',effect='collective tribal attack token creation',
+                        source=watcher.id,controller=watcher.controller,name=watcher.definition.name,
+                        tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords))))
   # A group-attack trigger is generated once for a simultaneous declaration,
   # not once per creature and not for tokens entering already attacking.
   for watcher in g.battlefield.values():
