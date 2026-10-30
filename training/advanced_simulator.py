@@ -273,6 +273,19 @@ class AdvancedRules:
    events.append(dict(operation='modal_attack_tokens',effect='modal attack token creation',
                       source=watcher.id,controller=watcher.controller,name=watcher.definition.name,
                       mode=mode,tokenSpec=dict(watcher.definition.modal_attack_tokens[mode])))
+  # Level-three Class triggers once per group, targeting one legal attacker at
+  # declaration, then counting all other current attackers at resolution.
+  for class_source in self.players[self.active].battlefield:
+   program=class_source.card.event_definition.class_program if class_source.card.event_definition else ()
+   if not program or class_source.class_level<3:continue
+   targets=[g.battlefield[i] for i in ids if i in g.battlefield
+            and not g.has(g.battlefield[i],'shroud')]
+   if targets:
+    chosen=max(targets,key=lambda p:(g.stats(p)[0],p.id))
+    events.append(dict(operation='class_attack_boost',effect='attack Class bonus',
+       source=class_source.card.id,controller=self.active,name=class_source.card.name,
+       target=chosen.id,powerPerOther=program[5],toughnessPerOther=program[6],
+       keyword=program[7]))
   # All attackers are declared simultaneously; mentor can target any lesser-power attacker.
   for identifier in ids:
    source=g.battlefield[identifier]

@@ -149,6 +149,7 @@ class Definition:
     equipment_basic_search: bool = False  # Equipped attacker searches for tapped basic land.
     graveyard_exile_activation: tuple = ()  # Cost, conditional creature-token specification.
     enchantment_copy_cost: str = ''  # Pay mana and tap to copy a stack ability from an enchantment.
+    class_program: tuple = ()  # Spell tax, Level 2/3 costs, anthem, attack bonus and keyword.
 
 
 def parse_card(card: dict) -> Definition:
@@ -175,6 +176,10 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from class_abilities import parse as parse_class
+    class_program=parse_class(text,types,subtypes)
+    if class_program:
+        return Definition(**base,abilities=frozenset(),class_program=class_program)
     from land_animation_spell_protection import parse as parse_land_animation
     land_animation=parse_land_animation(text,types)
     if land_animation:

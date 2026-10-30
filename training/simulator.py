@@ -7,7 +7,7 @@ from __future__ import annotations
 import argparse
 from card_events import Game as EventGame, Permanent as EventPermanent, Definition as EventDefinition, parse_card as parse_event_card, rule_text
 import base64
-from oracle_abilities import parse_token_creation
+from oracle_abilities import parse_token_creation, StaticEffect, Selector
 import mana_pool
 import opening_hand
 import x_spells
@@ -252,6 +252,7 @@ class Permanent:
     regeneration_shields: int = 0
     temporary_land_power: int | None = None
     temporary_land_subtype: str = ''
+    class_level: int = 1
 
 
 @dataclass
@@ -501,7 +502,7 @@ class Simulator(AdvancedRules):
         return {"id": c.id, "name": c.name, "kind": "aura" if item.bestowed else ("enchantment" if not effective and c.event_definition and c.event_definition.devotion else c.kind), "power": c.power,
                 "toughness": c.toughness, "traits": c.traits, "tapped": item.tapped,
                 "fresh": item.fresh, "saddled": item.saddled, "counters": item.counters, "isCreature": effective is not None, "bestowed": item.bestowed, "attachedTo": item.attached_to,
-                "hexproof": bool(state and game.has(state,'hexproof')), "wardCosts": list(game.ward_costs(state)) if state else [], "loyalty": item.loyalty, "chargeCounters": item.charge_counters}
+                "hexproof": bool(state and game.has(state,'hexproof')), "wardCosts": list(game.ward_costs(state)) if state else [], "loyalty": item.loyalty, "chargeCounters": item.charge_counters,"classLevel": item.class_level if item.card.event_definition and item.card.event_definition.class_program else None}
 
     def state(self) -> dict:
         return {"active": self.active, "turn": self.turn, "phase": self.phase,
@@ -574,6 +575,12 @@ class Simulator(AdvancedRules):
                         types=frozenset(set(definition.types)|{'Creature','Land'}),
                         subtypes=frozenset(set(definition.subtypes)|{item.temporary_land_subtype}),
                         power=item.temporary_land_power,toughness=item.temporary_land_power)
+                if definition.class_program and item.class_level>=2:
+                    program=definition.class_program
+                    anthem=StaticEffect(Selector(relation='controller',creature=True),
+                                        program[2],program[3])
+                    definition=replace(definition,
+                        static_effects=definition.static_effects+(anthem,))
                 definition=replace(definition,mana_cost=card.mana_cost)
                 game.battlefield[card.id] = EventPermanent(card.id, definition, seat, item.tapped,
                     item.fresh, item.saddled, item.animated, counters=item.counters, token=item.card.is_token,temporary_power=item.temporary_power,
@@ -1544,6 +1551,45 @@ class Simulator(AdvancedRules):
                  actor=seat,source=source_id,targetStack=target_stack,stackId=frame.id)
         if not self.manual_priority and not self._resolving_stack:self.drain_priority()
 
+    def class_level_choices(self,seat):
+        if seat!=self.active or self.stack.items or self.stack.priority!=seat or (
+                self.phase not in ('main','second_main')):return []
+        result=[]
+        for item in self.players[seat].battlefield:
+            program=item.card.event_definition.class_program if item.card.event_definition else ()
+            if not program or item.class_level>=3:continue
+            cost=program[1] if item.class_level==1 else program[4]
+            if self.payment(replace(item.card,mana_cost=cost),seat=seat,spell_cost=False)['paid']:
+                result.append(Candidate(item.card.id+':level'+str(item.class_level+1),
+                    'activate_class_level',item.card.id,
+                    features=features(power=1,cost=len(self.payment(replace(item.card,mana_cost=cost),
+                                             seat=seat,spell_cost=False)['sources'])),
+                    label='Level '+str(item.class_level+1)+' '+item.card.name))
+        return result
+
+    def activate_class_level(self,seat,source_id):
+        if seat!=self.active or self.phase not in ('main','second_main') or (
+                self.stack.items or self.stack.priority!=seat):
+            raise ValueError('Class level ability only as a sorcery')
+        source=next((item for item in self.players[seat].battlefield
+                    if item.card.id==source_id),None)
+        program=source.card.event_definition.class_program if source and source.card.event_definition else ()
+        if not program or source.class_level>=3:raise ValueError('Class cannot advance')
+        cost=program[1] if source.class_level==1 else program[4]
+        paid=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
+        if not paid['paid']:raise ValueError('Cannot pay class level cost')
+        for item in self.players[seat].battlefield:
+            if item.card.id in paid['sources']:item.tapped=True
+        self.players[seat].mana_pool=list(paid['pool'])
+        next_level=source.class_level+1
+        ability=dict(operation='class_level_up',source=source_id,controller=seat,
+                     name=source.card.name,expected=source.class_level,nextLevel=next_level)
+        frame=self.stack.push(seat,(ability,source.card),source.card.name+' level '+str(next_level))
+        self.stack.priority=seat
+        self.log('activate_class','Class level ability was paid and put on stack.',
+                 actor=seat,source=source_id,nextLevel=next_level,stackId=frame.id)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
     def equip_choices(self,seat):
         choices=[]
         for source in self.players[seat].battlefield:
@@ -2344,6 +2390,40 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='class_level_up':
+                source=next((item for item in self.players[event['controller']].battlefield
+                             if item.card.id==event['source']),None)
+                if source and source.class_level==event['expected']:
+                    source.class_level=event['nextLevel']
+                    self.log('class_level','Class gains its next level.',
+                             actor=event['controller'],source=event['source'],
+                             level=source.class_level)
+                else:
+                    self.log('class_level_fizzle','Class left play or no longer at expected level.',
+                             actor=event['controller'],source=event['source'])
+                continue
+            if event.get('operation')=='class_attack_boost':
+                game=self.event_game('combat');identifier=event['target']
+                valid=self.group_combat is not None and identifier in self.group_combat['attackers']
+                state=game.battlefield.get(identifier)
+                valid=valid and state is not None and state.controller==event['controller'] and game.creature(state)
+                if not valid:
+                    self.log('class_attack_fizzle','Target attacker no longer legal.',
+                             actor=event['controller'],target=identifier)
+                    continue
+                target=next(item for item in self.players[event['controller']].battlefield
+                            if item.card.id==identifier)
+                other=sum(i!=identifier for i in self.group_combat['attackers']
+                          if i in game.battlefield and game.creature(game.battlefield[i]))
+                target.temporary_power+=other*event['powerPerOther']
+                target.temporary_toughness+=other*event['toughnessPerOther']
+                target.temporary_abilities=frozenset(set(target.temporary_abilities)|{event['keyword']})
+                self.effect_clock+=1
+                target.temporary_ability_times[event['keyword']]=self.effect_clock
+                self.log('class_attack_boost','Class grants combat bonus and keyword.',
+                         actor=event['controller'],source=event['source'],target=identifier,
+                         otherAttackers=other,keyword=event['keyword'])
+                continue
             if event.get('operation')=='copy_enchantment_ability':
                 # The target ability must still be on the stack when this resolves.
                 # Both objects are independent and no spell is cast.
@@ -3504,6 +3584,12 @@ class Simulator(AdvancedRules):
                           for names,amount in permanent.card.event_definition.cost_reductions
                           if any(name in categories for name in names))
             cost=mana_pool.reduce_generic_cost(cost,reduction,x)
+            # Class level 1 taxes opponents' spells only while the Class owner is active.
+            if seat!=self.active:
+                imposed=sum(item.card.event_definition.class_program[0]
+                    for item in self.players[self.active].battlefield
+                    if item.card.event_definition and item.card.event_definition.class_program)
+                cost+=''.join('{1}' for _ in range(imposed))
         sources=[s for s in self.mana_sources(seat) if s[0] not in excluded_sources]
         any_color=any(p.card.mana_as_any_color for p in player.battlefield)
         return mana_pool.plan(cost,player.mana_pool,sources,x,spend_as_any_color=any_color)
@@ -3563,6 +3649,7 @@ class Simulator(AdvancedRules):
             if self.diagnostic: actions.extend(self.activation_choices(seat, {"crew","saddle"}))
             actions.extend(self.special_choices(seat))
             actions.extend(self.enchantment_copy_choices(seat))
+            actions.extend(self.class_level_choices(seat))
             actions.extend(self.equip_choices(seat))
             actions.extend(self.token_ability_choices(seat))
             actions.extend(self.scaled_mana_choices(seat))
@@ -3788,6 +3875,8 @@ class Simulator(AdvancedRules):
                 self.activate_station(self.active,choice.card_id,choice.tap_ids[0])
             elif choice.kind=='history_tokens':
                 self.activate_history(self.active,choice.card_id)
+            elif choice.kind=='activate_class_level':
+                self.activate_class_level(self.active,choice.card_id)
             elif choice.kind=='copy_enchantment_ability':
                 self.activate_enchantment_copy(self.active,choice.card_id,choice.target_stack)
             elif choice.kind=='activate_strip':
@@ -4091,7 +4180,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and (rules.query("cost",cost)["supported"] or "Land" in event_definition.types and not cost)):
