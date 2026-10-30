@@ -52,12 +52,16 @@ class TribalSpellCastChecks(unittest.TestCase):
         self.assertEqual(trigger.effect.operation,'create_tokens')
         watcher=Permanent('watcher',source,0)
         elf=SimpleNamespace(printed_types=('Creature',),
-                            event_definition=SimpleNamespace(subtypes=frozenset({'Elf','Warrior'})))
+                            event_definition=SimpleNamespace(subtypes=frozenset({'Elf','Warrior'}),types=frozenset({'Creature'}),abilities=frozenset()))
         goblin=SimpleNamespace(printed_types=('Creature',),
-                               event_definition=SimpleNamespace(subtypes=frozenset({'Goblin'})))
+                               event_definition=SimpleNamespace(subtypes=frozenset({'Goblin'}),types=frozenset({'Creature'}),abilities=frozenset()))
         self.assertTrue(cast_matches(trigger,watcher,elf,0))
         self.assertFalse(cast_matches(trigger,watcher,goblin,0))
         self.assertFalse(cast_matches(trigger,watcher,elf,1))
+        changeling=SimpleNamespace(printed_types=('Creature',),
+            event_definition=SimpleNamespace(subtypes=frozenset({'Shapeshifter'}),
+                types=frozenset({'Creature'}),abilities=frozenset({'changeling'})))
+        self.assertTrue(cast_matches(trigger,watcher,changeling,0))
 
     def test_real_lupitas_elves_huntmaster_compiles(self):
         import json
