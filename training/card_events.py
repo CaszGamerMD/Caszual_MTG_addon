@@ -106,6 +106,7 @@ class Definition:
     life_multiplier: int = 1
     opponent_creatures_enter_tapped: bool = False
     life_addition: int = 0
+    opponent_life_gain_becomes_loss: bool = False
     cost_reductions: tuple = ()
     counter_replacements: tuple = ()
     token_replacements: tuple = ()
@@ -291,7 +292,9 @@ def parse_card(card: dict) -> Definition:
             damage_events=enchantments.damage_events,
             life_multiplier=program.life_multiplier,
             opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
-            life_addition=program.life_addition,cost_reductions=program.cost_reductions,
+            life_addition=program.life_addition,
+            opponent_life_gain_becomes_loss=program.opponent_life_gain_becomes_loss,
+            cost_reductions=program.cost_reductions,
             counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
             token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers,
             attack_watchers=program.attack_watchers,chosen_type_entry=program.chosen_type_entry,
@@ -409,7 +412,9 @@ def parse_card(card: dict) -> Definition:
         return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects,
                           activations=program.activations,devotion=program.devotion,life_multiplier=program.life_multiplier,
                           opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
-                          life_addition=program.life_addition,cost_reductions=program.cost_reductions,
+                          life_addition=program.life_addition,
+            opponent_life_gain_becomes_loss=program.opponent_life_gain_becomes_loss,
+            cost_reductions=program.cost_reductions,
                           counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
                           token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers,
                           entry_counter_grants=program.entry_counter_grants,attack_watchers=program.attack_watchers,
