@@ -137,7 +137,8 @@ def static_effect(text):
     # includes its own source when that source has the subtype.
     controlled_subtype=re.fullmatch(
         r'([A-Z][a-z]+) creatures you control get ([+-][0-9]+)/([+-][0-9]+)\.',text)
-    if controlled_subtype:
+    if controlled_subtype and controlled_subtype[1] not in (
+            'White','Blue','Black','Red','Green','Legendary','Nonlegendary'):
         return StaticEffect(Selector(relation='controller',creature=True,
                                      subtype=controlled_subtype[1]),
                             int(controlled_subtype[2]),int(controlled_subtype[3]))
