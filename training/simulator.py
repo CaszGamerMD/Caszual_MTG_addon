@@ -204,6 +204,7 @@ class Card:
     flashback_cost: str = ""
     graveyard_return_subtype: str = ""
     target_modifier: tuple = ()  # (power, toughness, keyword choices, conditional draw subtype).
+    modal_sweeps: tuple = ()  # Ordered destroy modes, with two indices selected on casting.
 
 
 
@@ -274,6 +275,7 @@ class Candidate:
     attack_ids: tuple[str, ...] = ()
     blocks: tuple = ()
     discard_id: str = ''
+    modal_modes: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -423,7 +425,7 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.kind=='modifier_spell' and card.target_modifier:
                     continue
-                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_artifact_creature_token","destroy_artifact","exile_creature_life","exile_creature_basic_land","exile_creature_damaged_you","destroy_all_creatures","destroy_toughness_min"):
+                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_artifact_creature_token","destroy_artifact","exile_creature_life","exile_creature_basic_land","exile_creature_damaged_you","destroy_all_creatures","destroy_toughness_min","modal_sweep"):
                     continue
                 if self.diagnostic and card.kind=="graveyard_return_spell" and card.graveyard_return_subtype:
                     continue
@@ -1473,6 +1475,13 @@ class Simulator(AdvancedRules):
         return tuple(targets)
 
     def removal_choices(self,seat,card,kind):
+        if card.removal=='modal_sweep':
+            return tuple(Candidate(card.id+':modes='+str(i)+','+str(j),kind,card.id,
+                features=features(power=len(self.modal_sweep_targets(card,(i,j))),
+                                  cost=len(self.payment(card,seat=seat).get('sources',[]))),
+                label='Cast '+card.name+' choosing modes '+str(i+1)+' and '+str(j+1),
+                modal_modes=(i,j))
+                for i,j in itertools.combinations(range(len(card.modal_sweeps)),2))
         if card.removal in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min'):
             count=(len(self.nonland_destruction_set(seat))
                    if card.removal=='opponent_nonlands'
@@ -1503,6 +1512,26 @@ class Simulator(AdvancedRules):
             and game.creature(game.battlefield[item.card.id])
             and game.stats(game.battlefield[item.card.id])[1]>=minimum_toughness
             and not game.has(game.battlefield[item.card.id],'indestructible'))
+
+    def modal_sweep_targets(self,card,modes):
+        game=self.event_game('main')
+        targets=[]
+        for index in modes:
+            kind,threshold=card.modal_sweeps[index]
+            for owner,player in enumerate(self.players):
+                for item in player.battlefield:
+                    state=game.battlefield.get(item.card.id)
+                    if state is None or game.has(state,'indestructible'):continue
+                    types=state.definition.types
+                    matches=(kind=='artifact' and 'Artifact' in types or
+                             kind=='enchantment' and 'Enchantment' in types or
+                             kind=='creature_mana_le' and game.creature(state) and
+                                 (0 if item.card.is_token else item.card.printed_mana_value or 0)<=threshold or
+                             kind=='creature_mana_ge' and game.creature(state) and
+                                 (0 if item.card.is_token else item.card.printed_mana_value or 0)>=threshold)
+                    if matches and all(item is not old for _,old in targets):
+                        targets.append((owner,item))
+        return tuple(targets)
 
     def nonland_destruction_set(self,controller):
         game=self.event_game('main')
@@ -1537,7 +1566,7 @@ class Simulator(AdvancedRules):
                  protected=item.card.id,aura=aura.card.id,controller=aura_owner)
         return True
 
-    def destroy_batch(self,targets,card,reason="destroy"):
+    def destroy_batch(self,targets,card,reason="destroy",defer_triggers=False):
         game=self.event_game('main')
         targets=[(owner,item) for owner,item in targets
                  if not self.replace_umbra_destruction(owner,item,game)
@@ -1553,6 +1582,7 @@ class Simulator(AdvancedRules):
             if trigger['effect']=='create tapped Squirrels':
                 trigger.update(operation='create_tokens',tokenSpec=dict(amount=trigger['amount'],power=1,toughness=1,
                     colors=['Green'],subtypes=['Squirrel'],keywords=[],tapped=True,land=False))
+        if defer_triggers:return triggers
         self.resolve_entry_triggers(triggers,card)
 
     def counter_stack_item(self,frame):
@@ -1659,10 +1689,10 @@ class Simulator(AdvancedRules):
                                               ('White','Blue','Black','Red','Green')[choice.x_value])
             return 'activate'
         card=next(c for c in self.players[seat].hand if c.id==choice.card_id)
-        self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack)
+        self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack,modal_modes=choice.modal_modes)
         return 'cast'
 
-    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None):
+    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None,modal_modes=()):
         player=self.players[seat]
         if not card.instant and seat!=self.stack.priority: raise ValueError('Player lacks priority')
         if self.stack.items:
@@ -1682,8 +1712,14 @@ class Simulator(AdvancedRules):
             raise ValueError('Temporary modifier requires a legal creature target')
         if card.kind=='modifier_spell' and keyword_choice is not None and keyword_choice not in card.target_modifier[2]:
             raise ValueError('Unknown keyword choice')
-        if card.kind=='removal_spell' and card.removal not in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min') and target not in {item.card.id for _,item in self.removal_targets(seat,card)}:
+        if card.kind=='removal_spell' and card.removal not in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min','modal_sweep') and target not in {item.card.id for _,item in self.removal_targets(seat,card)}:
             raise ValueError('Removal requires a legal permanent target')
+        if card.modal_sweeps:
+            if len(modal_modes)!=2 or tuple(sorted(set(modal_modes)))!=tuple(modal_modes) or any(
+                    not isinstance(i,int) or i<0 or i>=len(card.modal_sweeps) for i in modal_modes):
+                raise ValueError('Choose two distinct legal modes on casting')
+        elif modal_modes:
+            raise ValueError('Spell has no modal destruction choices')
         if card.kind=='graveyard_return_spell' and target not in {c.id for c in self.graveyard_subtype_targets(seat,card.graveyard_return_subtype)}:
             raise ValueError('Graveyard return requires legal target')
         if card.kind=='counter_spell' and target not in {f.id for f in self.counter_targets(card)}:
@@ -1701,7 +1737,7 @@ class Simulator(AdvancedRules):
         else:casting_zone.remove(card)
         prior=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)
         self.stack.active=self.active
-        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'keywordChoice':keyword_choice or (card.target_modifier[2][0] if card.target_modifier and card.target_modifier[2] else None),'fromHand':not rebound and not flashback and not commander},card),card.name)
+        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'keywordChoice':keyword_choice or (card.target_modifier[2][0] if card.target_modifier and card.target_modifier[2] else None),'modalModes':tuple(modal_modes),'fromHand':not rebound and not flashback and not commander},card),card.name)
         self.log('cast',f'Player {seat+1} casts {card.name}.',actor=seat,card=card.name,
                  manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,bestow=bestow,rebound=rebound,flashback=flashback,targetStack=target if card.kind=='counter_spell' else None,
                  targetPermanent=target if card.kind in ('removal_spell','modifier_spell') else None)
@@ -1799,6 +1835,14 @@ class Simulator(AdvancedRules):
             self.resolve_entry_triggers(self.state_based_actions(),card)
             return
         if card.kind=='removal_spell':
+            if card.removal=='modal_sweep':
+                pending=[]
+                for mode in event['modalModes']:
+                    pending.extend(self.destroy_batch(self.modal_sweep_targets(card,(mode,)),card,
+                        reason='modal_destroy',defer_triggers=True) or [])
+                    if self.finished:break
+                if not self.finished:self.resolve_entry_triggers(pending,card)
+                return
             if card.removal in ('destroy_all_creatures','destroy_toughness_min'):
                 threshold=card.removal_min_toughness if card.removal=='destroy_toughness_min' else 0
                 self.destroy_batch(self.creature_board_destruction_set(threshold),card)
@@ -3138,7 +3182,7 @@ class Simulator(AdvancedRules):
                     self.resolve_entry_triggers(pending,card)
                 else:
                     self.cast_spell(self.active,card,choice.x_value,choice.kind=='cast_commander',
-                        target=choice.target_permanent or choice.target_stack,
+                        modal_modes=choice.modal_modes,target=choice.target_permanent or choice.target_stack,
                         bestow=choice.kind=='bestow',flashback=choice.kind=='cast_flashback')
         elif self.phase == "attack":
             choice = self.decide(self.active)
@@ -3401,6 +3445,10 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                 frozenset(spec.subtypes),False,spec.power,spec.toughness,spec.keywords,colors=frozenset(spec.colors))
             parsed={'kind':'token_spell','token_count':spec.amount,'token_definition':template,'token_tapped':spec.tapped,'storm':True}
     destruction=rule_text(definition.get('oracleText',''))
+    from modal_sweeps import parse as parse_modal_sweeps
+    modal=parse_modal_sweeps(destruction,definition.get('types',[]))
+    if parsed['kind']=='unsupported' and modal and rules.query('cost',cost)['supported']:
+        parsed={'kind':'removal_spell','removal':'modal_sweep','modal_sweeps':modal}
     if (parsed['kind']=='unsupported' and definition.get('types')==['Sorcery']
             and rules.query('cost',cost)['supported']):
         # Whole-text recognition; regeneration prohibition is represented
@@ -3492,7 +3540,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
     return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),blink_to_controller=parsed.get("blink_to_controller",False),flashback_cost=parsed.get("flashback_cost",""),graveyard_return_subtype=parsed.get("graveyard_return_subtype",""),
-        target_modifier=parsed.get('target_modifier',()),
+        target_modifier=parsed.get('target_modifier',()),modal_sweeps=parsed.get('modal_sweeps',()),
         instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),
