@@ -61,7 +61,7 @@ jobs:
           python -u training/scryfall_random_exam.py --count 5 --rounds 3 --source training/reports/scryfall-regression/scryfall-source.json --out training/reports/scryfall-regression/recheck
       - name: Pull 15 fresh Commander-legal cards (3 batches of 5)
         run: |
-          python -u training/scryfall_random_exam.py --count 5 --rounds 3 --out training/reports/scryfall-transfer
+          python -u training/scryfall_random_exam.py --count 5 --rounds 3 --exclude-source training/reports/scryfall-regression/scryfall-source.json --out training/reports/scryfall-transfer
       - name: Compute generalization progress and threshold
         run: |
           python - <<'PY'
