@@ -57,6 +57,36 @@ class ModalFaceChecks(unittest.TestCase):
         unseen['faces'][1]['text']+='\\nWhen this enters, win the game.'
         self.assertEqual(s.import_diagnostic_card(self.rules,unseen,0,'invalid-spellback',{'White'}).kind,'unsupported')
 
+    def test_spell_back_casts_as_equipment_then_returns_to_front_face(self):
+        raw=self.lookup["Halvar, God of Battle // Sword of the Realms"]
+        front=s.import_diagnostic_card(self.rules,raw,0,'dual-spell',{'White'})
+        self.assertEqual(front.kind,'creature')
+        self.assertIsNotNone(front.modal_spell_face)
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+[front],s.demo_deck(1)),
+                        diagnostic=True)
+        sim.manual_priority=True
+        player=sim.players[0]
+        (player.hand if front in player.hand else player.library).remove(front)
+        player.hand.append(front)
+        sim.phase='main';sim.active=0;sim.stack.priority=0
+        player.mana_pool[0]=5
+        choices=[action for action in sim.legal(0)
+                 if action.kind=='cast_modal_back' and action.card_id==front.id]
+        self.assertEqual(len(choices),1)
+        with patch.object(sim,'decide',return_value=choices[0]):
+            sim.step()
+        self.drain(sim)
+        equipment=next(permanent for permanent in player.battlefield
+                       if permanent.card.id==front.id)
+        self.assertEqual(equipment.card.name,'Sword of the Realms')
+        self.assertEqual(equipment.card.kind,'equipment')
+        self.assertFalse(any(card.id==front.id for card in player.hand))
+        sim.send_to_destination(player,equipment,to_hand=True)
+        returned=next(card for card in player.hand if card.id==front.id)
+        self.assertEqual(returned.name,'Halvar, God of Battle')
+        self.assertIsNotNone(returned.modal_spell_face)
+        sim.invariant()
+
     def prepare(self):
         card=s.import_diagnostic_card(self.rules,self.actual(),0,'modal',{'White','Green'})
         sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+[card],s.demo_deck(1)),diagnostic=True)
