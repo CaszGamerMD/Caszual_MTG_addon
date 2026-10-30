@@ -2664,6 +2664,23 @@ class Simulator(AdvancedRules):
                          actor=seat,source=event['source'],operation='scry',
                          amount=count,movedToBottom=len(to_bottom))
                 continue
+            if event.get('operation')=='surveil':
+                seat=event['controller'];owner=self.players[seat]
+                count=min(max(0,int(event.get('amount',1))),len(owner.library))
+                looked=list(owner.library[-count:]) if count else []
+                sent=[];kept=[]
+                # All choices are made over the same N cards. A single card
+                # cannot be inspected repeatedly after another one is kept.
+                for top in looked:
+                    (sent if self.choose_surveil_graveyard(seat,top) else kept).append(top)
+                if sent:
+                    del owner.library[-count:]
+                    owner.library.extend(kept)
+                    owner.graveyard.extend(sent)
+                self.log('surveil',f"Player {seat+1} surveils {count}, keeping {len(kept)} on top.",
+                         actor=seat,source=event['source'],operation='surveil',
+                         amount=count,movedToGraveyard=len(sent))
+                continue
             if event.get('operation')=='draw_cards':
                 if event.get('optional') and not self.choose_optional_draw(event):continue
                 for _ in range(event['amount']):self.draw(event['controller'])

@@ -34,6 +34,10 @@ class AdvancedRules:
  def choose_scry_bottom(self,seat,top_card):
   # Private input, never included in another player's policy observation.
   return False
+ def choose_surveil_graveyard(self,seat,looked_card):
+  # The policy may elect any of the inspected cards; default is keep all.
+  # The observation is private, including each card's identity.
+  return False
  def choose_role_kind(self,event,options):
   # Deterministic policy; later agents can choose according to board context.
   return 'Royal' if 'Royal' in options else options[0]
