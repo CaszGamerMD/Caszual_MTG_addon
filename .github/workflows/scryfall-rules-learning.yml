@@ -1,0 +1,81 @@
+name: Scryfall rules transfer learning - benchmark until 10 of 15
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - training/oracle_abilities.py
+      - training/card_events.py
+      - training/oracle_sequence.py
+      - training/composable_oracle.py
+      - training/simulator.py
+      - training/scryfall_random_exam.py
+      - training/tests/test_generic_color_protection.py
+      - training/tests/test_scryfall_random_exam.py
+      - .github/workflows/scryfall-rules-learning.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: scryfall-rules-transfer-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  recheck-and-challenge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Validate generic rules and previous Oracle examples
+        run: |
+          python -m compileall -q training
+          python -m unittest discover -s training/tests -p test_generic_color_protection.py -v
+          python -m unittest discover -s training/tests -p test_scryfall_random_exam.py -v
+          python -m unittest discover -s training/tests -p test_composable_power_mana.py -v
+          python -m unittest discover -s training/tests -p test_oracle_sequence.py -v
+      - name: Recover the original fifteen blind Scryfall cards as held-out regression
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p training/reports/scryfall-regression
+          gh run download 41064652535 --name blind-scryfall-commander-knowledge-exam -D training/reports/scryfall-regression
+          test -s training/reports/scryfall-regression/scryfall-source.json
+      - name: Re-run unchanged original card exam
+        run: |
+          python -u training/scryfall_random_exam.py --count 5 --rounds 3 --source training/reports/scryfall-regression/scryfall-source.json --out training/reports/scryfall-regression/recheck
+      - name: Pull 15 fresh Commander-legal cards (3 batches of 5)
+        run: |
+          python -u training/scryfall_random_exam.py --count 5 --rounds 3 --out training/reports/scryfall-transfer
+      - name: Compute generalization progress and threshold
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          old=json.loads(Path('training/reports/scryfall-regression/recheck/results.json').read_text())
+          fresh=json.loads(Path('training/reports/scryfall-transfer/results.json').read_text())
+          accepted=lambda report: sum(b['diagnosticCompiled'] for b in report['batches'])
+          a,b=accepted(old),accepted(fresh)
+          if old['totalCards']!=15 or fresh['totalCards']!=15: raise RuntimeError('Expected exactly 15 per benchmark')
+          summary=dict(previousBaseline=1,oldCardsNowRecognized=a,
+                       freshCardsRecognized=b,freshCardsTotal=15,
+                       target=10,goalMet=(b>=10),
+                       caveat='Diagnostic card importer coverage only; not verified real Commander gameplay',
+                       originalRun=41064652535)
+          p=Path('training/reports/scryfall-transfer/checkpoint.json')
+          p.write_text(json.dumps(summary,indent=2)+'\n')
+          print('RULE_LEARNING_CHECKPOINT '+json.dumps(summary),flush=True)
+          PY
+      - name: Upload exact original/new cards, results and threshold status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scryfall-transfer-learning-checkpoint
+          path: |
+            training/reports/scryfall-regression/
+            training/reports/scryfall-transfer/
+          retention-days: 30
