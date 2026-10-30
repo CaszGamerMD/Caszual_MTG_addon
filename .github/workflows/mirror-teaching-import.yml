@@ -1,0 +1,56 @@
+name: Import and audit mirrored Goblin-Elf teaching decks
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - training/import_mirror_decks.py
+      - training/tests/test_import_mirror_decks.py
+      - training/report_mirror_teaching.py
+      - .github/workflows/mirror-teaching-import.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: teaching-deck-import-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  import-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: experiment/commander-ai-golem
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Validate deck import rules without live network
+        run: python -m unittest discover -s training/tests -p test_import_mirror_decks.py -v
+      - name: Import both active decks, not maybeboard
+        run: python training/import_mirror_decks.py
+      - name: Analyze openings, deck composition and rules readiness
+        run: python training/report_mirror_teaching.py --samples 500
+      - name: Commit validated source fixtures to experimental branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add training/decks/14509839-mono-red-gobs.json training/decks/14435337-lupitas-elves.json
+          git diff --cached --quiet || git commit -m 'Import Goblin and Elf teaching deck fixtures from Archidekt'
+          git fetch origin experiment/commander-ai-golem
+          git rebase origin/experiment/commander-ai-golem
+          git push origin HEAD:experiment/commander-ai-golem
+      - name: Upload analysis and import evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goblin-elf-teaching-deck-analysis
+          path: |
+            training/reports/mirror-teaching-import.json
+            training/reports/mirror-teaching-comparison.json
+            training/decks/14509839-mono-red-gobs.json
+            training/decks/14435337-lupitas-elves.json
+          retention-days: 14
