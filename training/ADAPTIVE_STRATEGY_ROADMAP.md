@@ -20,7 +20,7 @@ Give **every deck the same strategy engine**, which:
    from legitimate wins and losses, and keeps a versioned championship policy.
    **This step has not yet been built.**
 
-## Initial implementation (v4)
+## Initial implementation (v4, extended in v5)
 
 `deck_adaptive_strategy.py` derives a `DeckPlan` from types, creature subtypes,
 commander rules text, deck quantities, and keyword patterns in Oracle text.
@@ -54,6 +54,46 @@ python training/seven_game_deck_adaptive.py --games 7 --turns 15 \
 ```
 stores the inferred plan for each deck, seven outcomes and spectator replays.
 Compare to `garbo-wilds-7x15-shared-ai` on identical seeds/seats.
+
+## Compositional strategy v5 — shared goal, different path
+
+Implemented in `strategy_building_blocks.py` and integrated into
+`deck_adaptive_strategy.py`:
+
+1. Parse the cards in the player's **own decklist** into reusable mechanic
+   building blocks, with typed `produces`, `needs` and `blocks` fields.
+   Examples: creature supply, token supply, mana engine, card engine, board
+   amplifier, attack trigger, direct damage, recursion and life gain.
+2. Link producer cards to consumer cards using the shared resource they
+   produce and require, e.g. `creature_entry` or `creature_board`.
+3. Compose possible routes such as mana -> creatures -> cards -> buffs ->
+   combat damage or tokens -> buffs -> combat damage. The destination may
+   be identical even when the setup sequence is different.
+4. Use those card roles when evaluating **already legal** actions in the
+   tactical policy. A board buff becomes more valuable when creatures are
+   available; a token producer is more important when rebuilding.
+5. Export `strategyRoutes`, `strategyDependencies` and the per-game
+   inferred plans in the diagnostic output.
+
+There is **no fixed Goblin/Elf/specific-card script** in this new layer.
+It includes a synthetic unseen-deck test where token-generating Goblins
+and mana-generating Elves pursue the same combat objective through distinct
+building blocks, as well as a new creature-subtype parser test.
+
+**Important limitation:** this parser currently extracts *candidate*
+mechanics from Oracle text with rules-text patterns. It does not itself
+verify triggers, targets, timings, cost payments or create legal actions.
+The simulator's rule compiler and action validator remain authoritative.
+Some printed abilities may be misclassified or missed. Work still needed:
+derive each block from compiled rule programs, distinguish generated
+resources from replacement/conditional effects, validate trigger conditions,
+and search actual legal multi-action sequences. A path is not a proven combo.
+
+Next accuracy milestone: feed the same algorithm two real decks with a shared
+win idea but different enablers, e.g. the user's Goblin and Elf lists. Test
+plan extraction against their printed card mechanics and then evaluate play
+on matched seeds. Avoid deck-ID-specific teaching and use failures to improve
+the general rule-to-strategy translator.
 
 ## Next milestones (NOT yet implemented)
 
