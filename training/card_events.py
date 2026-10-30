@@ -107,6 +107,7 @@ class Definition:
     opponent_creatures_enter_tapped: bool = False
     life_addition: int = 0
     opponent_life_gain_becomes_loss: bool = False
+    prevent_combat_damage_to_attackers: bool = False
     cost_reductions: tuple = ()
     counter_replacements: tuple = ()
     token_replacements: tuple = ()
@@ -294,6 +295,7 @@ def parse_card(card: dict) -> Definition:
             opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
             life_addition=program.life_addition,
             opponent_life_gain_becomes_loss=program.opponent_life_gain_becomes_loss,
+            prevent_combat_damage_to_attackers=program.prevent_combat_damage_to_attackers,
             cost_reductions=program.cost_reductions,
             counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
             token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers,
@@ -414,6 +416,7 @@ def parse_card(card: dict) -> Definition:
                           opponent_creatures_enter_tapped=program.opponent_creatures_enter_tapped,
                           life_addition=program.life_addition,
             opponent_life_gain_becomes_loss=program.opponent_life_gain_becomes_loss,
+            prevent_combat_damage_to_attackers=program.prevent_combat_damage_to_attackers,
             cost_reductions=program.cost_reductions,
                           counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
                           token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers,
