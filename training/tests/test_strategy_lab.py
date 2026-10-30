@@ -42,6 +42,13 @@ class StrategyLabChecks(unittest.TestCase):
         with self.assertRaises(ValueError):
             compare(a,b[::-1])
 
+    def test_existing_gauntlet_places_turns_started_inside_telemetry(self):
+        legacy=self.stub(1,True,6)
+        legacy['telemetry']['turnsStarted']=legacy.pop('turnsStarted')
+        row=results_for([legacy],5189995,'baseline')[0]
+        self.assertEqual(row['actualWinTurn'],6)
+        self.assertEqual(row['status'],'win')
+
     def test_loss_penalty_precedes_faster_win_turn(self):
         a=results_for([self.stub(1,True,9),self.stub(2,True,9)],5189995,'baseline')
         b=results_for([self.stub(1,True,2),self.stub(2,False,3)],5189995,'tempo')

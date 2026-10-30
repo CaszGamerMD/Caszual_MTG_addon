@@ -50,7 +50,7 @@ def results_for(matches, deck_id, profile):
         deck_won = match['winner'] == seat
         is_tie = match['winner'] is None
         rule_win=bool(deck_won and match['adjudication']=='game_rules')
-        turns=match['turnsStarted'][seat]
+        turns=match.get('turnsStarted', match['telemetry'].get('turnsStarted'))[seat]
         rows.append(dict(seed=match['seed'],profile=profile,
             status='tie' if is_tie else 'win' if deck_won else 'loss',
             ruleWin=rule_win,actualWinTurn=turns if rule_win else None,
