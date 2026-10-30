@@ -31,6 +31,24 @@ class GenericProtectionTests(unittest.TestCase):
         card['oracleText']+='\nTeleport a creature to nowhere.'
         self.assertFalse(parse_card(card).supported)
 
+    def test_diagnostic_import_accepts_protection_and_flash_without_card_names(self):
+        import simulator as s
+        with s.RulesBridge() as rules:
+            for color in ("white","blue","black","red","green"):
+                with self.subTest(color=color):
+                    raw=subject(color, "Anonymous "+color.title())
+                    raw.update(manaCost="{2}{B}",colorIdentity=["Black"])
+                    result=s.import_diagnostic_card(rules,raw,0,"p-"+color,{"Black"})
+                    self.assertEqual(result.kind,"creature")
+                    self.assertIn("protection from "+color,
+                                  result.event_definition.abilities)
+            raw=subject("red","Anonymous Flash Defender")
+            raw.update(oracleText="Flash",manaCost="{2}{B}",
+                       colorIdentity=["Black"])
+            result=s.import_diagnostic_card(rules,raw,0,"flash",{"Black"})
+            self.assertEqual(result.kind,"creature")
+            self.assertIn("flash",result.event_definition.abilities)
+
     def test_keyword_is_preserved_with_independent_trigger(self):
         card=subject('white','Unknown Archivist')
         card['oracleText']=('Protection from white\n'
