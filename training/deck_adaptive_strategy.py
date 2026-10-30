@@ -15,7 +15,7 @@ import re
 
 import simulator as s
 from goblin_strategy import _combat_estimate, _mana_value, _words
-from strategy_building_blocks import StrategyRoute, plan_for_deck, map_mechanics, compose_routes
+from strategy_building_blocks import StrategyRoute, map_mechanics, compose_routes, dependency_links
 
 _CASTS = frozenset(('cast','cast_commander','cast_exile','cast_flashback','cast_modal_back','bestow'))
 _TYPES = ('Creature','Enchantment','Artifact','Land','Instant','Sorcery')
@@ -35,6 +35,7 @@ class DeckPlan:
     routes: tuple[StrategyRoute, ...] = ()
     card_roles: tuple[tuple[str, tuple[str, ...]], ...] = ()
     commander_roles: tuple[str, ...] = ()
+    links: tuple[tuple[str, str, str], ...] = ()
 
     def metric(self, name):
         return dict(self.metrics).get(name, 0)
@@ -45,7 +46,10 @@ class DeckPlan:
     def describe(self):
         return dict(primary=self.primary, secondary=self.secondary, tribe=self.tribe,
                     metrics=dict(self.metrics), rankings=dict(self.rankings),
-                    strategyRoutes=[r.describe() for r in self.routes])
+                    strategyRoutes=[r.describe() for r in self.routes],
+                    strategyDependencies=[dict(source=a, supplies=b, enables=c)
+                                          for a,b,c in self.links[:20]],
+                    totalDependencies=len(self.links))
 
 
 def _card_mana_value(raw):
@@ -125,7 +129,8 @@ def analyze_deck(deck: dict) -> DeckPlan:
     return DeckPlan(ranked[0][0], ranked[1][0], tribe,
                     tuple(sorted(metrics.items())), tuple(sorted((k,round(v,3)) for k,v in ranks.items())),
                     tuple(commanders[0].get('types', ())), routes,
-                    tuple((c.name, c.blocks) for c in mechanics), mechanics[-1].blocks)
+                    tuple((c.name, c.blocks) for c in mechanics), mechanics[-1].blocks,
+                    dependency_links(mechanics))
 
 
 def tactical_mode(observation: s.Observation) -> str:
