@@ -176,6 +176,11 @@ def parse_card(card: dict) -> Definition:
         effects,activation=graveyard_program
         return Definition(**base,abilities=frozenset(),static_effects=effects,
                           graveyard_exile_activation=activation)
+    from death_exile_cast import parse as parse_death_exile_cast
+    death_program=parse_death_exile_cast(text,types)
+    if death_program:
+        static,trigger=death_program
+        return Definition(**base,abilities=frozenset(),static_effects=(static,),triggers=(trigger,))
     from forced_sacrifice import prevention as parse_sacrifice_prevention
     sacrifice_protected=parse_sacrifice_prevention(text,types)
     if sacrifice_protected:

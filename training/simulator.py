@@ -391,6 +391,7 @@ class Simulator(AdvancedRules):
         self.group_combat=None
         self.entry_history=[]
         self.rebound_pending=[]
+        self.exile_cast_permissions={}  # Card id -> (controller, expiry turn, creature subtype).
         self.object_sequence=0
         self._rebound_permission=None
         self.pending: str | None = None
@@ -910,6 +911,16 @@ class Simulator(AdvancedRules):
             self.resolve_entry_triggers([],item.payload[1])
             self.stack.priority=self.active
         return status
+
+    def permitted_exile_cards(self,seat):
+        result=[]
+        for owner in self.players:
+            for card in owner.exile:
+                permission=self.exile_cast_permissions.get(card.id)
+                if not permission or permission[0]!=seat or self.turn>permission[1]:continue
+                if 'Creature' not in card.printed_types or permission[2] not in card.land_subtypes:continue
+                if card.kind=='creature':result.append(card)
+        return result
 
     def response_choices(self,seat):
         if seat!=self.stack.priority: return ()
@@ -1751,7 +1762,8 @@ class Simulator(AdvancedRules):
     def counter_stack_item(self,frame):
         removed=self.stack.counter(frame.id)
         if removed and removed.payload[0].get('operation')=='spell' and not removed.payload[0].get('copy'):
-            owner=self.players[removed.controller];countered=removed.payload[1]
+            countered=removed.payload[1]
+            owner=self.players[self.card_owners.get(root(countered),removed.controller)]
             if root(countered)==owner.commander_id:owner.command_zone=countered
             elif removed.payload[0].get('flashback'):owner.exile.append(countered)
             else:owner.graveyard.append(countered)
@@ -1794,6 +1806,10 @@ class Simulator(AdvancedRules):
         actions.extend(self.land_counter_choices(seat))
         actions.extend(self.regenerate_choices(seat))
         actions.extend(self.strip_ability_choices(seat))
+        for card in self.permitted_exile_cards(seat):
+            if card.instant and self.payment(card,seat=seat)['paid']:
+                actions.append(Candidate(card.id+':exile','cast_exile',card.id,
+                    features=features(power=card.power),label='Cast exiled '+card.name))
         for card in self.response_choices(seat):
             if card.blink:
                 actions.extend(self.blink_choices(seat,card))
@@ -1857,11 +1873,15 @@ class Simulator(AdvancedRules):
             self.activate_sacrifice_protection(seat,choice.card_id,choice.target_permanent,
                                               ('White','Blue','Black','Red','Green')[choice.x_value])
             return 'activate'
+        if choice.kind=='cast_exile':
+            card=next(c for c in self.permitted_exile_cards(seat) if c.id==choice.card_id)
+            self.cast_spell(seat,card,exile_permission=True)
+            return 'cast'
         card=next(c for c in self.players[seat].hand if c.id==choice.card_id)
         self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack,modal_modes=choice.modal_modes)
         return 'cast'
 
-    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None,modal_modes=()):
+    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None,modal_modes=(),exile_permission=False):
         player=self.players[seat]
         if not card.instant and seat!=self.stack.priority: raise ValueError('Player lacks priority')
         if self.stack.items:
@@ -1871,7 +1891,11 @@ class Simulator(AdvancedRules):
         if rebound and self._rebound_permission!=(seat,root(card)):raise ValueError('No rebound casting permission')
         if flashback and (commander or rebound or bestow or not card.flashback_cost):
             raise ValueError('No supported flashback permission')
-        casting_zone=player.exile if rebound else player.graveyard if flashback else player.hand
+        if exile_permission:
+            if commander or rebound or flashback or bestow or card not in self.permitted_exile_cards(seat):
+                raise ValueError('No valid exile casting permission')
+            casting_zone=next(p.exile for p in self.players if card in p.exile)
+        else:casting_zone=player.exile if rebound else player.graveyard if flashback else player.hand
         if not commander and card not in casting_zone: raise ValueError('Card not in casting zone')
         if bestow and (not card.event_definition or not card.event_definition.bestow):raise ValueError('Card has no supported bestow ability')
         if (card.kind=='aura' or bestow) and target not in {p.card.id for _,p in
@@ -1904,11 +1928,12 @@ class Simulator(AdvancedRules):
         player.mana_pool=list(payment['pool'])
         if commander:player.command_zone=None;player.commander_casts+=1
         else:casting_zone.remove(card)
+        if exile_permission:self.exile_cast_permissions.pop(card.id,None)
         prior=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)
         self.stack.active=self.active
-        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'keywordChoice':keyword_choice or (card.target_modifier[2][0] if card.target_modifier and card.target_modifier[2] else None),'modalModes':tuple(modal_modes),'fromHand':not rebound and not flashback and not commander},card),card.name)
+        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'keywordChoice':keyword_choice or (card.target_modifier[2][0] if card.target_modifier and card.target_modifier[2] else None),'modalModes':tuple(modal_modes),'fromHand':not rebound and not flashback and not commander and not exile_permission},card),card.name)
         self.log('cast',f'Player {seat+1} casts {card.name}.',actor=seat,card=card.name,
-                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,bestow=bestow,rebound=rebound,flashback=flashback,targetStack=target if card.kind=='counter_spell' else None,
+                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,bestow=bestow,rebound=rebound,flashback=flashback,exilePermission=exile_permission,targetStack=target if card.kind=='counter_spell' else None,
                  targetPermanent=target if card.kind in ('removal_spell','modifier_spell') else None)
         self.stack.priority=seat
         self.log('stack_push',f'{card.name} goes on the stack.',stackId=frame.id,controller=seat)
@@ -2138,6 +2163,25 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='exile_top_cast_permission':
+                seat=event['controller'];player=self.players[seat]
+                if not player.library:
+                    self.log('exile_top_empty','No card remains on top of the library.',actor=seat,source=event['source'])
+                    continue
+                card_top=player.library.pop()
+                owner=self.card_owners.get(root(card_top),seat)
+                self.players[owner].exile.append(card_top)
+                restriction=event['libraryFilter']
+                if len(restriction)!=3 or restriction[0]!='subtype' or restriction[2]!='creature':
+                    raise RuntimeError('Unknown exiled card cast restriction')
+                eligible='Creature' in card_top.printed_types and restriction[1] in card_top.land_subtypes
+                expiry=self.turn+(2 if self.active==seat else 1)
+                if eligible:self.exile_cast_permissions[card_top.id]=(seat,expiry,restriction[1])
+                self.log('exile_top','Exile the real top card, then reveal it.',actor=seat,
+                         source=event['source'],card=card_top.name,cardId=card_top.id,
+                         cardOwner=owner,controller=seat,eligible=eligible,
+                         permissionExpiresTurn=expiry if eligible else None)
+                continue
             if event.get('operation')=='exile_graveyard_conditional_token':
                 seat=event['controller'];zone=event['targetZoneOwner']
                 target=next((c for c in self.players[zone].graveyard if c.id==event['target'] and not c.is_token),None)
@@ -3241,6 +3285,12 @@ class Simulator(AdvancedRules):
                             features(power=c.token_count*(c.token_definition.power if c.token_definition else 1),
                                       cost=len(payment.get('sources',[]))),
                             label='Flashback '+c.name))
+            for c in self.permitted_exile_cards(seat):
+                if self.payment(c,seat=seat)['paid']:
+                    actions.append(Candidate(c.id+':exile','cast_exile',c.id,
+                        features=features(power=c.power,toughness=c.toughness,
+                                          cost=len(self.payment(c,seat=seat).get('sources',[]))),
+                        label='Cast exiled '+c.name))
             for c in p.hand:
                 if c.kind=='graveyard_return_spell' and self.payment(c)['paid']:
                     actions.extend(Candidate(c.id+':graveyard:'+target.id,'cast',c.id,
@@ -3467,7 +3517,7 @@ class Simulator(AdvancedRules):
                 self.activate_transport(self.active,choice.kind,choice.card_id,choice.tap_ids)
             else:
                 card = (p.command_zone if choice.kind == "cast_commander" else
-                        next(c for c in (p.graveyard if choice.kind == "cast_flashback" else p.hand)
+                        next(c for c in (p.graveyard if choice.kind == "cast_flashback" else self.permitted_exile_cards(self.active) if choice.kind=="cast_exile" else p.hand)
                              if c.id == choice.card_id))
                 if card is None: raise RuntimeError("Commander is no longer in command zone")
                 if choice.kind == "land":
@@ -3481,7 +3531,8 @@ class Simulator(AdvancedRules):
                 else:
                     self.cast_spell(self.active,card,choice.x_value,choice.kind=='cast_commander',
                         modal_modes=choice.modal_modes,target=choice.target_permanent or choice.target_stack,
-                        bestow=choice.kind=='bestow',flashback=choice.kind=='cast_flashback')
+                        bestow=choice.kind=='bestow',flashback=choice.kind=='cast_flashback',
+                         exile_permission=choice.kind=='cast_exile')
         elif self.phase == "attack":
             choice = self.decide(self.active)
             if choice.kind=='attack_group':
@@ -3615,6 +3666,8 @@ class Simulator(AdvancedRules):
             self.phase='cleanup'
             return True
         elif self.phase == "cleanup":
+            self.exile_cast_permissions={key:value for key,value in self.exile_cast_permissions.items()
+                if not (value[0]==self.active and value[1]<=self.turn)}
             # Deterministic discard is a declared sandbox rule, not a learned policy.
             while len(p.hand) > 7:
                 c = p.hand.pop()

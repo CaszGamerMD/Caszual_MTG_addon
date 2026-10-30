@@ -46,6 +46,7 @@ class Selector:
     chosen_subtype: bool = False  # Resolve the source's entry-time creature-type choice.
     attacking: bool = False  # Check current combat participation, not tapped status.
     excluded_subtype: str = ''  # A non-Human filter must exclude all Human creatures.
+    self_or_controlled_subtype: str = ''
 
 @dataclass(frozen=True)
 class StaticEffect:
@@ -604,6 +605,8 @@ def compile_abilities(text, name=''):
 def matches(subject, source, entered, is_creature):
     return ((not subject.self_only or source.id==entered.id)
         and (not subject.other or source.id!=entered.id)
+        and (not subject.self_or_controlled_subtype or source.id==entered.id or
+             (source.controller==entered.controller and subject.self_or_controlled_subtype in entered.definition.subtypes))
         and (subject.relation!='controller' or source.controller==entered.controller)
         and (subject.relation!='opponent' or source.controller!=entered.controller)
         and (not subject.creature or is_creature)
@@ -635,6 +638,7 @@ def event_data(trigger, source, subject):
             'opponent_optional_basic_search':'each opponent may find a tapped basic land and shuffle',
             'optional_subtype_search_hand':'controller may tutor a subtype card to hand and shuffle',
             'return_graveyard':'controller may return target subtype card from graveyard to hand',
+            'exile_top_cast_permission':'exile the top library card and grant a temporary matching creature cast permission',
             'self_counter':'put +1/+1 counters on the source',
             'combat_target_boost':'target enchanted or enchantment creature gets a temporary bonus and keyword',
             'optional_put_hand_permanent':'controller may put a matching permanent card from hand onto the battlefield',
