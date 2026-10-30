@@ -24,7 +24,7 @@ LINKS={
 COLOR_MAP={'W':'White','U':'Blue','B':'Black','R':'Red','G':'Green',
            'White':'White','Blue':'Blue','Black':'Black','Red':'Red',
            'Green':'Green','C':'Colorless','Colorless':'Colorless'}
-SIDE={"Maybeboard","Sideboard","Considering","Tokens","Token","Sideboard"}
+SIDE={"Maybeboard","Sideboard","Considering"}  # Tokens is a user-defined strategy category!
 
 
 def colors(values):
