@@ -23,7 +23,7 @@ class SessionLearningModalRoles(unittest.TestCase):
         self.assertNotEqual(card.kind,'unsupported',repr(raw['oracleText']))
         self.assertEqual(card.event_definition.modal_role_choices,('Royal','Sorcerer','Monster'))
         raw['name']='Unseen Theater Director'
-        raw['oracleText']=raw['oracleText'].replace(NAME,'Unseen Theater Director')
+        raw['oracleText']=raw['oracleText'].replace('Gylwain','Unseen Theater Director')
         other=s.import_diagnostic_card(self.rules,raw,0,'renamed',{'White','Green'})
         self.assertNotEqual(other.kind,'unsupported')
         raw['oracleText']+='\nCast a mysterious spell.'
