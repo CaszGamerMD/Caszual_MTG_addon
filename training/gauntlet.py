@@ -19,21 +19,41 @@ def engine_source_hashes():
 
 
 def adjudicate(report, focal_seat):
-    """Normal game results precede the house rule for complete turn windows."""
-    final=report['events'][-1]['state']['players']
-    scores=[p['life'] for p in final]
+    """Fail closed on rules questions, unsupported encounters and incomplete games.
+
+    A score from a paused or question-blocked game must never enter win-rate
+    accounting, even if a winner or a turn-limit life score was also recorded.
+    """
+    progress=report.get('rulesProgress') or {}
+    reasons=[]
+    if progress.get('runtimeQuestions'):
+        reasons.append('runtime_rules_question')
+    if progress.get('unsupportedEncountered') or progress.get('unsupportedCommanders'):
+        reasons.append('unsupported_card_encountered')
+    if any(q.get('blocking') for q in report.get('questions',[]) if isinstance(q,dict)
+           and str(q.get('id','')).startswith('runtime-')):
+        if 'runtime_rules_question' not in reasons:
+            reasons.append('runtime_rules_question')
+    if not report.get('events') or len(report['events'][-1].get('state',{}).get('players',[])) != 2:
+        reasons.append('missing_final_state')
+        scores=[]
+    else:
+        scores=[p['life'] for p in report['events'][-1]['state']['players']]
+    if reasons:
+        return dict(outcome='blocked',winner=None,basis='invalid',scores=scores,invalidReasons=reasons)
     winner=report.get('winner')
-    if report['result']=='win':
+    if report['result']=='win' and winner in (0,1):
         basis='game_rules'
-    elif report['result']=='draw':
-        winner=None;basis='game_rules'
+    elif report['result']=='draw' and winner is None:
+        basis='game_rules'
     elif report['result']=='diagnostic_window_complete':
         winner=None if scores[0]==scores[1] else int(scores[1]>scores[0])
         basis='turn_limit_life_score'
     else:
-        return dict(outcome='blocked',winner=None,basis='incomplete',scores=scores)
+        return dict(outcome='blocked',winner=None,basis='incomplete',scores=scores,
+                    invalidReasons=['incomplete_or_inconsistent_result'])
     return dict(outcome='tie' if winner is None else 'win' if winner==focal_seat else 'loss',
-                winner=winner,basis=basis,scores=scores)
+                winner=winner,basis=basis,scores=scores,invalidReasons=[])
 
 
 def run(rules, focal, opponents, games=10, turns=10, seed=5189995, out=None):
