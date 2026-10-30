@@ -402,15 +402,12 @@ def effect(text):
         return Effect('mill_cards',count,recipient={
             'you mill':'controller','each opponent mills':'each opponent',
             'each player mills':'each player'}[milled[1]])
-    # Consume the entire ordered instruction; a partially understood clause
-    # must never be treated as a successful parse.
-    if text.endswith('.'):
-        clauses=re.split(r' and (?=(?:you )?(?:gain |draw |lose ))',text[:-1])
-        if len(clauses)>1:
-            steps=tuple(effect(clause+'.') for clause in clauses)
-            if all(step is not None and (step.operation in ('gain_life','draw_cards') or
-                                             (step.operation=='lose_life' and step.recipient=='self')) for step in steps):
-                return Effect('ordered_effects',0,steps=steps)
+    # Compose only fully parsed instructions with proven sequential execution
+    # support. Unknown remainder rejects the complete triggered ability.
+    from oracle_sequence import parse_sequence
+    steps=parse_sequence(text,effect)
+    if steps:
+        return Effect('ordered_effects',0,steps=steps)
     return None
 
 def compile_abilities(text, name=''):
@@ -711,7 +708,9 @@ def compile_abilities(text, name=''):
         action=effect(clause)
         if subject is None or action is None: return None
         event='dies' if m[2]=='dies' else 'enters'
-        if action.operation=='create_tokens' and not subject.self_only:
+        if (action.operation=='create_tokens' or
+                (action.operation=='ordered_effects' and
+                 any(part.operation=='create_tokens' for part in action.steps))) and not subject.self_only:
             return None  # Repeating token engines need bounded stack/loop handling.
         triggers.append(Trigger(event,subject,action))
     chosen_type_used=(any(e.subject.chosen_subtype for e in static_effects)
@@ -784,5 +783,11 @@ def event_data(trigger, source, subject):
             **({'requiresBuffedCreature':True} if trigger.power_above_base_required else {}),
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             **({'libraryFilter':e.library_filter} if e.library_filter else {}),
-            **({'steps':[{'operation':step.operation,'amount':step.amount,'recipient':step.recipient,'gain':step.gain} for step in e.steps]} if e.steps else {}),
+            **({'steps':[dict(operation=step.operation,amount=step.amount,
+                recipient=step.recipient,gain=step.gain,
+                optional=step.optional,controllerLoss=step.controller_loss,
+                **({'tokenSpec':dict(asdict(step.token),
+                                     keywords=sorted(step.token.keywords))}
+                   if step.token else {}))
+                for step in e.steps]} if e.steps else {}),
             {'enters':'entered','dies':'dead','upkeep':'permanent','end_step':'permanent','cast':'spell','gain_life':'permanent','deals_player_damage':'damageSource','combat_damage':'damageSource','graveyard':'dead','begin_combat':'permanent'}[trigger.event]:subject.id}
