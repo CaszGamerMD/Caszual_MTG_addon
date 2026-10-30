@@ -4494,6 +4494,14 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                 return raw
             front=import_diagnostic_card(rules,face_definition(faces[0]),seat,uid,identity)
             back=import_diagnostic_card(rules,face_definition(faces[1]),seat,uid,identity)
+            # Modal land/land Pathways are one physical land card: either
+            # fully compiled face may be played as the turn's land drop. The
+            # chosen back face returns to the front in all other zones.
+            # Both Oracle programs must compile independently; never treat a
+            # partially recognized second face as an ordinary front land.
+            if (front.kind=='land' and back.kind=='land' and
+                    not front.mana_cost and not back.mana_cost):
+                return replace(front,modal_land_face=back)
             if front.kind not in ('unsupported','land') and back.kind=='land' and not back.mana_cost:
                 return replace(front,modal_land_face=back)
             if (front.kind not in ('unsupported','land') and
