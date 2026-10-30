@@ -583,6 +583,9 @@ class Simulator(AdvancedRules):
         sources=[state for state in all_sources if not (
             'Land' in state.definition.types and replacements and
             not items_by_id[state.id].card.basic_land)]
+        # Continuous effects that set or add basic land types apply in
+        # timestamp order, not player/battlefield enumeration order.
+        sources.sort(key=lambda source: source.entered_at)
         for state in game.battlefield.values():
             if 'Land' not in state.definition.types:continue
             item=items_by_id[state.id]
