@@ -118,6 +118,12 @@ class Program:
     prevent_combat_damage_to_attackers: bool = False
 
 def static_effect(text):
+    # Global keyword grants apply to both players, not just the controller.
+    # This is a continuous effect: removing the source removes the grant.
+    global_grant=re.fullmatch(r'All creatures have ([a-z ]+)\.',text)
+    if global_grant:
+        if global_grant[1] not in KEYWORDS-{'flash'}:return None
+        return StaticEffect(Selector(creature=True),0,0,grant=global_grant[1])
     # A global subtype anthem applies to both players' creatures, unlike
     # "you control" lords. Do not infer the controller from a card name.
     global_subtype=re.fullmatch(
