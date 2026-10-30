@@ -63,6 +63,12 @@ jobs:
           python -m unittest discover -s training/tests -p test_creature_token_characteristics.py -v
           python -m unittest discover -s training/tests -p test_targeted_keyword_choices.py -v
           python -m unittest discover -s training/tests -p test_conditional_target_draw.py -v
+      - name: Verify library-language and modal-face integrations
+        run: |
+          python -m unittest discover -s training/tests -p test_mill_language.py -v
+          python -m unittest discover -s training/tests -p test_surveil_language.py -v
+          python -m unittest discover -s training/tests -p test_enchantment_abilities.py -v
+          python -m unittest discover -s training/tests -p test_modal_faces.py -v
       - name: Rank unresolved complete Oracle language families
         run: python training/question_batches.py --decks training/decks/*.json --focal-id 5189995 --out training/reports/question-batches-current.json
       - name: Probe seeded diagnostic matches for regression blockers
