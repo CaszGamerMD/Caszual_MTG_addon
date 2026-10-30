@@ -9,15 +9,15 @@ from oracle_abilities import KEYWORDS
 COLORS={'white','blue','black','red','green'}
 
 PATTERN=re.compile(
-    r'(?P<static>[A-Z][a-z]+(?:, [a-z]+)*)\\n'
-    r'Whenever you attack, choose one (?:—|-)\\n'
+    r'(?P<static>[A-Z][a-z]+(?:, [a-z]+)*)\n'
+    r'Whenever you attack, choose one (?:—|-)\n'
     r'[•*] Create a tapped and attacking X/X (?P<dcolor>white|blue|black|red|green) '
     r'(?P<dtype>[A-Z][a-z]+) creature token with (?P<dkeyword>[a-z ]+), '
-    r'where X is the greatest power among other attacking creatures\\.\\n'
+    r'where X is the greatest power among other attacking creatures\.\n'
     r'[•*] Create X (?P<vpower>[0-9]+)/(?P<vtoughness>[0-9]+) '
     r'(?P<vcolor>white|blue|black|red|green) (?P<vtype>[A-Z][a-z]+) '
     r'creature tokens with (?P<vkeyword>[a-z ]+), '
-    r'where X is the number of other attacking creatures\\.'
+    r'where X is the number of other attacking creatures\.'
 )
 
 def parse(text,types):
