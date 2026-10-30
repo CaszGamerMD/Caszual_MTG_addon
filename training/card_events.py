@@ -882,6 +882,12 @@ class Game:
                         roleOptions=list(watcher.definition.modal_role_choices))
                 for trigger in watcher.definition.triggers:
                     if trigger.event == "enters" and matches(trigger.subject,watcher,permanent,self.creature(permanent)):
+                        subtype=trigger.requires_other_controlled_subtype
+                        if subtype and not any(
+                                other.id!=watcher.id and other.controller==watcher.controller
+                                and has_subtype(other.definition,subtype)
+                                for other in self.battlefield.values()):
+                            continue  # Intervening-if must hold when the event triggers.
                         data=event_data(trigger,watcher,permanent)
                         if trigger.effect.operation=='entry_power_branch':
                             data.update(entryPower=self.stats(permanent)[0],entryAt=permanent.entered_at)
