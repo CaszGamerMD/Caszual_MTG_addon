@@ -60,7 +60,7 @@ class ModalFaceChecks(unittest.TestCase):
 
     def test_land_back_plays_tapped_without_cast_then_returns_front_to_hand(self):
         sim,front=self.prepare()
-        candidates=[c for c in sim.legal_actions(0) if c.kind=='land_back' and c.card_id==front.id]
+        candidates=[c for c in sim.legal(0) if c.kind=='land_back' and c.card_id==front.id]
         self.assertEqual(len(candidates),1)
         with patch.object(sim,'decide',return_value=candidates[0]):
             sim.step()
@@ -79,7 +79,7 @@ class ModalFaceChecks(unittest.TestCase):
     def test_land_back_can_be_cast_as_front_after_return_and_counts_dynamically(self):
         sim,front=self.prepare()
         with patch.object(sim,'decide',return_value=next(
-                c for c in sim.legal_actions(0) if c.kind=='land_back' and c.card_id==front.id)):
+                c for c in sim.legal(0) if c.kind=='land_back' and c.card_id==front.id)):
             sim.step()
         back=next(p for p in sim.players[0].battlefield if p.card.id==front.id)
         sim.send_to_destination(sim.players[0],back,to_hand=True)
