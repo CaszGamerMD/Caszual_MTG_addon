@@ -680,6 +680,13 @@ def compile_abilities(text, name=''):
                 Effect('entry_power_branch',draw,power_threshold=int(power_branch[2]),
                        low_power_counters=counters)))
             continue
+        subtype_casting=re.fullmatch(r'Whenever you cast (?:a|an) ([A-Z][a-z]+) spell, (.+)',line)
+        if subtype_casting:
+            action=effect(subtype_casting[2])
+            if action is None:return None
+            triggers.append(Trigger('cast',Selector(relation='controller',spell_type='subtype',
+                                                     subtype=subtype_casting[1]),action))
+            continue
         casting=re.fullmatch(r'Whenever you cast (?:a|an) (?:(enchantment|artifact|creature|instant|sorcery|planeswalker|noncreature) )?spell, (.+)',line)
         if casting:
             action=effect(casting[2])
@@ -810,6 +817,8 @@ def cast_matches(trigger, source, spell, controller):
     kind=trigger.subject.spell_type
     types=set(spell.printed_types)
     if kind=='any':return True
+    if kind=='subtype':
+        return trigger.subject.subtype in set(getattr(spell,'printed_subtypes',()) or ())
     if kind=='noncreature':return 'Creature' not in types
     return kind.title() in types
 
