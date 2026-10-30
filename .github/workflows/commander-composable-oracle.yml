@@ -1,0 +1,48 @@
+name: Compositional Oracle parsing - real and unseen cards
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - training/composable_oracle.py
+      - training/oracle_abilities.py
+      - training/card_events.py
+      - training/simulator.py
+      - training/tests/test_composable_power_mana.py
+      - .github/workflows/commander-composable-oracle.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: composable-oracle-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  rule-composition:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile Python module syntax
+        run: python -m compileall -q training
+      - name: Test real Marwyn and unknown-card grammar combinations
+        run: python -m unittest discover -s training/tests -p test_composable_power_mana.py -v
+      - name: Regression for previous composite abilities and mana
+        run: |
+          python -m unittest discover -s training/tests -p test_regeneration_tribal.py -v
+          python -m unittest discover -s training/tests -p test_mentor_combat.py -v
+      - name: Refresh diagnostic coverage for two teaching decks
+        run: |
+          python training/diagnostic_coverage.py
+      - name: Retain coverage audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compositional-oracle-coverage
+          path: training/reports/diagnostic-coverage.json
+          retention-days: 7
