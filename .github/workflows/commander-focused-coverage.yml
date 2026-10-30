@@ -71,6 +71,7 @@ jobs:
           python -m unittest discover -s training/tests -p test_modal_faces.py -v
           python -m unittest discover -s training/tests -p test_enchantment_copy.py -v
           python -m unittest discover -s training/tests -p test_class_language.py -v
+          python -m unittest discover -s training/tests -p test_counter_equipment.py -v
       - name: Rank unresolved complete Oracle language families
         run: python training/question_batches.py --decks training/decks/*.json --focal-id 5189995 --out training/reports/question-batches-current.json
       - name: Probe seeded diagnostic matches for regression blockers
