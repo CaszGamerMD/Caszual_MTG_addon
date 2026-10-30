@@ -207,6 +207,8 @@ class Card:
     modal_sweeps: tuple = ()  # Ordered destroy modes, with two indices selected on casting.
     sweep_reward: tuple = ()  # (nontoken only, Treasures per destroyed creature, tapped).
     forced_sacrifice: tuple = ()  # (opponents/all players, count) on spell resolution.
+    mana_as_any_color: bool = False
+    color_draw_cost: str = ''
 
 
 
@@ -916,9 +918,38 @@ class Simulator(AdvancedRules):
                      and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
 
+    def color_draw_payment(self,seat,source):
+        return self.payment(replace(source.card,mana_cost=source.card.color_draw_cost),seat=seat,
+                            spell_cost=False,excluded_sources=(source.card.id,))
+
+    def activate_color_draw(self,seat,source_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        if source is None or source.tapped or not source.card.color_draw_cost:raise ValueError('Illegal color draw')
+        game=self.event_game('main');state=game.battlefield.get(source_id)
+        if state is None or (game.creature(state) and source.fresh and not game.has(state,'haste')):
+            raise ValueError('Tap ability is summoning sick')
+        payment=self.color_draw_payment(seat,source)
+        if not payment['paid']:raise ValueError('Cannot pay draw cost')
+        for item in self.players[seat].battlefield:
+            if item.card.id in payment['sources']:item.tapped=True
+        self.players[seat].mana_pool=list(payment['pool']);source.tapped=True
+        event=dict(operation='draw_by_permanent_colors',controller=seat,source=source_id,name=source.card.name)
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_color_draw','Activate draw per permanent color.',actor=seat,source=source_id,stackId=frame.id,manaSources=payment['sources'])
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
     def token_ability_choices(self,seat):
         result=[]
         for source in self.players[seat].battlefield:
+            if source.card.color_draw_cost and not source.tapped:
+                game=self.event_game('main');state=game.battlefield.get(source.card.id)
+                if state and (not game.creature(state) or not source.fresh or game.has(state,'haste')):
+                    payment=self.color_draw_payment(seat,source)
+                    if payment['paid']:
+                        result.append(Candidate(source.card.id+':color-draw','activate_color_draw',source.card.id,
+                            features=features(draw=2,cost=len(payment['sources'])),label='Draw per controlled color'))
             definition=source.card.event_definition
             for index,(cost,spec) in enumerate(definition.activations if definition else ()):
                 payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
@@ -1752,6 +1783,9 @@ class Simulator(AdvancedRules):
         if choice.kind=='activate_strip':
             self.activate_strip(seat,choice.card_id,choice.activation_index)
             return 'activate'
+        if choice.kind=='activate_color_draw':
+            self.activate_color_draw(seat,choice.card_id)
+            return 'activate'
         if choice.kind=='activate_tokens':
             self.activate_tokens(seat,choice.card_id,choice.activation_index)
             return 'activate'
@@ -2064,6 +2098,14 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='draw_by_permanent_colors':
+                seat=event['controller'];game=self.event_game('main')
+                colors={'White','Blue','Black','Red','Green'}
+                present=set().union(*(set(p.definition.colors)&colors for p in game.battlefield.values() if p.controller==seat))
+                self.log('color_draw_resolution','Count distinct controlled permanent colors at resolution.',actor=seat,source=event['source'],colorCount=len(present))
+                for _ in present:self.draw(seat)
+                self.outcome()
+                continue
             if event.get('operation')=='sacrifice_protection':
                 game=self.event_game('main');target=game.battlefield.get(event['target'])
                 legal=bool(target and target.controller==event['controller']
@@ -3044,7 +3086,7 @@ class Simulator(AdvancedRules):
         return sources
 
     def payment(self, card: Card, tax: int = 0, x: int | None = None, seat: int | None = None,
-                spell_cost: bool = True) -> dict:
+                spell_cost: bool = True, excluded_sources: tuple[str, ...] = ()) -> dict:
         cost=card.mana_cost+(("{2}"*tax) if tax else "")
         seat=self.active if seat is None else seat
         player=self.players[seat]
@@ -3063,8 +3105,9 @@ class Simulator(AdvancedRules):
                           for names,amount in permanent.card.event_definition.cost_reductions
                           if any(name in categories for name in names))
             cost=mana_pool.reduce_generic_cost(cost,reduction,x)
-        sources=self.mana_sources(seat)
-        return mana_pool.plan(cost,player.mana_pool,sources,x)
+        sources=[s for s in self.mana_sources(seat) if s[0] not in excluded_sources]
+        any_color=any(p.card.mana_as_any_color for p in player.battlefield)
+        return mana_pool.plan(cost,player.mana_pool,sources,x,spend_as_any_color=any_color)
 
     def damage(self, a: Card, b: Card | None) -> dict:
         return self.rules.query("combat", a.traits, b.traits if b else "",
@@ -3334,6 +3377,8 @@ class Simulator(AdvancedRules):
                 self.activate_history(self.active,choice.card_id)
             elif choice.kind=='activate_strip':
                 self.activate_strip(self.active,choice.card_id,choice.activation_index)
+            elif choice.kind=='activate_color_draw':
+                self.activate_color_draw(self.active,choice.card_id)
             elif choice.kind=='activate_tokens':
                 self.activate_tokens(self.active,choice.card_id,choice.activation_index)
             elif choice.kind=='activate_tribal_tokens':
@@ -3737,12 +3782,17 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                                      definition.get('types',[]))
     if parsed['kind']=='unsupported' and modifier and rules.query('cost',cost)['supported']:
         parsed={'kind':'modifier_spell','target_modifier':modifier}
+    from artifact_color_mana import parse as parse_artifact_color_mana
+    color_program=parse_artifact_color_mana(rule_text(definition.get('oracleText','')),definition.get('types',[]))
+    if parsed['kind']=='unsupported' and color_program and rules.query('cost',cost)['supported']:
+        parsed={'kind':'mana_artifact',**color_program}
     output=mana_pool.production(definition.get("oracleText", ""))
     if (parsed["kind"]=="unsupported" and definition.get("types")==["Artifact"]
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
     return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),blink_to_controller=parsed.get("blink_to_controller",False),flashback_cost=parsed.get("flashback_cost",""),graveyard_return_subtype=parsed.get("graveyard_return_subtype",""),
         forced_sacrifice=parsed.get('forced_sacrifice',()),
+        mana_as_any_color=parsed.get('mana_as_any_color',False),color_draw_cost=parsed.get('color_draw_cost',''),
         target_modifier=parsed.get('target_modifier',()),modal_sweeps=parsed.get('modal_sweeps',()),sweep_reward=parsed.get('sweep_reward',()),
         instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),

@@ -11,22 +11,23 @@ def production(text):
     if not m: return None
     return tuple(m[1].count('{'+c+'}') for c in COLORS)
 
-def requirements(cost, x=None):
+def requirements(cost, x=None, spend_as_any_color=False):
     symbols = re.findall(r'\{([^{}]+)\}',cost)
     if not symbols or ''.join('{'+s+'}' for s in symbols) != cost: return None
     result=[]; generic=0
     for symbol in symbols:
-        if len(symbol)==1 and symbol in COLORS: result.append(1<<COLORS.index(symbol))
+        if len(symbol)==1 and symbol in COLORS:
+            result.append(63 if spend_as_any_color and symbol!='C' else 1<<COLORS.index(symbol))
         elif re.fullmatch(r'[WUBRG]/[WUBRG]',symbol) and symbol[0]!=symbol[2]:
-            result.append((1<<COLORS.index(symbol[0]))|(1<<COLORS.index(symbol[2])))
+            result.append(63 if spend_as_any_color else (1<<COLORS.index(symbol[0]))|(1<<COLORS.index(symbol[2])))
         elif re.fullmatch(r'[0-9]{1,2}',symbol): generic+=int(symbol)
         elif symbol=='X' and type(x) is int and x>=0: generic+=x
         else: return None
     return tuple(sorted(result,key=int.bit_count)+[63]*generic)
 
-def plan(cost, pool, sources, x=None):
+def plan(cost, pool, sources, x=None, spend_as_any_color=False):
     """Sources: (unique id, tuple of possible six-color production vectors)."""
-    needs=requirements(cost,x)
+    needs=requirements(cost,x,spend_as_any_color)
     if needs is None: return {'paid':False}
     pool=tuple(pool)
     if len(pool)!=6 or any(type(n) is not int or n<0 for n in pool): raise ValueError('Invalid mana pool')
