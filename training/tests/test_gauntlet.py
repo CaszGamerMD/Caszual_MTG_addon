@@ -81,3 +81,39 @@ class GauntletChecks(unittest.TestCase):
         report.update(result='diagnostic_window_complete',winner=None,events=[])
         self.assertEqual(g.adjudicate(report,0)['outcome'],'blocked')
         self.assertIn('missing_final_state',g.adjudicate(report,0)['invalidReasons'])
+
+    def test_match_telemetry_tracks_real_event_kinds_per_seat(self):
+        report=dict(openingMulligans=[1,2],turnsStarted=[3,2],turnsCompleted=[2,2],
+                    rulesProgress=dict(runtimeQuestions=['Illegal action at priority']),
+                    events=[dict(kind='land',actor=0),dict(kind='land',actor=1),
+                            dict(kind='cast',actor=1),dict(kind='cast',actor=1),
+                            dict(kind='attack',actor=0),dict(kind='priority_pass',actor=0),
+                            dict(kind='resolve',actor=1)])
+        info=g.match_telemetry(report)
+        self.assertEqual(info['openingMulligans'],[1,2])
+        self.assertEqual(info['landDropsBySeat'],[1,1])
+        self.assertEqual(info['spellsCastBySeat'],[0,2])
+        self.assertEqual(info['attacksBySeat'],[1,0])
+        self.assertEqual(info['resolutionLogEvents'],1)
+        self.assertEqual(info['runtimeQuestionCount'],1)
+        self.assertEqual(info['observedLegalityQuestions'],['Illegal action at priority'])
+
+    def test_unsupported_deck_invalidates_game_even_when_engine_says_win(self):
+        focal,opponent=self.deck('Focal',1),self.deck('Opponent',2)
+        report=dict(result='win',winner=0,learningEligible=False,
+                    turnsStarted=[1,1],turnsCompleted=[1,1],deckIds=[1,2],
+                    questions=[],rulesProgress=dict(unsupportedEncountered=[],
+                    unsupportedCommanders=[],runtimeQuestions=[]),
+                    events=[dict(kind='end',actor=0,state=dict(players=[
+                        dict(life=40),dict(life=35)]))])
+        def importer(_rules,raw,_seat,_id,_identity):
+            return SimpleNamespace(kind='unsupported' if raw['name']=='Opponent' else 'creature')
+        with patch.object(g.s,'import_diagnostic_card',side_effect=importer), \
+             patch.object(g.s,'parse_event_card',return_value=SimpleNamespace(reason='Unknown')), \
+             patch.object(g.s,'audit_card',return_value={'reason':'Unknown'}), \
+             patch.object(g.s,'diagnose',return_value=report), \
+             patch.object(g.s,'pack_replay',side_effect=lambda r:r),patch('builtins.print'):
+            summary=g.run(None,focal,[opponent],games=2)
+        self.assertEqual(summary['totals']['blocked'],2)
+        self.assertEqual(summary['totals']['wins'],0)
+        self.assertIn('unsupported_card_in_deck',summary['matches'][0]['invalidReasons'])
