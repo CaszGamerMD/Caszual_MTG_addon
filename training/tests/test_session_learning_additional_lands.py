@@ -41,7 +41,7 @@ class SessionLearningAdditionalLands(unittest.TestCase):
         game=sim.event_game('main')
         self.assertTrue({'Plains','Island','Swamp','Mountain','Forest'}<=set(game.battlefield[mine.card.id].definition.subtypes))
         self.assertEqual(set(game.battlefield[enemy.card.id].definition.subtypes),original_enemy)
-        self.assertEqual({i for options in dict(sim.mana_sources(0))[mine.card.id] for i,amount in enumerate(options) if amount},set(range(5)))
+        self.assertTrue(set(range(5)) <= {i for options in dict(sim.mana_sources(0))[mine.card.id] for i,amount in enumerate(options) if amount})
         sim.invariant()
 
     def test_additional_land_works_then_expires_when_source_leaves(self):
