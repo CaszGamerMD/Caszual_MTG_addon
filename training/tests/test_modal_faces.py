@@ -90,6 +90,16 @@ class ModalFaceChecks(unittest.TestCase):
         self.assertIsNotNone(returned.modal_spell_face)
         sim.invariant()
 
+    def test_real_wilds_vs_garbo_diagnostic_accepts_physical_front_face_identity(self):
+        import json
+        decks=[json.loads((s.HERE/'decks'/name).read_text(encoding='utf-8'))
+               for name in ('5189995-enchantments.json','5254666-garbo-gobbos.json')]
+        report=s.diagnose(self.rules,decks,seed=71,turns_per_player=1)
+        self.assertEqual(report['deckIds'],[5189995,5254666])
+        self.assertFalse(report['learningEligible'])
+        self.assertTrue(report['events'])
+        self.assertEqual(report['rulesProgress']['cardsPlayableInDiagnostic'],[100,100])
+
     def prepare(self):
         card=s.import_diagnostic_card(self.rules,self.actual(),0,'modal',{'White','Green'})
         sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+[card],s.demo_deck(1)),diagnostic=True)
