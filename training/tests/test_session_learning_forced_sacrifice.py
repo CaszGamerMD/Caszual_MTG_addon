@@ -34,13 +34,15 @@ class SessionLearningForcedSacrifice(unittest.TestCase):
         self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad',{'Green','White'}).kind,'unsupported')
 
     def test_edict_parser_variations_and_unsupported_clause(self):
-        for text,scope,count in (('Each opponent sacrifices a creature.','opponent',1),
-                                 ('Each player sacrifices two creatures.','all',2)):
-            card=s.import_diagnostic_card(self.rules,self.edict(text=text),0,'edict',{'Black'})
+        for name in ('Unseen mandatory edict','Another fresh sacrifice effect'):
+            card=s.import_diagnostic_card(self.rules,self.edict(name=name),0,'edict',{'Black'})
             self.assertEqual(card.kind,'sacrifice_spell')
-            self.assertEqual(card.forced_sacrifice,(scope,count))
-        bad=self.edict(text='Each opponent sacrifices a creature.\nDraw an unknown thing.')
-        self.assertEqual(s.import_diagnostic_card(self.rules,bad,0,'bad',{'Black'}).kind,'unsupported')
+            self.assertEqual(card.forced_sacrifice,('opponent',1))
+        for extra in ('Each player sacrifices two creatures.',
+                      'Each opponent sacrifices two creatures.',
+                      'Each opponent sacrifices a creature.\nDraw an unknown thing.'):
+            self.assertEqual(s.import_diagnostic_card(
+                self.rules,self.edict(text=extra),0,'bad',{'Black'}).kind,'unsupported')
 
     def test_opponent_edict_is_prevented_during_spell_resolution(self):
         raw=self.edict()
