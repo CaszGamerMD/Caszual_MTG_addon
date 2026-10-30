@@ -1,0 +1,53 @@
+name: Commander session full rules verification
+
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - 'training/**'
+      - '.github/workflows/commander-session-verify.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  python-full:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Baseline independent five-deck diagnostic audit
+        run: python training/diagnostic_coverage.py
+      - name: Rank and audit whole Oracle families
+        run: python training/question_batches.py --decks training/decks/*.json --focal-id 5189995 --out training/reports/question-batches-current.json
+      - name: Full standalone Python rules and viewer regression suite
+        run: python -m unittest discover -s training/tests -v
+      - name: Upload fresh deck coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-five-deck-coverage
+          path: |
+            training/reports/diagnostic-coverage.json
+            training/reports/question-batches-current.json
+  java-gradle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Verify Java rules and Fabric build
+        run: ./gradlew --no-daemon build
