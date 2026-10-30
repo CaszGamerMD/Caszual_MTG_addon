@@ -40,6 +40,20 @@ class CombatCardinalityChecks(unittest.TestCase):
         sim.send_to_destination(sim.players[0],mirri);self.drain(sim)
         self.assertEqual(sim.group_combat['block_limit'],1)
         sim.invariant()
+    def test_mandatory_attackers_maximize_satisfiable_requirements(self):
+        sim,cards=self.fixture(['Mirri, Weatherlight Duelist'])
+        mirri=self.put(sim,cards['Mirri, Weatherlight Duelist'])
+        a=self.token(sim,'required-a',seat=1);b=self.token(sim,'required-b',seat=1)
+        a.temporary_abilities=frozenset({'must_attack'})
+        b.temporary_abilities=frozenset({'must_attack'})
+        sim.active=1;sim.phase='attack';sim.stack.priority=1
+        mirri.tapped=True
+        groups=[x.attack_ids for x in sim.group_attack_choices(1) if x.kind=='attack_group']
+        self.assertTrue(groups)
+        self.assertTrue(all(len(group)==1 for group in groups))
+        sim.declare_attackers([a.card.id])
+        self.assertEqual(len(sim.group_combat['attackers']),1)
+        sim.invariant()
     def test_tapped_defender_limits_attackers(self):
         sim,cards=self.fixture(['Mirri, Weatherlight Duelist'])
         mirri=self.put(sim,cards['Mirri, Weatherlight Duelist'])

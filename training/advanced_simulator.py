@@ -161,13 +161,14 @@ class AdvancedRules:
   g=self.event_game('combat')
   required={p.card.id for p in available if g.must_attack(g.battlefield[p.card.id])}
   maximum=self.defending_attack_limit(seat,g)
+  required_count=min(len(required),maximum) if maximum is not None else len(required)
   groups={tuple(ids)} if ids else set()
   groups.update((i,) for i in ids)
   if len(ids)<=6:
    groups.update(group for n in range(2,len(ids)) for group in combinations(ids,n))
   result=[]
   for group in sorted(groups):
-   if not group or not required<=set(group) or maximum is not None and len(group)>maximum:continue
+   if not group or len(required & set(group))<required_count or maximum is not None and len(group)>maximum:continue
    power=sum(max(0,self.effective_card(p).power) for p in available if p.card.id in group)
    result.append(s.Candidate('attack:'+','.join(group),'attack_group',group[0],features=s.features(power=power/10,damage=power,lethal=int(power>=self.players[1-seat].life)),label='Attack with '+str(len(group))+' creatures',attack_ids=group))
   if not required:result.append(s.Candidate('pass','pass',features=s.features(**{'pass':1}),label='Pass'))
@@ -184,8 +185,9 @@ class AdvancedRules:
   if len(set(ids))!=len(ids) or any(i not in eligible for i in ids):raise ValueError('Illegal attack group')
   g=self.event_game('combat')
   required={p.card.id for p in eligible.values() if g.must_attack(g.battlefield[p.card.id])}
-  if not required<=set(ids):raise ValueError('Required attacker omitted')
   maximum=self.defending_attack_limit(self.active,g)
+  required_count=min(len(required),maximum) if maximum is not None else len(required)
+  if len(required & set(ids))<required_count:raise ValueError('Required attacker omitted')
   if maximum is not None and len(ids)>maximum:raise ValueError('Too many attackers against tapped restriction')
   if not ids:self.phase='second_main';return
   self.group_combat=dict(attackers=list(ids),declared=list(ids),blocks={},blocked=set(),early=None,block_limit=None)
