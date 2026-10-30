@@ -376,6 +376,7 @@ class AdvancedRules:
   for source,target,amount in assignments:
    source_state=g.battlefield[source]
    if target is not None and g.protected(g.battlefield[target],source_state.definition.colors):amount=0
+   if target in combat['attackers'] and self.prevents_attacker_combat_damage(g.battlefield[target].controller):amount=0
    if amount<=0:continue
    if target is None:
     defender=self.players[1-self.active];defender.life-=amount;player_hits.append(source)
