@@ -40,6 +40,27 @@ class OpeningHandTests(unittest.TestCase):
         self.assertTrue(h.fallback(good))
         self.assertFalse(h.fallback([land("L1")]+good[2:]))
 
+    def test_modal_land_back_counts_as_land_without_spending_its_front(self):
+        modal=s.Card('m','Blessing','aura','{G}',
+                     modal_land_face=land('m',mask=16,enters_tapped=True))
+        hand=[land('L1'),land('L2'),modal,creature('A','{G}'),
+              creature('B','{1}{G}'),creature('C','{8}'),creature('D','{9}')]
+        report=h.assess(hand)
+        self.assertTrue(report['keep'])
+        self.assertEqual(report['lands'],3)
+        self.assertEqual(report['early'],2)
+        self.assertTrue(h.fallback(hand))
+
+    def test_modal_front_and_back_cannot_both_count_for_one_opening(self):
+        modal=s.Card('m','Adaptable','creature','{G}','2;2;',2,2,
+                     modal_land_face=land('m',mask=16))
+        # Exactly one other early spell: using modal as the third land leaves
+        # only one castable spell; using modal as a spell leaves two lands.
+        hand=[land('L1'),land('L2'),modal,creature('A','{G}'),
+              creature('C','{8}'),creature('D','{9}'),creature('E','{7}')]
+        self.assertFalse(h.assess(hand)['keep'])
+        self.assertTrue(h.fallback(hand))
+
     def test_batch_seven_and_reproducible_free_mulligans(self):
         class Rules:
             def query(self,*args):return {"kind":"creature"}
