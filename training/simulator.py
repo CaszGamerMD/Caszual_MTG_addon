@@ -4762,8 +4762,16 @@ def diagnose(rules: RulesBridge, decks: list[dict], seed: int, turns_per_player:
     for seat, deck in enumerate(decks):
         imported = {card.name:card for card in cards[seat]}
         for definition in deck["mainboard"]:
-            if (audit_card(rules, definition)["kind"] == "unsupported"
-                    and imported[definition["name"]].kind != "unsupported"):
+            # A modal/transform card has one physical identity. Its imported
+            # hand-zone card uses the front face name, while the saved deck
+            # uses the combined printed name. Do not index the latter blindly.
+            faces = definition.get("faces") or []
+            front_name = (faces[0].get("name", definition["name"])
+                          if faces and definition.get("layout") in ("modal_dfc", "transform")
+                          else definition["name"])
+            compiled = imported.get(definition["name"]) or imported.get(front_name)
+            if (compiled is not None and audit_card(rules, definition)["kind"] == "unsupported"
+                    and compiled.kind != "unsupported"):
                 partially_supported.add(definition["name"])
     for q in audit["questions"]:
         if q.get("card") in partially_supported:
