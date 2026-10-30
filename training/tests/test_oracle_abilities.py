@@ -25,7 +25,7 @@ class ColoredWitnessGrammarChecks(unittest.TestCase):
     def test_briarberry_style_bonus_reacts_to_board_changes(self):
         creature=parse_card(dict(name='Unseen Cohort',types=['Creature'],
             subTypes=['Faerie'],colors=['Blue'],power='1',toughness='1',
-            oracleText='Flying\\nThis creature gets +1/+1 as long as you control another blue creature.'))
+            oracleText='Flying\nThis creature gets +1/+1 as long as you control another blue creature.'))
         self.assertTrue(creature.supported)
         ally=parse_card(dict(name='Unseen Blue Ally',types=['Creature'],
             colors=['Blue'],power='1',toughness='1',oracleText=''))
