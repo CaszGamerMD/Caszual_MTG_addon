@@ -53,3 +53,31 @@ class GauntletChecks(unittest.TestCase):
         self.assertEqual(g.adjudicate(report,0)['outcome'],'tie')
         report.update(result='blocked')
         self.assertEqual(g.adjudicate(report,0)['outcome'],'blocked')
+
+    def test_runtime_question_invalidates_even_reported_winner(self):
+        report=dict(result='win',winner=0,
+                    rulesProgress=dict(runtimeQuestions=['Unknown stack target'],
+                                       unsupportedEncountered=[],unsupportedCommanders=[]),
+                    events=[dict(state=dict(players=[dict(life=40),dict(life=1)]))])
+        decision=g.adjudicate(report,0)
+        self.assertEqual(decision['outcome'],'blocked')
+        self.assertEqual(decision['winner'],None)
+        self.assertIn('runtime_rules_question',decision['invalidReasons'])
+        report['rulesProgress']['runtimeQuestions']=[]
+        report['rulesProgress']['unsupportedEncountered']=['Unknown permanent']
+        decision=g.adjudicate(report,0)
+        self.assertEqual(decision['outcome'],'blocked')
+        self.assertIn('unsupported_card_encountered',decision['invalidReasons'])
+        report['rulesProgress']['unsupportedEncountered']=[]
+        report['questions']=[dict(id='runtime-1-0',blocking=True)]
+        self.assertEqual(g.adjudicate(report,0)['outcome'],'blocked')
+
+    def test_incomplete_or_contradictory_results_never_score(self):
+        report=dict(result='win',winner=None,events=[
+            dict(state=dict(players=[dict(life=40),dict(life=20)]))])
+        self.assertEqual(g.adjudicate(report,0)['outcome'],'blocked')
+        report.update(result='draw',winner=0)
+        self.assertEqual(g.adjudicate(report,0)['outcome'],'blocked')
+        report.update(result='diagnostic_window_complete',winner=None,events=[])
+        self.assertEqual(g.adjudicate(report,0)['outcome'],'blocked')
+        self.assertIn('missing_final_state',g.adjudicate(report,0)['invalidReasons'])
