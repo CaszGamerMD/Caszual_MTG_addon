@@ -7,6 +7,74 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class TribalTapActivationChecks(unittest.TestCase):
+    def test_unseen_tap_token_ability_composes_with_live_lord(self):
+        raw=dict(name='Unseen Elf Lord',types=['Creature'],subTypes=['Elf'],
+            power='2',toughness='2',manaCost='{2}{G}',
+            oracleText=('Other Elves you control get +1/+1.\n'
+                        '{G}, {T}: Create a 1/1 green Elf Warrior creature token.'))
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(len(definition.static_effects),1)
+        self.assertEqual(len(definition.activations),1)
+        cost,spec,tap=definition.activations[0]
+        self.assertEqual(cost,'{G}')
+        self.assertTrue(tap)
+        self.assertEqual(spec.subtypes,('Elf','Warrior'))
+        ally=Definition('Unknown Elf',frozenset({'Creature'}),frozenset({'Elf'}),
+                        False,1,1,frozenset())
+        game=Game()
+        lord=Permanent('lord',definition,0)
+        friend=Permanent('friend',ally,0)
+        enemy=Permanent('enemy',ally,1)
+        game.enter(lord);game.enter(friend);game.enter(enemy)
+        self.assertEqual(game.stats(lord),(2,2))
+        self.assertEqual(game.stats(friend),(2,2))
+        self.assertEqual(game.stats(enemy),(1,1))
+
+    def test_real_imperious_perfect_tap_cost_paid_before_token_resolves(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14435337-lupitas-elves.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Imperious Perfect')
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertTrue(definition.activations[0][2])
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'perfect',{'Green'})
+            self.assertNotEqual(card.kind,'unsupported')
+            lands=[s.Card('mana'+str(i),'Mana','land',mask=63) for i in range(3)]
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card]+lands,
+                s.demo_deck(1)),diagnostic=True)
+            sim.manual_priority=True;sim.phase='main';sim.stack.priority=0
+            owner=sim.players[0]
+            (owner.hand if card in owner.hand else owner.library).remove(card)
+            for mana in lands:
+                (owner.hand if mana in owner.hand else owner.library).remove(mana)
+                owner.battlefield.append(s.Permanent(mana))
+            pending=sim.enter_creature(card,owner)
+            sim.resolve_entry_triggers(pending,card)
+            source=next(p for p in owner.battlefield if p.card.id==card.id)
+            with self.assertRaises(ValueError):sim.activate_tokens(0,card.id)
+            source.fresh=False
+            sim.activate_tokens(0,card.id)
+            self.assertTrue(source.tapped)
+            with self.assertRaises(ValueError):sim.activate_tokens(0,card.id)
+            while sim.stack.items:sim.pass_priority(sim.stack.priority)
+            tokens=[p for p in owner.battlefield if p.card.is_token]
+            self.assertEqual(len(tokens),1)
+            self.assertEqual(sim.effective_card(tokens[0]).power,2)
+            self.assertFalse(any(p.card.is_token and p.card.id!=tokens[0].card.id
+                                 for p in owner.battlefield))
+
+    def test_unrecognized_extra_tap_instruction_rejected(self):
+        raw=dict(name='Unknown Lord',types=['Creature'],subTypes=['Elf'],
+            power='2',toughness='2',
+            oracleText=('{G}, {T}: Create a 1/1 green Elf Warrior creature token. '
+                        'Draw three cards.'))
+        self.assertFalse(parse_card(raw).supported)
+
+
 class TribalInterveningIfChecks(unittest.TestCase):
     @staticmethod
     def elite():
