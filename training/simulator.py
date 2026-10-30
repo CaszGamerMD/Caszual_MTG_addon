@@ -3928,6 +3928,12 @@ class Simulator(AdvancedRules):
                 game=snapshot or self.event_game('main');state=game.battlefield.get(item.card.id)
                 if state:
                     event['lastLifelink']=game.has(state,'lifelink');event['lastDeathtouch']=game.has(state,'deathtouch')
+            if event.get('operation')=='entry_power_branch' and event.get('entered')==item.card.id and event.get('entryAt')==item.entered_at:
+                # Last-known information is taken when the entrant leaves, not
+                # when the ETB trigger was originally placed on the stack.
+                game=snapshot or self.event_game('main')
+                state=game.battlefield.get(item.card.id)
+                if state and game.creature(state):event['entryPower']=game.stats(state)[0]
             if event.get('operation')=='mentor_counter' and event.get('source')==item.card.id:
                 # Mentor uses the source's last-known power if it leaves
                 # before the attack trigger resolves.

@@ -63,6 +63,17 @@ class EntryPowerBranchChecks(unittest.TestCase):
         self.assertEqual(ally.counters,0)
         sim.invariant()
 
+    def test_last_known_power_updates_when_entrant_leaves_after_being_pumped(self):
+        sim,cards=self.fixture(['Tribute to the World Tree'])
+        self.put(sim,cards['Tribute to the World Tree'])
+        ally=self.enter(sim,'ally',power=2,toughness=3)
+        before=len(sim.players[0].hand)
+        ally.temporary_power+=2
+        sim.send_to_destination(sim.players[0],ally)
+        self.drain(sim)
+        self.assertEqual(len(sim.players[0].hand),before+1)
+        sim.invariant()
+
     def test_exited_low_power_object_gets_no_counters(self):
         sim,cards=self.fixture(['Tribute to the World Tree'])
         self.put(sim,cards['Tribute to the World Tree'])
