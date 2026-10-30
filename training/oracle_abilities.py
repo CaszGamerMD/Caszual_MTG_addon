@@ -332,6 +332,14 @@ def effect(text):
     if m: return Effect('damage',int(m[1]),'each opponent')
     m=re.fullmatch(r'(scry|surveil) ([1-9][0-9]*)\.',text)
     if m: return Effect(m[1],int(m[2]))
+    milled=re.fullmatch(r'(you mill|each opponent mills|each player mills) (a|one|two|three|[1-9][0-9]*) cards?\.',text)
+    if milled:
+        word=milled[2]
+        count={'a':1,'one':1,'two':2,'three':3}.get(word)
+        if count is None:count=int(word)
+        return Effect('mill_cards',count,recipient={
+            'you mill':'controller','each opponent mills':'each opponent',
+            'each player mills':'each player'}[milled[1]])
     # Consume the entire ordered instruction; a partially understood clause
     # must never be treated as a successful parse.
     if text.endswith('.'):
@@ -631,7 +639,7 @@ def event_data(trigger, source, subject):
     labels={'return_controlled_land':'return a controlled land to its owner hand','gain_life':f'controller gains {e.amount} life','draw_cards':f'controller draws {e.amount} cards',
             'reveal_creatures':f'reveal {e.amount} cards and put matching creatures onto the battlefield',
             'damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
-            'damage':f'deal {e.amount} damage to each opponent','scry':'scry','surveil':'surveil',
+            'damage':f'deal {e.amount} damage to each opponent','scry':'scry','surveil':'surveil','mill_cards':'move top library cards to graveyards',
             'damage_any_target':f'may deal {e.amount} damage to any target',
             'add_counters':f'put {e.amount} +1/+1 counters on each {e.counter_subtype or "creature"} you control',
             'create_tokens':f'create {e.amount} creature tokens',

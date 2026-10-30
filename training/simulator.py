@@ -2681,6 +2681,21 @@ class Simulator(AdvancedRules):
                          actor=seat,source=event['source'],operation='surveil',
                          amount=count,movedToGraveyard=len(sent))
                 continue
+            if event.get('operation')=='mill_cards':
+                controller=event['controller'];scope=event.get('recipient','controller')
+                seats=([controller] if scope=='controller' else
+                       [seat for seat in range(len(self.players)) if seat!=controller] if scope=='each opponent'
+                       else list(range(len(self.players))) if scope=='each player' else None)
+                if seats is None:raise ValueError('Unsupported mill recipient; cannot execute incomplete Oracle instruction.')
+                counts={}
+                for seat in seats:
+                    owner=self.players[seat];cards=min(max(0,int(event['amount'])),len(owner.library))
+                    for _ in range(cards):owner.graveyard.append(owner.library.pop())
+                    counts[str(seat)]=cards
+                self.log('mill',f"Players mill cards from the top of their libraries.",
+                         actor=controller,source=event['source'],operation='mill_cards',
+                         amount=event['amount'],recipient=scope,milledCounts=counts)
+                continue
             if event.get('operation')=='draw_cards':
                 if event.get('optional') and not self.choose_optional_draw(event):continue
                 for _ in range(event['amount']):self.draw(event['controller'])
