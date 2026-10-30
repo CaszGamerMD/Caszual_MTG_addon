@@ -4,6 +4,8 @@ on:
     branches: [experiment/commander-ai-golem]
     paths:
       - training/composable_oracle.py
+      - training/oracle_sequence.py
+      - training/tests/test_oracle_sequence.py
       - training/oracle_abilities.py
       - training/card_events.py
       - training/simulator.py
@@ -31,7 +33,9 @@ jobs:
       - name: Compile Python module syntax
         run: python -m compileall -q training
       - name: Test real Marwyn and unknown-card grammar combinations
-        run: python -m unittest discover -s training/tests -p test_composable_power_mana.py -v
+        run: |
+          python -m unittest discover -s training/tests -p test_composable_power_mana.py -v
+          python -m unittest discover -s training/tests -p test_oracle_sequence.py -v
       - name: Regression for previous composite abilities and mana
         run: |
           python -m unittest discover -s training/tests -p test_regeneration_tribal.py -v
