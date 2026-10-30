@@ -20,12 +20,14 @@ class MirrorDeckImportTests(unittest.TestCase):
     def test_exclude_maybeboard_even_with_other_categories(self):
         rows=[card('Marwyn, the Nurturer',categories=('Commander',)),
               card('Forest',qty=35,categories=('Land',),types=('Land',)),
-              card('Elf',qty=64,categories=('Ramp',)),
+              card('Elf',qty=54,categories=('Ramp',)),
+              card('Goblin Tokens',qty=10,categories=('Tokens',)),
               card('Optional',qty=24,categories=('Maybeboard','Ramp'))]
         deck,report=convert_deck(14435337,dict(id=14435337,name='Demo',cards=rows))
         self.assertEqual(report['activeCards'],100)
         self.assertEqual(report['excludedMaybeboardCopies'],24)
         self.assertEqual(report['lands'],35)
+        self.assertIn('Goblin Tokens',[c['name'] for c in deck['mainboard']])
         self.assertEqual(sum(c['quantity'] for c in deck['mainboard']),99)
         self.assertNotIn('Optional',[c['name'] for c in deck['mainboard']])
         self.assertEqual(deck['commanders'][0]['name'],'Marwyn, the Nurturer')
