@@ -213,6 +213,7 @@ class Card:
     # in all hidden/nonbattlefield zones; a land back may be chosen only on play.
     modal_land_face: Card | None = None
     modal_front_face: Card | None = None
+    modal_spell_face: Card | None = None  # Alternate castable back, same physical card.
 
 
 
@@ -2143,7 +2144,7 @@ class Simulator(AdvancedRules):
         self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack,modal_modes=choice.modal_modes)
         return 'cast'
 
-    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None,modal_modes=(),exile_permission=False):
+    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None,modal_modes=(),exile_permission=False,zone_card=None):
         player=self.players[seat]
         if not card.instant and seat!=self.stack.priority: raise ValueError('Player lacks priority')
         if self.stack.items:
@@ -2158,7 +2159,7 @@ class Simulator(AdvancedRules):
                 raise ValueError('No valid exile casting permission')
             casting_zone=next(p.exile for p in self.players if card in p.exile)
         else:casting_zone=player.exile if rebound else player.graveyard if flashback else player.hand
-        if not commander and card not in casting_zone: raise ValueError('Card not in casting zone')
+        if not commander and (zone_card or card) not in casting_zone: raise ValueError('Card not in casting zone')
         if bestow and (not card.event_definition or not card.event_definition.bestow):raise ValueError('Card has no supported bestow ability')
         if (card.kind=='aura' or bestow) and target not in {p.card.id for _,p in
                 (self.aura_targets(seat,card) if card.kind=='aura' and not bestow else self.creature_targets(seat,card))}:
@@ -2189,7 +2190,7 @@ class Simulator(AdvancedRules):
             if source.card.id in payment['sources']:source.tapped=True
         player.mana_pool=list(payment['pool'])
         if commander:player.command_zone=None;player.commander_casts+=1
-        else:casting_zone.remove(card)
+        else:casting_zone.remove(zone_card or card)
         if exile_permission:self.exile_cast_permissions.pop(card.id,None)
         prior=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)
         self.stack.active=self.active
@@ -3773,6 +3774,11 @@ class Simulator(AdvancedRules):
                                      draw=x if c.x_effect=='draw' else 0,life=x if c.x_effect=='life' else 0,
                                      cost=len(payment['sources'])), 'Cast '+c.name+' with X='+str(x),x_value=x))
                     continue
+                if c.modal_spell_face is not None and self.payment(c.modal_spell_face,seat=seat)['paid']:
+                    back=c.modal_spell_face
+                    actions.append(Candidate(c.id+':spellback','cast_modal_back',c.id,
+                        features=features(power=back.power,toughness=back.toughness),
+                        label='Cast '+back.name))
                 if c.kind in ("creature", "vehicle", "enchantment", "spell", "token_spell", "mana_artifact", "equipment", "planeswalker", "station", "artifact") and self.payment(c)["paid"]:
                     if c.draw and len(p.library) < c.draw:
                         continue  # never choose a known self-decking draw spell
@@ -3984,6 +3990,10 @@ class Simulator(AdvancedRules):
                     self.log("land", f"Player {self.active + 1} plays {played.name}.", card=played.name,
                              modalBack=choice.kind=="land_back")
                     self.resolve_entry_triggers(pending,played)
+                elif choice.kind=='cast_modal_back':
+                    if card.modal_spell_face is None:raise ValueError('Missing legal modal spell face')
+                    back=replace(card.modal_spell_face,modal_front_face=card,physical_id=root(card))
+                    self.cast_spell(self.active,back,zone_card=card)
                 else:
                     self.cast_spell(self.active,card,choice.x_value,choice.kind=='cast_commander',
                         modal_modes=choice.modal_modes,target=choice.target_permanent or choice.target_stack,
@@ -4225,6 +4235,9 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             back=import_diagnostic_card(rules,face_definition(faces[1]),seat,uid,identity)
             if front.kind not in ('unsupported','land') and back.kind=='land' and not back.mana_cost:
                 return replace(front,modal_land_face=back)
+            if (front.kind not in ('unsupported','land') and
+                    back.kind not in ('unsupported','land') and back.mana_cost):
+                return replace(front,modal_spell_face=back)
         return Card(uid,definition['name'],'unsupported')
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)

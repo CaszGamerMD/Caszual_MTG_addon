@@ -153,6 +153,8 @@ class Definition:
     attachment_counter_scale: tuple = ()  # P/T added per counter on the attached permanent.
     equipment_planeswalker_cost: str = ''  # Alternative equip targeting a planeswalker.
     equipment_creature_conversion: bool = False  # Equipped permanent becomes non-planeswalker creature.
+    combat_reattach: bool = False  # Optional start-of-combat Aura/Equipment movement.
+    equipment_return_dying: bool = False  # Equipped creature dies -> return from graveyard.
 
 
 def parse_card(card: dict) -> Definition:
@@ -179,6 +181,15 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    halvar_lines=text.splitlines()
+    if len(halvar_lines)==2 and halvar_lines[1]==(
+            'At the beginning of each combat, you may attach target Aura or Equipment '
+            'attached to a creature you control to target creature you control.'):
+        anthem=compile_abilities(halvar_lines[0],name)
+        if anthem and anthem.static_effects and all(
+                effect.requires_attachment for effect in anthem.static_effects):
+            return Definition(**base,abilities=anthem.keywords,
+                              static_effects=anthem.static_effects,combat_reattach=True)
     from counter_equipment import parse as parse_counter_equipment
     scaling_equipment=parse_counter_equipment(text,types,subtypes)
     if scaling_equipment:
@@ -271,7 +282,8 @@ def parse_card(card: dict) -> Definition:
             upkeep_attachment_counters=enchantments.upkeep_attachment_counters,
             entry_attachment_counters=enchantments.entry_attachment_counters,
             double_attachment_counters_upkeep=enchantments.double_attachment_counters_upkeep,
-            living_weapon=enchantments.living_weapon)
+            living_weapon=enchantments.living_weapon,
+            equipment_return_dying=enchantments.equipment_return_dying)
     from land_aura_exile import parse as parse_land_aura_exile
     land_exile=parse_land_aura_exile(text,types,subtypes)
     if land_exile:
@@ -536,6 +548,10 @@ class Game:
                 power_bonus+=power*count;toughness_bonus+=toughness*count
             for effect in self.static_effects(source):
                 if not matches(effect.subject,source,p,True): continue
+                if effect.requires_attachment and not any(
+                    item.attached_to==p.id and item.definition.attachment and
+                    item.definition.attachment[0] in ('aura','equipment')
+                    for item in self.battlefield.values()):continue
                 if effect.life_min and self.life_totals.get(source.controller,0)<effect.life_min:continue
                 if effect.condition and not any(matches(effect.condition,source,x,self.creature(x)) for x in self.battlefield.values()): continue
                 if effect.share_types:
@@ -580,6 +596,10 @@ class Game:
             if source.attached_to==p.id and source.definition.attachment and ability in source.definition.attachment[2]:
                 grants.append(stamp)
             if any(effect.grant==ability and matches(effect.subject,source,p,self.creature(p))
+                   and (not effect.requires_attachment or any(
+                       item.attached_to==p.id and item.definition.attachment and
+                       item.definition.attachment[0] in ('aura','equipment')
+                       for item in self.battlefield.values()))
                    and (not effect.life_min or self.life_totals.get(source.controller,0)>=effect.life_min)
                    and (not effect.condition or any(matches(effect.condition,source,other,self.creature(other)) for other in self.battlefield.values()))
                    for effect in self.static_effects(source)):grants.append(stamp)

@@ -21,7 +21,7 @@ def parse(text,types,subtypes):
     if restriction.startswith('land:'):prefix='Enchanted land'
     for line in lines:
         line=line.strip()
-        m=re.fullmatch(r'Equip (\{[0-9]{1,2}\})',line)
+        m=re.fullmatch(r'Equip ((?:\{(?:[0-9]{1,2}|[WUBRGC])\})+)',line)
         if m and mode=='equipment':cost=m[1];continue
         m=re.fullmatch((prefix if prefix=='Enchanted land' else prefix+' creature')+r' has (.+)\.',line)
         if m:

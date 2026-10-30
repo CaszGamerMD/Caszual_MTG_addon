@@ -61,6 +61,7 @@ class StaticEffect:
     suppress: str = ''  # Continuous 'can't have or gain' overrides all grants.
     share_types: bool = False  # Count other creatures sharing any creature subtype.
     must_attack: bool = False  # Continuous requirement: attack each combat if able.
+    requires_attachment: bool = False  # Enchanted/equipped creature only.
 
 @dataclass(frozen=True)
 class Effect:
@@ -109,6 +110,11 @@ class Program:
     chosen_type_entry: bool = False
 
 def static_effect(text):
+    attached=re.fullmatch(r'Creatures you control that are enchanted or equipped have ([a-z ]+)\.',text)
+    if attached:
+        if attached[1] not in KEYWORDS-{'flash'}:return None
+        return StaticEffect(Selector(relation='controller',creature=True),0,0,
+                            grant=attached[1],requires_attachment=True)
     # Enchantment creatures form a type intersection, not a creature subtype.
     typed=re.fullmatch(r'(Other )?enchantment creatures you control get \+([0-9]+)/\+([0-9]+)\.',text)
     if typed:
