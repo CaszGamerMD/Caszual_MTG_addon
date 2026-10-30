@@ -1,0 +1,41 @@
+name: Shared AI - Garbo vs Wilds - seven 15-turn games
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - training/seven_game_shared_ai.py
+      - training/tests/test_seven_game_shared_ai.py
+      - .github/workflows/commander-shared-ai-seven-games.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: commander-shared-ai-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  shared-ai-match:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check both AI instances and fail-closed match rules
+        run: |
+          python -m unittest discover -s training/tests -p test_garbo_strategy.py -v
+          python -m unittest discover -s training/tests -p test_seven_game_shared_ai.py -v
+      - name: Both decks use identical pressure AI for 7 games with 15 turns
+        run: |
+          python training/seven_game_shared_ai.py --games 7 --turns 15 --seed 5189995 --out training/reports/garbo-wilds-7x15-shared-ai
+      - name: Upload scores and all seven replays
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: garbo-wilds-shared-ai-7x15
+          path: training/reports/garbo-wilds-7x15-shared-ai/
+          retention-days: 14
