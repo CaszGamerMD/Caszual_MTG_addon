@@ -392,6 +392,7 @@ class Simulator(AdvancedRules):
         self._rebound_permission=None
         self.pending: str | None = None
         self.land_played = False
+        self.land_plays_this_turn = 0
         self.turn_development=[False,False]
         self.opening_mulligans=[0,0]
         self.opening_reviews=[None,None]  # Private; not part of public state or AI observations
@@ -2945,6 +2946,13 @@ class Simulator(AdvancedRules):
             self.log("result", "Draw." if self.winner is None else f"Player {self.winner + 1} wins.",
                      lossReasons=[[r for r in row if r] for row in reasons])
 
+    def land_play_limit(self, seat: int) -> int:
+        # A land-play permission is continuous and cumulative. Losing its
+        # source does not undo land plays already performed this turn.
+        game=self.event_game('main')
+        return 1+sum(state.definition.additional_land_plays
+                     for state in game.battlefield.values() if state.controller==seat)
+
     def mana_sources(self, seat: int):
         sources=[]
         game=self.event_game('main')
@@ -3039,11 +3047,14 @@ class Simulator(AdvancedRules):
         if self.group_combat is not None and self.phase=='block':return self.group_block_choices(seat)
         actions = []
         if self.phase == "land":
-            if not self.land_played:
+            if self.land_plays_this_turn < self.land_play_limit(seat):
                 for c in p.hand:
                     if c.kind == "land":
                         actions.append(Candidate(c.id, "land", c.id, features(power=1), "Play " + c.name))
         elif self.phase in ("main", "second_main"):
+            if self.land_plays_this_turn < self.land_play_limit(seat):
+                actions.extend(Candidate(card.id,'land',card.id,features(power=1),label='Play '+card.name)
+                               for card in p.hand if card.kind=='land')
             if self.diagnostic: actions.extend(self.activation_choices(seat, {"crew","saddle"}))
             actions.extend(self.special_choices(seat))
             actions.extend(self.equip_choices(seat))
@@ -3215,6 +3226,7 @@ class Simulator(AdvancedRules):
             self.turn += 1
             self.stack.active=self.active;self.stack.priority=self.active
             self.land_played = False
+            self.land_plays_this_turn = 0
             self.turn_development[self.active]=False
             self.life_gained_turn=[0,0]
             self.damage_to_players=[set(),set()]
@@ -3299,6 +3311,7 @@ class Simulator(AdvancedRules):
                     p.hand.remove(card)
                     pending=self.enter_creature(card,p)
                     self.land_played = True
+                    self.land_plays_this_turn += 1
                     if self.phase == "land": self.phase = "main"
                     self.log("land", f"Player {self.active + 1} plays {card.name}.", card=card.name)
                     self.resolve_entry_triggers(pending,card)
@@ -3520,7 +3533,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and (rules.query("cost",cost)["supported"] or "Land" in event_definition.types and not cost)):
