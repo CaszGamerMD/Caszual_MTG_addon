@@ -18,7 +18,7 @@ def parse(text,name,types):
                           'Whenever this creature',normalized)
     lines=normalized.splitlines()
     if not re.fullmatch(
-        r'Whenever this creature or another nontoken creature (?:enters|enters the battlefield) under your control, choose one [—-]',
+        r'Whenever this creature or another nontoken creature (?:(?:you control enters(?: the battlefield)?)|(?:enters(?: the battlefield)? under your control)), choose one [—-]',
         lines[0] if lines else ''):
         return ()
     choices=[]
