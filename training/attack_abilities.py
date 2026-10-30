@@ -9,6 +9,14 @@ def compile(text):
         if not line: continue
         words={w.strip().lower() for w in line.split(',')}
         if words<=KEYWORDS: keywords.update(words);continue
+        # A saddled Mount's attack trigger creates noncreature Treasure tokens.
+        # The complete instruction is required; saddle is checked at attack time.
+        treasure=re.fullmatch(
+            r'Whenever this creature attacks while saddled, create (a|one|two|three|four|[1-9][0-9]*) Treasure tokens?\.',line)
+        if treasure:
+            amount={'a':1,'one':1,'two':2,'three':3,'four':4}.get(treasure[1])
+            effects.append(('saddled_treasures',amount if amount is not None else int(treasure[1]),0,''))
+            continue
         group=re.fullmatch(r'Whenever this creature and at least (one|two|three|[1-9][0-9]*) other creatures attack, (create .+)',line)
         saddled=re.fullmatch(r'Whenever this creature attacks while saddled, (create .+)',line)
         token=re.fullmatch(r'Whenever this creature attacks, (create .+)',line)

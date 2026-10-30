@@ -30,6 +30,36 @@ class AttackChecks(unittest.TestCase):
    sim.invariant()
   raw['oracleText']+='\nDraw a card.'
   self.assertFalse(parse_card(raw).supported)
+ def test_saddled_treasure_attack_real_and_unseen_full_rules(self):
+  lookup={c['name']:c for p in (Path(__file__).resolve().parents[1]/'decks').glob('*.json') for c in json.loads(p.read_text())['mainboard']}
+  real=lookup['Gilded Ghoda']
+  with s.RulesBridge() as rules:
+   for raw,expected in ((real,1),(dict(real,name='Unknown Mount',oracleText='Whenever this creature attacks while saddled, create three Treasure tokens.\nSaddle 1'),3)):
+    card=s.import_diagnostic_card(rules,raw,0,'ghoda-'+raw['name'],{'White'})
+    self.assertEqual(card.kind,'creature')
+    self.assertEqual(card.event_definition.attack_effects[0][:2],('saddled_treasures',expected))
+    sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card],s.demo_deck(1)),diagnostic=True)
+    owner=sim.players[0]
+    (owner.hand if card in owner.hand else owner.library).remove(card)
+    sim.enter_creature(card,owner)
+    mount=next(p for p in owner.battlefield if p.card.id==card.id)
+    mount.fresh=False
+    g=sim.event_game('combat');g.attack(card.id,1,defer=True)
+    self.assertFalse(any(e.get('operation')=='create_treasures' for e in g.events))
+    mount.saddled=True
+    g=sim.event_game('combat');g.attack(card.id,1,defer=True)
+    events=[e for e in g.events if e.get('operation')=='create_treasures']
+    self.assertEqual(len(events),1)
+    self.assertEqual(events[0]['amount'],expected)
+    before=sum(p.card.name=='Treasure' for p in owner.battlefield)
+    sim.resolve_entry_triggers(events,card)
+    self.assertEqual(sum(p.card.name=='Treasure' for p in owner.battlefield),before+expected)
+    self.assertTrue(all(p.card.is_token for p in owner.battlefield if p.card.name=='Treasure'))
+    sim.invariant()
+   bad=dict(real,oracleText=real['oracleText']+'\nWhenever this creature attacks, win the game.')
+   self.assertEqual(s.import_diagnostic_card(rules,bad,0,'bad',{'White'}).kind,'unsupported')
+   wrong=dict(real,subTypes=['Horse'])
+   self.assertEqual(s.import_diagnostic_card(rules,wrong,0,'wrong',{'White'}).kind,'unsupported')
  def test_generic_subtype_combat_damage_discard(self):
   from unittest.mock import patch
   with s.RulesBridge() as rules:

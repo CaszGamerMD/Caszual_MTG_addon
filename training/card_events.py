@@ -1229,6 +1229,10 @@ class Game:
                             for ability in keyword:self.grant_temporary(member,ability)
                     self.emit('trigger',source=a.id,effect='grant team keywords until end of turn',
                               keywords=list(keyword))
+            elif operation=='saddled_treasures' and a.saddled:
+                self.emit('trigger',operation='create_treasures',source=a.id,
+                          name=a.definition.name,controller=a.controller,
+                          amount=power,effect='create Treasures after a saddled attack')
             elif operation=='saddled_boost' and a.saddled and defer:
                 self.emit('trigger',operation='saddled_boost',source=a.id,name=a.definition.name,controller=a.controller,effect='saddled boost',power=power,toughness=toughness,keyword=keyword)
             elif operation=='saddled_boost' and a.saddled:
