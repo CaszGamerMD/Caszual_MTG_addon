@@ -3439,7 +3439,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.sacrifice_team_choices(seat))
             actions.extend(self.sacrifice_protection_choices(seat))
             actions.extend(self.land_counter_choices(seat))
-        actions.extend(self.land_animation_choices(seat))
+            actions.extend(self.land_animation_choices(seat))
             actions.extend(self.regenerate_choices(seat))
             actions.extend(self.strip_ability_choices(seat))
             if (self.diagnostic and p.command_zone and p.command_zone.kind == "creature"
