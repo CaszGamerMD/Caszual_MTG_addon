@@ -66,3 +66,46 @@ class DeathExileCastChecks(unittest.TestCase):
         self.assertTrue(any(p.card.id==top.id for p in sim.players[0].battlefield))
         self.assertNotIn(top.id,sim.exile_cast_permissions)
         sim.invariant()
+
+    def test_nonmatching_top_exiles_without_cast_permission(self):
+        sim,lord=self.prepare()
+        top=s.Card('top-elf','Unknown Elf','creature',mana_cost='{1}',printed_types=('Creature',),land_subtypes=('Elf',))
+        sim.players[0].library.append(top);sim.card_owners[top.id]=0
+        sim.total_cards=(sim.total_cards[0]+1,sim.total_cards[1])
+        gob=self.token(sim,'gob',subtypes=('Goblin',))
+        game=sim.event_game('main');triggers=game.death_triggers([gob.card.id])
+        sim.send_to_destination(sim.players[0],gob,snapshot=game)
+        sim.resolve_entry_triggers(triggers,lord)
+        self.assertFalse(any(top.name in str(e['details']) for e in sim.events if e['kind']=='stack_push'))
+        self.drain(sim)
+        self.assertIn(top,sim.players[0].exile)
+        self.assertNotIn(top.id,sim.exile_cast_permissions)
+        revealed=next(e['details'] for e in sim.events if e['kind']=='exile_top' and e['details']['cardId']==top.id)
+        self.assertEqual((revealed['cardOwner'],revealed['controller'],revealed['eligible']),(0,0,False))
+        sim.invariant()
+
+    def test_permission_expires_at_end_of_next_own_turn(self):
+        sim,lord=self.prepare()
+        top=s.Card('expiring-gob','Unknown Goblin','creature',mana_cost='{1}',power=1,toughness=1,
+                   traits='1;1;',printed_types=('Creature',),land_subtypes=('Goblin',))
+        sim.players[0].library.append(top);sim.card_owners[top.id]=0
+        sim.total_cards=(sim.total_cards[0]+1,sim.total_cards[1])
+        gob=self.token(sim,'gob',subtypes=('Goblin',))
+        game=sim.event_game('main');triggers=game.death_triggers([gob.card.id])
+        sim.send_to_destination(sim.players[0],gob,snapshot=game)
+        sim.resolve_entry_triggers(triggers,lord);self.drain(sim)
+        expiry=sim.exile_cast_permissions[top.id][1]
+        self.assertEqual(expiry,sim.turn+2)
+        sim.turn=expiry;sim.active=0;sim.phase='cleanup';sim._step()
+        self.assertNotIn(top.id,sim.exile_cast_permissions)
+        self.assertIn(top,sim.players[0].exile)
+        self.assertNotIn(top,sim.permitted_exile_cards(0))
+        sim.invariant()
+
+    def test_unseen_other_subtype_and_cast_subtype_are_parameters(self):
+        raw=dict(self.lookup['Rundvelt Hordemaster'],name='Unknown Elf captain')
+        raw['oracleText']=raw['oracleText'].replace('Goblins','Elves').replace('Goblin','Elf')
+        parsed=s.import_diagnostic_card(self.rules,raw,0,'unseen',{'Red'})
+        self.assertNotEqual(parsed.kind,'unsupported')
+        self.assertEqual(parsed.event_definition.triggers[0].subject.self_or_controlled_subtype,'Elf')
+        self.assertEqual(parsed.event_definition.triggers[0].effect.library_filter,('subtype','Elf','creature'))

@@ -66,3 +66,33 @@ class GraveyardExileChecks(unittest.TestCase):
         self.assertIn(card,sim.players[1].exile)
         self.assertFalse([p for p in sim.players[0].battlefield if p.card.is_token])
         sim.invariant()
+
+    def test_target_removed_before_resolution_fizzles_without_token(self):
+        sim,source=self.prepare()
+        victim=s.Card('fizzle-victim','Unknown victim','creature',printed_types=('Creature',))
+        sim.players[1].graveyard.append(victim);sim.card_owners[victim.id]=1
+        sim.total_cards=(sim.total_cards[0],sim.total_cards[1]+1)
+        sim.players[0].mana_pool=[0,0,0,0,0,4]
+        sim.activate_graveyard_exile(0,source.id,victim.id)
+        sim.players[1].graveyard.remove(victim);sim.players[1].exile.append(victim)
+        sim.pass_priority(0);sim.pass_priority(1)
+        self.assertFalse([p for p in sim.players[0].battlefield if p.card.is_token])
+        self.assertTrue(any(e['kind']=='graveyard_exile_fizzle' for e in sim.events))
+        sim.invariant()
+
+    def test_creature_token_creation_uses_replacement_effects(self):
+        sim,source=self.prepare()
+        double=s.import_diagnostic_card(self.rules,self.lookup['Doubling Season'],0,'double',{'Green'})
+        self.assertNotEqual(double.kind,'unsupported')
+        sim.players[0].battlefield.append(s.Permanent(double))
+        sim.card_owners[double.id]=0
+        sim.total_cards=(sim.total_cards[0]+1,sim.total_cards[1])
+        victim=s.Card('replacement-victim','Unknown victim','creature',printed_types=('Creature',))
+        sim.players[1].graveyard.append(victim);sim.card_owners[victim.id]=1
+        sim.total_cards=(sim.total_cards[0],sim.total_cards[1]+1)
+        sim.players[0].mana_pool=[0,0,0,0,0,4]
+        sim.activate_graveyard_exile(0,source.id,victim.id)
+        sim.pass_priority(0);sim.pass_priority(1)
+        spirits=[p for p in sim.players[0].battlefield if p.card.is_token and 'Spirit' in p.card.event_definition.subtypes]
+        self.assertEqual(len(spirits),2)
+        sim.invariant()
