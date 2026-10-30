@@ -507,7 +507,7 @@ def parse_card(card: dict) -> Definition:
     # The entry-time choice grammar must match the permanent type named by Oracle.
     if program and program.chosen_type_entry and not any(
         f"As this {kind.lower()} enters, choose a creature type." in text
-        for kind in ("Artifact", "Enchantment") if kind in types):
+        for kind in ("Artifact", "Enchantment", "Creature") if kind in types):
         program = None
     if program is not None and ("Creature" in types or "Enchantment" in types or "Artifact" in types):
         if program.devotion and not {'Creature','Enchantment'}<=types:

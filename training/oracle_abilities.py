@@ -334,6 +334,8 @@ KEYWORDS = {'flash','flying','first strike','double strike','lifelink','vigilanc
 
 def selector(text):
     if text == 'this creature': return Selector(self_only=True,creature=True)
+    if text=='another creature you control of the chosen type':
+        return Selector(relation='controller',other=True,creature=True,chosen_subtype=True)
     if text in ('this land','this artifact','this enchantment','this permanent'):return Selector(self_only=True)
     if text in ('this creature or another creature','this creature or another creature you control'):
         return Selector(relation='controller' if text.endswith('you control') else 'any',creature=True)
@@ -451,7 +453,8 @@ def compile_abilities(text, name=''):
             keywords.add('changeling')
             continue
         if line in ('As this enchantment enters, choose a creature type.',
-                    'As this artifact enters, choose a creature type.'):
+                    'As this artifact enters, choose a creature type.',
+                    'As this creature enters, choose a creature type.'):
             if chosen_type_entry:return None
             chosen_type_entry=True
             continue
@@ -735,6 +738,7 @@ def compile_abilities(text, name=''):
             return None  # Repeating token engines need bounded stack/loop handling.
         triggers.append(Trigger(event,subject,action))
     chosen_type_used=(any(e.subject.chosen_subtype for e in static_effects)
+                      or any(trigger.subject.chosen_subtype for trigger in triggers)
                       or any('chosen_creature_type' in names for names,_ in cost_reductions))
     if chosen_type_entry != chosen_type_used:return None
     return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers),tuple(token_leave_triggers),tuple(entry_counter_grants),tuple(attack_watchers),chosen_type_entry,opponent_life_gain_becomes_loss,prevent_combat_damage_to_attackers) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers or token_leave_triggers or entry_counter_grants or attack_watchers or opponent_life_gain_becomes_loss or prevent_combat_damage_to_attackers or keywords else None
