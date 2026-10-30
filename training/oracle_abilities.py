@@ -62,6 +62,7 @@ class StaticEffect:
     share_types: bool = False  # Count other creatures sharing any creature subtype.
     must_attack: bool = False  # Continuous requirement: attack each combat if able.
     requires_attachment: bool = False  # Enchanted/equipped creature only.
+    requires_keyword: str = ''  # Dynamic keyword filter on affected creature.
 
 @dataclass(frozen=True)
 class Effect:
@@ -112,6 +113,17 @@ class Program:
     prevent_combat_damage_to_attackers: bool = False
 
 def static_effect(text):
+    flying_anthem=re.fullmatch(r'(Other )?creatures you control with ([a-z ]+) get \+([0-9]+)/\+([0-9]+)\.',text)
+    if flying_anthem:
+        if flying_anthem[2] not in KEYWORDS-{'flash'}:return None
+        return StaticEffect(Selector(relation='controller',other=bool(flying_anthem[1]),creature=True),
+                            int(flying_anthem[3]),int(flying_anthem[4]),requires_keyword=flying_anthem[2])
+    conditional_keyword=re.fullmatch(r'This creature has ([a-z ]+) as long as you control another ([A-Z][a-z]+)\.',text)
+    if conditional_keyword:
+        ability,subtype=conditional_keyword.groups()
+        if ability not in KEYWORDS-{'flash'}:return None
+        return StaticEffect(Selector(self_only=True,creature=True),0,0,grant=ability,
+                            condition=Selector(relation='controller',other=True,creature=True,subtype=subtype))
     attached=re.fullmatch(r'Creatures you control that are enchanted or equipped have ([a-z ]+)\.',text)
     if attached:
         if attached[1] not in KEYWORDS-{'flash'}:return None

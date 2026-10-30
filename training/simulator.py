@@ -315,7 +315,7 @@ class Policy:
             raise ValueError("No legal action")
         # Identical observations give identical decisions. No access to the engine or replay.
         development={"cast","cast_commander","cast_flashback","bestow","equip","station",
-                     "history_tokens","activate_tokens","activate_strip"}
+                     "history_tokens","activate_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip"}
         def utility(action):
             score=sum(w*f for w,f in zip(self.weights,action.features))
             if observation.phase in ("main","second_main") and not observation.developed_this_turn:
@@ -1104,6 +1104,18 @@ class Simulator(AdvancedRules):
                         result.append(Candidate(source.card.id+':color-draw','activate_color_draw',source.card.id,
                             features=features(draw=2,cost=len(payment['sources'])),label='Draw per controlled color'))
             definition=source.card.event_definition
+            if definition and definition.team_keyword_pump and not source.tapped:
+                game=self.event_game('main');state=game.battlefield.get(source.card.id)
+                if state and (not game.creature(state) or not source.fresh or game.has(state,'haste')):
+                    result.append(Candidate(source.card.id+':team-pump','activate_team_keyword_pump',source.card.id,
+                        features=features(power=1),label='Pump team with '+source.card.name))
+            if definition and definition.self_pump:
+                cost,power,toughness=definition.self_pump
+                payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
+                if payment['paid']:
+                    result.append(Candidate(source.card.id+':self-pump','activate_self_pump',source.card.id,
+                        features=features(power=power,toughness=toughness,cost=len(payment['sources'])),
+                        label='Pump '+source.card.name))
             for index,(cost,spec) in enumerate(definition.activations if definition else ()):
                 payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
                 if payment['paid']:
@@ -1517,6 +1529,42 @@ class Simulator(AdvancedRules):
         self.stack.priority=seat
         self.log('activate_tribal_tokens','Player activates a tap-for-tribal-tokens ability.',
                  actor=seat,source=source_id,stackId=frame.id)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
+    def activate_team_keyword_pump(self,seat,source_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        ability=source.card.event_definition.team_keyword_pump if source and source.card.event_definition else ()
+        if not ability or source.tapped:raise ValueError('Illegal team pump')
+        game=self.event_game('main');state=game.battlefield.get(source_id)
+        if not state or (game.creature(state) and source.fresh and not game.has(state,'haste')):
+            raise ValueError('Tap ability is summoning sick')
+        source.tapped=True
+        keyword,power,toughness,other=ability
+        event=dict(operation='team_keyword_pump',source=source_id,controller=seat,name=source.card.name,
+                   keyword=keyword,power=power,toughness=toughness,other=other)
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_team_keyword_pump','Team pump put on stack.',actor=seat,source=source_id,stackId=frame.id)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
+    def activate_self_pump(self,seat,source_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        ability=source.card.event_definition.self_pump if source and source.card.event_definition else ()
+        if not ability:raise ValueError('No self-pump activation')
+        cost,power,toughness=ability
+        payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
+        if not payment['paid']:raise ValueError('Cannot pay self-pump activation')
+        for item in self.players[seat].battlefield:
+            if item.card.id in payment['sources']:item.tapped=True
+        self.players[seat].mana_pool=list(payment['pool'])
+        event=dict(operation='self_pump',source=source_id,controller=seat,name=source.card.name,
+                   power=power,toughness=toughness)
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_self_pump','Self-pump ability put on stack.',actor=seat,
+                 source=source_id,stackId=frame.id)
         if not self.manual_priority and not self._resolving_stack:self.drain_priority()
 
     def activate_tokens(self,seat,source_id,index=0):
@@ -2209,6 +2257,12 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_tokens':
             self.activate_tokens(seat,choice.card_id,choice.activation_index)
+            return 'activate'
+        if choice.kind=='activate_self_pump':
+            self.activate_self_pump(seat,choice.card_id)
+            return 'activate'
+        if choice.kind=='activate_team_keyword_pump':
+            self.activate_team_keyword_pump(seat,choice.card_id)
             return 'activate'
         if choice.kind=='activate_tribal_tokens':
             self.activate_tribal_tokens(seat,choice.card_id)
@@ -3254,6 +3308,27 @@ class Simulator(AdvancedRules):
                         finally:self._rebound_permission=None
                     else:self.log('rebound_declined','No chosen legal non-token target; the spell remains exiled.',actor=owner)
                 continue
+            if event.get('operation')=='team_keyword_pump':
+                game=self.event_game('main');affected=[]
+                for state in game.battlefield.values():
+                    if state.controller!=event['controller'] or not game.creature(state):continue
+                    if event['other'] and state.id==event['source']:continue
+                    if not game.has(state,event['keyword']):continue
+                    state.temporary_power+=event['power'];state.temporary_toughness+=event['toughness']
+                    affected.append(state.id)
+                self.sync_events(game)
+                self.log('team_keyword_pump','Team pump resolves on qualifying creatures.',
+                         actor=event['controller'],affected=affected)
+                continue
+            if event.get('operation')=='self_pump':
+                game=self.event_game('main');source=game.battlefield.get(event['source'])
+                if source and source.controller==event['controller']:
+                    source.temporary_power+=event['power']
+                    source.temporary_toughness+=event['toughness']
+                    self.sync_events(game)
+                self.log('self_pump','Self-pump ability resolves.',actor=event['controller'],
+                         source=event['source'],affected=bool(source))
+                continue
             if event.get('operation')=='saddled_boost':
                 game=self.event_game('combat');source=game.battlefield.get(event['source'])
                 if source:source.temporary_power+=event['power'];source.temporary_toughness+=event['toughness'];game.grant_temporary(source,event['keyword']);self.sync_events(game)
@@ -4098,7 +4173,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
-                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana","activate_sacrifice_boost","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
+                           "history_tokens","activate_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana","activate_sacrifice_boost","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
             self.turn_development[seat]=True
         return choice
 
@@ -4191,6 +4266,10 @@ class Simulator(AdvancedRules):
                 self.activate_color_draw(self.active,choice.card_id)
             elif choice.kind=='activate_tokens':
                 self.activate_tokens(self.active,choice.card_id,choice.activation_index)
+            elif choice.kind=='activate_self_pump':
+                self.activate_self_pump(self.active,choice.card_id)
+            elif choice.kind=='activate_team_keyword_pump':
+                self.activate_team_keyword_pump(self.active,choice.card_id)
             elif choice.kind=='activate_tribal_tokens':
                 self.activate_tribal_tokens(self.active,choice.card_id)
             elif choice.kind=='activate_scaled_mana':
@@ -4536,7 +4615,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.self_pump or event_definition.team_keyword_pump or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and (rules.query("cost",cost)["supported"] or "Land" in event_definition.types and not cost)):

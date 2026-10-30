@@ -88,6 +88,8 @@ class Definition:
     attack_effects: tuple = ()
     attachment: tuple = ()
     activations: tuple = ()
+    self_pump: tuple = ()  # Mana cost, power, toughness until EOT.
+    team_keyword_pump: tuple = ()  # Keyword, power, toughness, other only.
     devotion: tuple = ()
     mana_cost: str = ""
     bestow: tuple = ()
@@ -162,6 +164,16 @@ class Definition:
     saga_chapter_scale: tuple = ()  # Chapter I and II P/T per artifact/enchantment.
     self_artifact_enchantment_scale: tuple = ()  # Self static P/T count on transformed face.
 
+
+def _only_static_keyword_program(program):
+    """Composed activations must never discard unsupported extra clauses."""
+    return program is not None and not (
+        program.triggers or program.activations or program.devotion or
+        program.life_multiplier!=1 or program.opponent_creatures_enter_tapped or
+        program.life_addition or program.cost_reductions or program.counter_replacements or
+        program.token_replacements or program.token_action_triggers or program.token_leave_triggers or
+        program.entry_counter_grants or program.attack_watchers or program.chosen_type_entry or
+        program.opponent_life_gain_becomes_loss or program.prevent_combat_damage_to_attackers)
 
 def parse_card(card: dict) -> Definition:
     name = card.get("name", "")
@@ -402,6 +414,34 @@ def parse_card(card: dict) -> Definition:
                 return Definition(**base,abilities=base_program.keywords,
                                   static_effects=base_program.static_effects,
                                   enchantment_copy_cost=ability[1])
+    team_lines=text.splitlines()
+    team_pattern=r'\{T\}: (Other )?creatures you control with ([a-z ]+) get \+([0-9]+)/\+([0-9]+) until end of turn\.'
+    team_matches=[re.fullmatch(team_pattern,line) for line in team_lines]
+    if 'Creature' in types and sum(m is not None for m in team_matches)==1:
+        index=next(i for i,m in enumerate(team_matches) if m)
+        other,keyword,power_bonus,toughness_bonus=team_matches[index].groups()
+        if keyword in {'flying','first strike','double strike','lifelink','vigilance','trample',
+                       'haste','reach','deathtouch','indestructible','menace'} and (int(power_bonus) or int(toughness_bonus)):
+            remaining='\n'.join(line for i,line in enumerate(team_lines) if i!=index)
+            program=compile_abilities(remaining,name)
+            if _only_static_keyword_program(program):
+                return Definition(**base,abilities=program.keywords,static_effects=program.static_effects,
+                    triggers=program.triggers,team_keyword_pump=(keyword,int(power_bonus),
+                                                               int(toughness_bonus),bool(other)))
+    pump_lines=text.splitlines()
+    pump_pattern=r'((?:\{(?:[0-9]{1,2}|[WUBRGC])\})+): This creature gets \+([0-9]+)/\+([0-9]+) until end of turn\.'
+    pumps=[re.fullmatch(pump_pattern,line) for line in pump_lines]
+    if 'Creature' in types and len(pump_lines)>=1 and sum(match is not None for match in pumps)==1:
+        index=next(i for i,match in enumerate(pumps) if match)
+        cost,power_bonus,toughness_bonus=pumps[index].groups()
+        if int(power_bonus) or int(toughness_bonus):
+            remaining='\n'.join(line for i,line in enumerate(pump_lines) if i!=index)
+            parsed=compile_abilities(remaining,name) if remaining else None
+            if not remaining or _only_static_keyword_program(parsed):
+                return Definition(**base,abilities=parsed.keywords if parsed else frozenset(),
+                    static_effects=parsed.static_effects if parsed else (),
+                    triggers=parsed.triggers if parsed else (),
+                    self_pump=(cost,int(power_bonus),int(toughness_bonus)))
     program = compile_abilities(text,name)
     # The entry-time choice grammar must match the permanent type named by Oracle.
     if program and program.chosen_type_entry and not any(
@@ -572,6 +612,7 @@ class Game:
                 power_bonus+=power*count;toughness_bonus+=toughness*count
             for effect in self.static_effects(source):
                 if not matches(effect.subject,source,p,True): continue
+                if effect.requires_keyword and not self.has(p,effect.requires_keyword):continue
                 if effect.requires_attachment and not any(
                     item.attached_to==p.id and item.definition.attachment and
                     item.definition.attachment[0] in ('aura','equipment')
@@ -626,6 +667,7 @@ class Game:
             if source.attached_to==p.id and source.definition.attachment and ability in source.definition.attachment[2]:
                 grants.append(stamp)
             if any(effect.grant==ability and matches(effect.subject,source,p,self.creature(p))
+                   and (not effect.requires_keyword or ability!=effect.requires_keyword and self.has(p,effect.requires_keyword))
                    and (not effect.requires_attachment or any(
                        item.attached_to==p.id and item.definition.attachment and
                        item.definition.attachment[0] in ('aura','equipment')
