@@ -97,6 +97,7 @@ class Trigger:
     lands_controlled_at_least: int = 0
     min_counters: int = 0
     power_above_base_required: bool = False
+    requires_other_controlled_subtype: str = ''
 
 @dataclass(frozen=True)
 class Program:
@@ -773,6 +774,13 @@ def compile_abilities(text, name=''):
             triggers.append(Trigger('graveyard',death_subject,
                                     Effect('self_counter',1,optional=bool(to_graveyard[2]))))
             continue
+        conditional_entry=re.fullmatch(r'When this creature enters, if you control another ([A-Z][a-z]+), (create .+)',line)
+        if conditional_entry:
+            action=effect(conditional_entry[2])
+            if action is None or action.operation!='create_tokens':return None
+            triggers.append(Trigger('enters',Selector(self_only=True,creature=True),action,
+                requires_other_controlled_subtype=conditional_entry[1]))
+            continue
         m=re.fullmatch(r'(?:When|Whenever) (.+) (enters(?: the battlefield)?|dies), (.+)',line)
         if not m: return None
         subject=selector(m[1])
@@ -860,6 +868,7 @@ def event_data(trigger, source, subject):
             'optional':e.optional,
             **({'minLands':trigger.lands_controlled_at_least} if trigger.lands_controlled_at_least else {}),
             **({'requiresBuffedCreature':True} if trigger.power_above_base_required else {}),
+            **({'requiresOtherControlledSubtype':trigger.requires_other_controlled_subtype} if trigger.requires_other_controlled_subtype else {}),
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             **({'libraryFilter':e.library_filter} if e.library_filter else {}),
             **({'steps':[dict(operation=step.operation,amount=step.amount,
