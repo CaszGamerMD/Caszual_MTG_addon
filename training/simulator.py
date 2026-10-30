@@ -206,6 +206,7 @@ class Card:
     target_modifier: tuple = ()  # (power, toughness, keyword choices, conditional draw subtype).
     modal_sweeps: tuple = ()  # Ordered destroy modes, with two indices selected on casting.
     sweep_reward: tuple = ()  # (nontoken only, Treasures per destroyed creature, tapped).
+    forced_sacrifice: tuple = ()  # (opponents/all players, count) on spell resolution.
 
 
 
@@ -1062,6 +1063,32 @@ class Simulator(AdvancedRules):
                  actor=seat,source=source_id,stackId=frame.id)
         self.resolve_entry_triggers(triggers,source.card)
 
+    def choose_forced_sacrifice(self, affected_seat, creatures):
+        # The affected player chooses, not the controller of the spell.
+        # This is a deterministic diagnostic policy over legally available creatures.
+        return min(creatures,key=lambda item:(self.effective_card(item).power,item.card.id))
+
+    def force_opponent_sacrifice(self, source_controller, affected_seat, source):
+        game=self.event_game('main')
+        if source_controller!=affected_seat and any(
+                state.controller==affected_seat and state.definition.prevents_opponent_sacrifice
+                for state in game.battlefield.values()):
+            self.log('sacrifice_prevented','An opposing spell or ability cannot force a sacrifice.',
+                     actor=affected_seat,source=source.name)
+            return False
+        options=[item for item in self.players[affected_seat].battlefield
+                 if item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id])]
+        if not options:return False
+        victim=self.choose_forced_sacrifice(affected_seat,options)
+        if victim not in options:raise ValueError('Illegal forced-sacrifice choice')
+        triggers=game.death_triggers([victim.card.id])
+        if victim.card.is_token:triggers.extend(game.token_action_events('sacrifice',affected_seat,1))
+        self.send_to_destination(self.players[affected_seat],victim,snapshot=game)
+        self.log('forced_sacrifice','Affected player sacrifices one creature for an opposing effect.',
+                 actor=affected_seat,source=source.name,permanent=victim.card.id)
+        self.resolve_entry_triggers(triggers,source)
+        return True
+
     def _pay_sacrifice_creature(self,seat,victim):
         # Cost is paid before the ability resolves, regardless of whether its
         # source survives. Indestructible does not prevent sacrifice.
@@ -1867,6 +1894,14 @@ class Simulator(AdvancedRules):
         elif card.kind=='mana_artifact': p.battlefield.append(Permanent(card))
         elif not event.get('copy'):
             (p.exile if event.get('flashback') else p.graveyard).append(original)
+        if card.kind=='sacrifice_spell':
+            scope,count=card.forced_sacrifice
+            for affected in range(len(self.players)):
+                if scope=='opponent' and affected==controller:continue
+                for _ in range(count):
+                    self.force_opponent_sacrifice(controller,affected,card)
+                    if self.finished:return
+            return
         if card.kind=='graveyard_return_spell':
             target=next((c for c in self.graveyard_subtype_targets(controller,card.graveyard_return_subtype)
                          if c.id==event.get('target')),None)
@@ -3555,7 +3590,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and (rules.query("cost",cost)["supported"] or "Land" in event_definition.types and not cost)):
@@ -3692,6 +3727,11 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         rule_text(definition.get('oracleText','')))
     if (parsed['kind']=='unsupported' and 'Sorcery' in definition.get('types',[]) and return_subtype and rules.query('cost',cost)['supported']):
         parsed={'kind':'graveyard_return_spell','graveyard_return_subtype':return_subtype[1]}
+    from forced_sacrifice import edict as parse_forced_sacrifice
+    forced_sacrifice=parse_forced_sacrifice(rule_text(definition.get('oracleText','')),
+                                           definition.get('types',[]))
+    if parsed['kind']=='unsupported' and forced_sacrifice and rules.query('cost',cost)['supported']:
+        parsed={'kind':'sacrifice_spell','forced_sacrifice':forced_sacrifice}
     from targeted_modifiers import parse as parse_targeted_modifier
     modifier=parse_targeted_modifier(rule_text(definition.get('oracleText','')),
                                      definition.get('types',[]))
@@ -3702,6 +3742,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
             and output and rules.query("cost",cost)["supported"]):
         parsed={"kind":"mana_artifact","mana_production":output}
     return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),blink_to_controller=parsed.get("blink_to_controller",False),flashback_cost=parsed.get("flashback_cost",""),graveyard_return_subtype=parsed.get("graveyard_return_subtype",""),
+        forced_sacrifice=parsed.get('forced_sacrifice',()),
         target_modifier=parsed.get('target_modifier',()),modal_sweeps=parsed.get('modal_sweeps',()),sweep_reward=parsed.get('sweep_reward',()),
         instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
