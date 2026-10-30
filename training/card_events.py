@@ -143,6 +143,8 @@ class Definition:
     additional_land_plays: int = 0  # Static permission, counted while source stays in play.
     end_step_life_distribution: bool = False  # Other targets, allocation at trigger placement.
     modal_role_choices: tuple = ()  # Role types; one chosen when ETB trigger enters stack.
+    protected_spell_types: tuple = ()  # Spell types controlled by this source cannot be countered.
+    animate_land_ability: tuple = ()  # (mana cost, Elemental subtype, counted permanent type).
     prevents_opponent_sacrifice: bool = False  # Continuous rule: opposing effects can't force sacrifices.
     equipment_basic_search: bool = False  # Equipped attacker searches for tapped basic land.
     graveyard_exile_activation: tuple = ()  # Cost, conditional creature-token specification.
@@ -172,6 +174,11 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from land_animation_spell_protection import parse as parse_land_animation
+    land_animation=parse_land_animation(text,types)
+    if land_animation:
+        return Definition(**base,abilities=frozenset(),protected_spell_types=land_animation[0],
+                          animate_land_ability=land_animation[1:])
     from modal_role_choices import parse as parse_modal_role_choices
     role_choices=parse_modal_role_choices(text,name,types)
     if role_choices:
