@@ -135,6 +135,7 @@ class Definition:
     umbra_armor: bool = False  # Replace destruction of the enchanted creature.
     regenerate_subtype: str = ''  # Tap: create a one-use destruction replacement shield.
     entry_keyword_choices: tuple[str, ...] = ()  # Choose one keyword counter before entry.
+    dynamic_pt_color: str = ''  # Characteristic-defining P/T: own colored permanents.
 
 
 def parse_card(card: dict) -> Definition:
@@ -142,8 +143,11 @@ def parse_card(card: dict) -> Definition:
     types = frozenset(card.get("types") or [])
     subtypes = frozenset(card.get("subTypes") or [])
     text = rule_text(card.get("oracleText") or "")
+    from dynamic_characteristics import parse_colored_permanent_pt
+    dynamic_pt=parse_colored_permanent_pt(text,name,types)
     try:
-        power, toughness = int(card.get("power") or 0), int(card.get("toughness") or 0)
+        power, toughness = ((0,0) if dynamic_pt and card.get('power')=='*' and card.get('toughness')=='*'
+                            else (int(card.get("power") or 0),int(card.get("toughness") or 0)))
     except ValueError:
         return Definition(name, types, subtypes, False, 0, 0, frozenset(), supported=False,
                           reason="Variable power or toughness")
@@ -156,8 +160,12 @@ def parse_card(card: dict) -> Definition:
     base = dict(name=name, types=types, subtypes=subtypes,
                 legendary="Legendary" in (card.get("superTypes") or []), power=power, toughness=toughness,
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
-    if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
+    if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    if dynamic_pt:
+        if card.get('power')!='*' or card.get('toughness')!='*':
+            return Definition(**base,abilities=frozenset(),supported=False,reason='Variable characteristic mismatch')
+        return Definition(**base,abilities=dynamic_pt[0],dynamic_pt_color=dynamic_pt[1])
     # Whole-instruction grammar: choose a real keyword counter before entry.
     from keyword_counters import parse_entry_choice
     keyword_choices=parse_entry_choice(text,types)
@@ -438,8 +446,13 @@ class Game:
                                   if effect.count else 1)
                 power_bonus += effect.power * multiplier
                 toughness_bonus += effect.toughness * multiplier
-        return (p.definition.power + p.counters + 3*bonus + power_bonus,
-                p.definition.toughness + p.counters + bonus + toughness_bonus)
+        base_power,base_toughness=p.definition.power,p.definition.toughness
+        if p.definition.dynamic_pt_color:
+            count=sum(x.controller==p.controller and p.definition.dynamic_pt_color in x.definition.colors
+                      for x in self.battlefield.values())
+            base_power=base_toughness=count
+        return (base_power + p.counters + 3*bonus + power_bonus,
+                base_toughness + p.counters + bonus + toughness_bonus)
 
     def ward_costs(self,p):
         return tuple(effect.ward_cost for source in self.battlefield.values() for effect in self.static_effects(source)
