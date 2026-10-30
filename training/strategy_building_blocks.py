@@ -74,24 +74,17 @@ def parse_card_blocks(card: dict) -> CardBlocks:
         produces.add("artifact_board")
         needs.add("mana")
 
-    # Exclude “create a token copy of a spell” from creature-board producers.
+    # Generic token grammar; no hard-coded Goblin/Elf/etc subtype list.
     token_creature = _matches(
-        r"\bcreate\b(?:(?![.!?]).){0,140}\b(?:creature token|creature tokens|"
-        r"(?:goblin|elf|soldier|warrior|saproling|spirit|zombie|human|"
-        r"elemental|beast|squirrel|insect|cat|rat|thopter|treasure)\s+tokens?)\b", text)
-    # A Treasure is a mana source, not a creature.
+        r"\bcreate\b[^.!?]{0,140}\bcreature tokens?\b|"
+        r"\bcreate\b[^.!?]{0,140}\b[0-9]+/[0-9]+[^.!?]{0,60}\btokens?\b", text)
     if token_creature:
-        if _matches(r"\bcreate\b.{0,80}\btreasure tokens?\b", text):
-            produces.add("mana")
-            blocks.add("mana_engine")
-        if not _matches(r"\bcreate\b.{0,80}\btreasure tokens?\b", text) or _matches(
-                r"\bcreate\b.{0,120}\bcreature tokens?\b", text):
-            produces.update(("creature_board", "creature_entry"))
-            blocks.add("token_supply")
-    elif _matches(r"\bcreate\b.{0,110}\btreasure tokens?\b", text):
+        produces.update(("creature_board", "creature_entry"))
+        blocks.add("token_supply")
+    if _matches(r"\bcreate\b.{0,110}\btreasure tokens?\b", text):
         produces.add("mana")
         blocks.add("mana_engine")
-    elif _matches(r"\bcreate\b.{0,100}\b(?:food|clue)\s+tokens?\b", text):
+    if _matches(r"\bcreate\b.{0,100}\b(?:food|clue)\s+tokens?\b", text):
         produces.add("artifact_board")
 
     # Mana creatures, artifacts, and land-ramp spells feed the same resource.
@@ -112,8 +105,7 @@ def parse_card_blocks(card: dict) -> CardBlocks:
         if _matches(r"whenever [^.\n]{0,100}\b(?:attacks|combat damage)\b", text):
             needs.add("attack")
 
-    if _matches(r"\b(?:creatures|goblins|elves|soldiers|warriors|"
-                r"[a-z]+ creatures) you control (?:get|have|gain)\b[^.\n]{0,75}"
+    if _matches(r"\b(?:creatures|[a-z]+(?: creatures)?) you control (?:get|have|gain)\b[^.\n]{0,75}"
                 r"(?:\+[0-9]+/\+[0-9]+|double strike|trample|flying|menace)\b|"
                 r"\bother [a-z]+(?: creatures)? (?:you control )?get \+[0-9]+/\+[0-9]+\b|"
                 r"\bput (?:a|one|two|[0-9]+) \+1/\+1 counters? on (?:each|all) creature\b", text):
