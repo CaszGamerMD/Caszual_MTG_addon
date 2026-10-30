@@ -41,7 +41,10 @@ class ModalFaceChecks(unittest.TestCase):
         other['faces'][0]['text']+='\nCreate an unknown mystery.'
         self.assertEqual(s.import_diagnostic_card(self.rules,other,0,'bad2',{'White'}).kind,'unsupported')
         # Other multi-face mechanisms cannot be silently treated as a normal front card.
-        self.assertEqual(s.import_diagnostic_card(self.rules,self.lookup["Michiko's Reign of Truth // Portrait of Michiko"],0,'transform',{'White'}).kind,'unsupported')
+        # Fully compiled transforming Sagas now preserve both face programs.
+        transform=s.import_diagnostic_card(self.rules,self.lookup["Michiko's Reign of Truth // Portrait of Michiko"],0,'transform',{'White'})
+        self.assertEqual(transform.kind,'enchantment')
+        self.assertEqual(transform.transform_back_face.kind,'creature')
         # A castable spell back is now supported; the physical front and back
         # must be distinct programs rather than a silently ignored second face.
         dual=dict(self.lookup["Halvar, God of Battle // Sword of the Realms"])
