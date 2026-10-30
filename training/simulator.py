@@ -1123,8 +1123,16 @@ class Simulator(AdvancedRules):
                     result.append(Candidate(source.card.id+':self-pump','activate_self_pump',source.card.id,
                         features=features(power=power,toughness=toughness,cost=len(payment['sources'])),
                         label='Pump '+source.card.name))
-            for index,(cost,spec) in enumerate(definition.activations if definition else ()):
-                payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
+            for index,activation in enumerate(definition.activations if definition else ()):
+                cost,spec=activation[:2]
+                tap_cost=len(activation)>2 and activation[2]
+                if tap_cost:
+                    game=self.event_game('main');state=game.battlefield.get(source.card.id)
+                    if (not state or source.tapped or
+                            (source.fresh and game.creature(state) and not game.has(state,'haste'))):
+                        continue
+                payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False,
+                                     excluded_sources=(source.card.id,) if tap_cost else ())
                 if payment['paid']:
                     result.append(Candidate(source.card.id+':activate:'+str(index),'activate_tokens',source.card.id,
                         features=features(power=spec.amount*spec.power,toughness=spec.amount*spec.toughness,
@@ -1584,11 +1592,20 @@ class Simulator(AdvancedRules):
         source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
         activations=source.card.event_definition.activations if source and source.card.event_definition else ()
         if not 0<=index<len(activations):raise ValueError('Illegal activated ability')
-        cost,spec=activations[index]
-        payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
+        activation=activations[index]
+        cost,spec=activation[:2]
+        tap_cost=len(activation)>2 and activation[2]
+        if tap_cost:
+            game=self.event_game('main');state=game.battlefield.get(source_id)
+            if (not state or source.tapped or
+                    (source.fresh and game.creature(state) and not game.has(state,'haste'))):
+                raise ValueError('Tap-cost ability requires an untapped, ready source')
+        payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False,
+                             excluded_sources=(source_id,) if tap_cost else ())
         if not payment['paid']:raise ValueError('Cannot pay activated ability')
         for permanent in self.players[seat].battlefield:
             if permanent.card.id in payment['sources']:permanent.tapped=True
+        if tap_cost:source.tapped=True
         self.players[seat].mana_pool=list(payment['pool'])
         event=dict(operation='create_tokens',effect='create tokens',source=source_id,controller=seat,
                    name=source.card.name,tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords)))
