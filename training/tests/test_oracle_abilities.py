@@ -7,6 +7,36 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class GoblinAttackGrammarChecks(unittest.TestCase):
+    def test_unseen_standalone_attack_trigger_compiles(self):
+        raw=dict(name='Unseen Goblin Captain',types=['Creature'],subTypes=['Goblin'],
+                 power='2',toughness='2',oracleText=(
+                     "Whenever this creature attacks, put a +1/+1 counter on it, then create a number of 1/1 red Goblin creature tokens equal to this creature's power."))
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(definition.attack_effects[0][0],'counter_power_tokens')
+        self.assertEqual(definition.attack_effects[0][1],1)
+        self.assertEqual(definition.attack_effects[0][3].subtypes,('Goblin',))
+
+    def test_real_krenko_attack_uses_generic_grammar(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14509839-mono-red-gobs.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Krenko, Tin Street Kingpin')
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(definition.attack_effects[0][0],'counter_power_tokens')
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'krenko',{'Red'})
+        self.assertNotEqual(card.kind,'unsupported')
+
+    def test_standalone_attack_trigger_rejects_unrecognized_instruction(self):
+        raw=dict(name='Unseen Goblin Captain',types=['Creature'],subTypes=['Goblin'],
+                 power='2',toughness='2',oracleText=(
+                     "Whenever this creature attacks, put a +1/+1 counter on it, then create a number of 1/1 red Goblin creature tokens equal to this creature's power. Draw seven cards."))
+        self.assertFalse(parse_card(raw).supported)
+
+
 class TribalSpellCastChecks(unittest.TestCase):
     def test_unseen_tribal_spell_cast_trigger_is_selective(self):
         from oracle_abilities import cast_matches
