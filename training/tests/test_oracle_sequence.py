@@ -81,7 +81,8 @@ class OracleSequenceTests(unittest.TestCase):
         s0.resolve_entry_triggers(triggers,card)
         self.assertGreater(len(s0.stack.items),0)
         self.assertEqual(len([x for x in owner.battlefield if x.card.is_token]),0)
-        s0.drain_priority()
+        while s0.stack.items:
+            s0.pass_priority(s0.stack.priority)
         self.assertEqual(len([x for x in owner.battlefield if x.card.is_token]),1)
         self.assertEqual(len(owner.hand),before)  # cast consumes 1 then draws 1
         token=next(x for x in owner.battlefield if x.card.is_token)
