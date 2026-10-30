@@ -209,6 +209,10 @@ class Card:
     forced_sacrifice: tuple = ()  # (opponents/all players, count) on spell resolution.
     mana_as_any_color: bool = False
     color_draw_cost: str = ''
+    # Modal double-faced cards are one physical card. The front card is kept
+    # in all hidden/nonbattlefield zones; a land back may be chosen only on play.
+    modal_land_face: Card | None = None
+    modal_front_face: Card | None = None
 
 
 
@@ -3305,11 +3309,11 @@ class Simulator(AdvancedRules):
         if root(item.card) == destination.commander_id:
             destination.command_zone = item.card  # This prototype chooses the command-zone option.
         elif to_hand:
-            destination.hand.append(item.card)
+            destination.hand.append(item.card.modal_front_face or item.card)
         elif to_exile:
-            destination.exile.append(item.card)
+            destination.exile.append(item.card.modal_front_face or item.card)
         else:
-            destination.graveyard.append(item.card)
+            destination.graveyard.append(item.card.modal_front_face or item.card)
 
     def log(self, kind: str, message: str, **details):
         self.invariant()
@@ -3462,10 +3466,16 @@ class Simulator(AdvancedRules):
                 for c in p.hand:
                     if c.kind == "land":
                         actions.append(Candidate(c.id, "land", c.id, features(power=1), "Play " + c.name))
+                    if c.modal_land_face is not None:
+                        actions.append(Candidate(c.id+":back", "land_back", c.id,
+                                                 features(power=1), "Play " + c.modal_land_face.name))
         elif self.phase in ("main", "second_main"):
             if self.land_plays_this_turn < self.land_play_limit(seat):
                 actions.extend(Candidate(card.id,'land',card.id,features(power=1),label='Play '+card.name)
                                for card in p.hand if card.kind=='land')
+                actions.extend(Candidate(card.id+':back','land_back',card.id,features(power=1),
+                                         label='Play '+card.modal_land_face.name)
+                               for card in p.hand if card.modal_land_face is not None)
             if self.diagnostic: actions.extend(self.activation_choices(seat, {"crew","saddle"}))
             actions.extend(self.special_choices(seat))
             actions.extend(self.equip_choices(seat))
@@ -3731,14 +3741,24 @@ class Simulator(AdvancedRules):
                         next(c for c in (p.graveyard if choice.kind == "cast_flashback" else self.permitted_exile_cards(self.active) if choice.kind=="cast_exile" else p.hand)
                              if c.id == choice.card_id))
                 if card is None: raise RuntimeError("Commander is no longer in command zone")
-                if choice.kind == "land":
+                if choice.kind in ("land","land_back"):
+                    if self.land_plays_this_turn>=self.land_play_limit(self.active):
+                        raise ValueError('No land plays remain')
+                    if choice.kind=="land_back":
+                        if card.modal_land_face is None:raise ValueError('No supported land back face')
+                        played=replace(card.modal_land_face,modal_front_face=card,
+                                       physical_id=root(card))
+                    else:
+                        if card.kind!="land":raise ValueError('Only a land can be played')
+                        played=card
                     p.hand.remove(card)
-                    pending=self.enter_creature(card,p)
+                    pending=self.enter_creature(played,p)
                     self.land_played = True
                     self.land_plays_this_turn += 1
                     if self.phase == "land": self.phase = "main"
-                    self.log("land", f"Player {self.active + 1} plays {card.name}.", card=card.name)
-                    self.resolve_entry_triggers(pending,card)
+                    self.log("land", f"Player {self.active + 1} plays {played.name}.", card=played.name,
+                             modalBack=choice.kind=="land_back")
+                    self.resolve_entry_triggers(pending,played)
                 else:
                     self.cast_spell(self.active,card,choice.x_value,choice.kind=='cast_commander',
                         modal_modes=choice.modal_modes,target=choice.target_permanent or choice.target_stack,
@@ -3960,6 +3980,27 @@ def diagnostic_land(definition: dict, identity: set[str]) -> dict | None:
 
 def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                            uid: str, identity: set[str]) -> Card:
+    if definition.get('layout')=='modal_dfc':
+        faces=definition.get('faces',[])
+        # The current two-face executor supports modal spell-front/land-back
+        # cards, not transform, Saga, or two spell faces. Reject partial support.
+        if len(faces)==2 and all(isinstance(face,dict) for face in faces):
+            def face_definition(face):
+                raw={**definition,
+                     'name':face.get('name',''),'types':face.get('types',[]),
+                     'superTypes':face.get('superTypes',[]),
+                     'subTypes':face.get('subTypes',[]),
+                     'colors':face.get('colors',[]),
+                     'manaCost':face.get('manaCost',''),
+                     'oracleText':face.get('text',''),
+                     'power':face.get('power',''),'toughness':face.get('toughness',''),
+                     'layout':'normal','faces':[]}
+                return raw
+            front=import_diagnostic_card(rules,face_definition(faces[0]),seat,uid,identity)
+            back=import_diagnostic_card(rules,face_definition(faces[1]),seat,uid,identity)
+            if front.kind not in ('unsupported','land') and back.kind=='land' and not back.mana_cost:
+                return replace(front,modal_land_face=back)
+        return Card(uid,definition['name'],'unsupported')
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
