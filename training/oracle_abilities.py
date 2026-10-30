@@ -609,11 +609,14 @@ def compile_abilities(text, name=''):
             filters=tuple('subtype:'+word if word in subtypes else word for word in words)
             cost_reductions.append((filters,int(discount[2] if discount else repeated[3])))
             continue
-        activated=re.fullmatch(r'((?:\{(?:[0-9]+|[WUBRGC])\})+): (Create .+)',line)
+        activated=re.fullmatch(r'((?:\{(?:[0-9]+|[WUBRGC])\})+)(, \{T\})?: (Create .+)',line)
         if activated:
-            spec=parse_token_creation(activated[2])
+            spec=parse_token_creation(activated[3])
             if not spec or all(part=='0' for part in re.findall(r'\{([^}]+)\}',activated[1])):return None
-            activations.append((activated[1],spec));continue
+            # Tap is a cost paid immediately, not an effect when the token resolves.
+            # Preserve the existing two-part shape for non-tap activations.
+            activations.append((activated[1],spec,True) if activated[2] else (activated[1],spec))
+            continue
         blocking_limit=re.fullmatch(
             r"This creature can't be blocked by creatures with power ([1-9][0-9]*) or greater\.",
             line)
