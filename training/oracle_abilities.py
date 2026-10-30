@@ -135,7 +135,7 @@ def static_effect(text):
     # A subtype-qualified anthem with "you control" is not global and
     # includes its own source when that source has the subtype.
     controlled_subtype=re.fullmatch(
-        r'([A-Z][a-z]+) creatures you control get ([+-][0-9]+)/([+-][0-9]+)\\.',text)
+        r'([A-Z][a-z]+) creatures you control get ([+-][0-9]+)/([+-][0-9]+)\.',text)
     if controlled_subtype:
         return StaticEffect(Selector(relation='controller',creature=True,
                                      subtype=controlled_subtype[1]),
