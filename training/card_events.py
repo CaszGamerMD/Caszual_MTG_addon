@@ -143,6 +143,7 @@ class Definition:
     additional_land_plays: int = 0  # Static permission, counted while source stays in play.
     prevents_opponent_sacrifice: bool = False  # Continuous rule: opposing effects can't force sacrifices.
     equipment_basic_search: bool = False  # Equipped attacker searches for tapped basic land.
+    graveyard_exile_activation: tuple = ()  # Cost, conditional creature-token specification.
 
 
 def parse_card(card: dict) -> Definition:
@@ -169,6 +170,12 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from graveyard_exile_anthem import parse as parse_graveyard_exile_anthem
+    graveyard_program=parse_graveyard_exile_anthem(text,types)
+    if graveyard_program:
+        effects,activation=graveyard_program
+        return Definition(**base,abilities=frozenset(),static_effects=effects,
+                          graveyard_exile_activation=activation)
     from forced_sacrifice import prevention as parse_sacrifice_prevention
     sacrifice_protected=parse_sacrifice_prevention(text,types)
     if sacrifice_protected:

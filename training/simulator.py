@@ -940,9 +940,46 @@ class Simulator(AdvancedRules):
         self.log('activate_color_draw','Activate draw per permanent color.',actor=seat,source=source_id,stackId=frame.id,manaSources=payment['sources'])
         if not self.manual_priority and not self._resolving_stack:self.drain_priority()
 
+    def activate_graveyard_exile(self,seat,source_id,target_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        ability=source.card.event_definition.graveyard_exile_activation if source and source.card.event_definition else ()
+        if not ability:raise ValueError('No graveyard exile ability')
+        targets=[(owner,c) for owner,p in enumerate(self.players) if owner!=seat
+                 for c in p.graveyard if c.id==target_id and not c.is_token]
+        if len(targets)!=1:raise ValueError('Illegal opponent graveyard target')
+        cost,spec=ability
+        payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
+        if not payment['paid']:raise ValueError('Cannot pay activation')
+        for item in self.players[seat].battlefield:
+            if item.card.id in payment['sources']:item.tapped=True
+        self.players[seat].mana_pool=list(payment['pool'])
+        owner,target=targets[0]
+        event=dict(operation='exile_graveyard_conditional_token',controller=seat,source=source_id,
+                   name=source.card.name,target=target_id,targetZoneOwner=owner,
+                   tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords)))
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_graveyard_exile','Target an opponent graveyard card.',actor=seat,
+                 source=source_id,targetCard=target_id,targetZoneOwner=owner,stackId=frame.id)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
     def token_ability_choices(self,seat):
         result=[]
         for source in self.players[seat].battlefield:
+            ability=source.card.event_definition.graveyard_exile_activation if source.card.event_definition else ()
+            if ability:
+                cost,_=ability
+                payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
+                if payment['paid']:
+                    for opponent,player in enumerate(self.players):
+                        if opponent==seat:continue
+                        for target in player.graveyard:
+                            if not target.is_token:
+                                result.append(Candidate(source.card.id+':exile:'+target.id,
+                                    'activate_graveyard_exile',source.card.id,
+                                    features=features(power=1,cost=len(payment['sources'])),
+                                    label='Exile '+target.name,target_permanent=target.id))
             if source.card.color_draw_cost and not source.tapped:
                 game=self.event_game('main');state=game.battlefield.get(source.card.id)
                 if state and (not game.creature(state) or not source.fresh or game.has(state,'haste')):
@@ -1783,6 +1820,9 @@ class Simulator(AdvancedRules):
         if choice.kind=='activate_strip':
             self.activate_strip(seat,choice.card_id,choice.activation_index)
             return 'activate'
+        if choice.kind=='activate_graveyard_exile':
+            self.activate_graveyard_exile(seat,choice.card_id,choice.target_permanent)
+            return 'activate'
         if choice.kind=='activate_color_draw':
             self.activate_color_draw(seat,choice.card_id)
             return 'activate'
@@ -2098,6 +2138,25 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='exile_graveyard_conditional_token':
+                seat=event['controller'];zone=event['targetZoneOwner']
+                target=next((c for c in self.players[zone].graveyard if c.id==event['target'] and not c.is_token),None)
+                if target is None or zone==seat:
+                    self.log('graveyard_exile_fizzle','Target no longer legal.',actor=seat,
+                             source=event['source'],targetCard=event['target'])
+                    continue
+                self.players[zone].graveyard.remove(target)
+                physical_owner=self.card_owners.get(root(target),zone)
+                self.players[physical_owner].exile.append(target)
+                creature=('Creature' in target.printed_types or target.kind=='creature' or
+                          bool(target.event_definition and 'Creature' in target.event_definition.types))
+                self.log('graveyard_exile','Exile targeted graveyard card.',actor=seat,
+                         source=event['source'],targetCard=target.id,targetName=target.name,
+                         zoneOwner=zone,cardOwner=physical_owner,wasCreature=creature)
+                if creature:
+                    self._resolve_entry_effects([dict(operation='create_tokens',controller=seat,
+                        source=event['source'],name=event['name'],tokenSpec=event['tokenSpec'])],card)
+                continue
             if event.get('operation')=='draw_by_permanent_colors':
                 seat=event['controller'];game=self.event_game('main')
                 colors={'White','Blue','Black','Red','Green'}
@@ -3377,6 +3436,8 @@ class Simulator(AdvancedRules):
                 self.activate_history(self.active,choice.card_id)
             elif choice.kind=='activate_strip':
                 self.activate_strip(self.active,choice.card_id,choice.activation_index)
+            elif choice.kind=='activate_graveyard_exile':
+                self.activate_graveyard_exile(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind=='activate_color_draw':
                 self.activate_color_draw(self.active,choice.card_id)
             elif choice.kind=='activate_tokens':
@@ -3635,7 +3696,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and (rules.query("cost",cost)["supported"] or "Land" in event_definition.types and not cost)):
