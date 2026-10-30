@@ -88,10 +88,9 @@ class SessionLearningModalRoles(unittest.TestCase):
         self.assertEqual(len(self.roles(sim)),before)
         other=next(c for c in sim.players[0].library if c.kind=='creature' and not c.is_token)
         sim.players[0].library.remove(other)
-        sim.enter_creature(other,sim.players[0])
-        self.assertTrue(any(e.get('operation')=='create_chosen_role' for e in sim._waiting_triggers if isinstance(e,dict)) or
-                        any(e.get('operation')=='create_chosen_role' for e in [x for x,_ in sim._waiting_triggers]))
-        sim.resolve_entry_triggers([],other)
+        pending=sim.enter_creature(other,sim.players[0])
+        self.assertTrue(any(e.get('operation')=='create_chosen_role' for e in pending))
+        sim.resolve_entry_triggers(pending,other)
         self.drain(sim)
         self.assertTrue(any(p.attached_to==other.id for p in self.roles(sim)))
         sim.invariant()
