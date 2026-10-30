@@ -10,11 +10,12 @@ class ColorManaTests(unittest.TestCase):
     fixture=fixtures.EnchantmentChecks.fixture
 
     def prepare(self):
-        sim,_=self.fixture(['Lifelink'])
+        sim,cards=self.fixture(['Lifelink'])
         raw=self.lookup['Chromatic Orrery']
         card=s.import_diagnostic_card(self.rules,raw,0,'orrery',set())
         self.assertEqual(card.kind,'mana_artifact')
         source=s.Permanent(card)
+        sim.players[0].hand.remove(cards['Lifelink'])
         sim.players[0].battlefield.append(source)
         return sim,card,source
 
