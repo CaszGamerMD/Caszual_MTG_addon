@@ -10,6 +10,7 @@ import re
 from attachments import parse as parse_attachment, parse_bestow, parse_equipment_removals, parse_with_intrinsic
 from attack_abilities import compile as compile_attacks
 from oracle_abilities import Trigger, StaticEffect, compile_abilities, matches, event_data, cast_matches
+from creature_types import has_subtype, has_any_subtype, shares_creature_type
 
 
 class NeedsRules(ValueError):
@@ -501,6 +502,8 @@ def parse_card(card: dict) -> Definition:
     if program and any(trigger.effect.operation=='pay_return_source' and
                        trigger.effect.return_source_type not in types for trigger in program.triggers):
         program=None
+    if program and 'changeling' in program.keywords and 'Creature' not in types:
+        program=None
     # The entry-time choice grammar must match the permanent type named by Oracle.
     if program and program.chosen_type_entry and not any(
         f"As this {kind.lower()} enters, choose a creature type." in text
@@ -683,7 +686,7 @@ class Game:
                 if effect.condition and not any(matches(effect.condition,source,x,self.creature(x)) for x in self.battlefield.values()): continue
                 if effect.share_types:
                     multiplier=sum(other.id!=p.id and self.creature(other)
-                                   and bool(p.definition.subtypes & other.definition.subtypes)
+                                   and shares_creature_type(p.definition,other.definition)
                                    for other in self.battlefield.values())
                 else:
                     multiplier = (sum(matches(effect.count,source,x,self.creature(x)) for x in self.battlefield.values())
@@ -739,7 +742,7 @@ class Game:
                    for effect in self.static_effects(source)):grants.append(stamp)
         if ability=='indestructible' and p.definition.name=='Zurgo Helmsmasher' and p.controller==self.turn_player:
             grants.append(p.entered_at)
-        if ability=='haste' and ({'Mount','Vehicle'} & p.definition.subtypes):
+        if ability=='haste' and (has_any_subtype(p.definition,('Mount','Vehicle'))):
             grants.extend(x.entered_at for x in self.battlefield.values() if x.controller==p.controller and x.definition.name=='Kolodin, Triumph Caster')
         return bool(grants) and max(grants)>p.lost_abilities.get(ability,-1)
 
@@ -884,10 +887,10 @@ class Game:
             watched = any(x.id != permanent.id and x.controller == permanent.controller
                           and x.definition.name == "Kolodin, Triumph Caster"
                           for x in self.battlefield.values())
-            if watched and "Mount" in permanent.definition.subtypes:
+            if watched and has_subtype(permanent.definition,"Mount"):
                 permanent.saddled = True
                 self.emit("trigger", source="Kolodin, Triumph Caster", effect="saddled", target=permanent.id)
-            if watched and "Vehicle" in permanent.definition.subtypes:
+            if watched and has_subtype(permanent.definition,"Vehicle"):
                 permanent.animated = True
                 self.emit("trigger", source="Kolodin, Triumph Caster", effect="animated", target=permanent.id)
 
@@ -1159,7 +1162,7 @@ class Game:
                 condition=replacement[3] if len(replacement)>3 else 'any'
                 if condition=='effect' and not by_effect:continue
                 if scope in ('controlled_creature','controlled_permanent','controlled_subtypes') and source.controller!=target.controller:continue
-                if scope=='controlled_subtypes' and not set(replacement[4]).intersection(target.definition.subtypes):continue
+                if scope=='controlled_subtypes' and not has_any_subtype(target.definition,replacement[4]):continue
                 if scope in ('controlled_creature','any_creature') and not creature:continue
                 if scope!='controlled_permanent' and counter_type!='+1/+1':continue
                 if kind not in ('plus','double'):raise NeedsRules('Unknown counter replacement')
@@ -1220,7 +1223,7 @@ class Game:
                           operation='greatest_power_boost',effect='boost by greatest controlled power at resolution',
                           power=power,toughness=toughness)
             elif operation=='subtype_count_boost':
-                count=sum(other.id!=a.id and other.controller==a.controller and keyword in other.definition.subtypes
+                count=sum(other.id!=a.id and other.controller==a.controller and has_subtype(other.definition,keyword)
                           for other in self.battlefield.values())
                 if not defer:a.temporary_power+=power*count;a.temporary_toughness+=toughness*count
                 self.emit('trigger',source=a.id,name=a.definition.name,controller=a.controller,target=a.id,

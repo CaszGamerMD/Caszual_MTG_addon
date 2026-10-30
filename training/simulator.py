@@ -8,6 +8,7 @@ import argparse
 from card_events import Game as EventGame, Permanent as EventPermanent, Definition as EventDefinition, parse_card as parse_event_card, rule_text
 import base64
 from oracle_abilities import parse_token_creation, StaticEffect, Selector
+from creature_types import has_subtype, has_any_subtype, card_has_subtype
 import mana_pool
 import opening_hand
 import x_spells
@@ -1131,7 +1132,7 @@ class Simulator(AdvancedRules):
                 game=self.event_game('main');state=game.battlefield.get(source.card.id)
                 if state and (not source.fresh or not game.creature(state) or game.has(state,'haste')):
                     spec,subtype=definition.tribal_tap_tokens
-                    count=sum(subtype in p.card.event_definition.subtypes for p in self.players[seat].battlefield
+                    count=sum(has_subtype(p.card.event_definition,subtype) for p in self.players[seat].battlefield
                               if p.card.event_definition)
                     result.append(Candidate(source.card.id+':tribal-tap','activate_tribal_tokens',source.card.id,
                         features=features(power=count*spec.power,cost=0),label='Activate '+source.card.name))
@@ -1145,7 +1146,7 @@ class Simulator(AdvancedRules):
             operation,subtype,*parameters=definition.sacrifice_ability
             for victim in self.players[seat].battlefield:
                 state=game.battlefield.get(victim.card.id)
-                if state is None or not game.creature(state) or subtype not in state.definition.subtypes:continue
+                if state is None or not game.creature(state) or not has_subtype(state.definition,subtype):continue
                 if operation=='mana':
                     choices.append(Candidate(source.card.id+':sacrifice:'+victim.card.id,'activate_sacrifice_mana',
                         source.card.id,features=features(power=.05,cost=1),label='Sacrifice '+victim.card.name+
@@ -1311,7 +1312,7 @@ class Simulator(AdvancedRules):
         if not ability or ability[0]!='mana':raise ValueError('Illegal sacrifice mana ability')
         victim=next((p for p in self.players[seat].battlefield if p.card.id==victim_id),None)
         game=self.event_game('main');state=game.battlefield.get(victim_id)
-        if victim is None or state is None or not game.creature(state) or ability[1] not in state.definition.subtypes:
+        if victim is None or state is None or not game.creature(state) or not has_subtype(state.definition,ability[1]):
             raise ValueError('Sacrifice cost requires a matching creature')
         triggers=self._pay_sacrifice_creature(seat,victim)
         color=mana_pool.COLORS.index(ability[2]);self.players[seat].mana_pool[color]+=1
@@ -1346,7 +1347,7 @@ class Simulator(AdvancedRules):
         game=self.event_game('main')
         return tuple((owner,item) for owner,item in self.creature_targets(seat,source.card)
                      if item.card.id!=source.card.id and
-                     subtype in game.battlefield[item.card.id].definition.subtypes)
+                     has_subtype(game.battlefield[item.card.id].definition,subtype))
 
     def regenerate_choices(self,seat):
         if self.stack.priority!=seat:return []
@@ -1869,7 +1870,7 @@ class Simulator(AdvancedRules):
     def graveyard_subtype_targets(self,seat,subtype):
         """Target the owner's public graveyard; never peek at other hidden zones."""
         return tuple(c for c in self.players[seat].graveyard
-                     if subtype in (c.event_definition.subtypes if c.event_definition else c.land_subtypes))
+                     if card_has_subtype(c,subtype))
 
     def choose_optional_self_counter(self,event):
         """Optional choice made at resolution, never by treating 'may' as mandatory."""
@@ -1966,8 +1967,7 @@ class Simulator(AdvancedRules):
 
     def choose_optional_subtype_search(self, seat, subtype):
         """Default diagnostic player policy; not knowledge available to foe."""
-        return any(subtype in card.land_subtypes or
-                   (card.event_definition and subtype in card.event_definition.subtypes)
+        return any(card_has_subtype(card,subtype)
                    for card in self.players[seat].library)
 
     def legal_hand_put_cards(self,seat,subtype,kind):
@@ -1978,7 +1978,7 @@ class Simulator(AdvancedRules):
             definition=card.event_definition
             subtypes=set(card.land_subtypes)
             if definition:subtypes.update(definition.subtypes)
-            if subtype not in subtypes or card.kind=='unsupported':continue
+            if not card_has_subtype(card,subtype) or card.kind=='unsupported':continue
             types=set(card.printed_types)
             if definition:types.update(definition.types)
             if kind=='creature' and 'Creature' not in types:continue
@@ -2009,8 +2009,7 @@ class Simulator(AdvancedRules):
             return
         player=self.players[seat]
         found=next((candidate for candidate in player.library
-                    if subtype in candidate.land_subtypes or
-                       (candidate.event_definition and subtype in candidate.event_definition.subtypes)),None)
+                    if card_has_subtype(candidate,subtype)),None)
         if found is not None:
             player.library.remove(found)
             player.hand.append(found)
@@ -2459,7 +2458,7 @@ class Simulator(AdvancedRules):
                 if chosen not in choices:raise RuntimeError('Unrecognized spell keyword choice')
                 game.grant_temporary(state,chosen)
             self.sync_events(game)
-            if draw_subtype and any(draw_subtype in x.definition.subtypes and x.controller==controller
+            if draw_subtype and any(has_subtype(x.definition,draw_subtype) and x.controller==controller
                                     for x in game.battlefield.values()):
                 self.draw(controller)
                 self.outcome()
@@ -3044,7 +3043,7 @@ class Simulator(AdvancedRules):
             if event.get('operation')=='regenerate_shield':
                 game=self.event_game('main');target=game.battlefield.get(event['target'])
                 legal=bool(target and game.creature(target) and
-                           event['subtype'] in target.definition.subtypes and
+                           has_subtype(target.definition,event['subtype']) and
                            target.id!=event['source'] and not game.has(target,'shroud') and
                            (target.controller==event['controller'] or not game.has(target,'hexproof')) and
                            not game.protected(target,event.get('sourceColors',())))
@@ -3508,7 +3507,7 @@ class Simulator(AdvancedRules):
                          revealed=[dict(id=c.id,name=c.name) for c in revealed])
                 selected=[]
                 for candidate in revealed:
-                    if 'Creature' not in candidate.printed_types or subtype not in candidate.land_subtypes:continue
+                    if 'Creature' not in candidate.printed_types or not card_has_subtype(candidate,subtype):continue
                     if candidate.printed_mana_value is None:
                         self.pause('Cannot determine revealed creature mana value',candidate);return
                     if candidate.printed_mana_value<=maximum:
@@ -3540,7 +3539,7 @@ class Simulator(AdvancedRules):
             if event.get('operation')=='subtype_count_boost':
                 game=self.event_game('combat');source=game.battlefield.get(event['source'])
                 if source:
-                    count=sum(other.id!=source.id and other.controller==source.controller and event['subtype'] in other.definition.subtypes
+                    count=sum(other.id!=source.id and other.controller==source.controller and has_subtype(other.definition,event['subtype'])
                               for other in game.battlefield.values())
                     source.temporary_power+=event['power']*count;source.temporary_toughness+=event['toughness']*count
                     self.sync_events(game)
@@ -3588,7 +3587,7 @@ class Simulator(AdvancedRules):
                 event=dict(event,operation='create_tokens',tokenSpec=spec)
             if event.get('operation')=='tribal_tap_tokens':
                 game=self.event_game('main')
-                amount=sum(state.controller==event['controller'] and event['subtype'] in state.definition.subtypes
+                amount=sum(state.controller==event['controller'] and has_subtype(state.definition,event['subtype'])
                            for state in game.battlefield.values())
                 event=dict(event,operation='create_tokens',tokenSpec=dict(event['tokenSpec'],amount=amount))
             if event.get('operation')=='upkeep_token_rule':
@@ -3601,7 +3600,7 @@ class Simulator(AdvancedRules):
                 amount=event['tokenSpec']['amount']
                 if event['countSubtype']:
                     count=sum(permanent.controller==event['controller'] and game.creature(permanent)
-                              and event['countSubtype'] in permanent.definition.subtypes
+                              and has_subtype(permanent.definition,event['countSubtype'])
                               for permanent in game.battlefield.values())
                     amount=count//event['divisor']
                 event=dict(event,operation='create_tokens',tokenSpec=dict(event['tokenSpec'],amount=amount))
@@ -3699,7 +3698,7 @@ class Simulator(AdvancedRules):
                 game = self.event_game("main")
                 affected = []
                 for identifier,permanent in game.battlefield.items():
-                    if permanent.controller == event["controller"] and (event["counterSubtype"] in permanent.definition.subtypes if event.get("counterSubtype") else game.creature(permanent)):
+                    if permanent.controller == event["controller"] and (has_subtype(permanent.definition,event["counterSubtype"]) if event.get("counterSubtype") else game.creature(permanent)):
                         permanent.counters += game.counter_amount(identifier,event["amount"])
                         affected.append(identifier)
                 self.sync_events(game)
@@ -4066,7 +4065,7 @@ class Simulator(AdvancedRules):
             mask=(0 if overridden else item.card.mask) if item.card.kind=='land' else 0
             if effective and 'Land' in effective.types:
                 mask|=sum(bit for subtype,bit in {'Plains':1,'Island':2,'Swamp':4,'Mountain':8,'Forest':16}.items()
-                         if subtype in effective.subtypes)
+                         if has_subtype(effective,subtype))
                 if 'Creature' in effective.types and item.fresh:
                     creature=self.effective_card(item,game)
                     if creature is None or 'haste' not in creature.traits.split(';')[-1].split(','): continue
@@ -4087,7 +4086,7 @@ class Simulator(AdvancedRules):
                     _,symbol,kind,scope=definition.scaled_mana_tap.split(':')
                     count=sum((scope=='all' or permanent.controller==seat) and
                         (game.creature(permanent) if kind=='Creature' else
-                         kind in permanent.definition.subtypes)
+                         has_subtype(permanent.definition,kind))
                         for permanent in game.battlefield.values())
                     if not count:continue
                     color=mana_pool.COLORS.index(symbol)
@@ -4132,10 +4131,14 @@ class Simulator(AdvancedRules):
             reduction=sum(amount for permanent in player.battlefield
                           if permanent.card.event_definition
                           for names,amount in permanent.card.event_definition.cost_reductions
-                          if (any(name in categories for name in names if name!='chosen_creature_type')
+                          if (any(name in categories or (name.startswith('subtype:') and
+                                  card.event_definition and
+                                  has_subtype(card.event_definition,name[8:].title()))
+                                  for name in names if name!='chosen_creature_type')
                               or ('chosen_creature_type' in names and 'creature' in types
                                   and bool(permanent.chosen_subtype)
-                                  and permanent.chosen_subtype.lower() in subtypes)))
+                                  and (permanent.chosen_subtype.lower() in subtypes or
+                                       card.event_definition and has_subtype(card.event_definition,permanent.chosen_subtype)))))
             cost=mana_pool.reduce_generic_cost(cost,reduction,x)
             # Class level 1 taxes opponents' spells only while the Class owner is active.
             if seat!=self.active:
@@ -4799,7 +4802,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace", "shroud", "flash",
                         "flying", "reach", "haste", "first strike", "double strike",
                         "vigilance", "lifelink", "deathtouch", "trample",
-                        "defender", "indestructible"} & event_definition.abilities)
+                        "defender", "indestructible", "changeling"} & event_definition.abilities)
                or any(ability.startswith("protection from ")
                       for ability in event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.self_pump or event_definition.team_keyword_pump or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""

@@ -1,6 +1,7 @@
 """Strict, composable Oracle grammar. No card-name dispatch or guessed remainder."""
 from dataclasses import dataclass, asdict
 import re
+from creature_types import has_subtype, has_any_subtype
 
 @dataclass(frozen=True)
 class TokenSpec:
@@ -446,6 +447,9 @@ def compile_abilities(text, name=''):
     for line in text.splitlines():
         line=line.strip()
         if not line: continue
+        if line=='Changeling':
+            keywords.add('changeling')
+            continue
         if line in ('As this enchantment enters, choose a creature type.',
                     'As this artifact enters, choose a creature type.'):
             if chosen_type_entry:return None
@@ -739,19 +743,19 @@ def matches(subject, source, entered, is_creature):
     return ((not subject.self_only or source.id==entered.id)
         and (not subject.other or source.id!=entered.id)
         and (not subject.self_or_controlled_subtype or source.id==entered.id or
-             (source.controller==entered.controller and subject.self_or_controlled_subtype in entered.definition.subtypes))
+             (source.controller==entered.controller and has_subtype(entered.definition,subject.self_or_controlled_subtype)))
         and (subject.relation!='controller' or source.controller==entered.controller)
         and (subject.relation!='opponent' or source.controller!=entered.controller)
         and (not subject.creature or is_creature)
         and (not subject.nontoken or not entered.token)
         and (subject.legendary is None or subject.legendary==entered.definition.legendary)
         and (not subject.color or subject.color in entered.definition.colors)
-        and (not subject.subtype or subject.subtype in entered.definition.subtypes)
-        and (not subject.subtypes_any or bool(set(subject.subtypes_any)&entered.definition.subtypes))
+        and (not subject.subtype or has_subtype(entered.definition,subject.subtype))
+        and (not subject.subtypes_any or has_any_subtype(entered.definition,subject.subtypes_any))
         and (not subject.permanent_type or subject.permanent_type in entered.definition.types)
-        and (not subject.chosen_subtype or bool(source.chosen_subtype) and source.chosen_subtype in entered.definition.subtypes)
+        and (not subject.chosen_subtype or bool(source.chosen_subtype) and has_subtype(entered.definition,source.chosen_subtype))
         and (not subject.attacking or entered.attacking is not None)
-        and (not subject.excluded_subtype or subject.excluded_subtype not in entered.definition.subtypes))
+        and (not subject.excluded_subtype or not has_subtype(entered.definition,subject.excluded_subtype)))
 
 def cast_matches(trigger, source, spell, controller):
     if trigger.event!='cast' or source.controller!=controller:return False
