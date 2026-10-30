@@ -17,6 +17,22 @@ def compile(text):
             amount={'a':1,'one':1,'two':2,'three':3,'four':4}.get(treasure[1])
             effects.append(('saddled_treasures',amount if amount is not None else int(treasure[1]),0,''))
             continue
+        # Count each qualifying other creature once, even if it has multiple
+        # listed subtypes. X is calculated as the trigger resolves.
+        tribal_drain=re.fullmatch(
+            r'Whenever this creature attacks, each opponent loses X life and you gain X life, where X is the number of other ([A-Z][a-z]+(?:, [A-Z][a-z]+)*,? and [A-Z][a-z]+) you control\.',line)
+        if tribal_drain:
+            plurals=tuple(re.split(r',? and |, ',tribal_drain[1]))
+            if len(plurals)<2 or len(plurals)!=len(set(plurals)):return None
+            def singular(word):
+                if word.endswith('ies'):
+                    return word[:-3]+('ie' if word in {'Faeries','Pixies','Zombies'} else 'y')
+                if word.endswith('ves'):return word[:-3]+'f'
+                return word[:-1] if word.endswith('s') else ''
+            names=tuple(singular(word) for word in plurals)
+            if not all(names) or len(names)!=len(set(names)):return None
+            effects.append(('attack_subtype_drain',0,0,names))
+            continue
         group=re.fullmatch(r'Whenever this creature and at least (one|two|three|[1-9][0-9]*) other creatures attack, (create .+)',line)
         saddled=re.fullmatch(r'Whenever this creature attacks while saddled, (create .+)',line)
         token=re.fullmatch(r'Whenever this creature attacks, (create .+)',line)

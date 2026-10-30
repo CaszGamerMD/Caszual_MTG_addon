@@ -1229,6 +1229,10 @@ class Game:
                             for ability in keyword:self.grant_temporary(member,ability)
                     self.emit('trigger',source=a.id,effect='grant team keywords until end of turn',
                               keywords=list(keyword))
+            elif operation=='attack_subtype_drain':
+                self.emit('trigger',operation='attack_subtype_drain',source=a.id,
+                          name=a.definition.name,controller=a.controller,
+                          subtypes=list(keyword),effect='drain for other matching controlled creatures')
             elif operation=='saddled_treasures' and a.saddled:
                 self.emit('trigger',operation='create_treasures',source=a.id,
                           name=a.definition.name,controller=a.controller,

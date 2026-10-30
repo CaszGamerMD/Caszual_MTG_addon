@@ -2729,6 +2729,24 @@ class Simulator(AdvancedRules):
                     'Equipment source left before charge trigger resolved.',
                     actor=event['controller'],source=event['source'])
                 continue
+            if event.get('operation')=='attack_subtype_drain':
+                # This is a triggered ability, not combat damage. X is set
+                # on resolution using the current battlefield and source ID.
+                game=self.event_game('main')
+                types=set(event['subtypes'])
+                amount=sum(state.controller==event['controller'] and
+                           state.id!=event['source'] and game.creature(state) and
+                           bool(types.intersection(state.definition.subtypes))
+                           for state in game.battlefield.values())
+                for target in range(len(self.players)):
+                    if target!=event['controller']:self.players[target].life-=amount
+                self.gain_life(event['controller'],amount)
+                self.log('attack_subtype_drain','Attack trigger drains for other matching creatures.',
+                         actor=event['controller'],source=event['source'],amount=amount,
+                         subtypes=event['subtypes'])
+                self.outcome()
+                if self.finished:return
+                continue
             if event.get('operation')=='create_treasures':
                 self.create_treasures(event['controller'],event['amount'],False,card)
                 continue

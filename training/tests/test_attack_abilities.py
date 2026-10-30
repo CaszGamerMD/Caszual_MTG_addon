@@ -60,6 +60,39 @@ class AttackChecks(unittest.TestCase):
    self.assertEqual(s.import_diagnostic_card(rules,bad,0,'bad',{'White'}).kind,'unsupported')
    wrong=dict(real,subTypes=['Horse'])
    self.assertEqual(s.import_diagnostic_card(rules,wrong,0,'wrong',{'White'}).kind,'unsupported')
+ def test_attack_subtype_drain_counts_other_creatures_once_at_resolution(self):
+  lookup={c['name']:c for p in (Path(__file__).resolve().parents[1]/'decks').glob('*.json') for c in json.loads(p.read_text())['mainboard']}
+  real=lookup['Valley Rotcaller']
+  with s.RulesBridge() as rules:
+   for raw in (real,dict(real,name='Unknown Caller',oracleText='Menace\nWhenever this creature attacks, each opponent loses X life and you gain X life, where X is the number of other Elves, Goblins, and Faeries you control.')):
+    card=s.import_diagnostic_card(rules,raw,0,'caller-'+raw['name'],{'Black','Green'})
+    self.assertEqual(card.kind,'creature')
+    self.assertEqual(card.event_definition.attack_effects[0][0],'attack_subtype_drain')
+    types=card.event_definition.attack_effects[0][3]
+    def creature(uid,name,subtypes):
+     definition=s.EventDefinition(name,frozenset({'Creature'}),frozenset(subtypes),False,2,2,frozenset())
+     return s.Card(uid,name,'creature',power=2,toughness=2,traits='2;2;',land_subtypes=subtypes,event_definition=definition)
+    both=creature('both','Both types',(types[0],types[1]))
+    other=creature('other','Other type',(types[-1],))
+    enemy=creature('enemy','Enemy type',(types[0],))
+    sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card,both,other],s.demo_deck(1)+[enemy]),diagnostic=True)
+    owner=sim.players[0]
+    for creature_card,player in ((card,owner),(both,owner),(other,owner),(enemy,sim.players[1])):
+     (player.hand if creature_card in player.hand else player.library).remove(creature_card)
+     sim.enter_creature(creature_card,player)
+    mount=next(p for p in owner.battlefield if p.card.id==card.id);mount.fresh=False
+    g=sim.event_game('combat');g.attack(card.id,1,defer=True)
+    events=[e for e in g.events if e.get('operation')=='attack_subtype_drain']
+    self.assertEqual(len(events),1)
+    sim.send_to_destination(owner,mount)
+    before=(owner.life,sim.players[1].life)
+    sim.resolve_entry_triggers(events,card)
+    self.assertEqual((owner.life,sim.players[1].life),(before[0]+2,before[1]-2))
+    sim.invariant()
+   bad=dict(real,oracleText=real['oracleText']+'\nCreate a mystery token.')
+   self.assertEqual(s.import_diagnostic_card(rules,bad,0,'bad-caller',{'Black'}).kind,'unsupported')
+   repeated=dict(real,oracleText='Menace\nWhenever this creature attacks, each opponent loses X life and you gain X life, where X is the number of other Squirrels, Squirrels, and Rats you control.')
+   self.assertEqual(s.import_diagnostic_card(rules,repeated,0,'repeated',{'Black'}).kind,'unsupported')
  def test_generic_subtype_combat_damage_discard(self):
   from unittest.mock import patch
   with s.RulesBridge() as rules:
