@@ -3,7 +3,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from card_events import Game, Permanent, parse_card
+from card_events import Game, Permanent, Definition, parse_card
 import simulator as s
 
 
@@ -49,7 +49,7 @@ class GenericLandfallTests(unittest.TestCase):
         watcher=Permanent('watcher',d,0)
         g.enter_batch([watcher])
         g.events.clear()
-        ldef=parse_card(land())
+        ldef=Definition('Unseen Grove',frozenset({'Land'}),frozenset(),False,0,0,frozenset())
         g.enter_batch([Permanent('enemy-land',ldef,1)])
         self.assertFalse(any(e['kind']=='trigger' for e in g.events))
         g.events.clear()
