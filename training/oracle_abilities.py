@@ -121,7 +121,7 @@ def static_effect(text):
     # A global subtype anthem applies to both players' creatures, unlike
     # "you control" lords. Do not infer the controller from a card name.
     global_subtype=re.fullmatch(
-        r'([A-Z][a-z]+) creatures get ([+-][0-9]+)/([+-][0-9]+)\\.',text)
+        r'([A-Z][a-z]+) creatures get ([+-][0-9]+)/([+-][0-9]+)\.',text)
     if global_subtype:
         return StaticEffect(Selector(creature=True,subtype=global_subtype[1]),
                             int(global_subtype[2]),int(global_subtype[3]))
