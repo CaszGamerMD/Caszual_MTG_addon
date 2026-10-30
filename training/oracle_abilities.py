@@ -316,7 +316,7 @@ def static_effect(text):
 
 KEYWORDS = {'flash','flying','first strike','double strike','lifelink','vigilance',
             'trample','haste','defender','reach','deathtouch','indestructible','hexproof','menace',
-            'plainswalk','islandwalk','swampwalk','mountainwalk','forestwalk','shroud','fear'}
+            'plainswalk','islandwalk','swampwalk','mountainwalk','forestwalk','shroud','fear'} | {'protection from '+color for color in ('white','blue','black','red','green')}
 
 def selector(text):
     if text == 'this creature': return Selector(self_only=True,creature=True)
