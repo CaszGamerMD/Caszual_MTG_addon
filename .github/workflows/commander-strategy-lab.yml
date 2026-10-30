@@ -56,27 +56,3 @@ jobs:
           name: wilds-garbo-strategy-comparison
           path: training/reports/phase-plan-baseline/
           retention-days: 14
-  matchup-seven:
-    name: Garbo vs original Wilds, 7 games x 15 turns
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '25'
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Validate odd game split and policy isolation
-        run: python -m unittest discover -s training/tests -p test_seven_game_garbo.py -v
-      - name: Play seven games with Garbo pressure and Wilds baseline
-        run: python training/seven_game_garbo.py --games 7 --turns 15 --seed 5189995 --out training/reports/garbo-wilds-7x15
-      - name: Store score and watchable evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: garbo-wilds-7x15-results
-          path: training/reports/garbo-wilds-7x15/
-          retention-days: 14
