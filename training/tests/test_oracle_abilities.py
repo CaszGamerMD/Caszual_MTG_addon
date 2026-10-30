@@ -22,6 +22,26 @@ class ColoredWitnessGrammarChecks(unittest.TestCase):
                 self.assertEqual(effect.condition.relation,'controller')
                 self.assertEqual(effect.condition.color,color.capitalize())
 
+    def test_briarberry_style_bonus_reacts_to_board_changes(self):
+        creature=parse_card(dict(name='Unseen Cohort',types=['Creature'],
+            subTypes=['Faerie'],colors=['Blue'],power='1',toughness='1',
+            oracleText='Flying\\nThis creature gets +1/+1 as long as you control another blue creature.'))
+        self.assertTrue(creature.supported)
+        ally=parse_card(dict(name='Unseen Blue Ally',types=['Creature'],
+            colors=['Blue'],power='1',toughness='1',oracleText=''))
+        enemy=parse_card(dict(name='Unseen Blue Enemy',types=['Creature'],
+            colors=['Blue'],power='1',toughness='1',oracleText=''))
+        game=Game()
+        cohort=Permanent('cohort',creature,0)
+        game.enter(cohort)
+        self.assertEqual(game.stats(cohort),(1,1))
+        game.enter(Permanent('enemy',enemy,1))
+        self.assertEqual(game.stats(cohort),(1,1))
+        game.enter(Permanent('ally',ally,0))
+        self.assertEqual(game.stats(cohort),(2,2))
+        del game.battlefield['ally']
+        self.assertEqual(game.stats(cohort),(1,1))
+
     def test_unknown_extra_instruction_rejects_entire_program(self):
         self.assertIsNone(compile_abilities(
             'This creature gets +2/+3 as long as you control another blue creature. Draw seven cards.',
