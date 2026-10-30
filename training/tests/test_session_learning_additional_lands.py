@@ -1,5 +1,8 @@
 """Regression: cumulative extra land drops and all five basic land types."""
 import unittest
+import sys
+from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from dataclasses import replace
 import simulator as s
 import test_enchantment_abilities as fixtures
