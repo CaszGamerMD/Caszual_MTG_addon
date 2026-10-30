@@ -15,9 +15,9 @@ def prevention(text,types):
 
 def edict(text,types):
     if not set(types).intersection({'Instant','Sorcery'}):return ()
-    m=re.fullmatch(
-        r'(Each opponent|Each player) sacrifices (a|one|two|three|[1-9][0-9]*) creatures?\.',
-        text)
-    if not m:return ()
-    number={'a':1,'one':1,'two':2,'three':3}.get(m[2],int(m[2]) if m[2].isdigit() else 0)
-    return ('opponent' if m[1]=='Each opponent' else 'all',number)
+    # Only the one-creature, single-affected-player edict has a fully
+    # implemented zone change and trigger batch. Simultaneous multi-player
+    # or multi-creature sacrifice instructions must remain unsupported.
+    if re.fullmatch(r'Each opponent sacrifices a creature\\.',text):
+        return ('opponent',1)
+    return ()
