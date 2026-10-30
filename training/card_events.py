@@ -142,6 +142,7 @@ class Definition:
     land_type_effect: tuple = ()  # (scope, replace/add, basic land subtypes).
     additional_land_plays: int = 0  # Static permission, counted while source stays in play.
     end_step_life_distribution: bool = False  # Other targets, allocation at trigger placement.
+    modal_role_choices: tuple = ()  # Role types; one chosen when ETB trigger enters stack.
     prevents_opponent_sacrifice: bool = False  # Continuous rule: opposing effects can't force sacrifices.
     equipment_basic_search: bool = False  # Equipped attacker searches for tapped basic land.
     graveyard_exile_activation: tuple = ()  # Cost, conditional creature-token specification.
@@ -171,6 +172,10 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from modal_role_choices import parse as parse_modal_role_choices
+    role_choices=parse_modal_role_choices(text,name,types)
+    if role_choices:
+        return Definition(**base,abilities=frozenset(),modal_role_choices=role_choices)
     from life_distribution import parse as parse_life_distribution
     life_distribution=parse_life_distribution(text,types)
     if life_distribution:
@@ -507,8 +512,11 @@ class Game:
                 base_toughness + p.counters + bonus + toughness_bonus)
 
     def ward_costs(self,p):
-        return tuple(effect.ward_cost for source in self.battlefield.values() for effect in self.static_effects(source)
+        granted=tuple(effect.ward_cost for source in self.battlefield.values() for effect in self.static_effects(source)
                      if effect.ward_cost and matches(effect.subject,source,p,self.creature(p)))
+        roles=tuple('{1}' for source in self.battlefield.values()
+                    if source.attached_to==p.id and source.definition.role=='Royal')
+        return granted+roles
 
     def has(self, p: Permanent, ability: str) -> bool:
         # "Can't have or gain" is a continuous prohibition: even a later
@@ -656,6 +664,15 @@ class Game:
                           source=permanent.id,name=permanent.definition.name,controller=permanent.controller,
                           amount=permanent.definition.entry_attachment_counters)
             for watcher in list(self.battlefield.values()):
+                if (watcher.definition.modal_role_choices
+                        and watcher.controller==permanent.controller
+                        and self.creature(permanent)
+                        and (not permanent.token or watcher.id==permanent.id)):
+                    self.emit('trigger',operation='create_chosen_role',
+                        effect='create chosen Role attached to entering creature',
+                        source=watcher.id,name=watcher.definition.name,
+                        controller=watcher.controller,entering=permanent.id,
+                        roleOptions=list(watcher.definition.modal_role_choices))
                 for trigger in watcher.definition.triggers:
                     if trigger.event == "enters" and matches(trigger.subject,watcher,permanent,self.creature(permanent)):
                         self.emit("trigger",**event_data(trigger,watcher,permanent))
@@ -960,6 +977,12 @@ class Game:
                                       else 'damage the attacking flying creature'))
         if 'attacks' in a.definition.role_events:
             self.emit('trigger',**self.role_trigger(a))
+        # A Sorcerer Role grants the enchanted CREATURE an attack trigger.
+        # It is independent of the Aura after triggering and uses that creature's controller.
+        for aura in self.battlefield.values():
+            if aura.attached_to==a.id and aura.definition.role=='Sorcerer':
+                self.emit('trigger',operation='scry',effect='scry 1 from Sorcerer Role',
+                          source=a.id,name=a.definition.name,controller=a.controller,amount=1)
         for operation,power,toughness,keyword in a.definition.attack_effects:
             if operation=='counter' and defer:
                 self.emit('trigger',operation='self_counter',source=a.id,name=a.definition.name,controller=a.controller,effect='add counter',amount=power)
