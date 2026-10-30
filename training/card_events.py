@@ -157,6 +157,8 @@ class Definition:
     equipment_return_dying: bool = False  # Equipped creature dies -> return from graveyard.
     constellation_counter: bool = False  # Enchantment ETB triggers targeted +1/+1.
     enchantment_combat_copy: bool = False  # Once-per-turn enchantment token copy on damage.
+    saga_chapter_scale: tuple = ()  # Chapter I and II P/T per artifact/enchantment.
+    self_artifact_enchantment_scale: tuple = ()  # Self static P/T count on transformed face.
 
 
 def parse_card(card: dict) -> Definition:
@@ -183,6 +185,14 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from saga_abilities import compile_saga, compile_transformed_creature
+    saga_program=compile_saga(text,types,subtypes)
+    if saga_program:
+        return Definition(**base,abilities=frozenset(),saga_chapter_scale=saga_program)
+    self_scale=compile_transformed_creature(text,types)
+    if self_scale:
+        return Definition(**base,abilities=frozenset(),
+                          self_artifact_enchantment_scale=self_scale)
     from constellation_copy import compile as compile_constellation_copy
     if compile_constellation_copy(text,name,types,subtypes):
         return Definition(**base,abilities=frozenset(),constellation_counter=True,
@@ -570,6 +580,12 @@ class Game:
                 power_bonus += effect.power * multiplier
                 toughness_bonus += effect.toughness * multiplier
         base_power,base_toughness=p.definition.power,p.definition.toughness
+        if p.definition.self_artifact_enchantment_scale:
+            count=sum(other.controller==p.controller and bool(
+                {'Artifact','Enchantment'}&other.definition.types)
+                for other in self.battlefield.values())
+            dp,dt=p.definition.self_artifact_enchantment_scale
+            base_power+=dp*count;base_toughness+=dt*count
         if p.definition.dynamic_pt_color:
             count=sum(x.controller==p.controller and p.definition.dynamic_pt_color in x.definition.colors
                       for x in self.battlefield.values())

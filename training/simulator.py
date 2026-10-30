@@ -214,6 +214,7 @@ class Card:
     modal_land_face: Card | None = None
     modal_front_face: Card | None = None
     modal_spell_face: Card | None = None  # Alternate castable back, same physical card.
+    transform_back_face: Card | None = None  # Noncastable back for a transforming Saga.
 
 
 
@@ -254,6 +255,7 @@ class Permanent:
     temporary_land_power: int | None = None
     temporary_land_subtype: str = ''
     class_level: int = 1
+    lore_counters: int = 0
 
 
 @dataclass
@@ -503,7 +505,8 @@ class Simulator(AdvancedRules):
         return {"id": c.id, "name": c.name, "kind": "aura" if item.bestowed else ("enchantment" if not effective and c.event_definition and c.event_definition.devotion else c.kind), "power": c.power,
                 "toughness": c.toughness, "traits": c.traits, "tapped": item.tapped,
                 "fresh": item.fresh, "saddled": item.saddled, "counters": item.counters, "isCreature": effective is not None, "bestowed": item.bestowed, "attachedTo": item.attached_to,
-                "hexproof": bool(state and game.has(state,'hexproof')), "wardCosts": list(game.ward_costs(state)) if state else [], "loyalty": item.loyalty, "chargeCounters": item.charge_counters,"classLevel": item.class_level if item.card.event_definition and item.card.event_definition.class_program else None}
+                "hexproof": bool(state and game.has(state,'hexproof')), "wardCosts": list(game.ward_costs(state)) if state else [], "loyalty": item.loyalty, "chargeCounters": item.charge_counters,"classLevel": item.class_level if item.card.event_definition and item.card.event_definition.class_program else None,
+                "loreCounters":item.lore_counters if item.card.event_definition and item.card.event_definition.saga_chapter_scale else None}
 
     def state(self) -> dict:
         return {"active": self.active, "turn": self.turn, "phase": self.phase,
@@ -4364,6 +4367,23 @@ def diagnostic_land(definition: dict, identity: set[str]) -> dict | None:
 
 def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                            uid: str, identity: set[str]) -> Card:
+    if definition.get('layout')=='transform':
+        faces=definition.get('faces',())
+        if len(faces)==2 and all(isinstance(face,dict) for face in faces):
+            def as_card(face):
+                raw=dict(definition,name=face.get('name',''),types=face.get('types',[]),
+                         superTypes=face.get('superTypes',[]),subTypes=face.get('subTypes',[]),
+                         manaCost=face.get('manaCost',''),oracleText=face.get('text',''),
+                         power=face.get('power',''),toughness=face.get('toughness',''),
+                         colors=face.get('colors',[]),layout='normal',faces=[])
+                return import_diagnostic_card(rules,raw,seat,uid,identity)
+            front=as_card(faces[0]);back=as_card(faces[1])
+            if (front.kind=='enchantment' and front.event_definition and
+                    front.event_definition.saga_chapter_scale and
+                    back.kind=='creature' and back.event_definition and
+                    back.event_definition.self_artifact_enchantment_scale):
+                return replace(front,transform_back_face=back)
+        return Card(uid,definition['name'],'unsupported')
     if definition.get('layout')=='modal_dfc':
         faces=definition.get('faces',[])
         # The current two-face executor supports modal spell-front/land-back
@@ -4391,7 +4411,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.constellation_counter or event_definition.enchantment_combat_copy) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and (rules.query("cost",cost)["supported"] or "Land" in event_definition.types and not cost)):
