@@ -51,8 +51,15 @@ def compile_land(raw, clean_text):
         rest.append(line)
     if not mask and not production:return None
     program=compile_abilities('\n'.join(rest)) if rest else Program((),frozenset())
-    # Restrict land composition to complete self-entry triggers; other permanent
-    # rule families must be wired into land handling before accepting them.
-    if program is None or (rest and (not program.triggers or any(t.event!='enters' or not t.subject.self_only for t in program.triggers))):return None
-    if rest and any(not re.fullmatch(r'(?:When|Whenever) this land enters(?: the battlefield)?, .+',line) for line in rest):return None
+    # Land keywords and self-entry triggers can compose with mana and tapped
+    # entry. Do not silently accept any other static/activated/replacement
+    # program: its semantics may not be wired into land handling.
+    if program is None:return None
+    if rest:
+        if any(line!='Indestructible' and not re.fullmatch(
+                r'(?:When|Whenever) this land enters(?: the battlefield)?, .+',line)
+               for line in rest):return None
+        if any(t.event!='enters' or not t.subject.self_only for t in program.triggers):return None
+        if program.keywords-{'indestructible'} or program.static_effects or program.activations:return None
+        if program.devotion or program.cost_reductions or program.counter_replacements or program.token_replacements:return None
     return dict(kind='land',mask=mask,tapped=tapped,land_rule=entry,land_program=program,mana_production=production,land_counter_ability=counter_ability,land_counter_scope=counter_scope)
