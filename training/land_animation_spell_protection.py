@@ -12,4 +12,4 @@ def parse(text,types):
     if not m:return ()
     categories=(m[1].lower(),m[2].lower())
     if not set(categories)<= {'creature','enchantment','artifact'} or len(set(categories))!=2:return ()
-    return (categories,m[3],m[4],m[6].title())
+    return (categories,m[3],m[4],m[6][:-1].title())
