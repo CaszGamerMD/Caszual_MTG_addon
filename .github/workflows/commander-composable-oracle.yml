@@ -5,6 +5,8 @@ on:
     paths:
       - training/composable_oracle.py
       - training/oracle_sequence.py
+      - training/compiled_rules_knowledge.py
+      - training/tests/test_compiled_rules_knowledge.py
       - training/tests/test_oracle_sequence.py
       - training/oracle_abilities.py
       - training/card_events.py
@@ -36,6 +38,7 @@ jobs:
         run: |
           python -m unittest discover -s training/tests -p test_composable_power_mana.py -v
           python -m unittest discover -s training/tests -p test_oracle_sequence.py -v
+          python -m unittest discover -s training/tests -p test_compiled_rules_knowledge.py -v
       - name: Regression for previous composite abilities and mana
         run: |
           python -m unittest discover -s training/tests -p test_regeneration_tribal.py -v
