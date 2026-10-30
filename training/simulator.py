@@ -4733,7 +4733,8 @@ def schedule_decks(pool: list[dict], seed: int, matches: int) -> list[list[dict]
     return result
 
 
-def diagnose(rules: RulesBridge, decks: list[dict], seed: int, turns_per_player: int) -> dict:
+def diagnose(rules: RulesBridge, decks: list[dict], seed: int, turns_per_player: int,
+             policies: tuple[Policy, Policy] | None = None) -> dict:
     """Limited visible diagnostic, never a legal game or eligible for learning."""
     if len(decks) != 2 or turns_per_player < 1:
         raise ValueError("Two decks and a positive turn count are required")
@@ -4745,7 +4746,8 @@ def diagnose(rules: RulesBridge, decks: list[dict], seed: int, turns_per_player:
     commanders = tuple(import_diagnostic_card(rules, deck["commanders"][0], seat, f"{seat}-commander",
         set(deck["commanders"][0].get("colorIdentity", []))) for seat, deck in enumerate(decks))
     sim = Simulator(rules, seed, max_turns=turns_per_player * 2, decks=cards,
-                    commanders=commanders, diagnostic=True)
+                    commanders=commanders, diagnostic=True,
+                    policies=policies if policies is not None else (Policy(), Policy()))
     result = sim.run()
     turns = [sum(e["kind"] == "end" and e["actor"] == seat for e in result["events"])
              for seat in (0, 1)]

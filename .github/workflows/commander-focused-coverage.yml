@@ -126,6 +126,17 @@ jobs:
                   assert game['outcome']=='blocked'
           print('WILDS_GARBO_FIRST '+json.dumps({'totals':data['totals'],'matches':[{'seed':g['seed'],'outcome':g['outcome'],'invalidReasons':g['invalidReasons'],'telemetry':g['telemetry']} for g in data['matches']]}))
           PY
+      - name: Test experimental tempo strategy versus unchanged baseline on matched deals
+        run: |
+          python -m unittest discover -s training/tests -p test_strategy_lab.py -v
+          python training/strategy_lab.py --focal training/decks/5189995-enchantments.json --opponent training/decks/5254666-garbo-gobbos.json --baseline training/reports/wilds-garbo-first/summary.json --games 4 --seed 5189995 --profile tempo --out training/reports/wilds-garbo-first/strategy-tempo.json
+      - name: Upload matched strategy comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wilds-garbo-strategy-lab
+          path: training/reports/wilds-garbo-first/strategy-tempo.json
+          retention-days: 14
       - name: Upload seeded Wilds versus Garbo replays and diagnostics
         if: always()
         uses: actions/upload-artifact@v4
