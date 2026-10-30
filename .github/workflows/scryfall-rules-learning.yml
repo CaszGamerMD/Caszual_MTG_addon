@@ -10,6 +10,7 @@ on:
       - training/simulator.py
       - training/scryfall_random_exam.py
       - training/tests/test_generic_color_protection.py
+      - training/tests/test_generic_global_tribal_anthem.py
       - training/tests/test_scryfall_random_exam.py
       - .github/workflows/scryfall-rules-learning.yml
   workflow_dispatch:
@@ -35,6 +36,7 @@ jobs:
         run: |
           python -m compileall -q training
           python -m unittest discover -s training/tests -p test_generic_color_protection.py -v
+          python -m unittest discover -s training/tests -p test_generic_global_tribal_anthem.py -v
           python -m unittest discover -s training/tests -p test_scryfall_random_exam.py -v
           python -m unittest discover -s training/tests -p test_composable_power_mana.py -v
           python -m unittest discover -s training/tests -p test_oracle_sequence.py -v
