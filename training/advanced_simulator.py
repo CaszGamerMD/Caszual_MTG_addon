@@ -160,17 +160,24 @@ class AdvancedRules:
   s=model(self);available=self.attackable(seat);ids=[p.card.id for p in available]
   g=self.event_game('combat')
   required={p.card.id for p in available if g.must_attack(g.battlefield[p.card.id])}
+  maximum=self.defending_attack_limit(seat,g)
   groups={tuple(ids)} if ids else set()
   groups.update((i,) for i in ids)
   if len(ids)<=6:
    groups.update(group for n in range(2,len(ids)) for group in combinations(ids,n))
   result=[]
   for group in sorted(groups):
-   if not group or not required<=set(group):continue
+   if not group or not required<=set(group) or maximum is not None and len(group)>maximum:continue
    power=sum(max(0,self.effective_card(p).power) for p in available if p.card.id in group)
    result.append(s.Candidate('attack:'+','.join(group),'attack_group',group[0],features=s.features(power=power/10,damage=power,lethal=int(power>=self.players[1-seat].life)),label='Attack with '+str(len(group))+' creatures',attack_ids=group))
   if not required:result.append(s.Candidate('pass','pass',features=s.features(**{'pass':1}),label='Pass'))
   return tuple(result)
+ def defending_attack_limit(self,attacking_seat,game=None):
+  # Evaluate the continuous restriction when attackers are declared.
+  game=game or self.event_game('combat')
+  caps=[p.definition.combat_limits[1] for p in game.battlefield.values()
+        if p.controller!=attacking_seat and p.tapped and p.definition.combat_limits]
+  return min(caps) if caps else None
  def declare_attackers(self,identifiers):
   if self.phase!='attack' or self.stack.items or self.stack.priority!=self.active:raise ValueError('Illegal attack timing')
   ids=list(identifiers);eligible={p.card.id:p for p in self.attackable(self.active)}
@@ -178,8 +185,10 @@ class AdvancedRules:
   g=self.event_game('combat')
   required={p.card.id for p in eligible.values() if g.must_attack(g.battlefield[p.card.id])}
   if not required<=set(ids):raise ValueError('Required attacker omitted')
+  maximum=self.defending_attack_limit(self.active,g)
+  if maximum is not None and len(ids)>maximum:raise ValueError('Too many attackers against tapped restriction')
   if not ids:self.phase='second_main';return
-  self.group_combat=dict(attackers=list(ids),declared=list(ids),blocks={},blocked=set(),early=None)
+  self.group_combat=dict(attackers=list(ids),declared=list(ids),blocks={},blocked=set(),early=None,block_limit=None)
   g=self.event_game('combat');events=[]
   for identifier in ids:
    g.attack(identifier,1-self.active,defer=True)
@@ -192,6 +201,13 @@ class AdvancedRules:
     if equipment.attached_to==identifier:
      for spec in equipment.definition.equipment_attacks:
       events.append(dict(operation='create_tokens',effect='equipped attack token creation',source=equipment.id,controller=equipment.controller,name=equipment.definition.name,tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords))))
+  # Attack triggers survive their source leaving before stack resolution.
+  for identifier in ids:
+   source=g.battlefield[identifier]
+   if source.definition.combat_limits:
+    events.append(dict(operation='combat_block_limit',effect='limit blockers this combat',
+                       source=identifier,controller=source.controller,name=source.definition.name,
+                       maximum=source.definition.combat_limits[0]))
   # A nontoken attacker triggers each controlled watcher independently.
   for watcher in g.battlefield.values():
    if watcher.controller!=self.active:continue
@@ -242,6 +258,8 @@ class AdvancedRules:
     greedy[a.card.id]=tuple(b.card.id for b in chosen);used.update(greedy[a.card.id])
    for group in combinations(legal,minimum):maps.append({a.card.id:tuple(b.card.id for b in group)})
   if greedy:maps.append(greedy)
+  maximum=combat.get('block_limit')
+  if maximum is not None:maps=[m for m in maps if sum(len(bs) for bs in m.values())<=maximum]
   result=[]
   for index,mapping in enumerate(maps):
    damage=0;trade=0
@@ -256,6 +274,9 @@ class AdvancedRules:
  def declare_blockers(self,mapping):
   if not self.group_combat or self.phase!='block' or self.stack.items:raise ValueError('Illegal block timing')
   combat=self.group_combat;used=set();defender=1-self.active
+  maximum=combat.get('block_limit')
+  if maximum is not None and sum(len(bs) for bs in mapping.values())>maximum:
+   raise ValueError('Too many blockers for this combat')
   attackers={p.card.id:p for p in self.players[self.active].battlefield if p.card.id in combat['attackers'] and self.effective_card(p)}
   blockers={p.card.id:p for p in self.players[defender].battlefield};g=self.event_game('combat')
   for identifier,chosen in mapping.items():

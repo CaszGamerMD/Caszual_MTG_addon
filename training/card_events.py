@@ -136,6 +136,7 @@ class Definition:
     regenerate_subtype: str = ''  # Tap: create a one-use destruction replacement shield.
     entry_keyword_choices: tuple[str, ...] = ()  # Choose one keyword counter before entry.
     dynamic_pt_color: str = ''  # Characteristic-defining P/T: own colored permanents.
+    combat_limits: tuple[int, int] = ()  # Attack-triggered block cap, tapped-source attack cap.
 
 
 def parse_card(card: dict) -> Definition:
@@ -162,6 +163,10 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from combat_limits import parse as parse_combat_limits
+    combat_limits=parse_combat_limits(text,name,types)
+    if combat_limits:
+        return Definition(**base,abilities=combat_limits[0],combat_limits=combat_limits[1])
     if dynamic_pt:
         if card.get('power')!='*' or card.get('toughness')!='*':
             return Definition(**base,abilities=frozenset(),supported=False,reason='Variable characteristic mismatch')
