@@ -861,6 +861,11 @@ class Simulator(AdvancedRules):
                     if not candidates:continue
                     chosen=max(candidates,key=lambda item:(self.effective_card(item).power,item.card.id))
                     event=dict(event,target=chosen.card.id)
+                if event.get('operation')=='create_chosen_role':
+                    kind=self.choose_role_kind(event,event['roleOptions'])
+                    if kind not in event['roleOptions']:
+                        raise ValueError('Unknown modal Role choice')
+                    event=dict(event,roleChoice=kind)
                 if event.get('operation')=='create_role':
                     targets=self.role_targets(event)
                     chosen=next((p for p in targets if p.card.id==event.get('target')),None) if event.get('target') else max(targets,key=lambda p:(self.effective_card(p).power,p.card.id),default=None)
@@ -2538,6 +2543,9 @@ class Simulator(AdvancedRules):
                 self.log('condition_failed','Intervening upkeep land threshold no longer holds.',
                          actor=event['controller'],source=event['source'],minimumLands=minimum)
                 continue
+            if event.get('operation')=='create_chosen_role':
+                self.resolve_chosen_role(event)
+                continue
             if event.get('operation')=='create_role':
                 self.resolve_role(event)
                 continue
@@ -2545,6 +2553,20 @@ class Simulator(AdvancedRules):
                 for part in event['steps']:
                     self._resolve_entry_effects([{**event,**part}],card)
                     if self.finished:return
+                continue
+            if event.get('operation')=='scry':
+                seat=event['controller'];owner=self.players[seat]
+                for _ in range(event.get('amount',1)):
+                    if not owner.library:break
+                    top=owner.library[-1]
+                    # The player sees the top card privately. Deterministic
+                    # baseline keeps it unless the decision hook chooses bottom.
+                    if self.choose_scry_bottom(seat,top):
+                        owner.library.insert(0,owner.library.pop())
+                        moved=True
+                    else:moved=False
+                    self.log('scry','Player scries one privately.',actor=seat,
+                             source=event['source'],movedToBottom=moved)
                 continue
             if event.get('operation')=='draw_cards':
                 if event.get('optional') and not self.choose_optional_draw(event):continue
@@ -3805,7 +3827,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and (rules.query("cost",cost)["supported"] or "Land" in event_definition.types and not cost)):
