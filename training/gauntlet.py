@@ -69,8 +69,11 @@ def match_telemetry(report):
         openingMulligans=list(report.get('openingMulligans',[])),
         landDropsBySeat=by_seat('land'),
         spellsCastBySeat=by_seat('cast'),
-        activationsBySeat=by_seat('activate'),
-        attacksBySeat=by_seat('attack'),
+        activationsBySeat=[sum(e.get('actor')==seat and
+                                (e.get('kind')=='activate' or str(e.get('kind','')).startswith('activate_'))
+                                for e in events) for seat in (0,1)],
+        attacksBySeat=[sum(e.get('actor')==seat and e.get('kind') in ('attack','attack_group')
+                           for e in events) for seat in (0,1)],
         priorityPassesBySeat=by_seat('priority_pass'),
         turnsStarted=list(report.get('turnsStarted',[])),
         turnsCompleted=list(report.get('turnsCompleted',[])),
