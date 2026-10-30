@@ -1,0 +1,1538 @@
+{
+  "schemaVersion": 1,
+  "sourceUrl": "https://archidekt.com/decks/14509839/mono_red_gobs",
+  "sourceDeckId": 14509839,
+  "name": "Mono Red Gobs",
+  "sourceUpdatedAt": "2025-07-28T10:34:05.525438Z",
+  "retrievedAt": "2026-10-30T13:12:59.429093+00:00",
+  "format": "commander",
+  "commanders": [
+    {
+      "name": "Krenko, Mob Boss",
+      "quantity": 1,
+      "oracleId": "68418069-f615-40ef-ae0d-764192acae00",
+      "manaCost": "{2}{R}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Goblin",
+        "Warrior"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "{T}: Create X 1/1 red Goblin creature tokens, where X is the number of Goblins you control.",
+      "power": "3",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    }
+  ],
+  "mainboard": [
+    {
+      "name": "General Kreat, the Boltbringer",
+      "quantity": 1,
+      "oracleId": "da1c1c70-c2fa-4ba7-89fe-d9af3fb353b9",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Goblin",
+        "Soldier"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Whenever one or more Goblins you control attack, create a 1/1 red Goblin creature token that's tapped and attacking.\nWhenever another creature you control enters, General Kreat deals 1 damage to each opponent.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Pashalik Mons",
+      "quantity": 1,
+      "oracleId": "bdb94ccd-1bb5-4bb7-9539-e1b1c97c19c5",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Goblin",
+        "Warrior"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Whenever Pashalik Mons or another Goblin you control dies, Pashalik Mons deals 1 damage to any target.\n{3}{R}, Sacrifice a Goblin: Create two 1/1 red Goblin creature tokens.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Krenko, Tin Street Kingpin",
+      "quantity": 1,
+      "oracleId": "e8065e1d-e937-4b56-8011-78f0d07328a0",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Goblin"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Whenever Krenko attacks, put a +1/+1 counter on it, then create a number of 1/1 red Goblin creature tokens equal to Krenko's power.",
+      "power": "1",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Squee, Dubious Monarch",
+      "quantity": 1,
+      "oracleId": "124a5dd7-c4f8-479c-9eb0-669aca01d045",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Goblin",
+        "Noble"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Haste\nWhenever Squee attacks, create a 1/1 red Goblin creature token that's tapped and attacking.\nYou may cast this card from your graveyard by paying {3}{R} and exiling four other cards from your graveyard rather than paying its mana cost.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Ali from Cairo",
+      "quantity": 1,
+      "oracleId": "6517edb3-30e2-40ba-b6e4-4554b4bbb342",
+      "manaCost": "{2}{R}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Damage that would reduce your life total to less than 1 reduces it to 1 instead.",
+      "power": "0",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Hammer of Purphoros",
+      "quantity": 1,
+      "oracleId": "212d058b-69c6-4dc2-8c93-bdfe26dc2ffe",
+      "manaCost": "{1}{R}{R}",
+      "types": [
+        "Artifact",
+        "Enchantment"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Creatures you control have haste.\n{2}{R}, {T}, Sacrifice a land: Create a 3/3 colorless Golem enchantment artifact creature token.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Infantry Shield",
+      "quantity": 1,
+      "oracleId": "71c68002-1489-4858-a8fb-1f575641983e",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Equipped creature has menace and mobilize X, where X is its power. (Whenever it attacks, create X tapped and attacking 1/1 red Warrior creature tokens. Sacrifice them at the beginning of the next end step.)\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Mechanized Warfare",
+      "quantity": 1,
+      "oracleId": "c912a43b-8994-434e-84c0-f4cf58abbd42",
+      "manaCost": "{1}{R}{R}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "If a red or artifact source you control would deal damage to an opponent or a permanent an opponent controls, it deals that much damage plus 1 instead.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Dictate of the Twin Gods",
+      "quantity": 1,
+      "oracleId": "3d960d33-623a-4415-ae00-f8cffbc15f5a",
+      "manaCost": "{3}{R}{R}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Flash\nIf a source would deal damage to a permanent or player, it deals double that damage to that permanent or player instead.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Fortune Thief",
+      "quantity": 1,
+      "oracleId": "860add4f-8fe4-4441-b394-f3a48d610b90",
+      "manaCost": "{4}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Rogue"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Damage that would reduce your life total to less than 1 reduces it to 1 instead.\nMorph {R}{R} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)",
+      "power": "0",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Gratuitous Violence",
+      "quantity": 1,
+      "oracleId": "7c340a39-4ee0-4ba1-bb66-6674f8020fda",
+      "manaCost": "{2}{R}{R}{R}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "If a creature you control would deal damage to a permanent or player, it deals double that damage instead.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Sulfuric Vapors",
+      "quantity": 1,
+      "oracleId": "40b14aaa-f29e-4e84-9bdc-bc2ac9762ce9",
+      "manaCost": "{3}{R}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "If a red spell would deal damage to a permanent or player, it deals that much damage plus 1 to that permanent or player instead.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "The Sound of Drums",
+      "quantity": 1,
+      "oracleId": "0afcc646-cb34-4c0e-b3f5-4115ad4faa8e",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Aura"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Enchant creature\nEnchanted creature is goaded.\nIf enchanted creature would deal combat damage to a permanent or player, it deals double that damage instead.\n{2}{R}: Return this card from your graveyard to your hand.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Sulfuric Vortex",
+      "quantity": 1,
+      "oracleId": "7652f328-e142-494b-a869-772ced10c26a",
+      "manaCost": "{1}{R}{R}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "At the beginning of each player's upkeep, this enchantment deals 2 damage to that player.\nIf a player would gain life, that player gains no life instead.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Howlsquad Heavy",
+      "quantity": 1,
+      "oracleId": "cd45a29f-73bc-435c-9d50-09a4ecaa77be",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Mercenary"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Start your engines!\nOther Goblins you control have haste.\nAt the beginning of combat on your turn, create a 1/1 red Goblin creature token. That token attacks this combat if able.\nMax speed — {T}: Add {R} for each Goblin you control.",
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Skirk Prospector",
+      "quantity": 1,
+      "oracleId": "c18013e4-0b99-44e3-a2b2-027ace68723a",
+      "manaCost": "{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Sacrifice a Goblin: Add {R}.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Braid of Fire",
+      "quantity": 1,
+      "oracleId": "796009b3-73b5-42c0-a490-66f12be5a42e",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Cumulative upkeep—Add {R}. (At the beginning of your upkeep, put an age counter on this permanent, then sacrifice it unless you pay its upkeep cost for each age counter on it.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Thornbite Staff",
+      "quantity": 1,
+      "oracleId": "dae4815e-9025-4993-ab46-52a3f1a7219e",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact",
+        "Kindred"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment",
+        "Shaman"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature has \"{2}, {T}: This creature deals 1 damage to any target\" and \"Whenever a creature dies, untap this creature.\"\nWhenever a Shaman creature enters, you may attach this Equipment to it.\nEquip {4}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Mana Echoes",
+      "quantity": 1,
+      "oracleId": "369e90e5-a31b-49cc-b594-8a853f244be1",
+      "manaCost": "{2}{R}{R}",
+      "types": [
+        "Enchantment"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Whenever a creature enters, you may add an amount of {C} equal to the number of creatures you control that share a creature type with it.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Goblin Matron",
+      "quantity": 1,
+      "oracleId": "145737a7-c597-4dec-b752-207c2d0501e3",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "When this creature enters, you may search your library for a Goblin card, reveal that card, put it into your hand, then shuffle.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Goblin Recruiter",
+      "quantity": 1,
+      "oracleId": "792e1072-00bf-4f63-b956-5f20cdf09f11",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "When this creature enters, search your library for any number of Goblin cards, reveal them, then shuffle and put those cards on top in any order.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Bitterthorn, Nissa's Animus",
+      "quantity": 1,
+      "oracleId": "5a57fba3-01e3-4852-8c45-7c910502bd03",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Living weapon (When this Equipment enters, create a 0/0 black Phyrexian Germ creature token, then attach this to it.)\nEquipped creature gets +1/+1.\nWhenever equipped creature attacks, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nEquip {3}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Sword of Hearth and Home",
+      "quantity": 1,
+      "oracleId": "913e6182-706a-4872-8c8a-e146b0ae0738",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +2/+2 and has protection from green and from white.\nWhenever equipped creature deals combat damage to a player, exile up to one target creature you own, then search your library for a basic land card. Put both cards onto the battlefield under your control, then shuffle.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Sword of the Animist",
+      "quantity": 1,
+      "oracleId": "d79cbc61-6c15-48ea-bbba-3cffb819ccba",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +1/+1.\nWhenever equipped creature attacks, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Sword of Hours",
+      "quantity": 1,
+      "oracleId": "abaddcce-9039-4b4e-baf8-fdab304b5c52",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Whenever equipped creature attacks, put a +1/+1 counter on it.\nWhenever equipped creature deals combat damage, roll a d12. If the result is greater than the damage dealt or the result is 12, double the number of +1/+1 counters on that creature.\nEquip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Sword of Fire and Ice",
+      "quantity": 1,
+      "oracleId": "2ccdc60a-49a9-44b9-a7af-0ebf18b26785",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +2/+2 and has protection from red and from blue.\nWhenever equipped creature deals combat damage to a player, this Equipment deals 2 damage to any target and you draw a card.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Sword of Truth and Justice",
+      "quantity": 1,
+      "oracleId": "7a8baaf9-e21f-41a0-9f15-80764f6e5e68",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +2/+2 and has protection from white and from blue.\nWhenever equipped creature deals combat damage to a player, put a +1/+1 counter on a creature you control, then proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Sword of Light and Shadow",
+      "quantity": 1,
+      "oracleId": "01c8a554-45a6-46ca-b40a-af0fd4529e40",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +2/+2 and has protection from white and from black.\nWhenever equipped creature deals combat damage to a player, you gain 3 life and you may return up to one target creature card from your graveyard to your hand.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Sword of Body and Mind",
+      "quantity": 1,
+      "oracleId": "fac42229-4f5f-4d04-85dd-5031d4e435aa",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +2/+2 and has protection from green and from blue.\nWhenever equipped creature deals combat damage to a player, you create a 2/2 green Wolf creature token and that player mills ten cards.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Excalibur, Sword of Eden",
+      "quantity": 1,
+      "oracleId": "9fb6bd72-031b-40a1-83c5-8a1c82f84e12",
+      "manaCost": "{12}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "This spell costs {X} less to cast, where X is the total mana value of historic permanents you control. (Artifacts, legendaries, and Sagas are historic.)\nEquipped creature gets +10/+0 and has vigilance.\nEquip legendary creature {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Sword of Vengeance",
+      "quantity": 1,
+      "oracleId": "e366afb3-c447-4bde-b358-41c8568142d5",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +2/+0 and has first strike, vigilance, trample, and haste.\nEquip {3}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Sword of Feast and Famine",
+      "quantity": 1,
+      "oracleId": "d0901053-6de0-46d0-9ee3-8d40510236c1",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +2/+2 and has protection from black and from green.\nWhenever equipped creature deals combat damage to a player, that player discards a card and you untap all lands you control.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Sword of the Squeak",
+      "quantity": 1,
+      "oracleId": "6ede28a7-57ea-47d6-a5fb-b0f061da2689",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +1/+1 for each creature you control with base power or toughness 1.\nWhenever a Hamster, Mouse, Rat, or Squirrel you control enters, you may attach this Equipment to that creature.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Kazuul's Toll Collector",
+      "quantity": 1,
+      "oracleId": "3b0694ff-aa92-4a2e-a366-69fdf5a57c4b",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Warrior",
+        "Ogre"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "{0}: Attach target Equipment you control to this creature. Activate only as a sorcery.",
+      "power": "3",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Bladegraft Aspirant",
+      "quantity": 1,
+      "oracleId": "644c785d-3061-44bc-9f78-bc939c565bf4",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Warrior",
+        "Phyrexian"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Menace\nEquipment spells you cast cost {1} less to cast.\nActivated abilities of Equipment you control that target this creature cost {1} less to activate.",
+      "power": "2",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Champion of the Flame",
+      "quantity": 1,
+      "oracleId": "d9dbe40f-38e9-460a-b84f-4aa22650017e",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Human",
+        "Warrior"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Trample\nThis creature gets +2/+2 for each Aura and Equipment attached to it.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Valduk, Keeper of the Flame",
+      "quantity": 1,
+      "oracleId": "102b0a65-f2e0-4ef3-a9dc-4a85557b852e",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Human",
+        "Shaman"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "At the beginning of combat on your turn, for each Aura and Equipment attached to Valduk, create a 3/1 red Elemental creature token with trample and haste. Exile those tokens at the beginning of the next end step.",
+      "power": "3",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Goblin Gaveleer",
+      "quantity": 1,
+      "oracleId": "739621e6-e138-4ef9-87e8-c730b5a7f495",
+      "manaCost": "{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Warrior"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Trample\nThis creature gets +2/+0 for each Equipment attached to it.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Mister Gutsy",
+      "quantity": 1,
+      "oracleId": "09763d9a-056f-49db-a72b-1c7325075789",
+      "manaCost": "{2}",
+      "types": [
+        "Creature",
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Soldier",
+        "Robot"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Whenever you cast an Aura or Equipment spell, put a +1/+1 counter on this creature.\nWhen this creature dies, create X Junk tokens, where X is the number of +1/+1 counters on it. (They're artifacts with \"{T}, Sacrifice this token: Exile the top card of your library. You may play that card this turn. Activate only as a sorcery.\")",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Raubahn, Bull of Ala Mhigo",
+      "quantity": 1,
+      "oracleId": "d81d5749-ab4d-42c5-8903-0b400f10fe33",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Human",
+        "Warrior"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Ward—Pay life equal to Raubahn's power.\nWhenever Raubahn attacks, attach up to one target Equipment you control to target attacking creature.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Armory Automaton",
+      "quantity": 1,
+      "oracleId": "fa3335be-80b1-49d7-9809-5bef13be79f4",
+      "manaCost": "{3}",
+      "types": [
+        "Creature",
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Construct"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Whenever this creature enters or attacks, you may attach any number of target Equipment to it. (Control of the Equipment doesn't change.)",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Myr Adapter",
+      "quantity": 1,
+      "oracleId": "714f916a-10ac-4c54-b1c7-a97b7ad8b9e5",
+      "manaCost": "{3}",
+      "types": [
+        "Creature",
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Myr"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "This creature gets +1/+1 for each Equipment attached to it.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Brass Squire",
+      "quantity": 1,
+      "oracleId": "5a10c3a5-6724-4e5a-ae4f-b27dde12735a",
+      "manaCost": "{3}",
+      "types": [
+        "Creature",
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Myr"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "{T}: Attach target Equipment you control to target creature you control.",
+      "power": "1",
+      "toughness": "3",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Rhuk, Hexgold Nabber",
+      "quantity": 1,
+      "oracleId": "06607cba-76ba-4145-a5b5-24d3428142ac",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [
+        "Legendary"
+      ],
+      "subTypes": [
+        "Goblin",
+        "Rebel"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Trample, haste\nWhenever an equipped creature you control other than Rhuk attacks or dies, you may attach all Equipment attached to that creature to Rhuk.",
+      "power": "2",
+      "toughness": "2",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Hordeling Outburst",
+      "quantity": 1,
+      "oracleId": "a6450b8e-eb18-431c-9eb7-7daf107978b2",
+      "manaCost": "{1}{R}{R}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Create three 1/1 red Goblin creature tokens.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Mountain",
+      "quantity": 28,
+      "oracleId": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [
+        "Basic"
+      ],
+      "subTypes": [
+        "Mountain"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "({T}: Add {R}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Snow-Covered Mountain",
+      "quantity": 10,
+      "oracleId": "ca9f660b-e07d-4f42-a46e-abd0ca72510c",
+      "manaCost": "",
+      "types": [
+        "Land"
+      ],
+      "superTypes": [
+        "Basic",
+        "Snow"
+      ],
+      "subTypes": [
+        "Mountain"
+      ],
+      "colors": [],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "({T}: Add {R}.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Dragon Fodder",
+      "quantity": 1,
+      "oracleId": "d0d2c45b-b6e3-4999-bdab-976e8f0d6617",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Create two 1/1 red Goblin creature tokens.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Abrade",
+      "quantity": 1,
+      "oracleId": "f9db72dc-9a5b-48a4-a86e-7464d9a2166a",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Choose one —\n• Abrade deals 3 damage to target creature.\n• Destroy target artifact.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Brightstone Ritual",
+      "quantity": 1,
+      "oracleId": "08e90e85-4103-4acb-a8a7-e1329b460aa7",
+      "manaCost": "{R}",
+      "types": [
+        "Instant"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Add {R} for each Goblin on the battlefield.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Goblin War Strike",
+      "quantity": 1,
+      "oracleId": "5944d5c7-65ab-425f-a453-ed5871ca3d73",
+      "manaCost": "{R}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Goblin War Strike deals damage to target player or planeswalker equal to the number of Goblins you control.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Krenko's Command",
+      "quantity": 1,
+      "oracleId": "9cfe86ae-eebe-44aa-a956-4b3e9e621105",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Create two 1/1 red Goblin creature tokens.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Endless Atlas",
+      "quantity": 1,
+      "oracleId": "cb923c4d-1d2e-4039-90bb-72d1981b9738",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "{2}, {T}: Draw a card. Activate only if you control three or more lands with the same name.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Basilisk Collar",
+      "quantity": 1,
+      "oracleId": "f5f4dd28-f4ae-4d39-b9b8-6ebfd63c93fe",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature has deathtouch and lifelink. (Any amount of damage it deals to a creature is enough to destroy it. Damage dealt by this creature also causes you to gain that much life.)\nEquip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Goblin Sharpshooter",
+      "quantity": 1,
+      "oracleId": "d81285b7-a718-411a-8be3-ecc0cfe0bcb0",
+      "manaCost": "{2}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "This creature doesn't untap during your untap step.\nWhenever a creature dies, untap this creature.\n{T}: This creature deals 1 damage to any target.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Quietus Spike",
+      "quantity": 1,
+      "oracleId": "0ff0a309-9b4a-4f9e-9ea6-c4d07906ebec",
+      "manaCost": "{3}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature has deathtouch.\nWhenever equipped creature deals combat damage to a player, that player loses half their life, rounded up.\nEquip {3}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Dissection Tools",
+      "quantity": 1,
+      "oracleId": "50de5faa-d22e-4909-a1ff-3810cfcfcb1a",
+      "manaCost": "{5}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "When this Equipment enters, manifest dread, then attach this Equipment to that creature.\nEquipped creature gets +2/+2 and has deathtouch and lifelink.\nEquip—Sacrifice a creature.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Gorgon's Head",
+      "quantity": 1,
+      "oracleId": "190cdc23-fa05-475f-b853-471ca0f21b71",
+      "manaCost": "{1}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature has deathtouch.\nEquip {2}",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Gorgon Flail",
+      "quantity": 1,
+      "oracleId": "91dab3e2-039e-4db9-94e3-1146bced18ed",
+      "manaCost": "{2}",
+      "types": [
+        "Artifact"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Equipment"
+      ],
+      "colors": [],
+      "colorIdentity": [],
+      "oracleText": "Equipped creature gets +1/+1 and has deathtouch. (Any amount of damage it deals to a creature is enough to destroy that creature.)\nEquip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Gamble",
+      "quantity": 1,
+      "oracleId": "a54f0869-94c8-42af-9080-166efb9486a4",
+      "manaCost": "{R}",
+      "types": [
+        "Sorcery"
+      ],
+      "superTypes": [],
+      "subTypes": [],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Search your library for a card, put that card into your hand, discard a card at random, then shuffle.",
+      "power": "",
+      "toughness": "",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Bloodmark Mentor",
+      "quantity": 1,
+      "oracleId": "8c22b218-cf40-47af-8c11-73c581a43390",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Warrior"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "Red creatures you control have first strike.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Rigging Runner",
+      "quantity": 1,
+      "oracleId": "72b600e3-d671-4279-8ca6-9a3d6e774b53",
+      "manaCost": "{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Pirate"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "First strike\nRaid — This creature enters with a +1/+1 counter on it if you attacked this turn.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    },
+    {
+      "name": "Goblin Instigator",
+      "quantity": 1,
+      "oracleId": "8b022754-6d16-470e-b754-4df6e4f4709e",
+      "manaCost": "{1}{R}",
+      "types": [
+        "Creature"
+      ],
+      "superTypes": [],
+      "subTypes": [
+        "Goblin",
+        "Rogue"
+      ],
+      "colors": [
+        "Red"
+      ],
+      "colorIdentity": [
+        "Red"
+      ],
+      "oracleText": "When this creature enters, create a 1/1 red Goblin creature token.",
+      "power": "1",
+      "toughness": "1",
+      "layout": "normal",
+      "faces": [],
+      "loyalty": null
+    }
+  ]
+}
