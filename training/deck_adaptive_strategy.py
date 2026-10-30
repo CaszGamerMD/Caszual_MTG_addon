@@ -15,6 +15,7 @@ import re
 
 import simulator as s
 from goblin_strategy import _combat_estimate, _mana_value, _words
+from strategy_building_blocks import StrategyRoute, plan_for_deck, map_mechanics, compose_routes
 
 _CASTS = frozenset(('cast','cast_commander','cast_exile','cast_flashback','cast_modal_back','bestow'))
 _TYPES = ('Creature','Enchantment','Artifact','Land','Instant','Sorcery')
@@ -31,6 +32,9 @@ class DeckPlan:
     metrics: tuple[tuple[str, int], ...] = ()
     rankings: tuple[tuple[str, float], ...] = ()
     commander_types: tuple[str, ...] = ()
+    routes: tuple[StrategyRoute, ...] = ()
+    card_roles: tuple[tuple[str, tuple[str, ...]], ...] = ()
+    commander_roles: tuple[str, ...] = ()
 
     def metric(self, name):
         return dict(self.metrics).get(name, 0)
@@ -40,7 +44,8 @@ class DeckPlan:
 
     def describe(self):
         return dict(primary=self.primary, secondary=self.secondary, tribe=self.tribe,
-                    metrics=dict(self.metrics), rankings=dict(self.rankings))
+                    metrics=dict(self.metrics), rankings=dict(self.rankings),
+                    strategyRoutes=[r.describe() for r in self.routes])
 
 
 def _card_mana_value(raw):
@@ -113,9 +118,14 @@ def analyze_deck(deck: dict) -> DeckPlan:
         'midrange': 1.7,
     }
     ranked = sorted(ranks.items(), key=lambda row: (-row[1], row[0]))
+    # Strategy routes are composed from reusable rules-text roles, independent
+    # of the legacy archetype names and from the exact same own decklist.
+    mechanics = map_mechanics(deck)
+    routes = compose_routes(mechanics)
     return DeckPlan(ranked[0][0], ranked[1][0], tribe,
                     tuple(sorted(metrics.items())), tuple(sorted((k,round(v,3)) for k,v in ranks.items())),
-                    tuple(commanders[0].get('types', ())))
+                    tuple(commanders[0].get('types', ())), routes,
+                    tuple((c.name, c.blocks) for c in mechanics), mechanics[-1].blocks)
 
 
 def tactical_mode(observation: s.Observation) -> str:
@@ -156,7 +166,8 @@ class AdaptiveDeckPolicy(s.Policy):
 
     def decision_context(self, observation: s.Observation) -> dict:
         return {'strategyPlan': self.plan.primary, 'strategySupport': self.plan.secondary,
-                'strategyMode': tactical_mode(observation)}
+                'strategyMode': tactical_mode(observation),
+                'strategyRoute': self.plan.routes[0].describe() if self.plan.routes else None}
 
     def choose(self, observation: s.Observation) -> s.Candidate:
         if not observation.legal_actions:
@@ -180,6 +191,8 @@ class AdaptiveDeckPolicy(s.Policy):
         own_life = own.get('life', 40)
         hand = {c.id:c for c in observation.own_hand}
         p, q = self.plan.primary, self.plan.secondary
+        roles = dict(self.plan.card_roles)
+        route_steps = set(self.plan.routes[0].steps) if self.plan.routes else set()
         def affinity(name):
             return 1.0 if p == name else 0.45 if q == name else 0.0
 
@@ -199,6 +212,24 @@ class AdaptiveDeckPolicy(s.Policy):
                         score -= 3
             elif kind in _CASTS:
                 card = hand.get(a.card_id)
+                action_roles = set(self.plan.commander_roles if kind == 'cast_commander'
+                                   else roles.get(card.name, ()) if card else ())
+                # Generalizable rules-to-strategy path: mana -> board -> engines
+                # -> buffs -> combat. Roles have value ONLY for already-legal
+                # actions and are adjusted by visible board conditions.
+                route_factor = 1 if not route_steps else 1 if action_roles & route_steps else 0.3
+                if 'mana_engine' in action_roles and observation.turn <= 5 and lands < 6:
+                    score += 3 * route_factor
+                if 'creature_supply' in action_roles or 'token_supply' in action_roles:
+                    score += (3.5 if mode == 'rebuild' or not creatures else 1.2) * route_factor
+                if 'board_amplifier' in action_roles:
+                    score += (4.5 if len(creatures) >= 3 else 2 if creatures else -4) * route_factor
+                if 'card_engine' in action_roles:
+                    score += (3 if len(hand) <= 3 else 1.2) * route_factor
+                if 'damage_payoff' in action_roles:
+                    score += (4 if len(creatures) >= 3 else 1.5) * route_factor
+                if 'life_engine' in action_roles and mode == 'stabilize':
+                    score += 3
                 if kind == 'cast_commander':
                     score += 2 + (3 if lands >= self.plan.metric('commander_mana_value') else 0)
                     if p=='enchantment_value' and 'Creature' in self.plan.commander_types:
