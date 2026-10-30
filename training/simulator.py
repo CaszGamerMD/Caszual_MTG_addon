@@ -689,6 +689,13 @@ class Simulator(AdvancedRules):
                     card.power,card.toughness,frozenset(k for k in card.traits.split(';')[-1].split(',') if k),
                     colors=frozenset(card.colors))
             if card.id in bestowed_targets:definition=self.bestowed_definition(definition)
+            if ('Land' in definition.types and not card.basic_land and
+                    any(state.definition.land_type_effect[:2]==('nonbasic','replace')
+                        for state in game.battlefield.values())):
+                original=definition
+                definition=EventDefinition(original.name,original.types,frozenset({'Mountain'}),
+                    original.legendary,original.power,original.toughness,frozenset(),
+                    colors=original.colors,mana_cost=original.mana_cost)
             enters_tapped=self.land_entry_tapped(card,controller,entry_logs) if card.kind=='land' else card.enters_tapped
             if definition.chosen_type_entry:
                 chosen_types[card.id]=self.choose_creature_type(controller,definition,game)
@@ -1168,9 +1175,11 @@ class Simulator(AdvancedRules):
 
     def land_counter_choices(self,seat):
         choices=[];player=self.players[seat]
+        game=self.event_game('main')
         for source in player.battlefield:
             definition=source.card.event_definition
-            if source.tapped or not definition or not definition.land_counter_ability:continue
+            if source.tapped or not definition or not definition.land_counter_ability or (
+                    source.card.id in game.battlefield and getattr(game.battlefield[source.card.id],'land_overridden',False)):continue
             # The land's tap is a separate cost; it cannot also pay the mana.
             options=[entry for entry in self.mana_sources(seat) if entry[0]!=source.card.id]
             payment=mana_pool.plan(definition.land_counter_ability,player.mana_pool,options)
@@ -1188,7 +1197,9 @@ class Simulator(AdvancedRules):
         player=self.players[seat]
         source=next((p for p in player.battlefield if p.card.id==source_id),None)
         definition=source.card.event_definition if source else None
-        if not definition or not definition.land_counter_ability or source.tapped:
+        state=self.event_game('main').battlefield.get(source_id)
+        if not definition or not definition.land_counter_ability or source.tapped or (
+                state and getattr(state,'land_overridden',False)):
             raise ValueError('Illegal land counter activation')
         payment=mana_pool.plan(definition.land_counter_ability,player.mana_pool,
                                [entry for entry in self.mana_sources(seat) if entry[0]!=source_id])
@@ -1206,10 +1217,12 @@ class Simulator(AdvancedRules):
 
     def scaled_mana_choices(self,seat):
         choices=[]
+        game=self.event_game('main')
         sources=dict(self.mana_sources(seat))
         for item in self.players[seat].battlefield:
             definition=item.card.event_definition
-            if not definition or not definition.scaled_mana_tap or item.card.id not in sources:continue
+            if not definition or not definition.scaled_mana_tap or item.card.id not in sources or (
+                    item.card.id in game.battlefield and getattr(game.battlefield[item.card.id],'land_overridden',False)):continue
             for color in range(5):
                 choices.append(Candidate(item.card.id+':mana:'+str(color),'activate_scaled_mana',item.card.id,
                     features=features(power=.1),label='Tap '+item.card.name+' for '+mana_pool.COLORS[color],x_value=color))
@@ -1220,7 +1233,9 @@ class Simulator(AdvancedRules):
             raise ValueError('Illegal mana ability choice')
         sources=dict(self.mana_sources(seat))
         source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
-        if not source or not source.card.event_definition or not source.card.event_definition.scaled_mana_tap or source_id not in sources:
+        state=self.event_game('main').battlefield.get(source_id)
+        if not source or not source.card.event_definition or not source.card.event_definition.scaled_mana_tap or source_id not in sources or (
+                state and getattr(state,'land_overridden',False)):
             raise ValueError('Illegal mana ability source')
         amount=sources[source_id][color][color]
         source.tapped=True

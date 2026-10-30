@@ -65,6 +65,18 @@ class LandTypeCycle(unittest.TestCase):
         self.assertEqual(set(i for i in range(6) if any(v[i] for v in dict(sim.mana_sources(1))[enemy.card.id])),{1,2})
         sim.invariant()
 
+    def test_moon_suppresses_nonbasic_land_activated_abilities(self):
+        sim,cards=self.fixture(['Blood Moon','Gavony Township'])
+        township=self.put(sim,cards['Gavony Township'])
+        self.assertTrue(any(c.card_id==township.card.id for c in sim.land_counter_choices(0)))
+        moon=self.put(sim,cards['Blood Moon'])
+        self.assertFalse(any(c.card_id==township.card.id for c in sim.land_counter_choices(0)))
+        with self.assertRaisesRegex(ValueError,'Illegal land counter activation'):
+            sim.activate_land_counters(0,township.card.id)
+        sim.send_to_destination(sim.players[0],moon)
+        self.assertTrue(any(c.card_id==township.card.id for c in sim.land_counter_choices(0)))
+        sim.invariant()
+
     def test_overridden_nonbasic_land_loses_enter_tapped_ability(self):
         sim,cards=self.fixture(['Blood Moon'])
         moon=self.put(sim,cards['Blood Moon'])
