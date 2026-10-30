@@ -588,6 +588,15 @@ class Simulator(AdvancedRules):
                     entered_at=item.entered_at,attachment_at=item.attachment_at,lost_abilities=dict(item.lost_abilities),
                     temporary_ability_times=dict(item.temporary_ability_times),loyalty=item.loyalty,charge_counters=item.charge_counters,chosen_subtype=item.chosen_subtype,keyword_counters=item.keyword_counters,
                     attacking=(1-seat if self.group_combat and card.id in self.group_combat['attackers'] else None))
+        # Equipment's layer-4 type-changing effect acts on the actual equipped
+        # permanent, including an otherwise noncreature planeswalker. Rebuild
+        # from the original Card definition each time, so detachment restores
+        # the original type without changing zone identity.
+        for equipment in list(game.battlefield.values()):
+            if equipment.definition.equipment_creature_conversion and equipment.attached_to in game.battlefield:
+                target=game.battlefield[equipment.attached_to]
+                types=(set(target.definition.types)|{'Creature'})-{'Planeswalker'}
+                target.definition=replace(target.definition,types=frozenset(types))
         self.apply_land_type_effects(game)
         return game
 
@@ -1592,26 +1601,55 @@ class Simulator(AdvancedRules):
 
     def equip_choices(self,seat):
         choices=[]
+        game=self.event_game('main')
         for source in self.players[seat].battlefield:
-            if source.card.kind!='equipment' or source.attached_to:continue
-            cost=source.card.event_definition.attachment[1]
-            if not self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)['paid']:continue
-            for owner,target in self.creature_targets(seat,source.card):
-                if owner==seat and source.attached_to!=target.card.id:
-                    choices.append(Candidate(source.card.id+':equip:'+target.card.id,'equip',source.card.id,
-                        features=features(power=.5),label='Equip '+source.card.name,target_permanent=target.card.id))
+            definition=source.card.event_definition
+            if source.card.kind!='equipment' or not definition or not definition.attachment:continue
+            cost=definition.attachment[1]
+            if self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)['paid']:
+                for owner,target in self.creature_targets(seat,source.card):
+                    if owner==seat and source.attached_to!=target.card.id:
+                        choices.append(Candidate(source.card.id+':equip:'+target.card.id,'equip',source.card.id,
+                            features=features(power=.5),label='Equip '+source.card.name,target_permanent=target.card.id))
+            alternate=definition.equipment_planeswalker_cost
+            if not alternate or not self.payment(replace(source.card,mana_cost=alternate),
+                                                 seat=seat,spell_cost=False)['paid']:continue
+            for target in self.players[seat].battlefield:
+                state=game.battlefield.get(target.card.id)
+                if state and 'Planeswalker' in state.definition.types and (
+                        target.card.id!=source.attached_to and not game.has(state,'shroud')
+                        and not game.protected(state,source.card.colors)):
+                    choices.append(Candidate(source.card.id+':equip-pw:'+target.card.id,
+                        'equip_planeswalker',source.card.id,features=features(power=.5),
+                        label='Equip planeswalker '+source.card.name,target_permanent=target.card.id))
         return choices
 
-    def activate_equip(self,seat,source_id,target):
-        if self.stack.items or self.stack.priority!=seat or seat!=self.active or self.phase not in ('main','second_main'):raise ValueError('Illegal equip timing')
-        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id and p.card.kind=='equipment'),None)
-        if source is None or target not in {p.card.id for owner,p in self.creature_targets(seat,source.card) if owner==seat}:raise ValueError('Illegal equip target')
-        payment=self.payment(replace(source.card,mana_cost=source.card.event_definition.attachment[1]),seat=seat,spell_cost=False)
+    def activate_equip(self,seat,source_id,target,planeswalker=False):
+        if self.stack.items or self.stack.priority!=seat or seat!=self.active or self.phase not in ('main','second_main'):
+            raise ValueError('Illegal equip timing')
+        source=next((p for p in self.players[seat].battlefield
+                     if p.card.id==source_id and p.card.kind=='equipment'),None)
+        if source is None or not source.card.event_definition:raise ValueError('Illegal equip source')
+        game=self.event_game('main')
+        if planeswalker:
+            candidate=game.battlefield.get(target)
+            eligible=bool(candidate and candidate.controller==seat and
+                          'Planeswalker' in candidate.definition.types and
+                          not game.has(candidate,'shroud') and
+                          not game.protected(candidate,source.card.colors))
+            cost=source.card.event_definition.equipment_planeswalker_cost
+        else:
+            eligible=target in {p.card.id for owner,p in self.creature_targets(seat,source.card) if owner==seat}
+            cost=source.card.event_definition.attachment[1]
+        if not eligible or not cost or source.attached_to==target:raise ValueError('Illegal equip target')
+        payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
         if not payment['paid']:raise ValueError('Cannot pay equip')
         for p in self.players[seat].battlefield:
             if p.card.id in payment['sources']:p.tapped=True
         self.players[seat].mana_pool=list(payment['pool'])
-        self.resolve_entry_triggers([dict(operation='attach',source=source_id,target=target,controller=seat,name=source.card.name)],source.card)
+        self.resolve_entry_triggers([dict(operation='attach',source=source_id,target=target,
+                              controller=seat,name=source.card.name,
+                              equipTargetType='planeswalker' if planeswalker else 'creature')],source.card)
 
     def creature_targets(self,controller=None,source=None):
         game=self.event_game('main')
@@ -3157,10 +3195,20 @@ class Simulator(AdvancedRules):
                 continue
             elif event.get('operation')=='attach':
                 source=next((p for p in self.players[event['controller']].battlefield if p.card.id==event['source']),None)
-                if source and event['target'] in {p.card.id for owner,p in self.creature_targets(event['controller'],source.card) if owner==event['controller']}:
-                    if source.attached_to!=event['target']:
-                        source.attached_to=event['target']
-                        self.effect_clock+=1;source.attachment_at=self.effect_clock
+                game=self.event_game('main')
+                target=game.battlefield.get(event['target'])
+                if event.get('equipTargetType')=='planeswalker':
+                    valid=bool(source and target and target.controller==event['controller']
+                               and 'Planeswalker' in target.definition.types
+                               and not game.has(target,'shroud')
+                               and not game.protected(target,source.card.colors))
+                else:
+                    valid=bool(source and event['target'] in {p.card.id for owner,p in
+                                 self.creature_targets(event['controller'],source.card)
+                                 if owner==event['controller']})
+                if valid and source.attached_to!=event['target']:
+                    source.attached_to=event['target']
+                    self.effect_clock+=1;source.attachment_at=self.effect_clock
                 message=f"{event['name']}: equip ability resolves."
             elif event.get('operation') in ('enchanted_counters','enchanted_double_counters'):
                 aura=next((item for player in self.players for item in player.battlefield
@@ -3908,8 +3956,9 @@ class Simulator(AdvancedRules):
             elif choice.kind=='activate_sacrifice_protection':
                 self.activate_sacrifice_protection(self.active,choice.card_id,choice.target_permanent,
                                                   ('White','Blue','Black','Red','Green')[choice.x_value])
-            elif choice.kind=='equip':
-                self.activate_equip(self.active,choice.card_id,choice.target_permanent)
+            elif choice.kind in ('equip','equip_planeswalker'):
+                self.activate_equip(self.active,choice.card_id,choice.target_permanent,
+                                   planeswalker=choice.kind=='equip_planeswalker')
             elif choice.kind in ('crew','saddle'):
                 self.activate_transport(self.active,choice.kind,choice.card_id,choice.tap_ids)
             else:

@@ -150,6 +150,9 @@ class Definition:
     graveyard_exile_activation: tuple = ()  # Cost, conditional creature-token specification.
     enchantment_copy_cost: str = ''  # Pay mana and tap to copy a stack ability from an enchantment.
     class_program: tuple = ()  # Spell tax, Level 2/3 costs, anthem, attack bonus and keyword.
+    attachment_counter_scale: tuple = ()  # P/T added per counter on the attached permanent.
+    equipment_planeswalker_cost: str = ''  # Alternative equip targeting a planeswalker.
+    equipment_creature_conversion: bool = False  # Equipped permanent becomes non-planeswalker creature.
 
 
 def parse_card(card: dict) -> Definition:
@@ -176,6 +179,14 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from counter_equipment import parse as parse_counter_equipment
+    scaling_equipment=parse_counter_equipment(text,types,subtypes)
+    if scaling_equipment:
+        return Definition(**base,abilities=frozenset(),
+                          attachment=scaling_equipment[0],
+                          attachment_counter_scale=scaling_equipment[1],
+                          equipment_planeswalker_cost=scaling_equipment[2],
+                          equipment_creature_conversion=True)
     from class_abilities import parse as parse_class
     class_program=parse_class(text,types,subtypes)
     if class_program:
@@ -514,6 +525,11 @@ class Game:
         for source in self.battlefield.values():
             if source.attached_to==p.id and source.definition.attachment:
                 power_bonus+=source.definition.attachment[3];toughness_bonus+=source.definition.attachment[4]
+            if source.attached_to==p.id and source.definition.attachment_counter_scale:
+                # Known counter kinds share the same physical permanent.
+                count=p.counters+p.charge_counters+(p.loyalty or 0)
+                power,toughness=source.definition.attachment_counter_scale
+                power_bonus+=power*count;toughness_bonus+=toughness*count
             if source.attached_to==p.id and source.definition.attachment_scale:
                 power,toughness,types=source.definition.attachment_scale
                 count=sum(x.controller==source.controller and bool(set(types)&x.definition.types) for x in self.battlefield.values())
