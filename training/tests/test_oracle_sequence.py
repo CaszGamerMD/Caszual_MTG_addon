@@ -54,6 +54,7 @@ class OracleSequenceTests(unittest.TestCase):
             'draw a card, then teleport a creature.',
             'create a 1/1 green Elf creature token and rewrite the rules.',
             'draw a card, then destroy target creature.',
+            'draw a card, then target player loses 2 life.',
             'draw a card, then',
             'draw a card and then draw a second card.',
         ):
