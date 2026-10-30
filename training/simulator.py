@@ -4465,9 +4465,9 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                          layout='normal',faces=[])
                 parsed=import_diagnostic_card(rules,raw,seat,uid,identity)
                 if noncastable and not printed_cost and parsed.kind!='unsupported':
-                    definition=parsed.event_definition
+                    face_event=parsed.event_definition
                     parsed=replace(parsed,mana_cost='',printed_mana_value=None,
-                        event_definition=replace(definition,mana_cost='') if definition else None)
+                        event_definition=replace(face_event,mana_cost='') if face_event else None)
                 return parsed
             front=as_card(faces[0]);back=as_card(faces[1],noncastable=True)
             if (front.kind=='enchantment' and front.event_definition and
