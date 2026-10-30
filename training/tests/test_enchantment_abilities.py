@@ -183,6 +183,33 @@ class EnchantmentChecks(unittest.TestCase):
         self.assertEqual(s.import_diagnostic_card(self.rules,same,0,'bad-duplicate',{'White'}).kind,
                          'unsupported')
 
+    def test_unseen_other_enchantment_creature_anthem_is_type_intersection(self):
+        text='Other enchantment creatures you control get +2/+1.'
+        raw=dict(self.lookup['Ellivere of the Wild Court'],name='Unseen Enchantment Shepherd',
+                 manaCost='{1}{G}',types=['Creature','Enchantment'],subTypes=['Druid'],
+                 power='2',toughness='2',oracleText=text)
+        card=s.import_diagnostic_card(self.rules,raw,0,'lord',{'Green'})
+        self.assertEqual(card.kind,'creature')
+        source=card.event_definition.static_effects[0]
+        self.assertEqual((source.power,source.toughness,source.subject.permanent_type),(2,1,'Enchantment'))
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+[card],s.demo_deck(1)),diagnostic=True)
+        player=sim.players[0]
+        (player.hand if card in player.hand else player.library).remove(card)
+        sim.enter_creature(card,player)
+        dual_def=s.EventDefinition('Dual',frozenset({'Creature','Enchantment'}),frozenset(),False,2,2,frozenset())
+        ordinary_def=s.EventDefinition('Ordinary',frozenset({'Creature'}),frozenset(),False,2,2,frozenset())
+        for uid,definition,seat in [('dual',dual_def,0),('plain',ordinary_def,0),('enemy',dual_def,1)]:
+            sim.enter_creature(s.Card(uid,definition.name,'creature',power=2,toughness=2,
+                                      event_definition=definition,is_token=True),sim.players[seat])
+        stats=lambda uid:sim.effective_card(next(p for player in sim.players for p in player.battlefield if p.card.id==uid))
+        self.assertEqual((stats('dual').power,stats('dual').toughness),(4,3))
+        self.assertEqual((stats('plain').power,stats('plain').toughness),(2,2))
+        self.assertEqual((stats('enemy').power,stats('enemy').toughness),(2,2))
+        self.assertEqual(stats('lord').power,2)  # Other excludes the source.
+        raw['oracleText']+='\\nWhen frogs fly, draw unknown cards.'
+        self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad',{'Green'}).kind,'unsupported')
+        sim.invariant()
+
     def test_armor_counts_itself_and_helm_does_not_make_creature_enchanted(self):
         sim,cards=self.fixture(['Ethereal Armor','Helm of the Gods'])
         host=self.token(sim,'host');equipment=self.put(sim,cards['Helm of the Gods'])

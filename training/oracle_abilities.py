@@ -109,6 +109,12 @@ class Program:
     chosen_type_entry: bool = False
 
 def static_effect(text):
+    # Enchantment creatures form a type intersection, not a creature subtype.
+    typed=re.fullmatch(r'(Other )?enchantment creatures you control get \\+([0-9]+)/\\+([0-9]+)\\.',text)
+    if typed:
+        return StaticEffect(Selector(relation='controller',other=bool(typed[1]),
+                                     creature=True,permanent_type='Enchantment'),
+                            int(typed[2]),int(typed[3]))
     opposing=re.fullmatch(r'Creatures your opponents control get ([+-][0-9]+)/([+-][0-9]+)\.',text)
     if opposing:
         return StaticEffect(Selector(relation='opponent',creature=True),int(opposing[1]),int(opposing[2]))
