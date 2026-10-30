@@ -67,7 +67,7 @@ def main():
     # Name-level blocker inventory for the two focused decks, emitted in CI
     # so each remaining rule family can be resolved without guessing.
     for item in data["decks"]:
-        if item["deckId"] in (5254666, 5189995):
+        if item["deckId"] in (5254666, 5189995, 14509839, 14435337):
             print("FOCUSED_UNRESOLVED " + json.dumps({
                 "deckId":item["deckId"],"deck":item["deck"],
                 "unresolved":item["unsupportedCards"],"count":item["unsupported"]
