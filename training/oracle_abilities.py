@@ -132,6 +132,14 @@ def static_effect(text):
     if global_subtype:
         return StaticEffect(Selector(creature=True,subtype=global_subtype[1]),
                             int(global_subtype[2]),int(global_subtype[3]))
+    # A subtype-qualified anthem with "you control" is not global and
+    # includes its own source when that source has the subtype.
+    controlled_subtype=re.fullmatch(
+        r'([A-Z][a-z]+) creatures you control get ([+-][0-9]+)/([+-][0-9]+)\\.',text)
+    if controlled_subtype:
+        return StaticEffect(Selector(relation='controller',creature=True,
+                                     subtype=controlled_subtype[1]),
+                            int(controlled_subtype[2]),int(controlled_subtype[3]))
     transport_anthem=re.fullmatch(r'([A-Z][a-z]+) and ([A-Z][a-z]+) you control get \+([0-9]+)/\+([0-9]+)\.',text)
     if transport_anthem:
         def singular(word):
