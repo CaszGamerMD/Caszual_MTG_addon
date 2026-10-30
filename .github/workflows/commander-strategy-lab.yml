@@ -5,7 +5,9 @@ on:
     paths:
       - training/strategy_plans.py
       - training/strategy_lab.py
+      - training/goblin_strategy.py
       - training/tests/test_strategy_lab.py
+      - training/tests/test_garbo_strategy.py
       - .github/workflows/commander-strategy-lab.yml
   workflow_dispatch:
 permissions:
@@ -26,7 +28,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Verify strategy tests
-        run: python -m unittest discover -s training/tests -p test_strategy_lab.py -v
+        run: |
+          python -m unittest discover -s training/tests -p test_strategy_lab.py -v
+          python -m unittest discover -s training/tests -p test_garbo_strategy.py -v
       - name: Check both complete decks
         run: |
           python training/diagnostic_coverage.py
@@ -42,10 +46,13 @@ jobs:
       - name: Evaluate phase-aware plan for both decks
         run: |
           python training/strategy_lab.py --focal training/decks/5189995-enchantments.json --opponent training/decks/5254666-garbo-gobbos.json --baseline training/reports/phase-plan-baseline/summary.json --games 4 --seed 5189995 --profile phase-plan --out training/reports/phase-plan-baseline/strategy-phase-plan.json
+      - name: Evaluate Garbo-only pressure plan against unchanged Wilds AI
+        run: |
+          python training/strategy_lab.py --focal training/decks/5189995-enchantments.json --opponent training/decks/5254666-garbo-gobbos.json --baseline training/reports/phase-plan-baseline/summary.json --games 4 --seed 5189995 --profile garbo-pressure --out training/reports/phase-plan-baseline/strategy-garbo-pressure.json
       - name: Upload strategy and replay evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: wilds-garbo-phase-planning-study
+          name: wilds-garbo-strategy-comparison
           path: training/reports/phase-plan-baseline/
           retention-days: 14
