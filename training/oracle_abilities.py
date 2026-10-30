@@ -109,6 +109,7 @@ class Program:
     attack_watchers: tuple = ()
     chosen_type_entry: bool = False
     opponent_life_gain_becomes_loss: bool = False
+    prevent_combat_damage_to_attackers: bool = False
 
 def static_effect(text):
     attached=re.fullmatch(r'Creatures you control that are enchanted or equipped have ([a-z ]+)\.',text)
@@ -378,7 +379,7 @@ def compile_abilities(text, name=''):
             text=re.sub(r'(?<= on )'+re.escape(short)+r'(?=\.| instead\.)','this creature',text)
         if ',' in name:
             text=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= isn't a creature| enters| attacks|\'s power)",'this creature',text)
-    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0;cost_reductions=[];counter_replacements=[];token_replacements=[];token_action_triggers=[];token_leave_triggers=[];entry_counter_grants=[];attack_watchers=[];chosen_type_entry=False;opponent_life_gain_becomes_loss=False
+    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0;cost_reductions=[];counter_replacements=[];token_replacements=[];token_action_triggers=[];token_leave_triggers=[];entry_counter_grants=[];attack_watchers=[];chosen_type_entry=False;opponent_life_gain_becomes_loss=False;prevent_combat_damage_to_attackers=False
     for line in text.splitlines():
         line=line.strip()
         if not line: continue
@@ -421,6 +422,9 @@ def compile_abilities(text, name=''):
         if line=='If an opponent would gain life, that player loses that much life instead.':
             if opponent_life_gain_becomes_loss:return None
             opponent_life_gain_becomes_loss=True;continue
+        if line=='Prevent all combat damage that would be dealt to attacking creatures you control.':
+            if prevent_combat_damage_to_attackers:return None
+            prevent_combat_damage_to_attackers=True;continue
         if line=='Creatures your opponents control enter tapped.':
             if opponent_creatures_enter_tapped:return None
             opponent_creatures_enter_tapped=True;continue
@@ -632,7 +636,7 @@ def compile_abilities(text, name=''):
             return None  # Repeating token engines need bounded stack/loop handling.
         triggers.append(Trigger(event,subject,action))
     if chosen_type_entry != any(e.subject.chosen_subtype for e in static_effects):return None
-    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers),tuple(token_leave_triggers),tuple(entry_counter_grants),tuple(attack_watchers),chosen_type_entry,opponent_life_gain_becomes_loss) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers or token_leave_triggers or entry_counter_grants or attack_watchers or opponent_life_gain_becomes_loss or keywords else None
+    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers),tuple(token_leave_triggers),tuple(entry_counter_grants),tuple(attack_watchers),chosen_type_entry,opponent_life_gain_becomes_loss,prevent_combat_damage_to_attackers) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers or token_leave_triggers or entry_counter_grants or attack_watchers or opponent_life_gain_becomes_loss or prevent_combat_damage_to_attackers or keywords else None
 
 def matches(subject, source, entered, is_creature):
     return ((not subject.self_only or source.id==entered.id)
