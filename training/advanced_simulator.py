@@ -227,6 +227,15 @@ class AdvancedRules:
    if len(ids)>=minimum:
     events.append(dict(operation='draw_cards',effect='draw for declared attack group',
                        source=watcher.id,controller=watcher.controller,name=watcher.definition.name,amount=amount))
+  # One trigger per controlled modal-attack source, even when it did not attack.
+  # The choice is locked in now; the token quantity/stats wait for resolution.
+  for watcher in g.battlefield.values():
+   if watcher.controller!=self.active or not watcher.definition.modal_attack_tokens:continue
+   mode=self.choose_modal_attack_mode(watcher.id,watcher.definition.modal_attack_tokens,ids)
+   if mode not in (0,1):raise ValueError('Invalid modal attack choice')
+   events.append(dict(operation='modal_attack_tokens',effect='modal attack token creation',
+                      source=watcher.id,controller=watcher.controller,name=watcher.definition.name,
+                      mode=mode,tokenSpec=dict(watcher.definition.modal_attack_tokens[mode])))
   # All attackers are declared simultaneously; mentor can target any lesser-power attacker.
   for identifier in ids:
    source=g.battlefield[identifier]
