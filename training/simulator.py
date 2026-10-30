@@ -1510,9 +1510,8 @@ class Simulator(AdvancedRules):
             program=item.card.event_definition
             if item.tapped or not program or not program.enchantment_copy_cost:continue
             cost=program.enchantment_copy_cost
-            sources=[entry for entry in self.mana_sources(seat) if entry[0]!=item.card.id]
             if not self.payment(replace(item.card,mana_cost=cost),seat=seat,
-                                spell_cost=False,sources=sources)['paid']:continue
+                                spell_cost=False,excluded_sources=(item.card.id,))['paid']:continue
             for target in targets:
                 choices.append(Candidate(item.card.id+':copy:'+str(target.id),
                          'copy_enchantment_ability',item.card.id,
@@ -1531,8 +1530,7 @@ class Simulator(AdvancedRules):
             raise ValueError('Target must be your enchantment-sourced stack ability')
         cost=source.card.event_definition.enchantment_copy_cost
         payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,
-                             spell_cost=False,
-                             sources=[entry for entry in self.mana_sources(seat) if entry[0]!=source_id])
+                             spell_cost=False,excluded_sources=(source_id,))
         if not payment['paid']:raise ValueError('Cannot pay ability-copy cost')
         for item in self.players[seat].battlefield:
             if item.card.id in payment['sources']:item.tapped=True

@@ -344,8 +344,8 @@ def parse_card(card: dict) -> Definition:
     lines=text.splitlines()
     if len(lines)==2 and {'Creature','Enchantment'}<=types:
         ability=re.fullmatch(
-            r'((?:\\{(?:[0-9]{1,2}|[WUBRGC])\\})+), \\{T\\}: Copy target activated or triggered ability you control '
-            r'from an enchantment source\\. You may choose new targets for the copy\\.',lines[1])
+            r'((?:\{(?:[0-9]{1,2}|[WUBRGC])\})+), \{T\}: Copy target activated or triggered ability you control '
+            r'from an enchantment source\. You may choose new targets for the copy\.',lines[1])
         if ability:
             base_program=compile_abilities(lines[0],name)
             if base_program and base_program.static_effects and not (
