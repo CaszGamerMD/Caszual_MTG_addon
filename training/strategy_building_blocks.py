@@ -217,10 +217,31 @@ def compose_routes(cards: tuple[CardBlocks, ...]) -> tuple[StrategyRoute, ...]:
     return tuple(sorted(routes, key=lambda route:(-route.score, route.goal)))
 
 
+def dependency_links(cards: tuple[CardBlocks, ...]) -> tuple[tuple[str, str, str], ...]:
+    """Pair supply and demand by resource; ignore subtype and deck name.
+
+    A link means 'this card could supply a prerequisite for that card',
+    never 'a combo is proven'. Printed facts alone are not executable rules.
+    At most two top suppliers per need keep large decks' graph bounded.
+    """
+    if not cards:
+        return ()
+    links = set()
+    for consumer in cards:
+        for need in consumer.needs:
+            providers = [p for p in cards if p.name != consumer.name and
+                         need in p.produces]
+            providers.sort(key=lambda p: (-p.quantity, p.name))
+            for supplier in providers[:2]:
+                links.add((supplier.name, need, consumer.name))
+    return tuple(sorted(links))
+
+
 def plan_for_deck(deck: dict) -> dict:
     cards=map_mechanics(deck)
     routes=compose_routes(cards)
     return dict(routes=tuple(r.describe() for r in routes),
+                dependencyLinks=dependency_links(cards),
                 cardBlocks=tuple((c.name,c.blocks) for c in cards),
                 buildingBlockCounts=dict(Counter(
                     b for c in cards for b in c.blocks for _ in range(c.quantity))))
