@@ -1412,6 +1412,11 @@ class Simulator(AdvancedRules):
                     'Land' in item.card.event_definition.types)
                    for item in self.players[seat].battlefield)
 
+    def choose_modal_attack_mode(self, source_id, specs, declared_attackers):
+        # A deterministic legal policy chooses at trigger placement. Both
+        # modes stay available even if their eventual X would be zero.
+        return 1 if len(declared_attackers)>2 else 0
+
     def choose_optional_token_creation(self, event):
         """Diagnostic deterministic accept policy for a legal may-create clause.
 
@@ -2520,6 +2525,20 @@ class Simulator(AdvancedRules):
                     self.sync_events(game)
                 else: amount=max(0,event['lastPower'])
                 event=dict(event,operation='create_tokens',tokenSpec=dict(event['tokenSpec'],amount=amount))
+            if event.get('operation')=='modal_attack_tokens':
+                game=self.event_game('combat')
+                attacking=(self.group_combat['attackers'] if self.group_combat else ())
+                others=[game.battlefield[identifier] for identifier in attacking
+                        if identifier!=event['source'] and identifier in game.battlefield
+                        and game.creature(game.battlefield[identifier])]
+                mode=event['mode']
+                if mode not in (0,1):raise RuntimeError('Invalid attack mode')
+                spec=dict(event['tokenSpec'])
+                if mode==0:
+                    amount=max((game.stats(creature)[0] for creature in others),default=0)
+                    spec.update(power=max(0,amount),toughness=max(0,amount),amount=1)
+                else:spec['amount']=len(others)
+                event=dict(event,operation='create_tokens',tokenSpec=spec)
             if event.get('operation')=='tribal_tap_tokens':
                 game=self.event_game('main')
                 amount=sum(state.controller==event['controller'] and event['subtype'] in state.definition.subtypes
@@ -3536,7 +3555,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and (rules.query("cost",cost)["supported"] or "Land" in event_definition.types and not cost)):
