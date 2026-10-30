@@ -7,6 +7,87 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class TribalInterveningIfChecks(unittest.TestCase):
+    @staticmethod
+    def elite():
+        return parse_card(dict(name='Unseen Elven Recruiter',types=['Creature'],
+            subTypes=['Elf','Warrior'],power='2',toughness='2',
+            oracleText=('When this creature enters, if you control another Elf, '
+                        'create a 1/1 green Elf Warrior creature token.')))
+
+    def test_conditional_etb_requires_another_ally_at_trigger_time(self):
+        elite=self.elite()
+        self.assertTrue(elite.supported,elite.reason)
+        self.assertEqual(elite.triggers[0].requires_other_controlled_subtype,'Elf')
+        ally=Definition('Unknown Ally',frozenset({'Creature'}),frozenset({'Elf'}),
+                        False,1,1,frozenset())
+        other=Definition('Unknown Opponent',frozenset({'Creature'}),frozenset({'Elf'}),
+                         False,1,1,frozenset())
+        game=Game()
+        game.enter(Permanent('enemy',other,1))
+        game.enter(Permanent('first',elite,0))
+        self.assertFalse(any(e['kind']=='trigger' for e in game.events))
+        game.enter(Permanent('ally',ally,0))
+        game.events.clear()
+        game.enter(Permanent('second',elite,0))
+        triggers=[e for e in game.events if e['kind']=='trigger']
+        self.assertEqual(len(triggers),1)
+        self.assertEqual(triggers[0]['requiresOtherControlledSubtype'],'Elf')
+        self.assertEqual(triggers[0]['operation'],'create_tokens')
+        self.assertEqual(triggers[0]['tokenSpec']['subtypes'],('Elf','Warrior'))
+
+    def test_changeling_satisfies_other_elf_condition(self):
+        elite=self.elite()
+        changeling=Definition('Unknown Shapeshifter',frozenset({'Creature'}),
+            frozenset({'Shapeshifter'}),False,1,1,frozenset({'changeling'}))
+        game=Game()
+        game.enter(Permanent('changeling',changeling,0))
+        game.events.clear()
+        game.enter(Permanent('elite',elite,0))
+        self.assertEqual(len([e for e in game.events if e['kind']=='trigger']),1)
+
+    def test_real_dwynens_elite_and_fail_closed_extra_text(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14435337-lupitas-elves.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=="Dwynen's Elite")
+        parsed=parse_card(raw)
+        self.assertTrue(parsed.supported,parsed.reason)
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'dwynen',{'Green'})
+            self.assertNotEqual(card.kind,'unsupported')
+        altered=dict(raw,oracleText=raw['oracleText']+' Draw seven cards.')
+        self.assertFalse(parse_card(altered).supported)
+
+    def test_condition_is_rechecked_at_token_resolution(self):
+        elite=self.elite()
+        with s.RulesBridge() as rules:
+            raw=dict(name='Unseen Elven Recruiter',types=['Creature'],
+                subTypes=['Elf'],power='2',toughness='2',manaCost='{1}{G}',
+                oracleText=('When this creature enters, if you control another Elf, '
+                            'create a 1/1 green Elf Warrior creature token.'))
+            card=s.import_diagnostic_card(rules,raw,0,'elite',{'Green'})
+            self.assertNotEqual(card.kind,'unsupported')
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card],s.demo_deck(1)),diagnostic=True)
+            sim.manual_priority=True
+            sim.phase='main'
+            owner=sim.players[0]
+            (owner.hand if card in owner.hand else owner.library).remove(card)
+            ally_def=s.EventDefinition('Ally',frozenset({'Creature'}),frozenset({'Elf'}),
+                False,1,1,frozenset())
+            ally=s.Card('ally','Ally','creature',event_definition=ally_def,
+                        power=1,toughness=1)
+            sim.enter_creature(ally,owner)
+            pending=sim.enter_creature(card,owner)
+            sim.resolve_entry_triggers(pending,card)
+            self.assertTrue(sim.stack.items)
+            ally_perm=next(p for p in owner.battlefield if p.card.id=='ally')
+            sim.send_to_destination(owner,ally_perm)
+            while sim.stack.items:sim.pass_priority(sim.stack.priority)
+            self.assertFalse(any(p.card.is_token for p in owner.battlefield))
+            self.assertTrue(any(e['kind']=='entry_condition_failed' for e in sim.events))
+
+
 class GoblinAttackGrammarChecks(unittest.TestCase):
     def test_unseen_standalone_attack_trigger_compiles(self):
         raw=dict(name='Unseen Goblin Captain',types=['Creature'],subTypes=['Goblin'],
