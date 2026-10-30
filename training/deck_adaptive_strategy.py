@@ -16,6 +16,7 @@ import re
 import simulator as s
 from goblin_strategy import _combat_estimate, _mana_value, _words
 from strategy_building_blocks import StrategyRoute, map_mechanics, compose_routes, dependency_links
+from compiled_rules_knowledge import compiled_knowledge
 
 _CASTS = frozenset(('cast','cast_commander','cast_exile','cast_flashback','cast_modal_back','bestow'))
 _TYPES = ('Creature','Enchantment','Artifact','Land','Instant','Sorcery')
@@ -219,6 +220,11 @@ class AdaptiveDeckPolicy(s.Policy):
                 card = hand.get(a.card_id)
                 action_roles = set(self.plan.commander_roles if kind == 'cast_commander'
                                    else roles.get(card.name, ()) if card else ())
+                # Prefer execution-backed mechanics when available. Printed-text
+                # paths remain hypotheses, never proof of an ability.
+                if card is not None and card.kind != 'unsupported':
+                    evidence=compiled_knowledge(card)
+                    action_roles.update(evidence['roles'])
                 # Generalizable rules-to-strategy path: mana -> board -> engines
                 # -> buffs -> combat. Roles have value ONLY for already-legal
                 # actions and are adjusted by visible board conditions.
