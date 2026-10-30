@@ -77,11 +77,17 @@ def compile(text, name, types, subtypes):
         if line=='Whenever enchanted creature deals damage to an opponent, you may draw a card.':
             if mode!='aura' or 'optional_draw_opponent' in damage_events:return None
             damage_events.append('optional_draw_opponent');continue
-        m=re.fullmatch(r'(Enchanted|Equipped) creature gets \+([1-9][0-9]*)/\+([1-9][0-9]*) for each (enchantment|artifact and/or enchantment) you control(?: and has (first strike))?\.',line)
+        m=re.fullmatch(
+            r'(Enchanted|Equipped) creature gets \+([1-9][0-9]*)/\+([1-9][0-9]*) for each '
+            r'(artifact|creature|enchantment)(?: and/or (artifact|creature|enchantment))? you control'
+            r'(?: and has (first strike))?\.',line)
         if m:
             if scale or mode!=('aura' if m[1]=='Enchanted' else 'equipment'):return None
-            scale=(int(m[2]),int(m[3]),('Enchantment',) if m[4]=='enchantment' else ('Artifact','Enchantment'))
-            if m[5]:rest.append(m[1]+' creature has '+m[5]+'.')
+            requested=(m[4],)+((m[5],) if m[5] else ())
+            if len(set(requested))!=len(requested):return None
+            # Any permanent matching either printed type contributes only once.
+            scale=(int(m[2]),int(m[3]),tuple(word.title() for word in requested))
+            if m[6]:rest.append(m[1]+' creature has '+m[6]+'.')
             continue
         rest.append(line)
     if not (scale or role_events or enchanted_draw or attachment_draw or damage_events or upkeep_attachment_counters or entry_attachment_counters or double_attachment_counters_upkeep or aura_graveyard_draw or entry_token_lines or living_weapon):return None

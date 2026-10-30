@@ -138,6 +138,51 @@ class EnchantmentChecks(unittest.TestCase):
         self.assertEqual(sim.effective_card(host).power,3)
         sim.invariant()
 
+
+    def test_unseen_aura_creature_enchantment_union_counts_each_permanent_once(self):
+        raw=dict(self.lookup['All That Glitters'],
+                 name='Unseen Grove Blessing',
+                 oracleText='Enchant creature\nEnchanted creature gets +1/+1 for each creature and/or enchantment you control.')
+        card=s.import_diagnostic_card(self.rules,raw,0,'counted-aura',{'Green','White'})
+        self.assertEqual(card.kind,'aura')
+        self.assertEqual(card.event_definition.attachment_scale,(1,1,('Creature','Enchantment')))
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+[card],s.demo_deck(1)),diagnostic=True)
+        sim.manual_priority=True;sim.phase='main'
+        host=self.token(sim,'host')
+        player=sim.players[0]
+        (player.hand if card in player.hand else player.library).remove(card)
+        sim.enter_creature(card,player,attached_to=host.card.id)
+        self.assertEqual(sim.effective_card(host).power,4) # Host plus Aura.
+        both=s.EventDefinition('Dual enchantment creature',
+                 frozenset({'Creature','Enchantment'}),frozenset(),False,2,2,frozenset())
+        double=s.Card('double','Dual enchantment creature','creature',
+                      power=2,toughness=2,event_definition=both,is_token=True)
+        sim.enter_creature(double,player)
+        sim.enter_creature(replace(double,id='enemy-double'),sim.players[1])
+        self.assertEqual(sim.effective_card(host).power,5) # Dual type counts once.
+        item=next(x for x in player.battlefield if x.card.id=='double')
+        sim.send_to_destination(player,item)
+        self.assertEqual(sim.effective_card(host).power,4)
+        self.assertNotIn('enemy-double',[p.card.id for p in player.battlefield])
+        sim.invariant()
+
+    def test_union_counterparts_and_unknown_instructions_fail_closed(self):
+        source=self.lookup['All That Glitters']
+        for types in ('artifact and/or creature','artifact and/or enchantment',
+                      'creature and/or enchantment','creature'):
+            raw=dict(source,name='Unseen Counted Aura',oracleText=
+                     'Enchant creature\nEnchanted creature gets +2/+1 for each '+types+' you control.')
+            card=s.import_diagnostic_card(self.rules,raw,0,'count',{'White'})
+            self.assertEqual(card.kind,'aura',types)
+            self.assertEqual(card.event_definition.attachment_scale[0:2],(2,1))
+            raw['oracleText']+='\nWhenever an unknown event happens, win.'
+            self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad',{'White'}).kind,
+                             'unsupported')
+        same=dict(source,name='Unseen Counted Aura',oracleText=
+                  'Enchant creature\nEnchanted creature gets +1/+1 for each creature and/or creature you control.')
+        self.assertEqual(s.import_diagnostic_card(self.rules,same,0,'bad-duplicate',{'White'}).kind,
+                         'unsupported')
+
     def test_armor_counts_itself_and_helm_does_not_make_creature_enchanted(self):
         sim,cards=self.fixture(['Ethereal Armor','Helm of the Gods'])
         host=self.token(sim,'host');equipment=self.put(sim,cards['Helm of the Gods'])
