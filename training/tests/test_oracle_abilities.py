@@ -7,6 +7,27 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class ColoredWitnessGrammarChecks(unittest.TestCase):
+    def test_unseen_colored_witness_is_live_and_excludes_self(self):
+        for color in ('white','blue','black','red','green'):
+            with self.subTest(color=color):
+                text=f'This creature gets +2/+3 as long as you control another {color} creature.'
+                program=compile_abilities(text,'Unknown Sentinel')
+                self.assertIsNotNone(program)
+                self.assertEqual(len(program.static_effects),1)
+                effect=program.static_effects[0]
+                self.assertEqual((effect.power,effect.toughness),(2,3))
+                self.assertTrue(effect.subject.self_only)
+                self.assertTrue(effect.condition.other)
+                self.assertEqual(effect.condition.relation,'controller')
+                self.assertEqual(effect.condition.color,color.capitalize())
+
+    def test_unknown_extra_instruction_rejects_entire_program(self):
+        self.assertIsNone(compile_abilities(
+            'This creature gets +2/+3 as long as you control another blue creature. Draw seven cards.',
+            'Unknown Sentinel'))
+
+
 class OracleGrammarChecks(unittest.TestCase):
     def test_unfamiliar_upkeep_uses_parsed_amounts_and_only_controller_turn(self):
         raw=dict(name='Unseen nursery',types=['Enchantment'],manaCost='{G}',
