@@ -405,9 +405,13 @@ def parse_card(card: dict) -> Definition:
     other_lines=[line for line in normalized.splitlines() if not line.startswith('Whenever this creature attacks')]
     entry_program=compile_abilities('\n'.join(other_lines)) if other_lines else None
     attacks=compile_attacks('\n'.join(attack_lines)) if attack_lines else None
-    if entry_program and attacks and 'Creature' in types and (not entry_program.devotion or 'Enchantment' in types):
-        return Definition(**base,abilities=entry_program.keywords|attacks[0],triggers=entry_program.triggers,
-            static_effects=entry_program.static_effects,activations=entry_program.activations,devotion=entry_program.devotion,
+    if attacks and 'Creature' in types and (not other_lines or
+            (entry_program and (not entry_program.devotion or 'Enchantment' in types))):
+        return Definition(**base,abilities=(entry_program.keywords if entry_program else frozenset())|attacks[0],
+            triggers=entry_program.triggers if entry_program else (),
+            static_effects=entry_program.static_effects if entry_program else (),
+            activations=entry_program.activations if entry_program else (),
+            devotion=entry_program.devotion if entry_program else (),
             crew=attacks[1],saddle=attacks[2],attack_effects=attacks[3])
     # An enchantment-sourced activated/triggered ability on the stack is a
     # distinct target from a spell. The entire second instruction is required.
