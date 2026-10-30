@@ -31,6 +31,36 @@ class AdvancedRules:
   self.log('role_created','Virtuous Role tokens enter attached to a creature.',actor=event['controller'],source=event['source'],target=target.card.id,tokens=[token.id for token in created])
   pending.extend(self.event_game('main').token_action_events('create',event['controller'],count))
   self.resolve_entry_triggers(pending,created[0])
+ def choose_role_kind(self,event,options):
+  # Deterministic policy; later agents can choose according to board context.
+  return 'Royal' if 'Royal' in options else options[0]
+ def resolve_chosen_role(self,event):
+  s=model(self);g=self.event_game('main')
+  entrant=g.battlefield.get(event['entering'])
+  if entrant is None or not g.creature(entrant) or entrant.controller!=event['controller']:
+   self.log('role_entry_gone','Entering creature is no longer a legal attachment host.',
+            actor=event['controller'],source=event['source'],entering=event['entering'])
+   return
+  kind=event['roleChoice']
+  if kind not in event['roleOptions']:raise ValueError('Invalid Role choice')
+  role_grants=frozenset({'trample'}) if kind=='Monster' else frozenset()
+  definition=s.EventDefinition(kind+' Role',frozenset({'Enchantment'}),
+    frozenset({'Aura','Role'}),False,0,0,frozenset(),
+    attachment=('aura',None,role_grants,1,1),role=kind)
+  created=self.event_game('main').token_amount(event['controller'],1)
+  pending=[];tokens=[]
+  for _ in range(created):
+   self.token_sequence+=1
+   token=s.Card('token-'+str(self.token_sequence),kind+' Role','aura',
+     event_definition=definition,is_token=True,printed_types=('Enchantment',))
+   pending.extend(self.enter_creature(token,self.players[event['controller']],
+                                      attached_to=event['entering']))
+   tokens.append(token.id)
+  self.log('role_choice_created','The chosen Role enters attached to the entering creature.',
+           actor=event['controller'],source=event['source'],role=kind,attachedTo=event['entering'],
+           tokens=tokens)
+  pending.extend(self.event_game('main').token_action_events('create',event['controller'],created))
+  self.resolve_entry_triggers(pending,model(self).Card('role-event','Role entry','spell'))
  def choose_optional_draw(self,event):
   s=model(self);seat=event['controller']
   choices=(s.Candidate('draw','optional_draw',features=s.features(draw=1,power=0 if self.players[seat].library else -1000),label='Draw a card'),
