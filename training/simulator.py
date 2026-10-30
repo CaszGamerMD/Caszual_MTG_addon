@@ -3651,10 +3651,14 @@ class Simulator(AdvancedRules):
                 message = f"{event['name']} triggers: Player {source+1} gains {event['amount']} life."
             elif event.get("operation") == "lose_life":
                 source = event["controller"]
-                target = 1-source  # This diagnostic is explicitly two-player.
-                self.players[target].life -= event["amount"]
+                recipient=event.get('recipient','each opponent')
+                if recipient not in ('controller','each opponent','target player'):
+                    raise ValueError('Unsupported life-loss recipient')
+                targets=([source] if recipient=='controller' else
+                         [seat for seat in range(len(self.players)) if seat!=source])
+                for target in targets:self.players[target].life-=event['amount']
                 self.gain_life(source,event.get("gain",0))
-                message = f"{event['name']} triggers: Player {target+1} loses {event['amount']} life."
+                message = f"{event['name']} triggers: {recipient} loses {event['amount']} life."
             elif event.get("effect") == "scry":
                 source = event["controller"]
                 count = min(event["amount"],len(self.players[source].library))
