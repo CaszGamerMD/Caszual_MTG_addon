@@ -308,6 +308,9 @@ def selector(text):
     if text in ('this land','this artifact','this enchantment','this permanent'):return Selector(self_only=True)
     if text in ('this creature or another creature','this creature or another creature you control'):
         return Selector(relation='controller' if text.endswith('you control') else 'any',creature=True)
+    colored=re.fullmatch(r'(a|another) (white|blue|black|red|green) creature you control',text)
+    if colored:
+        return Selector(relation='controller',other=colored[1]=='another',creature=True,color=colored[2].title())
     m=re.fullmatch(r'(a|another) (creature|[A-Z][a-z]+(?: creature)?) you control',text)
     if not m:
         if text=='a creature an opponent controls':return Selector(relation='opponent',creature=True)
@@ -337,6 +340,14 @@ def effect(text):
     if text=='each opponent may search their library for a basic land card, put it onto the battlefield tapped, then shuffle.':
         return Effect('opponent_optional_basic_search',0,'each opponent')
     if text=="return a land you control to its owner's hand.":return Effect('return_controlled_land',1)
+    target_counter=re.fullmatch(r'put (a|one|two|three|[1-9][0-9]*) \+1/\+1 counters? on target creature\.',text)
+    if target_counter:
+        number={'a':1,'one':1,'two':2,'three':3}.get(target_counter[1])
+        return Effect('target_counter',number if number is not None else int(target_counter[1]))
+    treasure=re.fullmatch(r'create (a|one|two|three|[1-9][0-9]*) Treasure tokens?\.',text)
+    if treasure:
+        number={'a':1,'one':1,'two':2,'three':3}.get(treasure[1])
+        return Effect('create_treasures',number if number is not None else int(treasure[1]))
     gain=re.fullmatch(r'you gain ([1-9][0-9]*) life\.',text)
     if gain:return Effect('gain_life',int(gain[1]))
     drawn=re.fullmatch(r'(?:you )?draw (a|one|two|three|[1-9][0-9]*) cards?\.',text)
@@ -681,7 +692,9 @@ def event_data(trigger, source, subject):
             'damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
             'damage':f'deal {e.amount} damage to each opponent','scry':'scry','surveil':'surveil','mill_cards':'move top library cards to graveyards','discard':'damaged player discards a card',
             'damage_any_target':f'may deal {e.amount} damage to any target',
+            'target_counter':f'put {e.amount} +1/+1 counters on target creature',
             'add_counters':f'put {e.amount} +1/+1 counters on each {e.counter_subtype or "creature"} you control',
+            'create_treasures':f'create {e.amount} Treasure tokens',
             'create_tokens':f'create {e.amount} creature tokens',
             'opponent_optional_basic_search':'each opponent may find a tapped basic land and shuffle',
             'optional_subtype_search_hand':'controller may tutor a subtype card to hand and shuffle',

@@ -155,6 +155,8 @@ class Definition:
     enchantment_copy_cost: str = ''  # Pay mana and tap to copy a stack ability from an enchantment.
     class_program: tuple = ()  # Spell tax, Level 2/3 costs, anthem, attack bonus and keyword.
     attachment_counter_scale: tuple = ()  # P/T added per counter on the attached permanent.
+    equipment_charge_scale: tuple = ()  # P/T per charge counter on the Equipment source.
+    charge_on_life_gain: int = 0  # Each life-gain event triggers one charge-counter ability.
     equipment_planeswalker_cost: str = ''  # Alternative equip targeting a planeswalker.
     equipment_creature_conversion: bool = False  # Equipped permanent becomes non-planeswalker creature.
     combat_reattach: bool = False  # Optional start-of-combat Aura/Equipment movement.
@@ -220,6 +222,13 @@ def parse_card(card: dict) -> Definition:
                 effect.requires_attachment for effect in anthem.static_effects):
             return Definition(**base,abilities=anthem.keywords,
                               static_effects=anthem.static_effects,combat_reattach=True)
+    from counter_equipment import parse_charge
+    charge_equipment=parse_charge(text,name,types,subtypes)
+    if charge_equipment:
+        amount,scale,cost=charge_equipment
+        return Definition(**base,abilities=frozenset(),
+                          attachment=('equipment',cost,frozenset(),0,0),
+                          equipment_charge_scale=scale,charge_on_life_gain=amount)
     from counter_equipment import parse as parse_counter_equipment
     scaling_equipment=parse_counter_equipment(text,types,subtypes)
     if scaling_equipment:
@@ -601,6 +610,10 @@ class Game:
         for source in self.battlefield.values():
             if source.attached_to==p.id and source.definition.attachment:
                 power_bonus+=source.definition.attachment[3];toughness_bonus+=source.definition.attachment[4]
+            if source.attached_to==p.id and source.definition.equipment_charge_scale:
+                power,toughness=source.definition.equipment_charge_scale
+                power_bonus+=power*source.charge_counters
+                toughness_bonus+=toughness*source.charge_counters
             if source.attached_to==p.id and source.definition.attachment_counter_scale:
                 # Known counter kinds share the same physical permanent.
                 count=p.counters+p.charge_counters+(p.loyalty or 0)
@@ -848,6 +861,11 @@ class Game:
         result=[]
         for source in self.battlefield.values():
             if source.controller!=controller:continue
+            if source.definition.charge_on_life_gain:
+                result.append(dict(operation='equipment_life_charge',
+                    effect='add charge counters to source',source=source.id,
+                    name=source.definition.name,controller=controller,
+                    amount=source.definition.charge_on_life_gain))
             for trigger in source.definition.triggers:
                 if trigger.event=='gain_life':
                     result.append(event_data(trigger,source,source))

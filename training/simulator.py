@@ -929,6 +929,11 @@ class Simulator(AdvancedRules):
                     targets=self.graveyard_subtype_targets(controller,subtype[1])
                     if not targets:continue
                     event=dict(event,target=targets[0].id)
+                if event.get('operation')=='target_counter':
+                    candidates=self.creature_targets(controller,origin)
+                    if not candidates:continue
+                    chosen=min(candidates,key=lambda pair:(pair[0]!=controller,pair[1].card.id))
+                    event=dict(event,target=chosen[1].card.id)
                 if event.get('operation')=='damage_any_target':
                     options=self.damage_trigger_targets(event)
                     if not options:continue
@@ -2631,6 +2636,36 @@ class Simulator(AdvancedRules):
                 self.log('saga_transformed','Saga exiles and returns on its transformed face.',
                     actor=controller,source=front.id,backFace=back.name)
                 self.resolve_entry_triggers(pending,back)
+                continue
+            if event.get('operation')=='equipment_life_charge':
+                owner=self.players[event['controller']]
+                source=next((item for item in owner.battlefield
+                             if item.card.id==event['source']),None)
+                if source:
+                    game=self.event_game('main')
+                    source.charge_counters+=game.counter_amount(source.card.id,event['amount'])
+                self.log('equipment_charge' if source else 'equipment_charge_fizzle',
+                    'Life-gain trigger adds charge counters to Equipment.' if source else
+                    'Equipment source left before charge trigger resolved.',
+                    actor=event['controller'],source=event['source'])
+                continue
+            if event.get('operation')=='create_treasures':
+                self.create_treasures(event['controller'],event['amount'],False,card)
+                continue
+            if event.get('operation')=='target_counter':
+                game=self.event_game('main');identifier=event['target']
+                state=game.battlefield.get(identifier)
+                legal=bool(state and game.creature(state) and not game.has(state,'shroud')
+                           and (state.controller==event['controller'] or not game.has(state,'hexproof'))
+                           and not game.protected(state,event.get('sourceColors',())))
+                if legal:
+                    item=next(item for p in self.players for item in p.battlefield
+                              if item.card.id==identifier)
+                    item.counters+=game.counter_amount(identifier,event['amount'])
+                self.log('target_counter' if legal else 'target_counter_fizzle',
+                    'Triggered +1/+1 counters resolve.' if legal else 'Counter target became illegal.',
+                    actor=event['controller'],source=event['source'],target=identifier)
+                if legal:self.resolve_entry_triggers(self.state_based_actions(),card)
                 continue
             if event.get('operation')=='constellation_counter':
                 game=self.event_game('main');identifier=event['target']
