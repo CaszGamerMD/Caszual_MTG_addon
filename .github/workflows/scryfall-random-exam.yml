@@ -1,0 +1,58 @@
+name: Blind Scryfall Commander random-card exam
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - training/scryfall_random_exam.py
+      - training/tests/test_scryfall_random_exam.py
+      - .github/workflows/scryfall-random-exam.yml
+  workflow_dispatch:
+    inputs:
+      cards_per_round:
+        description: 'Number of unseen paper Commander legal cards per round'
+        required: true
+        default: '5'
+        type: choice
+        options: ['5', '10']
+      rounds:
+        description: 'Independent random-card rounds, no repeats per run'
+        required: true
+        default: '3'
+        type: choice
+        options: ['1', '3', '5']
+permissions:
+  contents: read
+concurrency:
+  group: scryfall-random-exam-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  examine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate exact-card Scryfall converter and evidence separation
+        run: |
+          python -m compileall -q training/scryfall_random_exam.py training/compiled_rules_knowledge.py
+          python -m unittest discover -s training/tests -p test_scryfall_random_exam.py -v
+      - name: Sample new cards and grade diagnostic parser
+        env:
+          CARDS: ${{ inputs.cards_per_round || '5' }}
+          ROUNDS: ${{ inputs.rounds || '3' }}
+        run: |
+          python -u training/scryfall_random_exam.py --count "$CARDS" --rounds "$ROUNDS" --out training/reports/random-commander-exam
+      - name: Retain exact Oracle text, original Scryfall records and assessment
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blind-scryfall-commander-knowledge-exam
+          path: training/reports/random-commander-exam/
+          if-no-files-found: warn
+          retention-days: 30
