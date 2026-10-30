@@ -536,6 +536,12 @@ class Simulator(AdvancedRules):
         return replace(definition,types=frozenset({'Enchantment'}),subtypes=frozenset({'Aura'}),
                        attachment=definition.bestow[2])
 
+    def prevents_attacker_combat_damage(self, seat: int) -> bool:
+        """Only an attacking creature controlled by this seat is protected."""
+        return any(item.card.event_definition and
+                   item.card.event_definition.prevent_combat_damage_to_attackers
+                   for item in self.players[seat].battlefield)
+
     def gain_life(self, seat: int, amount: int):
         """Track life gained, independent of damage/losses and total life change."""
         if amount<0:raise ValueError('Life gain amount must be nonnegative')
@@ -3573,7 +3579,7 @@ class Simulator(AdvancedRules):
                 to_blocker=min(power,lethal) if has(a,'trample') else power
                 if has(a,'trample'):to_player=power-to_blocker
             elif not context['blocked'] or has(a,'trample'):to_player=power
-        if hit_b and a:to_attacker=max(0,b.power)
+        if hit_b and a and not self.prevents_attacker_combat_damage(self.active):to_attacker=max(0,b.power)
         if attacker:attacker.marked_damage+=to_attacker
         if blocker:blocker.marked_damage+=to_blocker
         active=self.players[self.active];defender=self.players[1-self.active]
@@ -4301,6 +4307,12 @@ class Simulator(AdvancedRules):
                 self.phase='first_damage' if early else 'regular_damage'
                 return True
             d = self.damage(effective_attacker, effective_blocker)
+            if b and self.prevents_attacker_combat_damage(self.active):
+                # Combat damage to this attacking creature is prevented. The
+                # blocker did not deal damage, gain life from lifelink, or
+                # destroy it via deathtouch. Attacker damage still happens.
+                d['attackerDies']=False
+                d['gainB']=0
             regenerated=[]
             game=self.event_game('combat')
             for item,owner,key in ((a,self.active,'attackerDies'),(b,1-self.active,'blockerDies')):
@@ -4326,13 +4338,15 @@ class Simulator(AdvancedRules):
                     attack_damage=min(attack_damage,1 if 'deathtouch' in effective_attacker.traits.split(';')[-1].split(',') else max(0,effective_blocker.toughness))
                 if attack_damage:dealt.append(dict(source=a.card.id,target=b.card.id,amount=attack_damage))
                 defense_damage=max(0,effective_blocker.power)
-                if defense_damage:dealt.append(dict(source=b.card.id,target=a.card.id,amount=defense_damage))
+                if defense_damage and not self.prevents_attacker_combat_damage(self.active):
+                    dealt.append(dict(source=b.card.id,target=a.card.id,amount=defense_damage))
             if d['damage']>0:dealt.append(dict(source=a.card.id,target=None,amount=d['damage']))
             death_triggers.extend(game.aura_damage_triggers(dealt,1-self.active))
             self.log("block", choice.label, actor=1-self.active,
                      blocker=b.card.id if b else None)
             if b:
-                a.marked_damage+=max(0,effective_blocker.power)
+                if not self.prevents_attacker_combat_damage(self.active):
+                    a.marked_damage+=max(0,effective_blocker.power)
                 dealt=max(0,effective_attacker.power)
                 abilities=effective_attacker.traits.split(';')[-1].split(',')
                 if 'trample' in abilities:
@@ -4522,7 +4536,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and (rules.query("cost",cost)["supported"] or "Land" in event_definition.types and not cost)):
