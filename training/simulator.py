@@ -4451,14 +4451,25 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     if definition.get('layout')=='transform':
         faces=definition.get('faces',())
         if len(faces)==2 and all(isinstance(face,dict) for face in faces):
-            def as_card(face):
+            def as_card(face,noncastable=False):
+                # The bridge rejects a missing mana cost, correctly for cards
+                # cast from hand. A transformed back is NOT a castable card:
+                # validate its Oracle program using a temporary {0} bridge
+                # sentinel, then restore the genuinely absent printed cost.
+                printed_cost=face.get('manaCost','')
                 raw=dict(definition,name=face.get('name',''),types=face.get('types',[]),
                          superTypes=face.get('superTypes',[]),subTypes=face.get('subTypes',[]),
-                         manaCost=face.get('manaCost',''),oracleText=face.get('text',''),
-                         power=face.get('power',''),toughness=face.get('toughness',''),
-                         colors=face.get('colors',[]),layout='normal',faces=[])
-                return import_diagnostic_card(rules,raw,seat,uid,identity)
-            front=as_card(faces[0]);back=as_card(faces[1])
+                         manaCost=printed_cost or ('{0}' if noncastable else ''),
+                         oracleText=face.get('text',''),power=face.get('power',''),
+                         toughness=face.get('toughness',''),colors=face.get('colors',[]),
+                         layout='normal',faces=[])
+                parsed=import_diagnostic_card(rules,raw,seat,uid,identity)
+                if noncastable and not printed_cost and parsed.kind!='unsupported':
+                    definition=parsed.event_definition
+                    parsed=replace(parsed,mana_cost='',printed_mana_value=None,
+                        event_definition=replace(definition,mana_cost='') if definition else None)
+                return parsed
+            front=as_card(faces[0]);back=as_card(faces[1],noncastable=True)
             if (front.kind=='enchantment' and front.event_definition and
                     front.event_definition.saga_chapter_scale and
                     back.kind=='creature' and back.event_definition and
