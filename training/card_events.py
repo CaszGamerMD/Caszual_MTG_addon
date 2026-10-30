@@ -139,6 +139,7 @@ class Definition:
     combat_limits: tuple[int, int] = ()  # Attack-triggered block cap, tapped-source attack cap.
     upkeep_token_rule: tuple = ()  # (each/your, condition, counted subtype, divisor, TokenSpec).
     land_type_effect: tuple = ()  # (scope, replace/add, basic land subtypes).
+    additional_land_plays: int = 0  # Static permission, counted while source stays in play.
     equipment_basic_search: bool = False  # Equipped attacker searches for tapped basic land.
 
 
@@ -169,7 +170,10 @@ def parse_card(card: dict) -> Definition:
     from land_type_effects import parse as parse_land_type_effect
     land_type_effect=parse_land_type_effect(text,types)
     if land_type_effect:
-        return Definition(**base,abilities=frozenset(),land_type_effect=land_type_effect)
+        # Only a fully recognized two-clause program grants the extra play.
+        from land_type_effects import additional_land_plays
+        return Definition(**base,abilities=frozenset(),land_type_effect=land_type_effect,
+                          additional_land_plays=additional_land_plays(text))
     from equipment_land_search import parse as parse_equipment_land_search
     equipment_search=parse_equipment_land_search(text,types,subtypes)
     if equipment_search:
