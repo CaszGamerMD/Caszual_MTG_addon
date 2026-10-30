@@ -18,6 +18,6 @@ def edict(text,types):
     # Only the one-creature, single-affected-player edict has a fully
     # implemented zone change and trigger batch. Simultaneous multi-player
     # or multi-creature sacrifice instructions must remain unsupported.
-    if re.fullmatch(r'Each opponent sacrifices a creature\\.',text):
+    if re.fullmatch(r'Each opponent sacrifices a creature\.',text):
         return ('opponent',1)
     return ()
