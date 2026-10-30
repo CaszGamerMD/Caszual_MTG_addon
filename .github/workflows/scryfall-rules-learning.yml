@@ -16,6 +16,7 @@ on:
       - training/tests/test_generic_controlled_subtype_anthem.py
       - training/tests/test_generic_self_or_subtype_death.py
       - training/tests/test_generic_indestructible_land.py
+      - training/tests/test_generic_standalone_ward.py
       - training/tests/test_scryfall_random_exam.py
       - .github/workflows/scryfall-rules-learning.yml
   workflow_dispatch:
@@ -46,6 +47,7 @@ jobs:
           python -m unittest discover -s training/tests -p test_generic_controlled_subtype_anthem.py -v
           python -m unittest discover -s training/tests -p test_generic_self_or_subtype_death.py -v
           python -m unittest discover -s training/tests -p test_generic_indestructible_land.py -v
+          python -m unittest discover -s training/tests -p test_generic_standalone_ward.py -v
           python -m unittest discover -s training/tests -p test_scryfall_random_exam.py -v
           python -m unittest discover -s training/tests -p test_composable_power_mana.py -v
           python -m unittest discover -s training/tests -p test_oracle_sequence.py -v
