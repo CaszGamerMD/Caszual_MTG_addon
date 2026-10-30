@@ -1,0 +1,39 @@
+name: Garbo first real win hunt
+on:
+  push:
+    branches: [experiment/garbo-first-win]
+    paths:
+      - training/garbo_policy.py
+      - training/garbo_first_win.py
+      - training/tests/test_garbo_first_win.py
+      - .github/workflows/garbo-first-win.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: garbo-first-win
+  cancel-in-progress: true
+jobs:
+  match-lab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify legal public-only strategies
+        run: python -m unittest discover -s training/tests -p test_garbo_first_win.py -v
+      - name: Hunt first Garbo rules win on fresh alternating-seat seeds
+        run: |
+          python training/garbo_first_win.py --garbo training/decks/5254666-garbo-gobbos.json --wilds training/decks/5189995-enchantments.json --seed 5254666 --games 6 --turns 10 --out training/reports/garbo-first-win
+      - name: Upload counterexample evidence and first-win replay (if any)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: garbo-first-real-win-study
+          path: training/reports/garbo-first-win/
+          retention-days: 14
