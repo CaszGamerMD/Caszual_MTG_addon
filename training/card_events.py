@@ -141,6 +141,7 @@ class Definition:
     upkeep_token_rule: tuple = ()  # (each/your, condition, counted subtype, divisor, TokenSpec).
     land_type_effect: tuple = ()  # (scope, replace/add, basic land subtypes).
     additional_land_plays: int = 0  # Static permission, counted while source stays in play.
+    prevents_opponent_sacrifice: bool = False  # Continuous rule: opposing effects can't force sacrifices.
     equipment_basic_search: bool = False  # Equipped attacker searches for tapped basic land.
 
 
@@ -168,6 +169,10 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from forced_sacrifice import prevention as parse_sacrifice_prevention
+    sacrifice_protected=parse_sacrifice_prevention(text,types)
+    if sacrifice_protected:
+        return Definition(**base,abilities=sacrifice_protected,prevents_opponent_sacrifice=True)
     from modal_attack_tokens import parse as parse_modal_attack_tokens
     modal_attack=parse_modal_attack_tokens(text,types)
     if modal_attack:
