@@ -19,7 +19,7 @@ import re
 BUILDING_BLOCKS = (
     "mana_engine", "creature_supply", "token_supply", "card_engine",
     "board_amplifier", "attack_payoff", "damage_payoff", "life_engine",
-    "recursion_engine", "removal", "board_reset",
+    "recursion_engine", "removal", "board_reset", "equipment_engine",
 )
 
 @dataclass(frozen=True)
@@ -73,6 +73,10 @@ def parse_card_blocks(card: dict) -> CardBlocks:
     if "Artifact" in types:
         produces.add("artifact_board")
         needs.add("mana")
+    if "Equipment" in subtypes:
+        produces.add("equipped_threat")
+        needs.add("creature_board")
+        blocks.add("equipment_engine")
 
     # Generic token grammar; no hard-coded Goblin/Elf/etc subtype list.
     token_creature = _matches(
@@ -92,7 +96,9 @@ def parse_card_blocks(card: dict) -> CardBlocks:
                 r"\{T\}:\s*Add\b|\badd \{[WUBRGC0-9X]+\}\b|"
                 r"\bsearch your library for (?:a|up to \w+) basic land\b", text):
         produces.add("mana")
-        blocks.add("mana_engine")
+        # Normal lands are the base mana system, not acceleration engines.
+        if "Land" not in types:
+            blocks.add("mana_engine")
 
     if _matches(r"\bdraw (?:a|one|two|three|[0-9]+|\bX\b) cards?\b|"
                 r"\bdraw cards? equal to\b", text):
@@ -173,6 +179,7 @@ def compose_routes(cards: tuple[CardBlocks, ...]) -> tuple[StrategyRoute, ...]:
     pings = total["damage_payoff"]
     life = total["life_engine"]
     recursion = total["recursion_engine"]
+    equipment = total["equipment_engine"]
     routes = []
     if supply or tokens:
         path = []
@@ -183,17 +190,21 @@ def compose_routes(cards: tuple[CardBlocks, ...]) -> tuple[StrategyRoute, ...]:
             path.append("card_engine")
         if buffs:
             path.append("board_amplifier")
+        if equipment >= max(4, supply // 3):
+            path.append("equipment_engine")
         if attacks:
             path.append("attack_payoff")
         path.append("combat_damage")
         contributions = dict(mana_engine=mana,creature_supply=supply,
                              token_supply=tokens,card_engine=draw,
-                             board_amplifier=buffs,attack_payoff=attacks)
+                             board_amplifier=buffs,attack_payoff=attacks,
+                             equipment_engine=equipment)
         routes.append(StrategyRoute(
             "combat_damage", tuple(path), tuple(sorted(contributions.items())),
             round(0.35*min(30,supply) + 0.8*min(12,tokens) +
                   0.7*min(10,buffs) + 0.4*min(8,attacks) +
-                  0.25*min(10,mana) + 0.25*min(8,draw),3)))
+                  0.25*min(10,mana) + 0.25*min(8,draw) +
+                  0.35*min(12,equipment),3)))
     if pings >= 2:
         steps = tuple(step for step in ("creature_supply" if supply else "",
                   "token_supply" if tokens else "",
