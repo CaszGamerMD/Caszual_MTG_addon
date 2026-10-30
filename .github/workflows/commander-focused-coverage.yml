@@ -111,14 +111,14 @@ jobs:
           candidates={d['deckId']:d for d in data['decks'] if d['deckId'] in (5189995,5254666)}
           assert len(candidates)==2 and all(d['unsupported']==0 for d in candidates.values()), 'Both decks must have zero diagnostic blockers before a match'
           PY
-          python training/gauntlet.py --focal training/decks/5189995-enchantments.json --opponents training/decks/5254666-garbo-gobbos.json --games 2 --turns 10 --seed 5189995 --out training/reports/wilds-garbo-first
+          python training/gauntlet.py --focal training/decks/5189995-enchantments.json --opponents training/decks/5254666-garbo-gobbos.json --games 6 --turns 10 --seed 5189995 --out training/reports/wilds-garbo-first
           python - <<'PY'
           import json
           from pathlib import Path
           data=json.loads(Path('training/reports/wilds-garbo-first/summary.json').read_text())
           assert data['learningEligible'] is False and data['productionEligible'] is False
-          assert data['totals']['games']==2
-          assert data['totals']['wins']+data['totals']['losses']+data['totals']['ties']+data['totals']['blocked']==2
+          assert data['totals']['games']==6
+          assert data['totals']['wins']+data['totals']['losses']+data['totals']['ties']+data['totals']['blocked']==6
           for game in data['matches']:
               assert len(game['telemetry']['landDropsBySeat'])==2
               assert len(game['telemetry']['spellsCastBySeat'])==2
