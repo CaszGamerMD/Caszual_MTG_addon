@@ -7,6 +7,64 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class CollectiveTribalAttackChecks(unittest.TestCase):
+    def test_unseen_group_tribal_attack_program_composes_other_etb_trigger(self):
+        raw=dict(name='Unseen Goblin Captain',types=['Creature'],subTypes=['Goblin'],
+            power='2',toughness='2',
+            oracleText=('Whenever one or more Goblins you control attack, '
+                        "create a 1/1 red Goblin creature token that's tapped and attacking.\n"
+                        'Whenever another creature you control enters, '
+                        'Unseen Goblin Captain deals 1 damage to each opponent.'))
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(len(definition.group_attack_subtype_tokens),1)
+        tribe,spec=definition.group_attack_subtype_tokens[0]
+        self.assertEqual(tribe,'Goblin')
+        self.assertTrue(spec.tapped and spec.attacking)
+        self.assertEqual(len(definition.triggers),1)
+        self.assertTrue(definition.triggers[0].subject.other)
+        self.assertEqual(definition.triggers[0].effect.operation,'damage')
+        self.assertEqual(definition.triggers[0].effect.amount,1)
+        self.assertFalse(parse_card(dict(raw,oracleText=raw['oracleText']+'\nWin the game.')).supported)
+
+    def test_real_general_kreat_creates_once_for_two_goblins(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14509839-mono-red-gobs.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='General Kreat, the Boltbringer')
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'general',{'Red'})
+            self.assertNotEqual(card.kind,'unsupported')
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card],
+                s.demo_deck(1)),diagnostic=True)
+            sim.manual_priority=True;sim.phase='main'
+            owner=sim.players[0]
+            (owner.hand if card in owner.hand else owner.library).remove(card)
+            pending=sim.enter_creature(card,owner)
+            sim.resolve_entry_triggers(pending,card)
+            for index in range(2):
+                identifier='goblin'+str(index)
+                goblin=s.EventDefinition('Unknown Goblin',frozenset({'Creature'}),
+                    frozenset({'Goblin'}),False,1,1,frozenset())
+                unit=s.Card(identifier,'Unknown Goblin','creature',power=1,toughness=1,
+                    event_definition=goblin,is_token=True)
+                pending=sim.enter_creature(unit,owner)
+                sim.resolve_entry_triggers(pending,unit)
+            while sim.stack.items:sim.pass_priority(sim.stack.priority)
+            for creature in owner.battlefield:creature.fresh=False
+            prior=sim.players[1].life
+            sim.phase='attack';sim.stack.priority=sim.active
+            sim.declare_attackers(['goblin0','goblin1'])
+            while sim.stack.items:sim.pass_priority(sim.stack.priority)
+            added=[p for p in owner.battlefield if p.card.id.startswith('token-')]
+            self.assertEqual(len(added),1)
+            self.assertTrue(added[0].tapped)
+            self.assertIn(added[0].card.id,sim.group_combat['attackers'])
+            self.assertEqual(sim.players[1].life,prior-1)
+
+
 class TribalTapActivationChecks(unittest.TestCase):
     def test_unseen_tap_token_ability_composes_with_live_lord(self):
         raw=dict(name='Unseen Elf Lord',types=['Creature'],subTypes=['Elf'],
