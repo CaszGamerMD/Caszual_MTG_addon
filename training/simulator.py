@@ -3652,9 +3652,9 @@ class Simulator(AdvancedRules):
             elif event.get("operation") == "lose_life":
                 source = event["controller"]
                 recipient=event.get('recipient','each opponent')
-                if recipient not in ('controller','each opponent','target player'):
+                if recipient not in ('self','controller','each opponent','target player'):
                     raise ValueError('Unsupported life-loss recipient')
-                targets=([source] if recipient=='controller' else
+                targets=([source] if recipient=='self' else
                          [seat for seat in range(len(self.players)) if seat!=source])
                 for target in targets:self.players[target].life-=event['amount']
                 self.gain_life(source,event.get("gain",0))

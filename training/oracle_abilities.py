@@ -362,7 +362,7 @@ def effect(text):
         number={'a':1,'one':1,'two':2,'three':3}.get(treasure[1])
         return Effect('create_treasures',number if number is not None else int(treasure[1]))
     own_loss=re.fullmatch(r'you lose ([1-9][0-9]*) life\.',text)
-    if own_loss:return Effect('lose_life',int(own_loss[1]),'controller')
+    if own_loss:return Effect('lose_life',int(own_loss[1]),'self')
     gain=re.fullmatch(r'you gain ([1-9][0-9]*) life\.',text)
     if gain:return Effect('gain_life',int(gain[1]))
     drawn=re.fullmatch(r'(?:you )?draw (a|one|two|three|[1-9][0-9]*) cards?\.',text)
@@ -399,7 +399,7 @@ def effect(text):
         if len(clauses)>1:
             steps=tuple(effect(clause+'.') for clause in clauses)
             if all(step is not None and (step.operation in ('gain_life','draw_cards') or
-                                             (step.operation=='lose_life' and step.recipient=='controller')) for step in steps):
+                                             (step.operation=='lose_life' and step.recipient=='self')) for step in steps):
                 return Effect('ordered_effects',0,steps=steps)
     return None
 

@@ -20,6 +20,7 @@ class OrderedDrawLossChecks(unittest.TestCase):
         real=s.import_diagnostic_card(self.rules,raw,0,'real',{'Blue','Black'})
         self.assertEqual(real.kind,'creature')
         self.assertEqual([step.operation for step in real.event_definition.triggers[0].effect.steps],['draw_cards','lose_life'])
+        self.assertEqual(real.event_definition.triggers[0].effect.steps[1].recipient,'self')
         raw['name']='Unseen faerie ruler'
         raw['oracleText']=raw['oracleText'].replace('draw a card and you lose 1 life','draw two cards and you lose 3 life')
         other=s.import_diagnostic_card(self.rules,raw,0,'unseen',{'Blue','Black'})
