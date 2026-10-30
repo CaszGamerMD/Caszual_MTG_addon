@@ -41,7 +41,8 @@ class ClassLanguageChecks(unittest.TestCase):
     def test_level_abilities_use_stack_and_dynamic_creature_anthem(self):
         sim,card=self.prepare()
         host=self.token(sim,'host')
-        self.assertEqual(sim.effective_card(host).power,1)
+        baseline=sim.effective_card(host).power
+        self.assertEqual(baseline,host.card.power)
         source=next(p for p in sim.players[0].battlefield if p.card.id==card.id)
         self.assertEqual(source.class_level,1)
         choice=next(c for c in sim.legal(0) if c.kind=='activate_class_level')
@@ -49,7 +50,7 @@ class ClassLanguageChecks(unittest.TestCase):
         self.assertEqual(source.class_level,1)
         sim.pass_priority(0);sim.pass_priority(1)
         self.assertEqual(source.class_level,2)
-        self.assertEqual(sim.effective_card(host).power,2)
+        self.assertEqual(sim.effective_card(host).power,baseline+1)
         self.assertEqual(len(sim.class_level_choices(0)),1)
         sim.activate_class_level(0,card.id)
         sim.pass_priority(0);sim.pass_priority(1)
