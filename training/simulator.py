@@ -3154,11 +3154,12 @@ class Simulator(AdvancedRules):
         triggers.extend(game.aura_damage_triggers(dealt,1-self.active))
         if to_player and attacker:
             triggers.extend(game.combat_draw_triggers(attacker.card.id))
-            from oracle_abilities import matches
+            from oracle_abilities import matches, event_data
             for watcher in game.battlefield.values():
                 for trigger in watcher.definition.triggers:
                     if trigger.event=='combat_damage' and matches(trigger.subject,watcher,game.battlefield[attacker.card.id],True):
-                        triggers.append(dict(operation='discard',effect='discard',controller=watcher.controller,name=watcher.definition.name,source=watcher.id,target=1-self.active))
+                        ability=event_data(trigger,watcher,game.battlefield[attacker.card.id])
+                        triggers.append(dict(ability,target=1-self.active))
         if attacker and attacker.card.name=='Zurgo Helmsmasher' and blocker in dead and to_blocker>0:
             triggers.append(dict(operation='self_counter',effect='add +1/+1 counter',amount=1,
                                  source=attacker.card.id,name=attacker.card.name,controller=self.active))
@@ -3811,11 +3812,12 @@ class Simulator(AdvancedRules):
             if d['damage']>0:
                 game=self.event_game('combat')
                 combat_draws=game.combat_draw_triggers(a.card.id)
-                from oracle_abilities import matches
+                from oracle_abilities import matches, event_data
                 for watcher in game.battlefield.values():
                     for trigger in watcher.definition.triggers:
                         if trigger.event=='combat_damage' and matches(trigger.subject,watcher,game.battlefield[a.card.id],True):
-                            damage_triggers.append({'controller':watcher.controller,'name':watcher.definition.name,'source':watcher.id,'target':1-self.active})
+                            ability=event_data(trigger,watcher,game.battlefield[a.card.id])
+                            damage_triggers.append(dict(ability,target=1-self.active))
             game=self.event_game('combat')
             death_triggers = game.death_triggers(dead_ids)
             dealt=[]
@@ -3855,7 +3857,7 @@ class Simulator(AdvancedRules):
             self.pending = None
             self.outcome()
             if not self.finished:
-                death_triggers.extend(dict(t,operation='discard',effect='discard') for t in damage_triggers)
+                death_triggers.extend(damage_triggers)
                 death_triggers.extend(combat_draws)
                 self.resolve_entry_triggers(death_triggers,a.card)
             if not self.finished: self.phase = "second_main"

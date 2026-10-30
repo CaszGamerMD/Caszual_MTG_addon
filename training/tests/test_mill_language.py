@@ -64,6 +64,44 @@ class MillLanguageChecks(unittest.TestCase):
         self.assertFalse(any(owner.failed_draw for owner in sim.players))
         sim.invariant()
 
+
+    def test_eye_collector_and_new_names_parse_with_combat_timing(self):
+        real=self.lookup['Eye Collector']
+        card=s.import_diagnostic_card(self.rules,real,0,'eye',{'Blue','Black'})
+        self.assertNotEqual(card.kind,'unsupported')
+        self.assertTrue(any(t.event=='combat_damage' and t.effect.operation=='mill_cards'
+                            for t in card.event_definition.triggers))
+        raw=dict(real,name='Unseen combat archivist',
+                 oracleText='Flying\nWhenever this creature deals combat damage to a player, each player mills five cards.')
+        changed=s.import_diagnostic_card(self.rules,raw,0,'unknown',{'Blue'})
+        self.assertEqual(changed.event_definition.triggers[0].effect.amount,5)
+        raw['oracleText']+='\nCopy an unknown effect.'
+        self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'extra',{'Blue'}).kind,'unsupported')
+
+    def test_real_eye_collector_combat_triggers_one_mill_after_damage(self):
+        card=s.import_diagnostic_card(self.rules,self.lookup['Eye Collector'],0,'eye',{'Blue','Black'})
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+[card],s.demo_deck(1)),diagnostic=True)
+        sim.manual_priority=True
+        p=sim.players[0]
+        (p.hand if card in p.hand else p.library).remove(card)
+        permanent=sim.enter_creature(card,p)
+        sim.resolve_entry_triggers(permanent,card)
+        before=[list(owner.library) for owner in sim.players]
+        oldgrave=[list(owner.graveyard) for owner in sim.players]
+        sim.active=0
+        sim.phase='regular_damage'
+        sim.combat_context=dict(attacker=card.id,blocker=None,blocked=False,early=set())
+        sim.strike_damage_step(False)
+        self.assertEqual(len(sim.stack.items),1)
+        self.assertEqual([owner.library for owner in sim.players],before)
+        self.drain(sim)
+        for seat,owner in enumerate(sim.players):
+            self.assertEqual(owner.library,before[seat][:-1])
+            self.assertEqual(owner.graveyard,oldgrave[seat]+before[seat][-1:])
+        event=next(e for e in sim.events if e['details'].get('operation')=='mill_cards')
+        self.assertEqual(event['details']['milledCounts'],{'0':1,'1':1})
+        sim.invariant()
+
     def test_each_opponent_mill_and_empty_library_are_legal(self):
         card=s.import_diagnostic_card(self.rules,
              self.make_raw('each opponent mills 6 cards.'),0,'mill',{'Blue'})

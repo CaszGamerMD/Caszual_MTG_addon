@@ -490,6 +490,14 @@ def compile_abilities(text, name=''):
         static=static_effect(line)
         if static:
             static_effects.extend(static if isinstance(static,tuple) else (static,)); continue
+        damage_mill=re.fullmatch(
+            r'Whenever this creature deals combat damage to a player, (each (?:player|opponent) mills (?:a|one|two|three|[1-9][0-9]*) cards?\.)',
+            line)
+        if damage_mill:
+            action=effect(damage_mill[1])
+            if action is None or action.operation!='mill_cards':return None
+            triggers.append(Trigger('combat_damage',Selector(self_only=True,creature=True),action))
+            continue
         damage_hand=re.fullmatch(
             r'Whenever this creature deals damage to (a player|an opponent), you may put (?:a|an) ([A-Z][a-z]+) (creature|permanent) card from your hand onto the battlefield\.',
             line)
@@ -639,7 +647,7 @@ def event_data(trigger, source, subject):
     labels={'return_controlled_land':'return a controlled land to its owner hand','gain_life':f'controller gains {e.amount} life','draw_cards':f'controller draws {e.amount} cards',
             'reveal_creatures':f'reveal {e.amount} cards and put matching creatures onto the battlefield',
             'damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
-            'damage':f'deal {e.amount} damage to each opponent','scry':'scry','surveil':'surveil','mill_cards':'move top library cards to graveyards',
+            'damage':f'deal {e.amount} damage to each opponent','scry':'scry','surveil':'surveil','mill_cards':'move top library cards to graveyards','discard':'damaged player discards a card',
             'damage_any_target':f'may deal {e.amount} damage to any target',
             'add_counters':f'put {e.amount} +1/+1 counters on each {e.counter_subtype or "creature"} you control',
             'create_tokens':f'create {e.amount} creature tokens',
