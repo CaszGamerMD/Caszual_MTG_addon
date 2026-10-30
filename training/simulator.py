@@ -3989,7 +3989,10 @@ class Simulator(AdvancedRules):
             reduction=sum(amount for permanent in player.battlefield
                           if permanent.card.event_definition
                           for names,amount in permanent.card.event_definition.cost_reductions
-                          if any(name in categories for name in names))
+                          if (any(name in categories for name in names if name!='chosen_creature_type')
+                              or ('chosen_creature_type' in names and 'creature' in types
+                                  and bool(permanent.chosen_subtype)
+                                  and permanent.chosen_subtype.lower() in subtypes)))
             cost=mana_pool.reduce_generic_cost(cost,reduction,x)
             # Class level 1 taxes opponents' spells only while the Class owner is active.
             if seat!=self.active:

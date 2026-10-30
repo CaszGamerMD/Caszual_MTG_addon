@@ -501,6 +501,10 @@ def compile_abilities(text, name=''):
         if counter:
             counter_replacements.append(('double' if counter[1]=='twice that many' else 'plus',2 if counter[1]=='twice that many' else 1,'controlled_creature'))
             continue
+        chosen_discount=re.fullmatch(r'Creature spells of the chosen type cost \{([1-9][0-9]*)\} less to cast\.',line)
+        if chosen_discount:
+            cost_reductions.append((('chosen_creature_type',),int(chosen_discount[1])))
+            continue
         discount=re.fullmatch(r'([A-Z][a-z]+(?: and [A-Za-z]+)?) spells you cast cost \{([1-9][0-9]*)\} less to cast\.',line)
         repeated=re.fullmatch(r'([A-Z][a-z]+) spells and ([A-Z][a-z]+) spells you cast cost \{([1-9][0-9]*)\} less to cast\.',line)
         if discount or repeated:
@@ -658,7 +662,9 @@ def compile_abilities(text, name=''):
         if action.operation=='create_tokens' and not subject.self_only:
             return None  # Repeating token engines need bounded stack/loop handling.
         triggers.append(Trigger(event,subject,action))
-    if chosen_type_entry != any(e.subject.chosen_subtype for e in static_effects):return None
+    chosen_type_used=(any(e.subject.chosen_subtype for e in static_effects)
+                      or any('chosen_creature_type' in names for names,_ in cost_reductions))
+    if chosen_type_entry != chosen_type_used:return None
     return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers),tuple(token_leave_triggers),tuple(entry_counter_grants),tuple(attack_watchers),chosen_type_entry,opponent_life_gain_becomes_loss,prevent_combat_damage_to_attackers) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers or token_leave_triggers or entry_counter_grants or attack_watchers or opponent_life_gain_becomes_loss or prevent_combat_damage_to_attackers or keywords else None
 
 def matches(subject, source, entered, is_creature):
