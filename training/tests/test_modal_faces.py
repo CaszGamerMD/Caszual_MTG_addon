@@ -42,7 +42,20 @@ class ModalFaceChecks(unittest.TestCase):
         self.assertEqual(s.import_diagnostic_card(self.rules,other,0,'bad2',{'White'}).kind,'unsupported')
         # Other multi-face mechanisms cannot be silently treated as a normal front card.
         self.assertEqual(s.import_diagnostic_card(self.rules,self.lookup["Michiko's Reign of Truth // Portrait of Michiko"],0,'transform',{'White'}).kind,'unsupported')
-        self.assertEqual(s.import_diagnostic_card(self.rules,self.lookup["Halvar, God of Battle // Sword of the Realms"],0,'spellback',{'White'}).kind,'unsupported')
+        # A castable spell back is now supported; the physical front and back
+        # must be distinct programs rather than a silently ignored second face.
+        dual=dict(self.lookup["Halvar, God of Battle // Sword of the Realms"])
+        halvar=s.import_diagnostic_card(self.rules,dual,0,'spellback',{'White'})
+        self.assertEqual(halvar.kind,'creature')
+        self.assertIsNotNone(halvar.modal_spell_face)
+        self.assertEqual(halvar.modal_spell_face.name,'Sword of the Realms')
+        unseen=dict(dual,name='Unseen Battle God // Unseen Blade',
+                    faces=[dict(face) for face in dual['faces']])
+        unseen['faces'][0]['name']='Unseen Battle God'
+        unseen['faces'][1]['name']='Unseen Blade'
+        self.assertEqual(s.import_diagnostic_card(self.rules,unseen,0,'unseen-spellback',{'White'}).kind,'creature')
+        unseen['faces'][1]['text']+='\\nWhen this enters, win the game.'
+        self.assertEqual(s.import_diagnostic_card(self.rules,unseen,0,'invalid-spellback',{'White'}).kind,'unsupported')
 
     def prepare(self):
         card=s.import_diagnostic_card(self.rules,self.actual(),0,'modal',{'White','Green'})
