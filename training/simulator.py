@@ -573,18 +573,18 @@ class Simulator(AdvancedRules):
         from land_type_effects import BASIC_TYPES
         all_sources=[state for state in game.battlefield.values()
                      if state.definition.land_type_effect]
+        if not all_sources:return
+        items_by_id={item.card.id:item for player in self.players for item in player.battlefield}
         replacements=[state for state in all_sources
                       if state.definition.land_type_effect[:2]==('nonbasic','replace')]
         # A nonbasic land granting land types loses that ability under an active
         # nonbasic type replacement (e.g. Urborg under Blood Moon).
         sources=[state for state in all_sources if not (
             'Land' in state.definition.types and replacements and
-            not next(item.card.basic_land for player in self.players for item in player.battlefield
-                     if item.card.id==state.id))]
+            not items_by_id[state.id].card.basic_land)]
         for state in game.battlefield.values():
             if 'Land' not in state.definition.types:continue
-            item=next(item for player in self.players for item in player.battlefield
-                      if item.card.id==state.id)
+            item=items_by_id[state.id]
             types=set(state.definition.subtypes)
             replaced=False
             for source in sources:
