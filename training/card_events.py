@@ -138,6 +138,7 @@ class Definition:
     dynamic_pt_color: str = ''  # Characteristic-defining P/T: own colored permanents.
     combat_limits: tuple[int, int] = ()  # Attack-triggered block cap, tapped-source attack cap.
     upkeep_token_rule: tuple = ()  # (each/your, condition, counted subtype, divisor, TokenSpec).
+    land_type_effect: tuple = ()  # (scope, replace/add, basic land subtypes).
 
 
 def parse_card(card: dict) -> Definition:
@@ -164,6 +165,10 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from land_type_effects import parse as parse_land_type_effect
+    land_type_effect=parse_land_type_effect(text,types)
+    if land_type_effect:
+        return Definition(**base,abilities=frozenset(),land_type_effect=land_type_effect)
     from upkeep_token_rules import parse_enchanted, parse_scaled
     upkeep_tokens=parse_enchanted(text,types) or parse_scaled(text,types)
     if upkeep_tokens:

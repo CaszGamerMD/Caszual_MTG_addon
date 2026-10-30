@@ -565,7 +565,45 @@ class Simulator(AdvancedRules):
                     entered_at=item.entered_at,attachment_at=item.attachment_at,lost_abilities=dict(item.lost_abilities),
                     temporary_ability_times=dict(item.temporary_ability_times),loyalty=item.loyalty,charge_counters=item.charge_counters,chosen_subtype=item.chosen_subtype,keyword_counters=item.keyword_counters,
                     attacking=(1-seat if self.group_combat and card.id in self.group_combat['attackers'] else None))
+        self.apply_land_type_effects(game)
         return game
+
+    def apply_land_type_effects(self,game):
+        """Layer-4 basic land types; replacing nonbasic land abilities removes their own effects."""
+        from land_type_effects import BASIC_TYPES
+        all_sources=[state for state in game.battlefield.values()
+                     if state.definition.land_type_effect]
+        replacements=[state for state in all_sources
+                      if state.definition.land_type_effect[:2]==('nonbasic','replace')]
+        # A nonbasic land granting land types loses that ability under an active
+        # nonbasic type replacement (e.g. Urborg under Blood Moon).
+        sources=[state for state in all_sources if not (
+            'Land' in state.definition.types and replacements and
+            not next(item.card.basic_land for player in self.players for item in player.battlefield
+                     if item.card.id==state.id))]
+        for state in game.battlefield.values():
+            if 'Land' not in state.definition.types:continue
+            item=next(item for player in self.players for item in player.battlefield
+                      if item.card.id==state.id)
+            types=set(state.definition.subtypes)
+            replaced=False
+            for source in sources:
+                scope,mode,granted=source.definition.land_type_effect
+                if scope=='nonbasic' and item.card.basic_land:continue
+                if scope=='controller' and source.controller!=state.controller:continue
+                if mode=='replace':
+                    types=set(granted);replaced=True
+                else:types.update(granted)
+            if replaced:
+                # A land becoming a basic land type loses its printed abilities;
+                # it does not become Basic, and it retains nonland card types.
+                original=state.definition
+                state.definition=EventDefinition(original.name,original.types,
+                    frozenset(types),original.legendary,original.power,original.toughness,
+                    frozenset(),colors=original.colors,mana_cost=original.mana_cost)
+                state.land_overridden=True
+            elif types!=set(state.definition.subtypes):
+                state.definition=replace(state.definition,subtypes=frozenset(types))
 
     def sync_events(self, game: EventGame):
         self.effect_clock=max(self.effect_clock,game.clock)
@@ -599,6 +637,9 @@ class Simulator(AdvancedRules):
 
     def land_entry_tapped(self,card,seat,entry_logs):
         player=self.players[seat]
+        if not card.basic_land and any(state.definition.land_type_effect[:2]==('nonbasic','replace')
+               for state in self.event_game('main').battlefield.values()):
+            return False
         if card.land_rule.startswith('reveal_types:'):
             required=set(card.land_rule.split(':',1)[1].split(','))
             chosen=next((c for c in player.hand if c.id!=card.id and required.intersection(c.land_subtypes)),None)
@@ -612,8 +653,10 @@ class Simulator(AdvancedRules):
             if paid:player.life-=amount
             entry_logs.append(('land_entry_payment',f'Player {seat+1} '+('pays' if paid else 'declines to pay')+f' {amount} life.',dict(actor=seat,amount=amount,paid=paid,source=card.name)))
             return not paid
-        lands=[replace(p.card,land_subtypes=tuple(p.card.event_definition.subtypes)) if p.card.event_definition else p.card
-               for p in player.battlefield if p.card.kind=='land' or p.card.event_definition and 'Land' in p.card.event_definition.types]
+        game=self.event_game('main')
+        lands=[replace(p.card,land_subtypes=tuple(game.battlefield[p.card.id].definition.subtypes))
+               for p in player.battlefield if p.card.id in game.battlefield and
+               'Land' in game.battlefield[p.card.id].definition.types]
         return land_enters_tapped(card,lands)
 
     def choose_creature_type(self, controller, definition, game):
@@ -2885,18 +2928,23 @@ class Simulator(AdvancedRules):
 
     def mana_sources(self, seat: int):
         sources=[]
+        game=self.event_game('main')
         for item in self.players[seat].battlefield:
             if item.tapped: continue
             definition=item.card.event_definition
-            mask=item.card.mask if item.card.kind=='land' else 0
-            if definition and 'Land' in definition.types:
+            state=game.battlefield.get(item.card.id)
+            effective=state.definition if state else definition
+            overridden=bool(state and getattr(state,'land_overridden',False))
+            mask=(0 if overridden else item.card.mask) if item.card.kind=='land' else 0
+            if effective and 'Land' in effective.types:
                 mask|=sum(bit for subtype,bit in {'Plains':1,'Island':2,'Swamp':4,'Mountain':8,'Forest':16}.items()
-                         if subtype in definition.subtypes)
-                if 'Creature' in definition.types and item.fresh:
-                    effective=self.effective_card(item)
-                    if effective is None or 'haste' not in effective.traits.split(';')[-1].split(','): continue
-            if item.card.kind=='land' and item.card.mana_production:
-                options=(item.card.mana_production,)
+                         if subtype in effective.subtypes)
+                if 'Creature' in effective.types and item.fresh:
+                    creature=self.effective_card(item,game)
+                    if creature is None or 'haste' not in creature.traits.split(';')[-1].split(','): continue
+            if item.card.kind=='land' and (mask or item.card.mana_production and not overridden):
+                options=((item.card.mana_production,) if item.card.mana_production and not overridden else ()) + tuple(
+                    tuple(int(i==color) for i in range(6)) for color in range(6) if mask&(1<<color))
             elif mask:
                 options=tuple(tuple(int(i==color) for i in range(6)) for color in range(6) if mask&(1<<color))
             elif item.card.kind=='mana_artifact': options=(item.card.mana_production,)
@@ -3453,13 +3501,14 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
-            and rules.query("cost",cost)["supported"]):
+            and (rules.query("cost",cost)["supported"] or "Land" in event_definition.types and not cost)):
         keywords = sorted(event_definition.abilities)
         parsed = {"kind":("vehicle" if "Vehicle" in event_definition.subtypes else
                           "creature" if "Creature" in event_definition.types else
+                          "land" if "Land" in event_definition.types else
                           "planeswalker" if "Planeswalker" in event_definition.types else
                           "station" if event_definition.station else
                           "artifact" if "Artifact" in event_definition.types and not event_definition.attachment else
