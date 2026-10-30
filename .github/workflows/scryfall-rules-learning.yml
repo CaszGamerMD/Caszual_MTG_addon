@@ -4,6 +4,7 @@ on:
     branches: [experiment/commander-ai-golem]
     paths:
       - training/oracle_abilities.py
+      - training/land_abilities.py
       - training/card_events.py
       - training/oracle_sequence.py
       - training/composable_oracle.py
@@ -14,6 +15,7 @@ on:
       - training/tests/test_generic_landfall.py
       - training/tests/test_generic_controlled_subtype_anthem.py
       - training/tests/test_generic_self_or_subtype_death.py
+      - training/tests/test_generic_indestructible_land.py
       - training/tests/test_scryfall_random_exam.py
       - .github/workflows/scryfall-rules-learning.yml
   workflow_dispatch:
@@ -43,6 +45,7 @@ jobs:
           python -m unittest discover -s training/tests -p test_generic_landfall.py -v
           python -m unittest discover -s training/tests -p test_generic_controlled_subtype_anthem.py -v
           python -m unittest discover -s training/tests -p test_generic_self_or_subtype_death.py -v
+          python -m unittest discover -s training/tests -p test_generic_indestructible_land.py -v
           python -m unittest discover -s training/tests -p test_scryfall_random_exam.py -v
           python -m unittest discover -s training/tests -p test_composable_power_mana.py -v
           python -m unittest discover -s training/tests -p test_oracle_sequence.py -v
