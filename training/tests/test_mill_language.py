@@ -23,6 +23,7 @@ class MillLanguageChecks(unittest.TestCase):
             ('you mill one card.','controller',1),
             ('each opponent mills 4 cards.','each opponent',4),
             ('each player mills three cards.','each player',3),
+            ('each opponent mills ten cards.','each opponent',10),
             ('each player mills 17 cards.','each player',17)):
             raw=self.make_raw(instruction)
             card=s.import_diagnostic_card(self.rules,raw,0,'mil',{'Blue'})
@@ -38,9 +39,9 @@ class MillLanguageChecks(unittest.TestCase):
                             'each player mills two cards, then draws one.'):
             self.assertEqual(s.import_diagnostic_card(self.rules,self.make_raw(instruction),
                                                        0,'bad',{'Blue'}).kind,'unsupported')
-        # Eye Collector needs separate combat-damage trigger composition.
+        # Whole-text Eye Collector combat mill has been implemented and must remain supported.
         self.assertEqual(s.import_diagnostic_card(self.rules,self.lookup['Eye Collector'],
-                                                   0,'real',{'Blue','Black'}).kind,'unsupported')
+                                                   0,'real',{'Blue','Black'}).kind,'creature')
 
     def test_each_player_mill_waits_on_stack_and_moves_correct_top_cards(self):
         card=s.import_diagnostic_card(self.rules,

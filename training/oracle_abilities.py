@@ -332,10 +332,10 @@ def effect(text):
     if m: return Effect('damage',int(m[1]),'each opponent')
     m=re.fullmatch(r'(scry|surveil) ([1-9][0-9]*)\.',text)
     if m: return Effect(m[1],int(m[2]))
-    milled=re.fullmatch(r'(you mill|each opponent mills|each player mills) (a|one|two|three|[1-9][0-9]*) cards?\.',text)
+    milled=re.fullmatch(r'(you mill|each opponent mills|each player mills) (a|one|two|three|four|five|six|seven|eight|nine|ten|[1-9][0-9]*) cards?\.',text)
     if milled:
         word=milled[2]
-        count={'a':1,'one':1,'two':2,'three':3}.get(word)
+        count={'a':1,'one':1,'two':2,'three':3,'four':4,'five':5,'six':6,'seven':7,'eight':8,'nine':9,'ten':10}.get(word)
         if count is None:count=int(word)
         return Effect('mill_cards',count,recipient={
             'you mill':'controller','each opponent mills':'each opponent',
@@ -491,7 +491,7 @@ def compile_abilities(text, name=''):
         if static:
             static_effects.extend(static if isinstance(static,tuple) else (static,)); continue
         damage_mill=re.fullmatch(
-            r'Whenever this creature deals combat damage to a player, (each (?:player|opponent) mills (?:a|one|two|three|[1-9][0-9]*) cards?\.)',
+            r'Whenever this creature deals combat damage to a player, (each (?:player|opponent) mills (?:a|one|two|three|four|five|six|seven|eight|nine|ten|[1-9][0-9]*) cards?\.)',
             line)
         if damage_mill:
             action=effect(damage_mill[1])
@@ -674,4 +674,4 @@ def event_data(trigger, source, subject):
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             **({'libraryFilter':e.library_filter} if e.library_filter else {}),
             **({'steps':[{'operation':step.operation,'amount':step.amount,'recipient':step.recipient,'gain':step.gain} for step in e.steps]} if e.steps else {}),
-            {'enters':'entered','dies':'dead','upkeep':'permanent','end_step':'permanent','cast':'spell','gain_life':'permanent','deals_player_damage':'damageSource','graveyard':'dead','begin_combat':'permanent'}[trigger.event]:subject.id}
+            {'enters':'entered','dies':'dead','upkeep':'permanent','end_step':'permanent','cast':'spell','gain_life':'permanent','deals_player_damage':'damageSource','combat_damage':'damageSource','graveyard':'dead','begin_combat':'permanent'}[trigger.event]:subject.id}
