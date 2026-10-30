@@ -64,6 +64,42 @@ class LandLanguageChecks(unittest.TestCase):
         self.assertTrue(any('scries 1' in e['message'] for e in sim.events))
         sim.invariant()
 
+    def test_scry_three_inspects_distinct_cards_and_moves_selected_bottom(self):
+        sim,cards=self.fixture(['Temple of Plenty'])
+        library=list(sim.players[0].library)
+        looked=library[-3:]
+        examined=[]
+        def choose(seat,card):
+            self.assertEqual(seat,0)
+            examined.append(card.id)
+            return card.id==looked[-1].id
+        with patch.object(sim,'choose_scry_bottom',side_effect=choose):
+            sim._resolve_entry_effects([dict(operation='scry',controller=0,
+                                             source='unseen-scry',amount=3)],cards['Temple of Plenty'])
+        self.assertEqual(examined,[card.id for card in looked])
+        self.assertEqual(sim.players[0].library,
+                         [looked[-1]]+library[:-3]+looked[:-1])
+        event=sim.events[-1]
+        self.assertEqual(event['kind'],'scry')
+        self.assertEqual(event['details']['operation'],'scry')
+        self.assertEqual(event['details']['amount'],3)
+        self.assertEqual(event['details']['movedToBottom'],1)
+        self.assertIn('scries 3',event['message'])
+        public=str(event['details'])+event['message']
+        self.assertFalse(any(card.id in public or card.name in public for card in looked))
+        sim.invariant()
+
+    def test_scry_empty_library_still_logs_zero_without_failed_draw(self):
+        sim,cards=self.fixture(['Temple of Plenty'])
+        player=sim.players[0]
+        player.graveyard.extend(player.library);player.library.clear()
+        sim._resolve_entry_effects([dict(operation='scry',controller=0,
+                                         source='empty-scry',amount=4)],cards['Temple of Plenty'])
+        self.assertFalse(player.failed_draw)
+        self.assertEqual(sim.events[-1]['details']['amount'],0)
+        self.assertIn('scries 0',sim.events[-1]['message'])
+        sim.invariant()
+
     def test_reveal_entry_uses_matching_own_hand_and_keeps_card(self):
         for name,reveal in [('Fortified Village','Plains'),("Auntie's Hovel",'Goblin Instigator')]:
             sim,cards=self.fixture([name,reveal])

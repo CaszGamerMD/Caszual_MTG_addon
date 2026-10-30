@@ -2648,17 +2648,21 @@ class Simulator(AdvancedRules):
                 continue
             if event.get('operation')=='scry':
                 seat=event['controller'];owner=self.players[seat]
-                for _ in range(event.get('amount',1)):
-                    if not owner.library:break
-                    top=owner.library[-1]
-                    # The player sees the top card privately. Deterministic
-                    # baseline keeps it unless the decision hook chooses bottom.
-                    if self.choose_scry_bottom(seat,top):
-                        owner.library.insert(0,owner.library.pop())
-                        moved=True
-                    else:moved=False
-                    self.log('scry','Player scries one privately.',actor=seat,
-                             source=event['source'],movedToBottom=moved)
+                count=min(max(0,int(event.get('amount',1))),len(owner.library))
+                # A single scry N looks at N *distinct* top cards before choosing.
+                # The library uses its last element as its top. Never put card
+                # identities or chosen order into the public replay.
+                looked=list(owner.library[-count:]) if count else []
+                to_bottom=[];kept=[]
+                for top in looked:
+                    (to_bottom if self.choose_scry_bottom(seat,top) else kept).append(top)
+                if to_bottom:
+                    del owner.library[-count:]
+                    owner.library[:0]=to_bottom
+                    owner.library.extend(kept)
+                self.log('scry',f"Player {seat+1} scries {count}, keeping {len(kept)} on top.",
+                         actor=seat,source=event['source'],operation='scry',
+                         amount=count,movedToBottom=len(to_bottom))
                 continue
             if event.get('operation')=='draw_cards':
                 if event.get('optional') and not self.choose_optional_draw(event):continue
