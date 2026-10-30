@@ -239,6 +239,7 @@ class Permanent:
     loyalty: int | None = None
     charge_counters: int = 0
     chosen_subtype: str = ''
+    keyword_counters: frozenset[str] = frozenset()
     regeneration_shields: int = 0
 
 
@@ -559,7 +560,7 @@ class Simulator(AdvancedRules):
                     item.fresh, item.saddled, item.animated, counters=item.counters, token=item.card.is_token,temporary_power=item.temporary_power,
                     temporary_toughness=item.temporary_toughness,temporary_abilities=item.temporary_abilities,attached_to=item.attached_to,
                     entered_at=item.entered_at,attachment_at=item.attachment_at,lost_abilities=dict(item.lost_abilities),
-                    temporary_ability_times=dict(item.temporary_ability_times),loyalty=item.loyalty,charge_counters=item.charge_counters,chosen_subtype=item.chosen_subtype,
+                    temporary_ability_times=dict(item.temporary_ability_times),loyalty=item.loyalty,charge_counters=item.charge_counters,chosen_subtype=item.chosen_subtype,keyword_counters=item.keyword_counters,
                     attacking=(1-seat if self.group_combat and card.id in self.group_combat['attackers'] else None))
         return game
 
@@ -574,6 +575,7 @@ class Simulator(AdvancedRules):
                     item.loyalty=state.loyalty
                     item.charge_counters=state.charge_counters
                     item.chosen_subtype=state.chosen_subtype
+                    item.keyword_counters=state.keyword_counters
                     item.lost_abilities=dict(state.lost_abilities);item.temporary_ability_times=dict(state.temporary_ability_times)
                     item.tapped, item.fresh = state.tapped, state.fresh
                     item.saddled, item.animated, item.counters = state.saddled, state.animated, state.counters
@@ -621,15 +623,17 @@ class Simulator(AdvancedRules):
         # Human is a valid creature type when no existing controlled creature offers a choice.
         return min(counts,key=lambda kind:(-counts[kind],kind)) if counts else 'Human'
 
-    def enter_creature(self, card: Card, player: Player, attached_to=None):
-        return self.enter_creatures([card],player,attached_targets={card.id:attached_to} if attached_to else None)
+    def enter_creature(self, card: Card, player: Player, attached_to=None, keyword_counter=None):
+        return self.enter_creatures([card],player,attached_targets={card.id:attached_to} if attached_to else None,
+                                    keyword_choices={card.id:keyword_counter} if keyword_counter else None)
 
-    def enter_creatures(self, cards, player: Player, bestowed_targets=None, attached_targets=None):
+    def enter_creatures(self, cards, player: Player, bestowed_targets=None, attached_targets=None, keyword_choices=None):
         game=self.event_game('main')
         game._next_token=self.token_sequence
         known=set(game.battlefield)
         controller=next(i for i,candidate in enumerate(self.players) if candidate is player)
         entrants=[];entry_logs=[];chosen_types={}
+        keyword_choices=keyword_choices or {}
         bestowed_targets=bestowed_targets or {}
         attached_targets=dict(attached_targets or {},**bestowed_targets)
         for card in cards:
@@ -642,14 +646,22 @@ class Simulator(AdvancedRules):
             enters_tapped=self.land_entry_tapped(card,controller,entry_logs) if card.kind=='land' else card.enters_tapped
             if definition.chosen_type_entry:
                 chosen_types[card.id]=self.choose_creature_type(controller,definition,game)
+            keyword_choice=keyword_choices.get(card.id)
+            if definition.entry_keyword_choices:
+                if keyword_choice is None:keyword_choice=definition.entry_keyword_choices[0]
+                if keyword_choice not in definition.entry_keyword_choices:
+                    raise ValueError('Illegal keyword counter choice')
+            elif keyword_choice is not None:raise ValueError('Card has no keyword counter choice')
             entrants.append(EventPermanent(card.id,replace(definition,mana_cost=card.mana_cost),controller,tapped=enters_tapped,
-                                           attached_to=attached_targets.get(card.id),chosen_subtype=chosen_types.get(card.id,'')))
+                                           attached_to=attached_targets.get(card.id),chosen_subtype=chosen_types.get(card.id,''),
+                                           keyword_counters=frozenset((keyword_choice,)) if keyword_choice else frozenset()))
         game.life_totals={seat:p.life for seat,p in enumerate(self.players)}
         game.enter_batch(entrants)
         self.entry_history.extend(dict(turn=self.turn,controller=controller,id=p.id,
             subtypes=sorted(p.definition.subtypes)) for p in entrants)
         player.battlefield.extend(Permanent(card,attached_to=attached_targets.get(card.id),bestowed=card.id in bestowed_targets,
-                                           chosen_subtype=chosen_types.get(card.id,'')) for card in cards)
+                                           chosen_subtype=chosen_types.get(card.id,''),
+                                           keyword_counters=next(p.keyword_counters for p in entrants if p.id==card.id)) for card in cards)
         for token_id in game.battlefield.keys()-known-{card.id for card in cards}:
             token_state=game.battlefield[token_id]
             if not token_state.token:raise RuntimeError('Unknown event-created permanent')
@@ -3334,7 +3346,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and rules.query("cost",cost)["supported"]):

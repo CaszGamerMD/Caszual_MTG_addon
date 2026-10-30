@@ -134,6 +134,7 @@ class Definition:
     discard_token_ability: tuple = ()  # (mana cost, TokenSpec); discard one card as cost.
     umbra_armor: bool = False  # Replace destruction of the enchanted creature.
     regenerate_subtype: str = ''  # Tap: create a one-use destruction replacement shield.
+    entry_keyword_choices: tuple[str, ...] = ()  # Choose one keyword counter before entry.
 
 
 def parse_card(card: dict) -> Definition:
@@ -157,6 +158,11 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    # Whole-instruction grammar: choose a real keyword counter before entry.
+    from keyword_counters import parse_entry_choice
+    keyword_choices=parse_entry_choice(text,types)
+    if keyword_choices:
+        return Definition(**base,abilities=frozenset(),entry_keyword_choices=keyword_choices)
     from enchantment_abilities import compile as compile_enchantments
     enchantments=compile_enchantments(text,name,types,subtypes)
     if enchantments:
@@ -350,6 +356,7 @@ class Permanent:
     loyalty: int | None = None
     charge_counters: int = 0
     chosen_subtype: str = ''
+    keyword_counters: frozenset[str] = frozenset()
 
 
 @dataclass
@@ -449,6 +456,7 @@ class Game:
         grants=[]
         if any(p.charge_counters>=threshold and ability in keywords for threshold,_,keywords in p.definition.station):grants.append(p.entered_at)
         if ability in p.definition.abilities:grants.append(p.entered_at)
+        if ability in p.keyword_counters:grants.append(p.entered_at)
         if ability in p.temporary_abilities:grants.append(p.temporary_ability_times.get(ability,p.entered_at))
         for source in self.battlefield.values():
             stamp=max(source.entered_at,source.attachment_at)
@@ -524,6 +532,9 @@ class Game:
         if len({p.id for p in permanents})!=len(permanents):raise IllegalAction('Duplicate permanent ID')
         for permanent in permanents:
             if permanent.id in self.battlefield: raise IllegalAction("Duplicate permanent ID")
+            if permanent.definition.entry_keyword_choices and (len(permanent.keyword_counters)!=1 or
+                    not permanent.keyword_counters <= frozenset(permanent.definition.entry_keyword_choices)):
+                raise NeedsRules('Legal keyword-counter choice required before entry')
             if permanent.definition.chosen_type_entry and not permanent.chosen_subtype:
                 raise NeedsRules('Creature-type choice required before entry')
             if not permanent.definition.supported:
