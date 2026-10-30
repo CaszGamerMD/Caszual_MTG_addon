@@ -164,8 +164,8 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
-    from upkeep_token_rules import parse_enchanted
-    upkeep_tokens=parse_enchanted(text,types)
+    from upkeep_token_rules import parse_enchanted, parse_scaled
+    upkeep_tokens=parse_enchanted(text,types) or parse_scaled(text,types)
     if upkeep_tokens:
         return Definition(**base,abilities=frozenset(),upkeep_token_rule=upkeep_tokens)
     from combat_limits import parse as parse_combat_limits
