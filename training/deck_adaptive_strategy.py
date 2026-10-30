@@ -220,7 +220,7 @@ class AdaptiveDeckPolicy(s.Policy):
                         if mode=='rebuild':
                             score += 2.5
                     if 'Enchantment' in types or card.kind=='enchantment':
-                        score += (3 + min(4,enchants * 0.55)) * affinity('enchantment_value')
+                        score += (5 + min(4,enchants * 0.55)) * affinity('enchantment_value')
                         if 'Aura' in subtypes:
                             score += 2 * affinity('enchantment_value') if creatures else -4
                     if 'Artifact' in types or card.kind in ('artifact','equipment','mana_artifact'):
