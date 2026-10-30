@@ -1337,6 +1337,47 @@ class Simulator(AdvancedRules):
                  actor=seat,source=source_id,manaSources=payment['sources'],stackId=frame.id)
         self.resolve_entry_triggers([],source.card)
 
+    def land_animation_choices(self,seat):
+        game=self.event_game('main')
+        choices=[]
+        for source in self.players[seat].battlefield:
+            definition=source.card.event_definition
+            if not definition or not definition.animate_land_ability:continue
+            cost,subtype,count_type=definition.animate_land_ability
+            if not self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)['paid']:
+                continue
+            for land in self.players[seat].battlefield:
+                state=game.battlefield.get(land.card.id)
+                if not state or 'Land' not in state.definition.types or game.has(state,'shroud') or game.protected(state,source.card.colors):
+                    continue
+                choices.append(Candidate(source.card.id+':animate:'+land.card.id,'activate_land_animation',
+                    source.card.id,features=features(power=2),label='Animate '+land.card.name,
+                    target_permanent=land.card.id))
+        return choices
+
+    def activate_land_animation(self,seat,source_id,land_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        ability=source.card.event_definition.animate_land_ability if source and source.card.event_definition else ()
+        if not ability:raise ValueError('No land-animation ability')
+        game=self.event_game('main')
+        target=game.battlefield.get(land_id)
+        if not target or target.controller!=seat or 'Land' not in target.definition.types or game.has(target,'shroud') or game.protected(target,source.card.colors):
+            raise ValueError('Land animation requires a legal controlled land')
+        cost,subtype,count_type=ability
+        payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
+        if not payment['paid']:raise ValueError('Cannot pay land-animation activation')
+        for item in self.players[seat].battlefield:
+            if item.card.id in payment['sources']:item.tapped=True
+        self.players[seat].mana_pool=list(payment['pool'])
+        event=dict(operation='animate_land',source=source_id,name=source.card.name,controller=seat,
+                   target=land_id,subtype=subtype,countType=count_type,
+                   sourceColors=sorted(source.card.colors))
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' land-animation ability')
+        self.log('activate_land_animation','Mana paid; target chosen before stack resolution.',
+                 actor=seat,source=source_id,target=land_id,stackId=frame.id)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
     def scaled_mana_choices(self,seat):
         choices=[]
         game=self.event_game('main')
@@ -1864,6 +1905,7 @@ class Simulator(AdvancedRules):
         actions.extend(self.sacrifice_team_choices(seat))
         actions.extend(self.sacrifice_protection_choices(seat))
         actions.extend(self.land_counter_choices(seat))
+        actions.extend(self.land_animation_choices(seat))
         actions.extend(self.regenerate_choices(seat))
         actions.extend(self.strip_ability_choices(seat))
         for card in self.permitted_exile_cards(seat):
@@ -1925,6 +1967,9 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_land_counters':
             self.activate_land_counters(seat,choice.card_id)
+            return 'activate'
+        if choice.kind=='activate_land_animation':
+            self.activate_land_animation(seat,choice.card_id,choice.target_permanent)
             return 'activate'
         if choice.kind=='activate_sacrifice_team':
             self.activate_sacrifice_team_boost(seat,choice.card_id)
@@ -2271,6 +2316,30 @@ class Simulator(AdvancedRules):
                 self.log('color_draw_resolution','Count distinct controlled permanent colors at resolution.',actor=seat,source=event['source'],colorCount=len(present))
                 for _ in present:self.draw(seat)
                 self.outcome()
+                continue
+            if event.get('operation')=='animate_land':
+                game=self.event_game('main')
+                target=game.battlefield.get(event['target'])
+                legal=bool(target and target.controller==event['controller'] and
+                           'Land' in target.definition.types and
+                           not game.has(target,'shroud') and
+                           not game.protected(target,event['sourceColors']))
+                if legal:
+                    amount=sum(state.controller==event['controller'] and event['countType'] in state.definition.types
+                               for state in game.battlefield.values())
+                    item=next(item for item in self.players[event['controller']].battlefield
+                              if item.card.id==event['target'])
+                    item.temporary_land_power=amount
+                    item.temporary_land_subtype=event['subtype']
+                    item.temporary_abilities=frozenset(set(item.temporary_abilities)|{'trample','haste'})
+                    self.effect_clock+=1
+                    item.temporary_ability_times.update({'trample':self.effect_clock,'haste':self.effect_clock})
+                    self.log('animate_land','Land becomes a temporary Elemental creature with fixed X/X.',
+                             actor=event['controller'],target=event['target'],power=amount,subtype=event['subtype'])
+                    self.resolve_entry_triggers(self.state_based_actions(),card)
+                else:
+                    self.log('animate_land_fizzle','Land-animation target is no longer legal.',
+                             actor=event['controller'],target=event['target'])
                 continue
             if event.get('operation')=='end_step_life_counters':
                 game=self.event_game('main')
@@ -3367,6 +3436,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.sacrifice_team_choices(seat))
             actions.extend(self.sacrifice_protection_choices(seat))
             actions.extend(self.land_counter_choices(seat))
+        actions.extend(self.land_animation_choices(seat))
             actions.extend(self.regenerate_choices(seat))
             actions.extend(self.strip_ability_choices(seat))
             if (self.diagnostic and p.command_zone and p.command_zone.kind == "creature"
@@ -3504,7 +3574,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
-                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana","activate_sacrifice_boost","activate_land_counters","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
+                           "history_tokens","activate_tokens","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana","activate_sacrifice_boost","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
             self.turn_development[seat]=True
         return choice
 
@@ -3605,6 +3675,8 @@ class Simulator(AdvancedRules):
                 self.activate_regenerate(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind=='activate_land_counters':
                 self.activate_land_counters(self.active,choice.card_id)
+            elif choice.kind=='activate_land_animation':
+                self.activate_land_animation(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind=='activate_sacrifice_team':
                 self.activate_sacrifice_team_boost(self.active,choice.card_id)
             elif choice.kind=='activate_sacrifice_protection':
