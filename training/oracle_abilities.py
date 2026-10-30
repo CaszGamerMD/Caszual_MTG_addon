@@ -287,7 +287,7 @@ def static_effect(text):
     # excludes the source and the color restriction applies to the witness,
     # not to the creature receiving the bonus.
     colored_witness=re.fullmatch(
-        r'This creature gets \\+([0-9]+)/\\+([0-9]+) as long as you control another (white|blue|black|red|green) creature\\.',text)
+        r'This creature gets \+([0-9]+)/\+([0-9]+) as long as you control another (white|blue|black|red|green) creature\.',text)
     if colored_witness:
         return StaticEffect(
             Selector(self_only=True,creature=True),
