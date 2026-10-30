@@ -42,7 +42,7 @@ def parse_sequence(text: str, atom):
         if parsed is None or parsed.operation not in _SAFE:
             return None
         if parsed.operation=="lose_life" and parsed.recipient not in (
-                "self", "each opponent", "target player"):
+                "self", "each opponent"):
             return None
         if parsed.operation=="self_counter" and parsed.amount<=0:
             return None
