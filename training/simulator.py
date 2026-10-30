@@ -1855,6 +1855,9 @@ class Simulator(AdvancedRules):
         if event.get('operation')=='spell':
             types=set(spell.printed_types)
             if spell.event_definition:types.update(spell.event_definition.types)
+            if spell.kind in ('creature','vehicle'):types.add('Creature')
+            if spell.kind in ('aura','enchantment'):types.add('Enchantment')
+            if spell.kind in ('equipment','artifact','mana_artifact'):types.add('Artifact')
             if event.get('bestow'):types={'Enchantment'}
             game=self.event_game('main')
             if any(source.controller==frame.controller and source.definition.protected_spell_types
