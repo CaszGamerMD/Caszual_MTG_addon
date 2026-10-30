@@ -4,7 +4,14 @@ import re
 
 def compile(text,name,types,subtypes):
     if not {'Creature','Enchantment'}<=set(types):return None
-    lines=text.replace(name,'this creature').splitlines()
+    # Oracle often refers to a legendary permanent using only its short name.
+    # Normalize this grammatical self-reference, never use name-based dispatch.
+    short=name.split(',')[0].strip()
+    normalized=text.replace(name,'this creature')
+    if short!=name:
+        normalized=re.sub(r'(?<=Whenever )'+re.escape(short)+r'(?= or )',
+                          'this creature',normalized)
+    lines=normalized.splitlines()
     if len(lines)!=2:return None
     enter=(
         'Constellation — Whenever this creature or another enchantment you control enters, '
