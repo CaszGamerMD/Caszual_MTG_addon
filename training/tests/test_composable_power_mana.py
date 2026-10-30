@@ -68,7 +68,12 @@ class ComposedPowerManaTests(unittest.TestCase):
         sim,cards=self.fixture(['Marwyn, the Nurturer'])
         marwyn=self.put(sim,cards['Marwyn, the Nurturer'])
         marwyn.fresh=False
-        ally=self.token(sim,'ally',subtypes=('Elf',),power=2,toughness=2)
+        ally_type=s.EventDefinition('Unseen ally',frozenset({'Creature'}),
+                     frozenset({'Elf'}),False,2,2,frozenset())
+        ally=s.Card('ally','Unseen ally','creature','{1}{G}',power=2,
+                    toughness=2,event_definition=ally_type,is_token=True)
+        triggers=sim.enter_creature(ally,sim.players[0])
+        sim.resolve_entry_triggers(triggers,ally)
         self.assertEqual(marwyn.counters,0)  # trigger is on stack, not resolved yet
         self.assertGreaterEqual(len(sim.stack.items),1)
         self.drain(sim)
