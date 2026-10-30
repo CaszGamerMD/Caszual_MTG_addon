@@ -160,8 +160,8 @@ def tactical_mode(observation: s.Observation) -> str:
 @dataclass(frozen=True)
 class AdaptiveDeckPolicy(s.Policy):
     """One AI algorithm: profile own deck, assess battlefield, pursue current goal."""
-    version: int = 4
-    scope: str = 'deck-adaptive-public-diagnostic-v1'
+    version: int = 5
+    scope: str = 'deck-adaptive-public-diagnostic-v2'
     plan: DeckPlan = field(default_factory=DeckPlan)
 
     def decision_context(self, observation: s.Observation) -> dict:
