@@ -5,6 +5,7 @@ from unittest.mock import patch
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import simulator as s
+from card_events import IllegalAction
 import test_enchantment_abilities as fixtures
 
 class ChosenTypeEntryTriggerCycle(unittest.TestCase):
@@ -55,6 +56,15 @@ class ChosenTypeEntryTriggerCycle(unittest.TestCase):
         self.drain(sim)
         self.assertEqual(watcher.counters,2)
         sim.invariant()
+
+    def test_noncreature_choices_are_rejected_before_entry(self):
+        for invalid in ('Forest','Equipment','not a type'):
+            sim,cards=self.fixture(['Bloodline Pretender'])
+            with patch.object(sim,'choose_creature_type',return_value=invalid):
+                with self.assertRaises(IllegalAction):
+                    sim.enter_creature(cards['Bloodline Pretender'],sim.players[0])
+            self.assertFalse(any(p.card.id==cards['Bloodline Pretender'].id
+                                 for p in sim.players[0].battlefield))
 
     def test_chosen_type_does_not_trigger_for_opponent_and_source_can_leave(self):
         sim,cards=self.fixture(['Bloodline Pretender'])

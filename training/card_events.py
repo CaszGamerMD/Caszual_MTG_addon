@@ -10,7 +10,7 @@ import re
 from attachments import parse as parse_attachment, parse_bestow, parse_equipment_removals, parse_with_intrinsic
 from attack_abilities import compile as compile_attacks
 from oracle_abilities import Trigger, StaticEffect, compile_abilities, matches, event_data, cast_matches
-from creature_types import has_subtype, has_any_subtype, shares_creature_type
+from creature_types import has_subtype, has_any_subtype, shares_creature_type, valid_creature_choice
 
 
 class NeedsRules(ValueError):
@@ -811,6 +811,8 @@ class Game:
                 raise NeedsRules('Legal keyword-counter choice required before entry')
             if permanent.definition.chosen_type_entry and not permanent.chosen_subtype:
                 raise NeedsRules('Creature-type choice required before entry')
+            if permanent.definition.chosen_type_entry and not valid_creature_choice(permanent.chosen_subtype):
+                raise IllegalAction('Chosen type must be a creature type')
             if not permanent.definition.supported:
                 self.questions.append({"card":permanent.definition.name, "blocking":True,
                     "reason":permanent.definition.reason,

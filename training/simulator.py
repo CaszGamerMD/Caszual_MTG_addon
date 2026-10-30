@@ -8,7 +8,7 @@ import argparse
 from card_events import Game as EventGame, Permanent as EventPermanent, Definition as EventDefinition, parse_card as parse_event_card, rule_text
 import base64
 from oracle_abilities import parse_token_creation, StaticEffect, Selector
-from creature_types import has_subtype, has_any_subtype, card_has_subtype
+from creature_types import has_subtype, has_any_subtype, card_has_subtype, valid_creature_choice
 import mana_pool
 import opening_hand
 import x_spells
@@ -722,7 +722,8 @@ class Simulator(AdvancedRules):
         for creature in game.battlefield.values():
             if creature.controller!=controller or not game.creature(creature):continue
             for subtype in creature.definition.subtypes:
-                counts[subtype]=counts.get(subtype,0)+1
+                if valid_creature_choice(subtype):
+                    counts[subtype]=counts.get(subtype,0)+1
         # Human is a valid creature type when no existing controlled creature offers a choice.
         return min(counts,key=lambda kind:(-counts[kind],kind)) if counts else 'Human'
 

@@ -4,6 +4,7 @@ A changeling is every *creature* type in all zones, not every land,
 artifact or enchantment subtype. The caller still checks whether the
 object is a creature when a rule asks for a creature permanent.
 """
+import re
 
 # Noncreature subtypes must never be inferred from changeling. This list
 # is intentionally a denylist only for the wildcard: printed membership
@@ -40,3 +41,9 @@ def shares_creature_type(first, second) -> bool:
 def card_has_subtype(card, subtype: str) -> bool:
     return (subtype in card.land_subtypes or
             bool(card.event_definition and has_subtype(card.event_definition,subtype)))
+
+
+def valid_creature_choice(subtype: str) -> bool:
+    # The complete type catalog is a separate future validation task; reject
+    # known noncreature types and malformed choices rather than accepting them.
+    return bool(re.fullmatch(r'[A-Z][A-Za-z-]*',subtype)) and subtype not in NONCREATURE_SUBTYPES
