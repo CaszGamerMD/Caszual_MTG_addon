@@ -141,6 +141,7 @@ class Definition:
     upkeep_token_rule: tuple = ()  # (each/your, condition, counted subtype, divisor, TokenSpec).
     land_type_effect: tuple = ()  # (scope, replace/add, basic land subtypes).
     additional_land_plays: int = 0  # Static permission, counted while source stays in play.
+    end_step_life_distribution: bool = False  # Other targets, allocation at trigger placement.
     prevents_opponent_sacrifice: bool = False  # Continuous rule: opposing effects can't force sacrifices.
     equipment_basic_search: bool = False  # Equipped attacker searches for tapped basic land.
     graveyard_exile_activation: tuple = ()  # Cost, conditional creature-token specification.
@@ -170,6 +171,10 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from life_distribution import parse as parse_life_distribution
+    life_distribution=parse_life_distribution(text,types)
+    if life_distribution:
+        return Definition(**base,abilities=life_distribution,end_step_life_distribution=True)
     from graveyard_exile_anthem import parse as parse_graveyard_exile_anthem
     graveyard_program=parse_graveyard_exile_anthem(text,types)
     if graveyard_program:
