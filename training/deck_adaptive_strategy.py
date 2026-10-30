@@ -233,6 +233,8 @@ class AdaptiveDeckPolicy(s.Policy):
                     score += (3 if len(hand) <= 3 else 1.2) * route_factor
                 if 'damage_payoff' in action_roles:
                     score += (4 if len(creatures) >= 3 else 1.5) * route_factor
+                if 'equipment_engine' in action_roles:
+                    score += (4 if creatures else -1) * route_factor
                 if 'life_engine' in action_roles and mode == 'stabilize':
                     score += 3
                 if kind == 'cast_commander':
@@ -321,7 +323,12 @@ class AdaptiveDeckPolicy(s.Policy):
                     score -= 3
             elif kind in ('equip','equip_planeswalker'):
                 source = own_permanents.get(a.card_id,{})
-                score -= 10 if source.get('attachedTo') else 2
+                if source.get('attachedTo'):
+                    score -= 10  # Reattaching already equipped gear wastes tempo.
+                elif 'equipment_engine' in route_steps and creatures:
+                    score += 2  # Completing the legal gear-to-creature step.
+                else:
+                    score -= 2
             elif kind.startswith('activate_sacrifice'):
                 score -= 5 if p in ('tribal_swarm','token_swarm') else 2
             elif kind=='group_blocks':
