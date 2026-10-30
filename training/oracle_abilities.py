@@ -44,6 +44,7 @@ class Selector:
     spell_type: str = ''
     permanent_type: str = ''
     chosen_subtype: bool = False  # Resolve the source's entry-time creature-type choice.
+    subtypes_any: tuple[str, ...] = ()  # A single OR condition, not stacking anthems.
     attacking: bool = False  # Check current combat participation, not tapped status.
     excluded_subtype: str = ''  # A non-Human filter must exclude all Human creatures.
     self_or_controlled_subtype: str = ''
@@ -113,6 +114,16 @@ class Program:
     prevent_combat_damage_to_attackers: bool = False
 
 def static_effect(text):
+    transport_anthem=re.fullmatch(r'([A-Z][a-z]+) and ([A-Z][a-z]+) you control get \+([0-9]+)/\+([0-9]+)\.',text)
+    if transport_anthem:
+        def singular(word):
+            irregular={'Faeries':'Faerie','Elves':'Elf','Mice':'Mouse','Wolves':'Wolf','Oxen':'Ox'}
+            if word in irregular:return irregular[word]
+            return word[:-1] if word.endswith('s') and not word.endswith(('ies','ves','ses','xes','ches','shes')) else None
+        kinds=(singular(transport_anthem[1]),singular(transport_anthem[2]))
+        if not all(kinds):return None
+        return StaticEffect(Selector(relation='controller',creature=True,subtypes_any=kinds),
+                            int(transport_anthem[3]),int(transport_anthem[4]))
     flying_anthem=re.fullmatch(r'(Other )?creatures you control with ([a-z ]+) get \+([0-9]+)/\+([0-9]+)\.',text)
     if flying_anthem:
         if flying_anthem[2] not in KEYWORDS-{'flash'}:return None
@@ -321,6 +332,8 @@ def selector(text):
                     subtype='' if noun=='creature' else noun.split()[0])
 
 def effect(text):
+    mandatory_damage=re.fullmatch(r'this creature deals ([1-9][0-9]*) damage to any target\.',text)
+    if mandatory_damage:return Effect('damage_any_target',int(mandatory_damage[1]))
     any_target=re.fullmatch(r'you may have (?:it|this creature) deal ([1-9][0-9]*) damage to any target\.',text)
     if any_target:return Effect('damage_any_target',int(any_target[1]),optional=True)
     if text=='each opponent loses life equal to the number of tapped creatures you control.':
@@ -681,6 +694,7 @@ def matches(subject, source, entered, is_creature):
         and (subject.legendary is None or subject.legendary==entered.definition.legendary)
         and (not subject.color or subject.color in entered.definition.colors)
         and (not subject.subtype or subject.subtype in entered.definition.subtypes)
+        and (not subject.subtypes_any or bool(set(subject.subtypes_any)&entered.definition.subtypes))
         and (not subject.permanent_type or subject.permanent_type in entered.definition.types)
         and (not subject.chosen_subtype or bool(source.chosen_subtype) and source.chosen_subtype in entered.definition.subtypes)
         and (not subject.attacking or entered.attacking is not None)

@@ -451,6 +451,19 @@ def parse_card(card: dict) -> Definition:
                     static_effects=parsed.static_effects if parsed else (),
                     triggers=parsed.triggers if parsed else (),
                     self_pump=(cost,int(power_bonus),int(toughness_bonus)))
+    # Crew/saddle helper text changes only the creature's contribution to
+    # tapping costs; it never changes combat power or toughness.
+    pilot_lines=text.splitlines()
+    pilot_pattern=r'This creature saddles Mounts and crews Vehicles as though its power were ([1-9][0-9]*) greater\.'
+    pilot_matches=[(i,re.fullmatch(pilot_pattern,line)) for i,line in enumerate(pilot_lines)]
+    pilot_matches=[(i,m) for i,m in pilot_matches if m]
+    if len(pilot_matches)==1 and 'Creature' in types:
+        index,match=pilot_matches[0]
+        remainder='\n'.join(line for i,line in enumerate(pilot_lines) if i!=index)
+        program=compile_abilities(remainder,name)
+        if program:
+            fields={key:value for key,value in vars(program).items() if key!='keywords'}
+            return Definition(**base,abilities=program.keywords,pilot_bonus=int(match[1]),**fields)
     program = compile_abilities(text,name)
     # The entry-time choice grammar must match the permanent type named by Oracle.
     if program and program.chosen_type_entry and not any(
