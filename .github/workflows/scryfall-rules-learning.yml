@@ -71,6 +71,28 @@ jobs:
           from pathlib import Path
           old=json.loads(Path('training/reports/scryfall-regression/recheck/results.json').read_text())
           fresh=json.loads(Path('training/reports/scryfall-transfer/results.json').read_text())
+          # Check the actual saved source cards, not just aggregate acceptance.
+          old_source=json.loads(Path('training/reports/scryfall-regression/recheck/scryfall-source.json').read_text())
+          fresh_source=json.loads(Path('training/reports/scryfall-transfer/scryfall-source.json').read_text())
+          identity=lambda card: card.get('oracle_id') or card['id']
+          old_ids=[identity(card) for card in old_source]
+          fresh_ids=[identity(card) for card in fresh_source]
+          if len(old_ids)!=15 or len(fresh_ids)!=15:
+              raise RuntimeError('Expected exactly 15 source cards in each exam')
+          if len(set(old_ids))!=15 or len(set(fresh_ids))!=15:
+              raise RuntimeError('Duplicate Oracle identity in benchmark or fresh exam')
+          if set(old_ids)&set(fresh_ids):
+              raise RuntimeError('Fresh challenge contains original benchmark Oracle identity')
+          if len(fresh['batches'])!=3 or any(batch['count']!=5 for batch in fresh['batches']):
+              raise RuntimeError('Fresh challenge must contain three complete five-card groups')
+          for report in (old,fresh):
+              for batch in report['batches']:
+                  if batch['diagnosticCompiled']!=sum(
+                          row['verdict']=='diagnostic-compiled' and row['executableDiagnostic']
+                          for row in batch['cards']):
+                      raise RuntimeError('Reported coverage disagrees with card-level diagnostic evidence')
+                  if any(not row['commanderLegal'] for row in batch['cards']):
+                      raise RuntimeError('Exam includes a card not paper Commander legal')
           accepted=lambda report: sum(b['diagnosticCompiled'] for b in report['batches'])
           a,b=accepted(old),accepted(fresh)
           if old['totalCards']!=15 or fresh['totalCards']!=15: raise RuntimeError('Expected exactly 15 per benchmark')
