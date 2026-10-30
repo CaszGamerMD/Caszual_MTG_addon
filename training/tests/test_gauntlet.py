@@ -87,13 +87,15 @@ class GauntletChecks(unittest.TestCase):
                     rulesProgress=dict(runtimeQuestions=['Illegal action at priority']),
                     events=[dict(kind='land',actor=0),dict(kind='land',actor=1),
                             dict(kind='cast',actor=1),dict(kind='cast',actor=1),
-                            dict(kind='attack',actor=0),dict(kind='priority_pass',actor=0),
+                            dict(kind='attack_group',actor=0),dict(kind='activate_land_counters',actor=1),
+                            dict(kind='priority_pass',actor=0),
                             dict(kind='resolve',actor=1)])
         info=g.match_telemetry(report)
         self.assertEqual(info['openingMulligans'],[1,2])
         self.assertEqual(info['landDropsBySeat'],[1,1])
         self.assertEqual(info['spellsCastBySeat'],[0,2])
         self.assertEqual(info['attacksBySeat'],[1,0])
+        self.assertEqual(info['activationsBySeat'],[0,1])
         self.assertEqual(info['resolutionLogEvents'],1)
         self.assertEqual(info['runtimeQuestionCount'],1)
         self.assertEqual(info['observedLegalityQuestions'],['Illegal action at priority'])
