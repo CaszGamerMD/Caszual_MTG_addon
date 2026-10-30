@@ -82,7 +82,13 @@ class HalvarRuleTests(unittest.TestCase):
         back=replace(front.modal_spell_face,physical_id=front.id,modal_front_face=front)
         sim.enter_creature(back,p)
         equip=next(item for item in p.battlefield if item.card.id==front.id)
-        victim=self.token(sim,'victim')
+        # A token ceases to exist after leaving the battlefield, so it cannot
+        # test a graveyard-to-hand death trigger. Use a physical creature card.
+        victim_card=s.Card('victim','victim','creature','{1}{W}',
+                           event_definition=s.EventDefinition('victim',
+                               frozenset({'Creature'}),frozenset(),False,2,2,frozenset()))
+        sim.enter_creature(victim_card,p)
+        victim=next(item for item in p.battlefield if item.card.id==victim_card.id)
         equip.attached_to=victim.card.id
         sim.send_to_destination(p,victim)
         self.assertIn(victim.card,p.graveyard)
