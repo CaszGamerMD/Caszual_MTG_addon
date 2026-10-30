@@ -471,6 +471,14 @@ def compile_abilities(text, name=''):
         if line.startswith('Landfall — '):
             line=line[len('Landfall — '):]
             if not line.startswith('Whenever a land you control enters, '):return None
+        # Ward is a static targeting tax, not a keyword with no parameters.
+        # Reuse the executable static-effect representation; malformed costs
+        # and additional unrecognized instructions still fail the whole card.
+        if re.fullmatch(r'Ward (?:\{(?:[0-9]+|[WUBRGC])\})+',line):
+            ward=static_effect(line)
+            if ward is None:return None
+            static_effects.append(ward)
+            continue
         if line=='Changeling':
             keywords.add('changeling')
             continue
