@@ -81,6 +81,8 @@ class Effect:
     alternate_amount: int = 0
     boost_toughness: int = 0
     boost_keyword: str = ''
+    power_threshold: int = 0
+    low_power_counters: int = 0
 
 @dataclass(frozen=True)
 class Trigger:
@@ -588,6 +590,17 @@ def compile_abilities(text, name=''):
                 return None
             triggers.append(Trigger('gain_life',Selector(self_only=True),action))
             continue
+        # Evaluate the entry-power branch on resolution, not at trigger creation.
+        power_branch=re.fullmatch(
+            r'Whenever a creature you control enters, draw (a|one|two|three|[1-9][0-9]*) cards? if its power is ([1-9][0-9]*) or greater\. Otherwise, put (a|one|two|three|[1-9][0-9]*) \+1/\+1 counters? on it\.',line)
+        if power_branch:
+            words={'a':1,'one':1,'two':2,'three':3}
+            draw=words.get(power_branch[1],int(power_branch[1]) if power_branch[1].isdigit() else 0)
+            counters=words.get(power_branch[3],int(power_branch[3]) if power_branch[3].isdigit() else 0)
+            triggers.append(Trigger('enters',Selector(relation='controller',creature=True),
+                Effect('entry_power_branch',draw,power_threshold=int(power_branch[2]),
+                       low_power_counters=counters)))
+            continue
         casting=re.fullmatch(r'Whenever you cast (?:a|an) (?:(enchantment|artifact|creature|instant|sorcery|planeswalker|noncreature) )?spell, (.+)',line)
         if casting:
             action=effect(casting[2])
@@ -715,6 +728,7 @@ def event_data(trigger, source, subject):
             'damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
             'damage':f'deal {e.amount} damage to each opponent','scry':'scry','surveil':'surveil','mill_cards':'move top library cards to graveyards','discard':'damaged player discards a card',
             'damage_any_target':f'may deal {e.amount} damage to any target',
+            'entry_power_branch':'draw on sufficient entry power, otherwise add counters',
             'target_counter':f'put {e.amount} +1/+1 counters on target creature',
             'add_counters':f'put {e.amount} +1/+1 counters on each {e.counter_subtype or "creature"} you control',
             'create_treasures':f'create {e.amount} Treasure tokens',
@@ -734,6 +748,7 @@ def event_data(trigger, source, subject):
             'effect':label,'operation':e.operation,'recipient':e.recipient,'sourceColors':sorted(source.definition.colors),
             'counterSubtype':e.counter_subtype,'counterSubtypes':e.counter_subtypes,'alternateAmount':e.alternate_amount,
             'boostToughness':e.boost_toughness,'boostKeyword':e.boost_keyword,
+            'powerThreshold':e.power_threshold,'lowPowerCounters':e.low_power_counters,
             **({'deadSubtypes':sorted(subject.definition.subtypes)} if trigger.event in ('dies','graveyard') else {}),
             'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
             'optional':e.optional,

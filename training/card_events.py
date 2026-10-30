@@ -837,7 +837,10 @@ class Game:
                         roleOptions=list(watcher.definition.modal_role_choices))
                 for trigger in watcher.definition.triggers:
                     if trigger.event == "enters" and matches(trigger.subject,watcher,permanent,self.creature(permanent)):
-                        self.emit("trigger",**event_data(trigger,watcher,permanent))
+                        data=event_data(trigger,watcher,permanent)
+                        if trigger.effect.operation=='entry_power_branch':
+                            data.update(entryPower=self.stats(permanent)[0],entryAt=permanent.entered_at)
+                        self.emit("trigger",**data)
             # These are triggered abilities, modeled as immediate resolutions in this
             # focused prototype. The full engine must provide stack/priority.
             watched = any(x.id != permanent.id and x.controller == permanent.controller

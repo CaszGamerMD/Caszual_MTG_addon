@@ -2593,6 +2593,26 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='entry_power_branch':
+                game=self.event_game('main')
+                entered=game.battlefield.get(event['entered'])
+                # Re-entering creates a new object; do not use its power or counters.
+                same=bool(entered and entered.entered_at==event['entryAt'] and game.creature(entered))
+                power=game.stats(entered)[0] if same else event['entryPower']
+                if power>=event['powerThreshold']:
+                    for _ in range(event['amount']):self.draw(event['controller'])
+                    self.log('entry_power_draw','Entry power condition draws cards.',
+                        actor=event['controller'],entered=event['entered'],power=power,drawn=event['amount'])
+                else:
+                    amount=0
+                    if same:
+                        amount=game.counter_amount(entered.id,event['lowPowerCounters'])
+                        entered.counters+=amount
+                        self.sync_events(game)
+                    self.log('entry_power_counters','Low-power entrant receives counters if still present.',
+                        actor=event['controller'],entered=event['entered'],power=power,counters=amount)
+                    if same:self.resolve_entry_triggers(self.state_based_actions(),card)
+                continue
             if event.get('operation')=='saga_chapter_bonus':
                 game=self.event_game('main');target=game.battlefield.get(event['target'])
                 legal=bool(target and game.creature(target) and not game.has(target,'shroud') and
