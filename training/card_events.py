@@ -87,6 +87,7 @@ class Definition:
     triggers: tuple[Trigger, ...] = ()
     static_effects: tuple[StaticEffect, ...] = ()
     attack_effects: tuple = ()
+    group_attack_subtype_tokens: tuple = ()  # Once per declared combat group, not per attacker.
     attachment: tuple = ()
     activations: tuple = ()
     self_pump: tuple = ()  # Mana cost, power, toughness until EOT.
@@ -398,6 +399,31 @@ def parse_card(card: dict) -> Definition:
         return Definition(**base,abilities=frozenset(),attachment=umbra,umbra_armor=True)
     attachment=parse_with_intrinsic(text,types,subtypes)
     if attachment:return Definition(**base,abilities=attachment[0],attachment=attachment[1])
+    # A collective attack trigger fires once for a simultaneous declaration,
+    # independently of how many matching creatures attack in that group.
+    # The remaining Oracle text must independently compile in full.
+    collective_lines=text.splitlines()
+    collective_pattern=r'Whenever one or more ([A-Z][a-z]+) you control attack, (create .+)'
+    collective=[(i,re.fullmatch(collective_pattern,line)) for i,line in enumerate(collective_lines)]
+    collective=[(i,match) for i,match in collective if match]
+    if len(collective)==1 and 'Creature' in types:
+        from oracle_abilities import parse_token_creation
+        index,match=collective[0]
+        irregular={'Elves':'Elf','Faeries':'Faerie','Wolves':'Wolf','Mice':'Mouse',
+                   'Oxen':'Ox','Zombies':'Zombie','Allies':'Ally','Merfolk':'Merfolk'}
+        plural=match[1]
+        tribe=irregular.get(plural)
+        if tribe is None and plural.endswith('s') and not plural.endswith(
+                ('ies','ves','ses','xes','ches','shes')):
+            tribe=plural[:-1]
+        spec=parse_token_creation(match[2][:1].upper()+match[2][1:])
+        remaining='\n'.join(line for i,line in enumerate(collective_lines) if i!=index)
+        program=compile_abilities(remaining,name) if remaining else None
+        if tribe and spec and (not remaining or program):
+            fields=dict(vars(program)) if program else {}
+            abilities=fields.pop('keywords',frozenset())
+            return Definition(**base,abilities=abilities,
+                              group_attack_subtype_tokens=((tribe,spec),),**fields)
     normalized=text.replace(name,'this creature') if name else text
     if ',' in name:
         normalized=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= enters| attacks| isn't a creature|\'s power)",'this creature',normalized)
