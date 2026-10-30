@@ -399,6 +399,14 @@ class AdvancedRules:
   from oracle_abilities import matches,event_data
   for identifier in player_hits:
    pending.extend(g.combat_draw_triggers(identifier))
+   for watcher in g.battlefield.values():
+    if not watcher.definition.enchantment_combat_copy or watcher.controller!=self.active:continue
+    struck=g.battlefield[identifier]
+    if watcher.id==identifier or (struck.controller==watcher.controller and g.enchanted(struck)):
+     pending.append(dict(operation='enchantment_combat_copy',
+        effect='optional once-per-turn nonlegendary enchantment copy',
+        source=watcher.id,sourceEntry=watcher.entered_at,
+        controller=watcher.controller,name=watcher.definition.name))
    for source in g.battlefield.values():
     for trigger in source.definition.triggers:
      if (trigger.event=='combat_damage' and matches(trigger.subject,source,g.battlefield[identifier],True)

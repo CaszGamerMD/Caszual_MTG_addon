@@ -155,6 +155,8 @@ class Definition:
     equipment_creature_conversion: bool = False  # Equipped permanent becomes non-planeswalker creature.
     combat_reattach: bool = False  # Optional start-of-combat Aura/Equipment movement.
     equipment_return_dying: bool = False  # Equipped creature dies -> return from graveyard.
+    constellation_counter: bool = False  # Enchantment ETB triggers targeted +1/+1.
+    enchantment_combat_copy: bool = False  # Once-per-turn enchantment token copy on damage.
 
 
 def parse_card(card: dict) -> Definition:
@@ -181,6 +183,10 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from constellation_copy import compile as compile_constellation_copy
+    if compile_constellation_copy(text,name,types,subtypes):
+        return Definition(**base,abilities=frozenset(),constellation_counter=True,
+                          enchantment_combat_copy=True)
     halvar_lines=text.splitlines()
     if len(halvar_lines)==2 and halvar_lines[1]==(
             'At the beginning of each combat, you may attach target Aura or Equipment '

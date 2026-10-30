@@ -760,8 +760,24 @@ class Simulator(AdvancedRules):
             player.battlefield.append(Permanent(token))
         self.token_sequence=game._next_token
         self.sync_events(game)
+        pending=[event for event in game.events if event['kind']=='trigger']
+        # Constellation sees the entering enchantment including the source itself.
+        # Each watcher/entrant pair produces its own targeted stack trigger.
+        for entrant in entrants:
+            if 'Enchantment' not in entrant.definition.types:continue
+            for controller,owner in enumerate(self.players):
+                if controller!=entrant.controller:continue
+                for watcher in owner.battlefield:
+                    definition=watcher.card.event_definition
+                    if not definition or not definition.constellation_counter:continue
+                    targets=self.creature_targets(controller,watcher.card)
+                    if not targets:continue
+                    chosen=min(targets,key=lambda pair:(pair[0]!=controller,pair[1].card.id))
+                    pending.append(dict(operation='constellation_counter',effect='target creature gains +1/+1 counter',
+                             source=watcher.card.id,controller=controller,name=watcher.card.name,
+                             target=chosen[1].card.id,amount=1))
         for kind,message,details in entry_logs:self.log(kind,message,**details)
-        return [event for event in game.events if event['kind']=='trigger']
+        return pending
 
     def state_based_actions(self):
         """Collect creature deaths in repeated simultaneous batches before priority."""
@@ -1498,6 +1514,9 @@ class Simulator(AdvancedRules):
         self.log('activate_strip',f'Player {seat+1} activates {source.card.name}.',actor=seat,
                  stackId=frame.id,manaSources=payment['sources'],manaPool=list(self.players[seat].mana_pool))
         if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
+    def choose_optional_enchantment_copy(self,event,enchantment):
+        return True
 
     def choose_optional_combat_reattach(self,event):
         return True
@@ -2459,6 +2478,57 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='constellation_counter':
+                game=self.event_game('main');identifier=event['target']
+                state=game.battlefield.get(identifier)
+                legal=bool(state and game.creature(state) and not game.has(state,'shroud')
+                          and (state.controller==event['controller'] or not game.has(state,'hexproof')))
+                if legal:
+                    item=next(item for p in self.players for item in p.battlefield
+                              if item.card.id==identifier)
+                    item.counters+=game.counter_amount(identifier,1)
+                self.log('constellation_counter' if legal else 'constellation_fizzle',
+                    'Constellation puts a counter on target creature.' if legal else
+                    'Constellation target left or became illegal.',
+                    actor=event['controller'],source=event['source'],target=identifier)
+                if legal:self.resolve_entry_triggers(self.state_based_actions(),card)
+                continue
+            if event.get('operation')=='enchantment_combat_copy':
+                key=(event['source'],event['sourceEntry'])
+                used=getattr(self,'enchantment_copy_used',{})
+                if used.get(key)==self.turn:
+                    self.log('enchantment_copy_limit','Once-per-turn copy already created.',
+                        actor=event['controller'],source=event['source'])
+                    continue
+                owner=self.players[event['controller']]
+                options=[item for item in owner.battlefield
+                    if item.card.event_definition
+                    and 'Enchantment' in item.card.event_definition.types
+                    and not item.card.legendary]
+                options.sort(key=lambda item:(item.card.kind=='aura',item.card.id))
+                chosen=None;target_id=None
+                for candidate in options:
+                    if candidate.card.kind=='aura':
+                        targets=self.aura_targets(event['controller'],candidate.card)
+                        if not targets:continue
+                        target_id=min(targets,key=lambda value:(value[0]!=event['controller'],value[1].card.id))[1].card.id
+                    chosen=candidate;break
+                if not chosen or not self.choose_optional_enchantment_copy(event,chosen):
+                    self.log('enchantment_copy_declined','No eligible enchantment or copy declined.',
+                        actor=event['controller'],source=event['source'])
+                    continue
+                self.token_sequence+=1
+                base=chosen.card
+                token=replace(base,id='token-'+str(self.token_sequence),is_token=True,
+                              physical_id='',modal_front_face=None,modal_spell_face=None,
+                              modal_land_face=None,legendary=False)
+                pending=self.enter_creature(token,owner,attached_to=target_id)
+                used[key]=self.turn;self.enchantment_copy_used=used
+                self.log('enchantment_copied','Creates a nonlegendary enchantment token copy.',
+                    actor=event['controller'],source=event['source'],
+                    copiedFrom=base.id,token=token.id,attachedTo=target_id)
+                self.resolve_entry_triggers(pending,token)
+                continue
             if event.get('operation')=='return_dead_equipped':
                 owner=self.players[event['victimOwner']]
                 victim=next((card for card in owner.graveyard
@@ -4321,7 +4391,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.constellation_counter or event_definition.enchantment_combat_copy) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and (rules.query("cost",cost)["supported"] or "Land" in event_definition.types and not cost)):
