@@ -128,6 +128,7 @@ class Definition:
     land_counter_scope: str = 'all'  # Or a color-limited, entered-this-turn subset.
     mentor: bool = False  # Attack trigger: counter on a lesser-power attacker.
     attack_nontoken_tokens: tuple = ()  # Nontoken attacker creates a tapped attacking token.
+    modal_attack_tokens: tuple = ()  # Two modes; chosen on attack, variable X at resolution.
     sacrifice_team_boost: tuple = ()  # Self-sacrifice cost for a team-wide temporary boost.
     sacrifice_protection: tuple = ()  # Mana + self-sacrifice to grant chosen-color protection.
     attack_group_draw: tuple = ()  # (minimum declared attackers, cards drawn) on the stack.
@@ -167,6 +168,10 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from modal_attack_tokens import parse as parse_modal_attack_tokens
+    modal_attack=parse_modal_attack_tokens(text,types)
+    if modal_attack:
+        return Definition(**base,abilities=modal_attack[0],modal_attack_tokens=modal_attack[1])
     from land_type_effects import parse as parse_land_type_effect
     land_type_effect=parse_land_type_effect(text,types)
     if land_type_effect:
