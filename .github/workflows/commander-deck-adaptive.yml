@@ -5,6 +5,7 @@ on:
     paths:
       - training/strategy_building_blocks.py
       - training/deck_adaptive_strategy.py
+      - training/compiled_rules_knowledge.py
       - training/seven_game_deck_adaptive.py
       - training/tests/test_deck_adaptive_strategy.py
       - training/tests/test_strategy_building_blocks.py
