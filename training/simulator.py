@@ -2729,6 +2729,9 @@ class Simulator(AdvancedRules):
                     'Equipment source left before charge trigger resolved.',
                     actor=event['controller'],source=event['source'])
                 continue
+            if event.get('operation')=='death_power_tokens':
+                event=dict(event,operation='create_tokens',
+                           tokenSpec=dict(event['tokenSpec'],amount=max(0,event['lastPower'])))
             if event.get('operation')=='attack_subtype_drain':
                 # This is a triggered ability, not combat damage. X is set
                 # on resolution using the current battlefield and source ID.

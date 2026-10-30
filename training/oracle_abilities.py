@@ -367,6 +367,10 @@ def effect(text):
     if treasure:
         number={'a':1,'one':1,'two':2,'three':3}.get(treasure[1])
         return Effect('create_treasures',number if number is not None else int(treasure[1]))
+    self_counter=re.fullmatch(r'put (a|one|two|three|[1-9][0-9]*) \+1/\+1 counters? on this creature\.',text)
+    if self_counter:
+        number={'a':1,'one':1,'two':2,'three':3}.get(self_counter[1])
+        return Effect('self_counter',number if number is not None else int(self_counter[1]))
     own_loss=re.fullmatch(r'you lose ([1-9][0-9]*) life\.',text)
     if own_loss:return Effect('lose_life',int(own_loss[1]),'self')
     gain=re.fullmatch(r'you gain ([1-9][0-9]*) life\.',text)
@@ -590,9 +594,17 @@ def compile_abilities(text, name=''):
         life_event=re.fullmatch(r'Whenever you gain life, (.+)',line)
         if life_event:
             action=effect(life_event[1])
-            if action is None or action.operation not in ('lose_life','gain_life','draw_cards','add_counters'):
+            if action is None or action.operation not in ('lose_life','gain_life','draw_cards','add_counters','self_counter'):
                 return None
             triggers.append(Trigger('gain_life',Selector(self_only=True),action))
+            continue
+        death_power=re.fullmatch(
+            r'When this creature dies, create X ((?:tapped )?[0-9]+/[1-9][0-9]* (?:white|blue|black|red|green|colorless)(?: and (?:white|blue|black|red|green))? [A-Z][a-z]+(?: [A-Z][a-z]+)* creature tokens?(?: with [a-z, ]+)?), where X is its power\.',line)
+        if death_power:
+            spec=parse_token_creation('Create a '+death_power[1].replace('creature tokens','creature token')+'.')
+            if not spec:return None
+            triggers.append(Trigger('dies',Selector(self_only=True,creature=True),
+                                    Effect('death_power_tokens',0,token=spec)))
             continue
         # Evaluate the entry-power branch on resolution, not at trigger creation.
         power_branch=re.fullmatch(
@@ -746,6 +758,7 @@ def event_data(trigger, source, subject):
             'target_counter':f'put {e.amount} +1/+1 counters on target creature',
             'add_counters':f'put {e.amount} +1/+1 counters on each {e.counter_subtype or "creature"} you control',
             'create_treasures':f'create {e.amount} Treasure tokens',
+            'death_power_tokens':'create creature tokens equal to last-known source power',
             'create_tokens':f'create {e.amount} creature tokens',
             'opponent_optional_basic_search':'each opponent may find a tapped basic land and shuffle',
             'optional_subtype_search_hand':'controller may tutor a subtype card to hand and shuffle',

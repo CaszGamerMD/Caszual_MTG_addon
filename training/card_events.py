@@ -973,6 +973,8 @@ class Game:
                 for creature in dead:
                     if trigger.event == "dies" and matches(trigger.subject,watcher,creature,True):
                         event=event_data(trigger,watcher,creature)
+                        if trigger.effect.operation=='death_power_tokens':
+                            event['lastPower']=max(0,self.stats(creature)[0])
                         if trigger.effect.operation=='pay_return_source':
                             event['sourceEntry']=watcher.entered_at
                         if trigger.effect.operation=='damage_any_target':
