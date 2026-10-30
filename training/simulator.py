@@ -246,6 +246,8 @@ class Permanent:
     chosen_subtype: str = ''
     keyword_counters: frozenset[str] = frozenset()
     regeneration_shields: int = 0
+    temporary_land_power: int | None = None
+    temporary_land_subtype: str = ''
 
 
 @dataclass
@@ -563,6 +565,11 @@ class Simulator(AdvancedRules):
                                                  card.legendary, card.power, card.toughness, keywords,
                                                  colors=frozenset(card.colors))
                 if item.bestowed:definition=self.bestowed_definition(definition)
+                if item.temporary_land_power is not None:
+                    definition=replace(definition,
+                        types=frozenset(set(definition.types)|{'Creature','Land'}),
+                        subtypes=frozenset(set(definition.subtypes)|{item.temporary_land_subtype}),
+                        power=item.temporary_land_power,toughness=item.temporary_land_power)
                 definition=replace(definition,mana_cost=card.mana_cost)
                 game.battlefield[card.id] = EventPermanent(card.id, definition, seat, item.tapped,
                     item.fresh, item.saddled, item.animated, counters=item.counters, token=item.card.is_token,temporary_power=item.temporary_power,
@@ -1803,6 +1810,16 @@ class Simulator(AdvancedRules):
         self.resolve_entry_triggers(triggers,card)
 
     def counter_stack_item(self,frame):
+        event,spell=frame.payload
+        if event.get('operation')=='spell':
+            types=set(spell.printed_types)
+            if spell.event_definition:types.update(spell.event_definition.types)
+            if event.get('bestow'):types={'Enchantment'}
+            game=self.event_game('main')
+            if any(source.controller==frame.controller and source.definition.protected_spell_types
+                   and {word.title() for word in source.definition.protected_spell_types}.intersection(types)
+                   for source in game.battlefield.values()):
+                return None
         removed=self.stack.counter(frame.id)
         if removed and removed.payload[0].get('operation')=='spell' and not removed.payload[0].get('copy'):
             countered=removed.payload[1]
@@ -2157,8 +2174,11 @@ class Simulator(AdvancedRules):
             if frame is None:
                 self.log('illegal_target',f'{card.name} has no legal target and does not resolve.',targetStack=event['target'])
                 return
-            self.counter_stack_item(frame)
-            self.log('counter',f'{card.name} counters {frame.label}.',targetStack=frame.id)
+            removed=self.counter_stack_item(frame)
+            self.log('counter' if removed else 'counter_prevented',
+                     f'{card.name} counters {frame.label}.' if removed
+                     else 'The spell cannot be countered.',
+                     targetStack=frame.id)
             return
         if card.kind=='x_spell':
             x=event['x']
@@ -2706,8 +2726,10 @@ class Simulator(AdvancedRules):
                     self.log('ward_paid',f"Player {payer+1} pays {event['cost']} for ward.",actor=payer,
                              cost=event['cost'],targetStack=frame.id,manaSources=payment['sources'],manaPool=list(payment['pool']))
                 else:
-                    self.counter_stack_item(frame)
-                    self.log('ward_counter',f"{event['name']} counters {frame.label} because ward was not paid.",
+                    removed=self.counter_stack_item(frame)
+                    self.log('ward_counter' if removed else 'ward_counter_prevented',
+                             f"{event['name']} counters {frame.label} because ward was not paid."
+                             if removed else 'Spell cannot be countered by ward.',
                              actor=event['controller'],cost=event['cost'],targetStack=frame.id)
                 continue
             if event.get('operation')=='reveal_creatures':
@@ -3754,6 +3776,7 @@ class Simulator(AdvancedRules):
             for player in self.players:
                 for item in player.battlefield:
                     item.marked_damage=0;item.regeneration_shields=0
+                    item.temporary_land_power=None;item.temporary_land_subtype=''
             game = self.event_game("cleanup")
             game.cleanup()
             self.sync_events(game)
@@ -3827,7 +3850,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation) or "Vehicle" in definition.get("subTypes", []))
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace","shroud"} & event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and (rules.query("cost",cost)["supported"] or "Land" in event_definition.types and not cost)):
