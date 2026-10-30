@@ -50,6 +50,7 @@ class Selector:
     attacking: bool = False  # Check current combat participation, not tapped status.
     excluded_subtype: str = ''  # A non-Human filter must exclude all Human creatures.
     self_or_controlled_subtype: str = ''
+    self_or_subtype: str = ''  # Self or any creature of the subtype, including opponents.
 
 @dataclass(frozen=True)
 class StaticEffect:
@@ -347,6 +348,11 @@ def selector(text):
     if text=='another creature you control of the chosen type':
         return Selector(relation='controller',other=True,creature=True,chosen_subtype=True)
     if text in ('this land','this artifact','this enchantment','this permanent'):return Selector(self_only=True)
+    # Death/entry triggers like "this creature or another Zombie" watch
+    # both the source and matching creatures from either controller.
+    self_or_tribe=re.fullmatch(r'this creature or another ([A-Z][a-z]+)(?: creature)?',text)
+    if self_or_tribe:
+        return Selector(creature=True,self_or_subtype=self_or_tribe[1])
     if text in ('this creature or another creature','this creature or another creature you control'):
         return Selector(relation='controller' if text.endswith('you control') else 'any',creature=True)
     colored=re.fullmatch(r'(a|another) (white|blue|black|red|green) creature you control',text)
@@ -764,6 +770,8 @@ def matches(subject, source, entered, is_creature):
         and (not subject.other or source.id!=entered.id)
         and (not subject.self_or_controlled_subtype or source.id==entered.id or
              (source.controller==entered.controller and has_subtype(entered.definition,subject.self_or_controlled_subtype)))
+        and (not subject.self_or_subtype or source.id==entered.id or
+             has_subtype(entered.definition,subject.self_or_subtype))
         and (subject.relation!='controller' or source.controller==entered.controller)
         and (subject.relation!='opponent' or source.controller!=entered.controller)
         and (not subject.creature or is_creature)
