@@ -7,6 +7,35 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class TribalSpellCastChecks(unittest.TestCase):
+    def test_unseen_tribal_spell_cast_trigger_is_selective(self):
+        from oracle_abilities import cast_matches
+        from types import SimpleNamespace
+        source=parse_card(dict(name='Unknown Elf Mentor',types=['Creature'],subTypes=['Elf'],
+            power='2',toughness='2',oracleText=(
+                'Whenever you cast an Elf spell, you may create a 1/1 green Elf Warrior creature token.')))
+        self.assertTrue(source.supported)
+        self.assertEqual(len(source.triggers),1)
+        trigger=source.triggers[0]
+        self.assertEqual(trigger.subject.subtype,'Elf')
+        self.assertTrue(trigger.effect.optional)
+        self.assertEqual(trigger.effect.operation,'create_tokens')
+        watcher=Permanent('watcher',source,0)
+        elf=SimpleNamespace(printed_types=('Creature',),
+                            event_definition=SimpleNamespace(subtypes=frozenset({'Elf','Warrior'})))
+        goblin=SimpleNamespace(printed_types=('Creature',),
+                               event_definition=SimpleNamespace(subtypes=frozenset({'Goblin'})))
+        self.assertTrue(cast_matches(trigger,watcher,elf,0))
+        self.assertFalse(cast_matches(trigger,watcher,goblin,0))
+        self.assertFalse(cast_matches(trigger,watcher,elf,1))
+
+    def test_unknown_tribal_trigger_remainder_rejected(self):
+        raw=dict(name='Unknown Elf Mentor',types=['Creature'],subTypes=['Elf'],
+                 power='2',toughness='2',oracleText=(
+                     'Whenever you cast an Elf spell, you may create a 1/1 green Elf Warrior creature token. Draw four cards.'))
+        self.assertFalse(parse_card(raw).supported)
+
+
 class LinkedRemovalGrammarChecks(unittest.TestCase):
     def test_generic_destroy_and_controller_token_parsing(self):
         for target_order in ('artifact or creature','creature or artifact'):
