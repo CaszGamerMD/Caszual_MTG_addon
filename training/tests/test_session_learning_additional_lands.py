@@ -74,6 +74,23 @@ class SessionLearningAdditionalLands(unittest.TestCase):
         self.assertFalse(any(c.kind=='land' for c in sim.legal(0)))
         sim.invariant()
 
+    def test_basic_type_addition_and_replacement_follow_timestamps(self):
+        for moon_last in (False,True):
+            sim,cards=self.fixture(['Dryad of the Ilysian Grove','Blood Moon'])
+            player=sim.players[0]
+            land=next(p for p in player.battlefield if p.card.kind=='land')
+            if moon_last:
+                self.put(sim,cards['Dryad of the Ilysian Grove'])
+            player.hand.remove(cards['Blood Moon'])
+            sim.enter_creature(cards['Blood Moon'],sim.players[1])
+            if not moon_last:
+                self.put(sim,cards['Dryad of the Ilysian Grove'])
+            game=sim.event_game('main')
+            observed=set(game.battlefield[land.card.id].definition.subtypes)
+            self.assertEqual(observed,{'Mountain'} if moon_last else
+                             {'Plains','Island','Swamp','Mountain','Forest'})
+            sim.invariant()
+
     def test_extra_land_permission_cumulative_for_multiple_sources(self):
         sim,cards=self.fixture(['Dryad of the Ilysian Grove'])
         source=self.put(sim,cards['Dryad of the Ilysian Grove'])
