@@ -168,9 +168,18 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--count',type=int,default=5)
     p.add_argument('--rounds',type=int,default=1)
+    p.add_argument('--source',type=Path,help='Re-examine a saved scryfall-source.json without redrawing cards')
     p.add_argument('--out',type=Path,default=HERE/'reports/random-commander-exam')
     a=p.parse_args()
-    draws=sample(a.count,a.rounds)
+    if a.source:
+        originals=json.loads(a.source.read_text(encoding='utf-8'))
+        if not isinstance(originals,list) or len(originals)!=a.count*a.rounds:
+            raise ValueError('Saved source count does not match rounds x count')
+        draws=[(source,convert_scryfall(source)) for source in originals]
+        if len({x.get('oracle_id') or x['id'] for x,_ in draws})!=len(draws):
+            raise ValueError('Saved source contains duplicate card identities')
+    else:
+        draws=sample(a.count,a.rounds)
     a.out.mkdir(parents=True,exist_ok=True)
     s.write_json(a.out/'scryfall-source.json',[source for source,_ in draws])
     with s.RulesBridge() as rules:
