@@ -1,3 +1,28 @@
+## Wilds versus Garbo seeded diagnostics (2026-10-30)
+
+Both saved candidate decks currently have **100/100 diagnostic importer coverage**;
+this is not complete Commander rules legality. The focused coverage workflow
+runs a non-learning, alternating-seat Wilds-versus-Garbo batch with seeds
+5189995 onward, a ten-turn-per-player cap, and a first-match spectator HTML
+replay. Its `wilds-garbo-seeded-diagnostic` artifact contains the full
+summary, question log, packed replays, and `first-match.html`.
+
+Diagnostic match accounting **invalidates** games with runtime rules questions,
+unsupported cards, missing final state, inconsistent results, or unsupported
+cards in either participating deck. Invalid games count as `blocked`, not
+wins, losses, or ties. At a completed ten-turn window, higher remaining life
+wins and equal life is a tie; normal engine game results take precedence.
+Reports include friendly mulligans, per-seat land drops and casts, grouped
+attacks, activations, stack resolution events, runtime questions, and
+invalidation reasons. These counters describe observed events, not an
+independent legality oracle. **No diagnostic game is learning-eligible.**
+
+The first verified two-game batch (seeds 5189995 and 5189996) recorded two
+diagnostic Wilds wins, zero runtime questions, and no invalidated games.
+One was a game-rules result; the other used the ten-turn life-score rule.
+This small sample is not a strategic win-rate estimate. A six-game batch
+with alternating seats is the next validation step.
+
 # Commander Golem Match Theater
 
 The Match Theater is a **read-only replay viewer with optional online artwork** for the standalone Commander rules diagnostic. It does not play Magic itself, implement additional rulings, or integrate with Minecraft.
