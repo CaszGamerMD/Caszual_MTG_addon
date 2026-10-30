@@ -333,6 +333,8 @@ KEYWORDS = {'flash','flying','first strike','double strike','lifelink','vigilanc
             'plainswalk','islandwalk','swampwalk','mountainwalk','forestwalk','shroud','fear'} | {'protection from '+color for color in ('white','blue','black','red','green')}
 
 def selector(text):
+    # Landfall is a permanent-entry event, not a creature trigger.
+    if text == 'a land you control': return Selector(relation='controller',permanent_type='Land')
     if text == 'this creature': return Selector(self_only=True,creature=True)
     if text=='another creature you control of the chosen type':
         return Selector(relation='controller',other=True,creature=True,chosen_subtype=True)
@@ -449,6 +451,12 @@ def compile_abilities(text, name=''):
     for line in text.splitlines():
         line=line.strip()
         if not line: continue
+        # Landfall is an ability word with no independent rules meaning.
+        # Consume it only when followed by an actual land-entry trigger;
+        # the full effect still has to compile or the card fails closed.
+        if line.startswith('Landfall — '):
+            line=line[len('Landfall — '):]
+            if not line.startswith('Whenever a land you control enters, '):return None
         if line=='Changeling':
             keywords.add('changeling')
             continue
