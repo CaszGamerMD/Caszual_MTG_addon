@@ -764,6 +764,14 @@ class Simulator(AdvancedRules):
         self.token_sequence=game._next_token
         self.sync_events(game)
         pending=[event for event in game.events if event['kind']=='trigger']
+        # Lore is placed as the Saga enters. Chapter abilities are triggered,
+        # not resolved during entry, and Chapter III needs the same stack.
+        for entrant in entrants:
+            item=next(item for item in player.battlefield if item.card.id==entrant.id)
+            if item.card.event_definition and item.card.event_definition.saga_chapter_scale:
+                item.lore_counters+=1
+                trigger=self.saga_chapter_event(controller,item,item.lore_counters)
+                if trigger:pending.append(trigger)
         # Constellation sees the entering enchantment including the source itself.
         # Each watcher/entrant pair produces its own targeted stack trigger.
         for entrant in entrants:
@@ -781,6 +789,34 @@ class Simulator(AdvancedRules):
                              target=chosen[1].card.id,amount=1))
         for kind,message,details in entry_logs:self.log(kind,message,**details)
         return pending
+
+    def saga_chapter_event(self,seat,permanent,chapter):
+        program=permanent.card.event_definition.saga_chapter_scale
+        if not program:return None
+        if chapter>=3:
+            return dict(operation='saga_transform',controller=seat,source=permanent.card.id,
+                        name=permanent.card.name,chapter=chapter)
+        if chapter not in (1,2):return None
+        targets=self.creature_targets(seat,permanent.card)
+        if not targets:return None
+        chosen=min(targets,key=lambda target:(target[0]!=seat,target[1].card.id))
+        return dict(operation='saga_chapter_bonus',controller=seat,source=permanent.card.id,
+            name=permanent.card.name,chapter=chapter,target=chosen[1].card.id,
+            power=program[0],toughness=program[1])
+
+    def advance_sagas_after_draw(self,seat):
+        """Sagas add one lore counter after the draw step of their controller."""
+        pending=[]
+        for item in list(self.players[seat].battlefield):
+            if not item.card.event_definition or not item.card.event_definition.saga_chapter_scale:
+                continue
+            item.lore_counters+=1
+            event=self.saga_chapter_event(seat,item,item.lore_counters)
+            if event:pending.append((event,item.card))
+            self.log('saga_lore','Saga gets a lore counter after its controller draw step.',
+                actor=seat,source=item.card.id,lore=item.lore_counters)
+        self._waiting_triggers.extend(pending)
+        self.resolve_entry_triggers([],Card('saga-draw','Saga draw step','spell'))
 
     def state_based_actions(self):
         """Collect creature deaths in repeated simultaneous batches before priority."""
@@ -2481,6 +2517,50 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='saga_chapter_bonus':
+                game=self.event_game('main');target=game.battlefield.get(event['target'])
+                legal=bool(target and game.creature(target) and not game.has(target,'shroud') and
+                           (target.controller==event['controller'] or not game.has(target,'hexproof')))
+                if legal:
+                    count=sum(p.controller==event['controller'] and bool(
+                        {'Artifact','Enchantment'}&p.definition.types)
+                        for p in game.battlefield.values())
+                    item=next(p for owner in self.players for p in owner.battlefield
+                              if p.card.id==event['target'])
+                    item.temporary_power+=count*event['power']
+                    item.temporary_toughness+=count*event['toughness']
+                self.log('saga_bonus' if legal else 'saga_bonus_fizzle',
+                    'Saga chapter grants counted temporary power and toughness.' if legal else
+                    'Saga chapter target is no longer legal.',actor=event['controller'],
+                    source=event['source'],target=event['target'],
+                    chapter=event['chapter'],count=count if legal else 0)
+                if legal:self.resolve_entry_triggers(self.state_based_actions(),card)
+                continue
+            if event.get('operation')=='saga_transform':
+                controller=event['controller'];owner=self.players[controller]
+                saga=next((p for p in owner.battlefield if p.card.id==event['source']),None)
+                if saga is None or saga.lore_counters<3 or not saga.card.transform_back_face:
+                    self.log('saga_transform_fizzle','Saga chapter III has no surviving source.',
+                        actor=controller,source=event['source'])
+                    continue
+                front=saga.card
+                self.send_to_destination(owner,saga,to_exile=True)
+                # Tokens cease existing after exile and cannot return.
+                if front.is_token:
+                    self.log('saga_token_exiled','Token Saga does not return transformed.',
+                        actor=controller,source=event['source'])
+                    continue
+                physical_owner=self.players[self.card_owners.get(root(front),controller)]
+                exiled=next((c for c in physical_owner.exile if c.id==front.id),None)
+                if not exiled:raise RuntimeError('Saga exile zone lost physical card')
+                physical_owner.exile.remove(exiled)
+                back=replace(front.transform_back_face,modal_front_face=front,
+                    physical_id=root(front),printed_mana_value=front.printed_mana_value)
+                pending=self.enter_creature(back,owner)
+                self.log('saga_transformed','Saga exiles and returns on its transformed face.',
+                    actor=controller,source=front.id,backFace=back.name)
+                self.resolve_entry_triggers(pending,back)
+                continue
             if event.get('operation')=='constellation_counter':
                 game=self.event_game('main');identifier=event['target']
                 state=game.battlefield.get(identifier)
@@ -4067,6 +4147,7 @@ class Simulator(AdvancedRules):
         elif self.phase == "draw":
             self.phase = "land"
             self.log("phase", "First main phase: land decision.")
+            self.advance_sagas_after_draw(self.active)
         elif self.phase in ("land", "main", "second_main"):
             choice = self.decide(self.active)
             if choice.kind == "pass":
