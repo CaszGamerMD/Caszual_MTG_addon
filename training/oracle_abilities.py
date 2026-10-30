@@ -283,6 +283,17 @@ def static_effect(text):
         subject=Selector(relation='controller',other=bool(subtype_keyword[1]),
                          creature=True,subtype=subtype_keyword[2])
         return tuple(StaticEffect(subject,0,0,grant=word) for word in sorted(traits))
+    # Colored board-state predicates are live continuous effects. "Another"
+    # excludes the source and the color restriction applies to the witness,
+    # not to the creature receiving the bonus.
+    colored_witness=re.fullmatch(
+        r'This creature gets \\+([0-9]+)/\\+([0-9]+) as long as you control another (white|blue|black|red|green) creature\\.',text)
+    if colored_witness:
+        return StaticEffect(
+            Selector(self_only=True,creature=True),
+            int(colored_witness[1]),int(colored_witness[2]),
+            condition=Selector(relation='controller',other=True,creature=True,
+                               color=colored_witness[3].capitalize()))
     stat_conditional=re.fullmatch(r'This creature gets \+([0-9]+)/\+([0-9]+) as long as you have ([1-9][0-9]*) or more life\.',text)
     if stat_conditional:
         return StaticEffect(Selector(self_only=True,creature=True),int(stat_conditional[1]),int(stat_conditional[2]),life_min=int(stat_conditional[3]))
