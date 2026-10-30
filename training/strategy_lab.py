@@ -32,6 +32,9 @@ def policy_for(profile):
     if profile == 'phase-plan':
         from strategy_plans import PhasePlanPolicy
         return PhasePlanPolicy()
+    if profile == 'garbo-pressure':
+        from goblin_strategy import GarboPressurePolicy
+        return GarboPressurePolicy()
     if profile not in PROFILE_DELTAS:
         raise ValueError('Unknown experimental strategy')
     values={k:v for k,v in zip(s.FEATURES,s.Policy().weights)}
@@ -41,7 +44,7 @@ def policy_for(profile):
     return replace(s.Policy(),weights=weights,version=1)
 
 
-def results_for(matches, deck_id, profile):
+def results_for(matches, deck_id, profile, focal_id=5189995):
     """No credit for a paused, unsupported, or rules-question match."""
     rows=[]
     for match in matches:
@@ -49,7 +52,7 @@ def results_for(matches, deck_id, profile):
             rows.append(dict(seed=match['seed'],profile=profile,status='blocked',
                              invalidReasons=match['invalidReasons']))
             continue
-        seat=match['focalSeat'] if deck_id==5189995 else 1-match['focalSeat']
+        seat=match['focalSeat'] if deck_id==focal_id else 1-match['focalSeat']
         deck_won = match['winner'] == seat
         is_tie = match['winner'] is None
         rule_win=bool(deck_won and match['adjudication']=='game_rules')
@@ -118,7 +121,14 @@ def run(rules,focal,opponent,baseline_report,games=4,profile='tempo',seed=518999
         notice='Policy hypotheses only. No legal Commander certification or strategy promotion.',
         comparisons={},matchData=[])
     candidate=policy_for(profile)
-    for controlled_deck in (focal,opponent):
+    if profile == 'garbo-pressure':
+        garbo = [deck for deck in (focal, opponent) if deck['sourceDeckId'] == 5254666]
+        if len(garbo) != 1:
+            raise ValueError('Garbo pressure profile requires Garbo Gobbos deck 5254666')
+        controlled_decks = garbo
+    else:
+        controlled_decks = (focal, opponent)
+    for controlled_deck in controlled_decks:
         target=controlled_deck['sourceDeckId']
         candidate_matches=[]
         for i in range(games):
@@ -139,8 +149,8 @@ def run(rules,focal,opponent,baseline_report,games=4,profile='tempo',seed=518999
                 adjudication=verdict['basis'],scores=verdict['scores'],
                 turnsStarted=report['turnsStarted'],invalidReasons=verdict['invalidReasons'],
                 telemetry=stats))
-        base_rows=results_for(matches,target,'baseline')
-        candidate_rows=results_for(candidate_matches,target,profile)
+        base_rows=results_for(matches,target,'baseline',focal['sourceDeckId'])
+        candidate_rows=results_for(candidate_matches,target,profile,focal['sourceDeckId'])
         results['comparisons'][str(target)]=compare(base_rows,candidate_rows)
         results['matchData'].append(dict(deckId=target,baseline=base_rows,candidate=candidate_rows))
         print('STRATEGY_COMPARE '+json.dumps(dict(deckId=target,**results['comparisons'][str(target)])),flush=True)
@@ -154,7 +164,7 @@ def main():
     parser.add_argument('--baseline',type=Path,required=True)
     parser.add_argument('--games',type=int,default=4)
     parser.add_argument('--seed',type=int,default=5189995)
-    parser.add_argument('--profile',choices=(*PROFILE_DELTAS,'phase-plan'),default='tempo')
+    parser.add_argument('--profile',choices=(*PROFILE_DELTAS,'phase-plan','garbo-pressure'),default='tempo')
     parser.add_argument('--out',type=Path,required=True)
     a=parser.parse_args()
     with s.RulesBridge() as rules:
