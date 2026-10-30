@@ -44,6 +44,7 @@ class Selector:
     spell_type: str = ''
     permanent_type: str = ''
     chosen_subtype: bool = False  # Resolve the source's entry-time creature-type choice.
+    nontoken: bool = False
     subtypes_any: tuple[str, ...] = ()  # A single OR condition, not stacking anthems.
     attacking: bool = False  # Check current combat participation, not tapped status.
     excluded_subtype: str = ''  # A non-Human filter must exclude all Human creatures.
@@ -83,6 +84,7 @@ class Effect:
     boost_keyword: str = ''
     power_threshold: int = 0
     low_power_counters: int = 0
+    return_source_type: str = ''
 
 @dataclass(frozen=True)
 class Trigger:
@@ -665,6 +667,13 @@ def compile_abilities(text, name=''):
                 action=Effect(action.operation,action.amount,token=action.token,controller_loss=int(loss[1]))
             triggers.append(Trigger('upkeep',Selector(self_only=True),action))
             continue
+        paid_return=re.fullmatch(
+            r"Whenever a nontoken creature you control dies, you may pay \{([1-9][0-9]*)\}\. If you do, return this (enchantment|artifact) to its owner's hand\.",line)
+        if paid_return:
+            triggers.append(Trigger('dies',Selector(relation='controller',creature=True,nontoken=True),
+                Effect('pay_return_source',int(paid_return[1]),optional=True,
+                       return_source_type=paid_return[2].title())))
+            continue
         conditional_death=re.fullmatch(
             r'Whenever another creature you control dies, put a \+1/\+1 counter on this creature\. If that creature was an? ([A-Z][a-z]+) or ([A-Z][a-z]+), put two \+1/\+1 counters on this creature instead\.',
             line)
@@ -706,6 +715,7 @@ def matches(subject, source, entered, is_creature):
         and (subject.relation!='controller' or source.controller==entered.controller)
         and (subject.relation!='opponent' or source.controller!=entered.controller)
         and (not subject.creature or is_creature)
+        and (not subject.nontoken or not entered.token)
         and (subject.legendary is None or subject.legendary==entered.definition.legendary)
         and (not subject.color or subject.color in entered.definition.colors)
         and (not subject.subtype or subject.subtype in entered.definition.subtypes)
@@ -730,6 +740,7 @@ def event_data(trigger, source, subject):
             'damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
             'damage':f'deal {e.amount} damage to each opponent','scry':'scry','surveil':'surveil','mill_cards':'move top library cards to graveyards','discard':'damaged player discards a card',
             'damage_any_target':f'may deal {e.amount} damage to any target',
+            'pay_return_source':'optionally pay mana to return source to owner hand',
             'self_sacrifice_unless_bounce':'return another controlled creature or sacrifice this source',
             'entry_power_branch':'draw on sufficient entry power, otherwise add counters',
             'target_counter':f'put {e.amount} +1/+1 counters on target creature',
@@ -752,6 +763,7 @@ def event_data(trigger, source, subject):
             'counterSubtype':e.counter_subtype,'counterSubtypes':e.counter_subtypes,'alternateAmount':e.alternate_amount,
             'boostToughness':e.boost_toughness,'boostKeyword':e.boost_keyword,
             'powerThreshold':e.power_threshold,'lowPowerCounters':e.low_power_counters,
+            'returnSourceType':e.return_source_type,
             **({'deadSubtypes':sorted(subject.definition.subtypes)} if trigger.event in ('dies','graveyard') else {}),
             'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
             'optional':e.optional,

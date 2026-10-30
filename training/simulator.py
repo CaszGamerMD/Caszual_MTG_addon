@@ -2591,12 +2591,40 @@ class Simulator(AdvancedRules):
             self.log("resolve", f"{card.name} resolves.", lifeGain=card.life, drawn=card.draw)
             self.outcome()
 
+    def choose_optional_pay_return(self,event):
+        """Diagnostic decision policy; return False to decline optional mana payment."""
+        return True
+
     def choose_optional_entry_bounce(self,event,candidates):
         """Deterministic legal choice; callers may supply a different decision policy."""
         return min(candidates,key=lambda item:item.card.id) if candidates else None
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='pay_return_source':
+                controller=event['controller']
+                source=next((item for owner in self.players for item in owner.battlefield
+                             if item.card.id==event['source']),None)
+                if source is None or source.entered_at!=event['sourceEntry'] or source.card.event_definition is None or (
+                        event['returnSourceType'] not in source.card.event_definition.types):
+                    self.log('paid_return_no_source','Return trigger has no surviving source.',
+                             actor=controller,source=event['source'])
+                    continue
+                cost='{'+str(event['amount'])+'}'
+                payment=self.payment(replace(source.card,mana_cost=cost),seat=controller,spell_cost=False)
+                if not payment['paid'] or not self.choose_optional_pay_return(event):
+                    self.log('paid_return_declined','Optional return cost not paid.',
+                             actor=controller,source=event['source'],cost=cost)
+                    continue
+                for item in self.players[controller].battlefield:
+                    if item.card.id in payment['sources']:item.tapped=True
+                self.players[controller].mana_pool=list(payment['pool'])
+                owner=next(owner for owner in self.players if source in owner.battlefield)
+                self.send_to_destination(owner,source,to_hand=True)
+                self.log('paid_return','Paid mana and returned the source to its owner hand.',
+                         actor=controller,source=event['source'],cost=cost,
+                         manaSources=payment['sources'])
+                continue
             if event.get('operation')=='self_sacrifice_unless_bounce':
                 controller=event['controller']
                 source=next((item for owner in self.players for item in owner.battlefield

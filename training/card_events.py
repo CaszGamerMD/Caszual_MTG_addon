@@ -465,6 +465,9 @@ def parse_card(card: dict) -> Definition:
             fields={key:value for key,value in vars(program).items() if key!='keywords'}
             return Definition(**base,abilities=program.keywords,pilot_bonus=int(match[1]),**fields)
     program = compile_abilities(text,name)
+    if program and any(trigger.effect.operation=='pay_return_source' and
+                       trigger.effect.return_source_type not in types for trigger in program.triggers):
+        program=None
     # The entry-time choice grammar must match the permanent type named by Oracle.
     if program and program.chosen_type_entry and not any(
         f"As this {kind.lower()} enters, choose a creature type." in text
@@ -970,6 +973,8 @@ class Game:
                 for creature in dead:
                     if trigger.event == "dies" and matches(trigger.subject,watcher,creature,True):
                         event=event_data(trigger,watcher,creature)
+                        if trigger.effect.operation=='pay_return_source':
+                            event['sourceEntry']=watcher.entered_at
                         if trigger.effect.operation=='damage_any_target':
                             # The source may leave before the trigger resolves. Preserve LKI.
                             event.update(lastLifelink=self.has(watcher,'lifelink'),
