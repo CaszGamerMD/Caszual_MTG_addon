@@ -25,6 +25,26 @@ class StrategyLabChecks(unittest.TestCase):
                            baseline.weights[list(__import__('simulator').FEATURES).index('damage')])
         self.assertNotEqual(candidate.weights,baseline.weights)
 
+    def test_phase_plan_uses_public_board_and_own_hand_only(self):
+        import json
+        import simulator as s
+        policy=policy_for('phase-plan')
+        land=s.Candidate('land','land',features=s.features(power=1))
+        passing=s.Candidate('pass','pass',features=s.features(**{'pass':1}))
+        state=dict(players=[dict(battlefield=[],life=40),dict(battlefield=[],life=40)])
+        obs=s.Observation(0,1,'main',(),json.dumps(state),(land,passing))
+        self.assertEqual(policy.choose(obs).kind,'land')
+        self.assertEqual(policy.choose(obs),policy.choose(obs))
+        with self.assertRaises(ValueError):
+            policy.choose(s.Observation(0,1,'main',(),json.dumps(state),()))
+        d=s.EventDefinition('Unseen',frozenset({'Enchantment'}),frozenset(),False,0,0,frozenset())
+        e=s.Card('e','Unseen','enchantment','{W}',event_definition=d)
+        generic=s.Card('g','Generic','artifact','{W}')
+        a=s.Candidate('e','cast','e',s.features(power=2,cost=1))
+        b=s.Candidate('g','cast','g',s.features(power=2,cost=1))
+        ob=s.Observation(0,3,'main',(e,generic),json.dumps(state),(a,b))
+        self.assertEqual(policy.choose(ob).card_id,'e')
+
     def test_same_win_count_faster_real_win_is_provisional_not_training(self):
         a=results_for([self.stub(1,True,8),self.stub(2,True,7)],5189995,'baseline')
         b=results_for([self.stub(1,True,5),self.stub(2,True,6)],5189995,'tempo')

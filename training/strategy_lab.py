@@ -29,6 +29,9 @@ PROFILE_DELTAS = {
 def policy_for(profile):
     if profile == 'baseline':
         return s.Policy()
+    if profile == 'phase-plan':
+        from strategy_plans import PhasePlanPolicy
+        return PhasePlanPolicy()
     if profile not in PROFILE_DELTAS:
         raise ValueError('Unknown experimental strategy')
     values={k:v for k,v in zip(s.FEATURES,s.Policy().weights)}
@@ -151,7 +154,7 @@ def main():
     parser.add_argument('--baseline',type=Path,required=True)
     parser.add_argument('--games',type=int,default=4)
     parser.add_argument('--seed',type=int,default=5189995)
-    parser.add_argument('--profile',choices=tuple(PROFILE_DELTAS),default='tempo')
+    parser.add_argument('--profile',choices=(*PROFILE_DELTAS,'phase-plan'),default='tempo')
     parser.add_argument('--out',type=Path,required=True)
     a=parser.parse_args()
     with s.RulesBridge() as rules:
