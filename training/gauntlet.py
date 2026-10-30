@@ -56,6 +56,33 @@ def adjudicate(report, focal_seat):
                 winner=winner,basis=basis,scores=scores,invalidReasons=[])
 
 
+
+def match_telemetry(report):
+    """Observable actions only; no hidden AI knowledge or fabricated legality checks."""
+    events=report.get('events',[])
+    kinds=Counter(e.get('kind') for e in events)
+    by_seat=lambda kind: [sum(e.get('kind')==kind and e.get('actor')==seat
+                              for e in events) for seat in (0,1)]
+    progress=report.get('rulesProgress') or {}
+    questions=progress.get('runtimeQuestions',[])
+    return dict(
+        openingMulligans=list(report.get('openingMulligans',[])),
+        landDropsBySeat=by_seat('land'),
+        spellsCastBySeat=by_seat('cast'),
+        activationsBySeat=by_seat('activate'),
+        attacksBySeat=by_seat('attack'),
+        priorityPassesBySeat=by_seat('priority_pass'),
+        turnsStarted=list(report.get('turnsStarted',[])),
+        turnsCompleted=list(report.get('turnsCompleted',[])),
+        eventCounts=dict(kinds),
+        resolutionLogEvents=sum(kinds.get(kind,0) for kind in ('resolve','trigger','stack_resolve')),
+        runtimeQuestionCount=len(questions),
+        # This is a subset of observed engine complaints, not proof of legality.
+        observedLegalityQuestions=[q for q in questions
+            if any(term in str(q).lower() for term in ('illegal','invariant','no legal action'))],
+    )
+
+
 def run(rules, focal, opponents, games=10, turns=10, seed=5189995, out=None):
     if games < 2 or games % 2 or turns < 1:
         raise ValueError('Use a positive even number of games and positive turn limit')
@@ -108,6 +135,9 @@ def run(rules, focal, opponents, games=10, turns=10, seed=5189995, out=None):
             assert not report['learningEligible']
             assert all(n <= turns for n in report['turnsStarted'])
             decision=adjudicate(report,focal_seat)
+            if any(item['unsupportedCards'] for item in coverage if item['deckId'] in report['deckIds']):
+                decision=dict(outcome='blocked',winner=None,basis='invalid',scores=decision['scores'],
+                              invalidReasons=sorted(set(decision['invalidReasons']+['unsupported_card_in_deck'])))
             outcome=decision['outcome']
             results[outcome] += 1
             results['turn_limit'] += int(decision['basis']=='turn_limit_life_score')
@@ -127,9 +157,12 @@ def run(rules, focal, opponents, games=10, turns=10, seed=5189995, out=None):
                        winner=decision['winner'], engineWinner=report.get('winner'), adjudication=decision['basis'],
                        scores=decision['scores'], scoreMetric='remaining_life', turnsCompleted=report['turnsCompleted'],
                        focalLife=final[focal_seat]['life'], opponentLife=final[1-focal_seat]['life'],
-                       rulesProgress=report['rulesProgress'])
+                       rulesProgress=report['rulesProgress'],invalidReasons=decision['invalidReasons'],
+                       telemetry=match_telemetry(report))
             summary['matches'].append(row)
             packed.append(dict(id=match_id, adjudication=decision, replay=s.pack_replay(report)))
+            if out and opponent_index==0 and game_index==0:
+                s.export_review(out/'first-match.json',report)
             print(json.dumps({k:row[k] for k in ('id','opponent','outcome','turnsCompleted','focalLife','opponentLife')}), flush=True)
         wins, losses = results['win'], results['loss']
         summary['matchups'].append(dict(opponent=opponent['name'], opponentId=opponent['sourceDeckId'],
