@@ -1,0 +1,43 @@
+name: Garbo commander-clock multi-seed gauntlet
+on:
+  push:
+    branches: [experiment/garbo-first-win]
+    paths:
+      - training/garbo_clock.py
+      - training/garbo_clock_series.py
+      - training/tests/test_garbo_clock_series.py
+      - .github/workflows/garbo-clock-series.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: garbo-clock-series
+  cancel-in-progress: true
+jobs:
+  seeded-series:
+    strategy:
+      matrix:
+        seed: [5257000, 5258000]
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify commander-clock policy and score separation
+        run: python -m unittest discover -s training/tests -p test_garbo_clock_series.py -v
+      - name: Six fresh matched seeds with baseline, swarm and commander-clock
+        run: |
+          python training/garbo_clock_series.py --garbo training/decks/5254666-garbo-gobbos.json --wilds training/decks/5189995-enchantments.json --seed ${{ matrix.seed }} --games 6 --turns 10 --out training/reports/garbo-clock-${{ matrix.seed }}
+      - name: Retain complete summaries and first actual-win replay per plan
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: garbo-clock-series-${{ matrix.seed }}
+          path: training/reports/garbo-clock-${{ matrix.seed }}/
+          retention-days: 14
