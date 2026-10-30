@@ -7,6 +7,30 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class LinkedRemovalGrammarChecks(unittest.TestCase):
+    def test_generic_destroy_and_controller_token_parsing(self):
+        for target_order in ('artifact or creature','creature or artifact'):
+            with self.subTest(target_order=target_order):
+                raw=dict(name='Unseen Intervention',types=['Instant'],
+                    manaCost='{1}{W}',oracleText=(
+                        f'Destroy target {target_order}. Its controller creates a 2/2 white Ox creature token.'))
+                with s.RulesBridge() as rules:
+                    card=s.import_diagnostic_card(rules,raw,0,'intervention',{'White'})
+                self.assertEqual(card.kind,'removal_spell')
+                self.assertEqual(card.removal,'destroy_artifact_creature_token')
+                self.assertEqual(card.token_count,1)
+                self.assertEqual((card.token_definition.power,card.token_definition.toughness),(2,2))
+                self.assertIn('Ox',card.token_definition.subtypes)
+                self.assertIn('White',card.token_definition.colors)
+
+    def test_linked_removal_fails_closed_on_unknown_remainder(self):
+        raw=dict(name='Unseen Intervention',types=['Instant'],manaCost='{1}{W}',
+            oracleText='Destroy target artifact or creature. Its controller creates a 2/2 white Ox creature token. Draw three cards.')
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'intervention',{'White'})
+        self.assertEqual(card.kind,'unsupported')
+
+
 class BudgetFaeriesChoiceRegression(unittest.TestCase):
     def test_entry_keyword_choice_is_generic_and_validated(self):
         from card_events import NeedsRules
