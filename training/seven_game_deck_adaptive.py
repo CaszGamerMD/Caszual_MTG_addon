@@ -45,6 +45,10 @@ def run(rules, garbo, wilds, games=7, turns=15, seed=DEFAULT_SEED, out=None):
     if any(unsupported.values()):
         raise ValueError('Cannot score decks with unsupported cards: ' + repr(unsupported))
     plans = {'Garbo': analyze_deck(garbo), 'Wilds': analyze_deck(wilds)}
+    for name, plan in plans.items():
+        print('DECK_BUILDING_BLOCKS ' + json.dumps(dict(deck=name,
+              primary=plan.primary, secondary=plan.secondary,
+              routes=[r.describe() for r in plan.routes]), sort_keys=True), flush=True)
     matches = []
     for index in range(games):
         garbo_seat = index % 2
@@ -87,7 +91,7 @@ def run(rules, garbo, wilds, games=7, turns=15, seed=DEFAULT_SEED, out=None):
         productionEligible=False,
         disclaimer='Incomplete two-player Commander diagnostic, NOT certified legal Magic games.',
         matchup=['Garbo Gobbos (adaptive)', 'Getting Wild (adaptive)'],
-        policyBySeat=['AdaptiveDeckPolicy-v4', 'AdaptiveDeckPolicy-v4'],
+        policyBySeat=['AdaptiveDeckPolicy-v5', 'AdaptiveDeckPolicy-v5'],
         plans={name:plan.describe() for name,plan in plans.items()},
         identicalAi=True,
         games=games, turnsPerPlayer=turns, seed=seed, firstPlayerSplit={'Garbo': 4, 'Wilds': 3},
