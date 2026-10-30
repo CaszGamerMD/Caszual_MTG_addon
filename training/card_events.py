@@ -66,7 +66,7 @@ MUSTANG = """Whenever this creature attacks while saddled, untap it and put a +1
 Saddle 1"""
 SIMPLE_ABILITIES = {"flying", "first strike", "double strike", "lifelink", "vigilance",
                     "trample", "haste", "defender", "reach", "deathtouch", "indestructible", "hexproof", "menace",
-                    "plainswalk", "islandwalk", "swampwalk", "mountainwalk", "forestwalk", "shroud", "fear"}
+                    "plainswalk", "islandwalk", "swampwalk", "mountainwalk", "forestwalk", "shroud", "fear"} | {"protection from "+color for color in ("white","blue","black","red","green")}
 
 
 @dataclass(frozen=True)
