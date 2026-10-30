@@ -100,6 +100,75 @@ class ModalFaceChecks(unittest.TestCase):
         self.assertTrue(report['events'])
         self.assertEqual(report['rulesProgress']['cardsPlayableInDiagnostic'],[100,100])
 
+    def pathway(self, name='Needleverge Pathway // Pillarverge Pathway'):
+        return dict(self.lookup[name],faces=[dict(face) for face in self.lookup[name]['faces']])
+
+    def test_three_saved_pathways_and_unseen_two_land_faces_are_whole_oracle(self):
+        examples=(('Needleverge Pathway // Pillarverge Pathway',8,1),
+                  ('Clearwater Pathway // Murkwater Pathway',2,4),
+                  ('Darkbore Pathway // Slitherbore Pathway',4,16))
+        for name,front_mask,back_mask in examples:
+            with self.subTest(name=name):
+                raw=self.pathway(name)
+                card=s.import_diagnostic_card(self.rules,raw,0,'pathway',set())
+                self.assertEqual(card.kind,'land')
+                self.assertEqual(card.mask,front_mask)
+                self.assertEqual(card.modal_land_face.kind,'land')
+                self.assertEqual(card.modal_land_face.mask,back_mask)
+                self.assertEqual(card.modal_land_face.name,raw['faces'][1]['name'])
+                self.assertFalse(card.enters_tapped)
+                self.assertFalse(card.modal_land_face.enters_tapped)
+        raw=self.pathway()
+        raw['name']='Unseen Mountain Trail // Unseen Ocean Trail'
+        raw['faces'][0]['name']='Unseen Mountain Trail'
+        raw['faces'][1]['name']='Unseen Ocean Trail'
+        raw['faces'][0]['text']='{T}: Add {G}.'
+        raw['faces'][1]['text']='{T}: Add {U}.'
+        unseen=s.import_diagnostic_card(self.rules,raw,0,'unseen-pathway',{'Green','Blue'})
+        self.assertEqual((unseen.mask,unseen.modal_land_face.mask),(16,2))
+        raw['faces'][1]['text']+='\\nWhenever this land taps, win the game.'
+        self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad-back',set()).kind,'unsupported')
+        raw['faces'][1]['text']='{T}: Add {U}.'
+        raw['faces'][0]['text']+='\\nCreate a mysterious counter.'
+        self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad-front',set()).kind,'unsupported')
+
+    def test_pathway_front_or_back_uses_one_land_play_and_reverts_in_zones(self):
+        raw=self.pathway()
+        for chosen,expected,mask in (('land','Needleverge Pathway',8),
+                                     ('land_back','Pillarverge Pathway',1)):
+            with self.subTest(chosen=chosen):
+                front=s.import_diagnostic_card(self.rules,raw,0,'pathway',{'White','Red'})
+                sim=s.Simulator(self.rules,42,
+                    decks=(s.demo_deck(0)+[front],s.demo_deck(1)),diagnostic=True)
+                sim.manual_priority=True
+                player=sim.players[0]
+                (player.hand if front in player.hand else player.library).remove(front)
+                player.hand.append(front)
+                sim.phase='land';sim.active=0;sim.stack.priority=0
+                actions=[action for action in sim.legal(0)
+                         if action.card_id==front.id and action.kind in ('land','land_back')]
+                self.assertEqual({a.kind for a in actions},{'land','land_back'})
+                with patch.object(sim,'decide',return_value=next(a for a in actions if a.kind==chosen)):
+                    sim.step()
+                permanent=next(p for p in player.battlefield if p.card.id==front.id)
+                self.assertEqual(permanent.card.name,expected)
+                self.assertEqual(permanent.card.mask,mask)
+                self.assertFalse(permanent.tapped)
+                self.assertEqual(sim.land_plays_this_turn,1)
+                self.assertEqual([a for a in sim.legal(0) if a.kind in ('land','land_back')],[])
+                self.assertIn(front.id,[source for source,_ in sim.mana_sources(0)])
+                self.assertEqual(next(options for source,options in sim.mana_sources(0)
+                                      if source==front.id),
+                                 (tuple(int(i==('WUBRGC'.index('R' if mask==8 else 'W')))
+                                        for i in range(6)),))
+                self.assertFalse(any(e['kind']=='cast' and e['details'].get('card')==expected
+                                     for e in sim.events))
+                sim.send_to_destination(player,permanent,to_hand=True)
+                returned=next(c for c in player.hand if c.id==front.id)
+                self.assertEqual(returned.name,'Needleverge Pathway')
+                self.assertIsNotNone(returned.modal_land_face)
+                sim.invariant()
+
     def prepare(self):
         card=s.import_diagnostic_card(self.rules,self.actual(),0,'modal',{'White','Green'})
         sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+[card],s.demo_deck(1)),diagnostic=True)
