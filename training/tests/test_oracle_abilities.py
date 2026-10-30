@@ -29,6 +29,20 @@ class TribalSpellCastChecks(unittest.TestCase):
         self.assertFalse(cast_matches(trigger,watcher,goblin,0))
         self.assertFalse(cast_matches(trigger,watcher,elf,1))
 
+    def test_real_lupitas_elves_huntmaster_compiles(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14435337-lupitas-elves.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Lys Alana Huntmaster')
+        parsed=parse_card(raw)
+        self.assertTrue(parsed.supported,parsed.reason)
+        self.assertEqual(parsed.triggers[0].subject.subtype,'Elf')
+        self.assertEqual(parsed.triggers[0].effect.operation,'create_tokens')
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'huntmaster',{'Green'})
+        self.assertNotEqual(card.kind,'unsupported')
+
+
     def test_unknown_tribal_trigger_remainder_rejected(self):
         raw=dict(name='Unknown Elf Mentor',types=['Creature'],subTypes=['Elf'],
                  power='2',toughness='2',oracleText=(
