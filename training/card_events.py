@@ -137,6 +137,7 @@ class Definition:
     entry_keyword_choices: tuple[str, ...] = ()  # Choose one keyword counter before entry.
     dynamic_pt_color: str = ''  # Characteristic-defining P/T: own colored permanents.
     combat_limits: tuple[int, int] = ()  # Attack-triggered block cap, tapped-source attack cap.
+    upkeep_token_rule: tuple = ()  # (each/your, condition, counted subtype, divisor, TokenSpec).
 
 
 def parse_card(card: dict) -> Definition:
@@ -163,6 +164,10 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from upkeep_token_rules import parse_enchanted
+    upkeep_tokens=parse_enchanted(text,types)
+    if upkeep_tokens:
+        return Definition(**base,abilities=frozenset(),upkeep_token_rule=upkeep_tokens)
     from combat_limits import parse as parse_combat_limits
     combat_limits=parse_combat_limits(text,name,types)
     if combat_limits:
@@ -662,6 +667,14 @@ class Game:
         land_counts=land_counts or {}
         triggers = []
         for p in self.battlefield.values():
+            rule=p.definition.upkeep_token_rule
+            if rule and (rule[0]=='each' or p.controller==self.turn_player):
+                if rule[1]!='enchanted' or self.enchanted(p):
+                    from dataclasses import asdict
+                    triggers.append(dict(operation='upkeep_token_rule',effect='conditional upkeep tokens',
+                        source=p.id,name=p.definition.name,controller=p.controller,event='upkeep',
+                        condition=rule[1],countSubtype=rule[2],divisor=rule[3],
+                        tokenSpec=dict(asdict(rule[4]),keywords=sorted(rule[4].keywords))))
             if p.controller != self.turn_player: continue
             if p.definition.upkeep_attachment_counters and p.attached_to in self.battlefield:
                 triggers.append(dict(operation='enchanted_counters',effect='put counters on enchanted creature',
