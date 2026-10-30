@@ -1,0 +1,56 @@
+name: Commander deck-adaptive AI - 7 games x 15 turns
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - training/deck_adaptive_strategy.py
+      - training/seven_game_deck_adaptive.py
+      - training/tests/test_deck_adaptive_strategy.py
+      - .github/workflows/commander-deck-adaptive.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: commander-deck-adaptive-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  unit:
+    name: Validate deck analysis and tactical policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test adaptive strategy
+        run: |
+          python -m unittest discover -s training/tests -p test_deck_adaptive_strategy.py -v
+          python -m unittest discover -s training/tests -p test_seven_game_shared_ai.py -v
+  match:
+    name: Same algorithm, independently inferred deck plans
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Analyze both decks and run seven 15-turn matches
+        run: |
+          python training/seven_game_deck_adaptive.py --games 7 --turns 15 --seed 5189995 --out training/reports/garbo-wilds-7x15-deck-adaptive
+      - name: Upload strategic plans, results and all replays
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: garbo-wilds-deck-adaptive-7x15
+          path: training/reports/garbo-wilds-7x15-deck-adaptive/
+          retention-days: 14
