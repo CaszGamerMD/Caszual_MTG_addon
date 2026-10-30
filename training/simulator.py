@@ -3606,6 +3606,17 @@ class Simulator(AdvancedRules):
                     amount=count//event['divisor']
                 event=dict(event,operation='create_tokens',tokenSpec=dict(event['tokenSpec'],amount=amount))
             if event.get("operation") == "create_tokens":
+                required_tribe=event.get('requiresOtherControlledSubtype')
+                if required_tribe:
+                    game=self.event_game('main')
+                    if not any(other.id!=event['source'] and
+                            other.controller==event['controller'] and
+                            has_subtype(other.definition,required_tribe)
+                            for other in game.battlefield.values()):
+                        self.log('entry_condition_failed',
+                            'Intervening-if tribal condition no longer holds at resolution.',
+                            actor=event['controller'],source=event['source'],subtype=required_tribe)
+                        continue
                 if event.get('requiresBuffedCreature') and not self.event_game('main').controlled_creature_above_base(event['controller']):
                     self.log('end_step_condition_failed','Intervening-if condition no longer holds at resolution.',
                              actor=event['controller'],source=event['source'])
