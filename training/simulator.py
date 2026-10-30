@@ -1499,6 +1499,36 @@ class Simulator(AdvancedRules):
                  stackId=frame.id,manaSources=payment['sources'],manaPool=list(self.players[seat].mana_pool))
         if not self.manual_priority and not self._resolving_stack:self.drain_priority()
 
+    def choose_optional_combat_reattach(self,event):
+        return True
+
+    def combat_reattach_triggers(self):
+        """Optional beginning-of-each-combat attach targeting, once per source."""
+        game=self.event_game('combat');result=[]
+        for controller,player in enumerate(self.players):
+            for source in player.battlefield:
+                if not source.card.event_definition or not source.card.event_definition.combat_reattach:
+                    continue
+                attachments=sorted((item for item in player.battlefield
+                    if item.card.kind in ('aura','equipment') and item.attached_to
+                    and item.card.id in game.battlefield and item.attached_to in game.battlefield
+                    and game.creature(game.battlefield[item.attached_to])
+                    and game.battlefield[item.attached_to].controller==controller),
+                    key=lambda item:item.card.id)
+                for attachment in attachments:
+                    available=(self.aura_targets(controller,attachment.card)
+                        if attachment.card.kind=='aura' else
+                        self.creature_targets(controller,attachment.card))
+                    choices=sorted(p.card.id for seat,p in available if seat==controller
+                                   and p.card.id!=attachment.attached_to)
+                    if choices:
+                        result.append((dict(operation='combat_reattach',
+                            source=source.card.id,controller=controller,name=source.card.name,
+                            attachment=attachment.card.id,target=choices[0],
+                            effect='may reattach Aura or Equipment'),source.card))
+                        break
+        return result
+
     def enchantment_copy_targets(self,seat):
         """Target nonmana abilities from enchantment sources controlled on the stack."""
         targets=[]
@@ -2429,6 +2459,43 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='return_dead_equipped':
+                owner=self.players[event['victimOwner']]
+                victim=next((card for card in owner.graveyard
+                             if card.id==event['victim']),None)
+                if victim:
+                    owner.graveyard.remove(victim)
+                    owner.hand.append(victim.modal_front_face or victim)
+                self.log('return_equipped' if victim else 'return_equipped_fizzle',
+                    'Equipped creature returns to owner hand.' if victim else
+                    'Creature card is no longer in its owner graveyard.',
+                    actor=event['controller'],source=event['source'],
+                    victim=event['victim'])
+                continue
+            if event.get('operation')=='combat_reattach':
+                controller=event['controller'];game=self.event_game('combat')
+                src=next((item for item in self.players[controller].battlefield
+                          if item.card.id==event['attachment']),None)
+                attached=game.battlefield.get(src.attached_to) if src else None
+                target=game.battlefield.get(event['target'])
+                valid=(src is not None and attached is not None and target is not None
+                       and attached.controller==controller and game.creature(attached)
+                       and target.controller==controller and game.creature(target)
+                       and target.id!=attached.id and not game.has(target,'shroud')
+                       and not game.protected(target,src.card.colors))
+                if valid and src.card.kind=='aura':
+                    valid=event['target'] in {p.card.id for seat,p in
+                        self.aura_targets(controller,src.card) if seat==controller}
+                if valid and self.choose_optional_combat_reattach(event):
+                    src.attached_to=event['target'];self.effect_clock+=1
+                    src.attachment_at=self.effect_clock
+                    self.log('combat_reattach','Combat source moves an attachment.',
+                        actor=controller,source=event['source'],attachment=src.card.id,
+                        target=event['target'])
+                else:
+                    self.log('combat_reattach_fizzle','Attachment move declined or illegal.',
+                             actor=controller,source=event['source'])
+                continue
             if event.get('operation')=='class_level_up':
                 source=next((item for item in self.players[event['controller']].battlefield
                              if item.card.id==event['source']),None)
@@ -3455,6 +3522,17 @@ class Simulator(AdvancedRules):
             next(i for i,p in enumerate(self.players) if p is player))]
         to_graveyard=not (to_exile or to_hand or root(item.card)==destination.commander_id)
         if to_graveyard:
+            # The Equipment's leave/death trigger sees its predeath attachment.
+            for controller,owner in enumerate(self.players):
+                for equip in owner.battlefield:
+                    definition=equip.card.event_definition
+                    if equip.attached_to==item.card.id and definition and definition.equipment_return_dying:
+                        victim_owner=self.card_owners.get(root(item.card),
+                            next(i for i,p in enumerate(self.players) if p is player))
+                        self._waiting_triggers.append((dict(
+                            operation='return_dead_equipped',source=equip.card.id,
+                            controller=controller,name=equip.card.name,
+                            victim=item.card.id,victimOwner=victim_owner),equip.card))
             if item.card.event_definition and item.card.event_definition.aura_graveyard_draw:
                 controller=next(seat for seat,owner in enumerate(self.players) if owner is player)
                 self._waiting_triggers.append((dict(operation='draw_cards',effect='draw a card',
@@ -3924,6 +4002,7 @@ class Simulator(AdvancedRules):
                 if self.phase=='attack':
                     game=self.event_game('combat');game.turn_player=self.active
                     pending=game.begin_combat_triggers()
+                    self._waiting_triggers.extend(self.combat_reattach_triggers())
                     self.resolve_entry_triggers(pending,Card('combat','Beginning of combat','spell'))
             elif choice.kind=='station':
                 self.activate_station(self.active,choice.card_id,choice.tap_ids[0])
