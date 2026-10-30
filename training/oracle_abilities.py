@@ -326,6 +326,10 @@ def selector(text):
     colored=re.fullmatch(r'(a|another) (white|blue|black|red|green) creature you control',text)
     if colored:
         return Selector(relation='controller',other=colored[1]=='another',creature=True,color=colored[2].title())
+    global_subtype=re.fullmatch(r'(a|another) ([A-Z][a-z]+)(?: creature)?',text)
+    if global_subtype:
+        return Selector(other=global_subtype[1]=='another',creature=True,
+                        subtype=global_subtype[2])
     m=re.fullmatch(r'(a|another) (creature|[A-Z][a-z]+(?: creature)?) you control',text)
     if not m:
         if text=='a creature an opponent controls':return Selector(relation='opponent',creature=True)
