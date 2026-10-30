@@ -1,0 +1,31 @@
+name: Garbo winning strategy postmortem
+on:
+  push:
+    branches: [experiment/garbo-first-win]
+    paths:
+      - training/garbo_win_postmortem.py
+      - .github/workflows/garbo-win-postmortem.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  winning-seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reproduce baseline/swarm/counterpunch genuine win and collect commander damage
+        run: python training/garbo_win_postmortem.py
+      - name: Upload three verified winning-seed replays and detailed strategy evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: garbo-winner-3-ways-replay
+          path: training/reports/garbo-first-win-postmortem/
+          retention-days: 14
