@@ -4079,7 +4079,11 @@ class Simulator(AdvancedRules):
             elif definition and definition.scaled_mana_tap:
                 game=self.event_game('main');state=game.battlefield.get(item.card.id)
                 if state is None or (game.creature(state) and item.fresh and not game.has(state,'haste')):continue
-                if definition.scaled_mana_tap.startswith('power:'):
+                if definition.scaled_mana_tap.startswith('fixed:'):
+                    _,symbol,quantity=definition.scaled_mana_tap.split(':')
+                    color=mana_pool.COLORS.index(symbol)
+                    options=(tuple(int(quantity) if index==color else 0 for index in range(6)),)
+                elif definition.scaled_mana_tap.startswith('power:'):
                     symbol=definition.scaled_mana_tap.removeprefix('power:')
                     if symbol not in mana_pool.COLORS[:5]:
                         raise RuntimeError('Unsupported self-power mana color')
