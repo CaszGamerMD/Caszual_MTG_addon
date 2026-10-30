@@ -15,8 +15,9 @@ import gauntlet
 import simulator as s
 from garbo_policy import GoblinPlan
 from garbo_clock import CommanderClockPolicy
+from garbo_adaptive import AdaptiveGarboPolicy
 
-PROFILES=('baseline','swarm','commander-clock')
+PROFILES=('baseline','swarm','commander-clock','adaptive')
 
 def actual_win(decision, report, seat):
     return (decision['outcome']=='win' and decision['basis']=='game_rules'
@@ -73,6 +74,7 @@ def run(rules,garbo,wilds,seeds,turns=10,out=None):
             policies=[s.Policy(),s.Policy()]
             if plan=='swarm':policies[garbo_seat]=GoblinPlan(plan='swarm')
             if plan=='commander-clock':policies[garbo_seat]=CommanderClockPolicy()
+            if plan=='adaptive':policies[garbo_seat]=AdaptiveGarboPolicy()
             report=s.diagnose(rules,decks,seed,turns,policies=tuple(policies))
             verdict=gauntlet.adjudicate(report,garbo_seat)
             is_actual=actual_win(verdict,report,garbo_seat)
@@ -109,11 +111,17 @@ def run(rules,garbo,wilds,seeds,turns=10,out=None):
     for seed in seeds:
         bundle={r['plan']:r for r in output['matches'] if r['seed']==seed}
         if set(bundle)==set(PROFILES):
-            original,swarm,clock=(bundle[p] for p in PROFILES)
+            original,swarm,clock,adaptive=(bundle[p] for p in PROFILES)
             output['pairedSeedComparisons'].append(dict(seed=seed,
                 baselineActualWin=original['actualWin'],
                 swarmActualWin=swarm['actualWin'],
                 clockActualWin=clock['actualWin'],
+                adaptiveActualWin=adaptive['actualWin'],
+                adaptiveCreatesWin=adaptive['actualWin'] and not original['actualWin'],
+                adaptiveLosesWin=original['actualWin'] and not adaptive['actualWin'],
+                adaptiveDamageDeltaVsBaseline=adaptive['commanderDamage']-original['commanderDamage'],
+                adaptiveTurnsSaved=(original['garboTurn']-adaptive['garboTurn']
+                                    if original['actualWin'] and adaptive['actualWin'] else None),
                 commanderDamageDeltaVsBaseline=clock['commanderDamage']-original['commanderDamage'],
                 commanderDamageDeltaVsSwarm=clock['commanderDamage']-swarm['commanderDamage'],
                 clockCreatesWin=clock['actualWin'] and not original['actualWin'],
@@ -122,7 +130,9 @@ def run(rules,garbo,wilds,seeds,turns=10,out=None):
     if out:s.write_json(out/'results.json',output)
     print('CLOCK_SUMMARY '+json.dumps(dict(seedCount=len(seeds),
         totalGames=len(output['matches']),profiles=output['summary'],
-        newRealWins=sum(x['clockCreatesWin'] for x in output['pairedSeedComparisons']))),flush=True)
+        newRealWins=sum(x['clockCreatesWin'] for x in output['pairedSeedComparisons']),
+        adaptiveNewWins=sum(x['adaptiveCreatesWin'] for x in output['pairedSeedComparisons']),
+        adaptiveLostWins=sum(x['adaptiveLosesWin'] for x in output['pairedSeedComparisons']))),flush=True)
     return output
 
 def main():

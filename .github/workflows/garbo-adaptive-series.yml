@@ -1,0 +1,45 @@
+name: Garbo adaptive tactics versus original Wilds
+on:
+  push:
+    branches: [experiment/garbo-first-win]
+    paths:
+      - training/garbo_adaptive.py
+      - training/tests/test_garbo_adaptive.py
+      - training/garbo_clock_series.py
+      - .github/workflows/garbo-adaptive-series.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: garbo-adaptive-series
+  cancel-in-progress: true
+jobs:
+  adaptive-vs-original:
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [5258000, 5260000]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify public-only tactical adaptations and baseline fallback
+        run: |
+          python -m unittest discover -s training/tests -p test_garbo_adaptive.py -v
+          python -m unittest discover -s training/tests -p test_garbo_clock_series.py -v
+      - name: Compare four Garbo policies with original Wilds on six same-seed games
+        run: |
+          python training/garbo_clock_series.py --garbo training/decks/5254666-garbo-gobbos.json --wilds training/decks/5189995-enchantments.json --seed ${{ matrix.seed }} --games 6 --turns 10 --out training/reports/garbo-adaptive-${{ matrix.seed }}
+      - name: Upload matches and victory replays
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: garbo-adaptive-${{ matrix.seed }}
+          path: training/reports/garbo-adaptive-${{ matrix.seed }}/
+          retention-days: 14
