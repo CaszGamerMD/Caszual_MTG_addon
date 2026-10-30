@@ -148,6 +148,7 @@ class Definition:
     prevents_opponent_sacrifice: bool = False  # Continuous rule: opposing effects can't force sacrifices.
     equipment_basic_search: bool = False  # Equipped attacker searches for tapped basic land.
     graveyard_exile_activation: tuple = ()  # Cost, conditional creature-token specification.
+    enchantment_copy_cost: str = ''  # Pay mana and tap to copy a stack ability from an enchantment.
 
 
 def parse_card(card: dict) -> Definition:
@@ -337,6 +338,21 @@ def parse_card(card: dict) -> Definition:
         return Definition(**base,abilities=entry_program.keywords|attacks[0],triggers=entry_program.triggers,
             static_effects=entry_program.static_effects,activations=entry_program.activations,devotion=entry_program.devotion,
             crew=attacks[1],saddle=attacks[2],attack_effects=attacks[3])
+    # An enchantment-sourced activated/triggered ability on the stack is a
+    # distinct target from a spell. The entire second instruction is required.
+    # Reminder text was already removed by rule_text().
+    lines=text.splitlines()
+    if len(lines)==2 and {'Creature','Enchantment'}<=types:
+        ability=re.fullmatch(
+            r'((?:\\{(?:[0-9]{1,2}|[WUBRGC])\\})+), \\{T\\}: Copy target activated or triggered ability you control '
+            r'from an enchantment source\\. You may choose new targets for the copy\\.',lines[1])
+        if ability:
+            base_program=compile_abilities(lines[0],name)
+            if base_program and base_program.static_effects and not (
+                    base_program.triggers or base_program.activations or base_program.devotion):
+                return Definition(**base,abilities=base_program.keywords,
+                                  static_effects=base_program.static_effects,
+                                  enchantment_copy_cost=ability[1])
     program = compile_abilities(text,name)
     # The entry-time choice grammar must match the permanent type named by Oracle.
     if program and program.chosen_type_entry and not any(

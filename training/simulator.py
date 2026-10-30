@@ -1482,6 +1482,70 @@ class Simulator(AdvancedRules):
                  stackId=frame.id,manaSources=payment['sources'],manaPool=list(self.players[seat].mana_pool))
         if not self.manual_priority and not self._resolving_stack:self.drain_priority()
 
+    def enchantment_copy_targets(self,seat):
+        """Target nonmana abilities from enchantment sources controlled on the stack."""
+        targets=[]
+        for frame in self.stack.items:
+            event,origin=frame.payload
+            if frame.controller!=seat or event.get('operation') in (
+                    'spell','add_mana','mana','produce_mana','copy_enchantment_ability'):
+                continue
+            source_id=event.get('source')
+            source=next((permanent for player in self.players for permanent in player.battlefield
+                         if permanent.card.id==source_id),None)
+            is_enchantment=(source is not None and source.card.event_definition is not None
+                             and 'Enchantment' in source.card.event_definition.types)
+            if not is_enchantment and origin.id==source_id:
+                is_enchantment=bool(origin.event_definition and
+                                    'Enchantment' in origin.event_definition.types)
+            if is_enchantment:targets.append(frame)
+        return tuple(targets)
+
+    def enchantment_copy_choices(self,seat):
+        if seat!=self.stack.priority:return []
+        targets=self.enchantment_copy_targets(seat)
+        if not targets:return []
+        choices=[]
+        for item in self.players[seat].battlefield:
+            program=item.card.event_definition
+            if item.tapped or not program or not program.enchantment_copy_cost:continue
+            cost=program.enchantment_copy_cost
+            sources=[entry for entry in self.mana_sources(seat) if entry[0]!=item.card.id]
+            if not self.payment(replace(item.card,mana_cost=cost),seat=seat,
+                                spell_cost=False,sources=sources)['paid']:continue
+            for target in targets:
+                choices.append(Candidate(item.card.id+':copy:'+str(target.id),
+                         'copy_enchantment_ability',item.card.id,
+                         features=features(power=.3,cost=1),
+                         label='Copy '+target.label,target_stack=target.id))
+        return choices
+
+    def activate_enchantment_copy(self,seat,source_id,target_stack):
+        if seat!=self.stack.priority:raise ValueError('Player lacks priority')
+        source=next((item for item in self.players[seat].battlefield
+                     if item.card.id==source_id),None)
+        if not source or source.tapped or not source.card.event_definition or (
+                not source.card.event_definition.enchantment_copy_cost):
+            raise ValueError('Source has no ready ability copier')
+        if target_stack not in {frame.id for frame in self.enchantment_copy_targets(seat)}:
+            raise ValueError('Target must be your enchantment-sourced stack ability')
+        cost=source.card.event_definition.enchantment_copy_cost
+        payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,
+                             spell_cost=False,
+                             sources=[entry for entry in self.mana_sources(seat) if entry[0]!=source_id])
+        if not payment['paid']:raise ValueError('Cannot pay ability-copy cost')
+        for item in self.players[seat].battlefield:
+            if item.card.id in payment['sources']:item.tapped=True
+        source.tapped=True
+        self.players[seat].mana_pool=list(payment['pool'])
+        ability=dict(operation='copy_enchantment_ability',controller=seat,
+                     source=source_id,name=source.card.name,targetStack=target_stack)
+        frame=self.stack.push(seat,(ability,source.card),source.card.name+' ability copy')
+        self.stack.priority=seat
+        self.log('copy_activate','Paid and tapped to target an enchantment ability.',
+                 actor=seat,source=source_id,targetStack=target_stack,stackId=frame.id)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
     def equip_choices(self,seat):
         choices=[]
         for source in self.players[seat].battlefield:
@@ -1905,6 +1969,7 @@ class Simulator(AdvancedRules):
                 actions.append(replace(choice,features=features(power=.5 if useful else -100)))
         else:actions.extend(crews)
         actions.extend(self.special_choices(seat))
+        actions.extend(self.enchantment_copy_choices(seat))
         actions.extend(self.token_ability_choices(seat))
         actions.extend(self.scaled_mana_choices(seat))
         actions.extend(self.sacrifice_choices(seat))
@@ -1942,6 +2007,9 @@ class Simulator(AdvancedRules):
             self.activate_transport(seat,choice.kind,choice.card_id,choice.tap_ids);return 'activate'
         if choice.kind=='history_tokens':
             self.activate_history(seat,choice.card_id);return 'activate'
+        if choice.kind=='copy_enchantment_ability':
+            self.activate_enchantment_copy(seat,choice.card_id,choice.target_stack)
+            return 'activate'
         if choice.kind=='activate_strip':
             self.activate_strip(seat,choice.card_id,choice.activation_index)
             return 'activate'
@@ -2278,6 +2346,24 @@ class Simulator(AdvancedRules):
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='copy_enchantment_ability':
+                # The target ability must still be on the stack when this resolves.
+                # Both objects are independent and no spell is cast.
+                source=next((frame for frame in self.stack.items
+                             if frame.id==event['targetStack']),None)
+                if source is None or source.controller!=event['controller'] or (
+                        source.payload[0].get('operation')=='spell'):
+                    self.log('ability_copy_fizzle','Targeted ability left the stack.',
+                             actor=event['controller'],targetStack=event['targetStack'])
+                    continue
+                original,origin=source.payload
+                duplicate=dict(original,copied=True)
+                copied=self.stack.push(event['controller'],(duplicate,origin),
+                                       source.label+' copy')
+                self.stack.priority=self.active
+                self.log('ability_copy','An enchantment ability is copied on the stack.',
+                         actor=event['controller'],targetStack=source.id,stackId=copied.id)
+                continue
             if event.get('operation')=='exile_top_cast_permission':
                 seat=event['controller'];player=self.players[seat]
                 if not player.library:
@@ -3478,6 +3564,7 @@ class Simulator(AdvancedRules):
                                for card in p.hand if card.modal_land_face is not None)
             if self.diagnostic: actions.extend(self.activation_choices(seat, {"crew","saddle"}))
             actions.extend(self.special_choices(seat))
+            actions.extend(self.enchantment_copy_choices(seat))
             actions.extend(self.equip_choices(seat))
             actions.extend(self.token_ability_choices(seat))
             actions.extend(self.scaled_mana_choices(seat))
@@ -3703,6 +3790,8 @@ class Simulator(AdvancedRules):
                 self.activate_station(self.active,choice.card_id,choice.tap_ids[0])
             elif choice.kind=='history_tokens':
                 self.activate_history(self.active,choice.card_id)
+            elif choice.kind=='copy_enchantment_ability':
+                self.activate_enchantment_copy(self.active,choice.card_id,choice.target_stack)
             elif choice.kind=='activate_strip':
                 self.activate_strip(self.active,choice.card_id,choice.activation_index)
             elif choice.kind=='activate_graveyard_exile':
