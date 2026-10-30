@@ -2591,8 +2591,40 @@ class Simulator(AdvancedRules):
             self.log("resolve", f"{card.name} resolves.", lifeGain=card.life, drawn=card.draw)
             self.outcome()
 
+    def choose_optional_entry_bounce(self,event,candidates):
+        """Deterministic legal choice; callers may supply a different decision policy."""
+        return min(candidates,key=lambda item:item.card.id) if candidates else None
+
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('operation')=='self_sacrifice_unless_bounce':
+                controller=event['controller']
+                source=next((item for owner in self.players for item in owner.battlefield
+                             if item.card.id==event['source'] and item.entered_at==event['entryAt']),None)
+                if source is None:
+                    self.log('bounce_trigger_no_source','The triggered source changed zones before resolution.',
+                             actor=controller,source=event['source'])
+                    continue
+                game=self.event_game('main')
+                candidates=[item for item in self.players[controller].battlefield
+                            if item.card.id!=source.card.id and item.card.id in game.battlefield
+                            and game.creature(game.battlefield[item.card.id])]
+                chosen=self.choose_optional_entry_bounce(event,candidates)
+                if chosen is not None:
+                    if chosen not in candidates:raise ValueError('Illegal optional creature return')
+                    self.send_to_destination(self.players[controller],chosen,to_hand=True)
+                    self.log('entry_bounce','Returned another controlled creature to its owner hand.',
+                             actor=controller,source=event['source'],returned=chosen.card.id)
+                elif source in self.players[controller].battlefield:
+                    pending=game.death_triggers([source.card.id])
+                    self.send_to_destination(self.players[controller],source,snapshot=game)
+                    self.log('entry_sacrifice','Declined or could not return another creature; source sacrificed.',
+                             actor=controller,source=event['source'])
+                    self.resolve_entry_triggers(pending,card)
+                else:
+                    self.log('entry_sacrifice_unavailable','Source is not controlled by the ability controller.',
+                             actor=controller,source=event['source'])
+                continue
             if event.get('operation')=='entry_power_branch':
                 game=self.event_game('main')
                 entered=game.battlefield.get(event['entered'])

@@ -338,6 +338,8 @@ def effect(text):
     if mandatory_damage:return Effect('damage_any_target',int(mandatory_damage[1]))
     any_target=re.fullmatch(r'you may have (?:it|this creature) deal ([1-9][0-9]*) damage to any target\.',text)
     if any_target:return Effect('damage_any_target',int(any_target[1]),optional=True)
+    if text=="sacrifice it unless you return another creature you control to its owner's hand.":
+        return Effect('self_sacrifice_unless_bounce',0)
     if text=='each opponent loses life equal to the number of tapped creatures you control.':
         return Effect('opponent_loss_tapped_creatures',0,'each opponent')
     may=re.fullmatch(r'you may (create .+)',text)
@@ -728,6 +730,7 @@ def event_data(trigger, source, subject):
             'damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
             'damage':f'deal {e.amount} damage to each opponent','scry':'scry','surveil':'surveil','mill_cards':'move top library cards to graveyards','discard':'damaged player discards a card',
             'damage_any_target':f'may deal {e.amount} damage to any target',
+            'self_sacrifice_unless_bounce':'return another controlled creature or sacrifice this source',
             'entry_power_branch':'draw on sufficient entry power, otherwise add counters',
             'target_counter':f'put {e.amount} +1/+1 counters on target creature',
             'add_counters':f'put {e.amount} +1/+1 counters on each {e.counter_subtype or "creature"} you control',

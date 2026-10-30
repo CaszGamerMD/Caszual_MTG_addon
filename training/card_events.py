@@ -840,6 +840,8 @@ class Game:
                         data=event_data(trigger,watcher,permanent)
                         if trigger.effect.operation=='entry_power_branch':
                             data.update(entryPower=self.stats(permanent)[0],entryAt=permanent.entered_at)
+                        if trigger.effect.operation=='self_sacrifice_unless_bounce':
+                            data['entryAt']=permanent.entered_at
                         self.emit("trigger",**data)
             # These are triggered abilities, modeled as immediate resolutions in this
             # focused prototype. The full engine must provide stack/priority.
