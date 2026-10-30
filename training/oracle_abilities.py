@@ -199,20 +199,20 @@ def static_effect(text):
     # controls them. Landwalk is a blocking restriction evaluated at declare
     # blockers, not a stat bonus or a change to land ownership.
     lord=re.fullmatch(
-        r'Other ([A-Z][a-z]+) get \+([0-9]+)/\+([0-9]+) and have ((?:plains|island|swamp|mountain|forest)walk)\.',
+        r'Other ([A-Z][a-z]+)( creatures)? get \+([0-9]+)/\+([0-9]+) and have ((?:plains|island|swamp|mountain|forest)walk)\.',
         text)
     if lord:
         plurals={'Faeries':'Faerie','Elves':'Elf','Wolves':'Wolf','Mice':'Mouse',
                  'Allies':'Ally','Zombies':'Zombie','Merfolk':'Merfolk',
                  'Oxen':'Ox','Fish':'Fish'}
         plural=lord[1]
-        subtype=plurals.get(plural)
+        subtype=plural if lord[2] else plurals.get(plural)
         if subtype is None and plural.endswith('s') and not plural.endswith(('ies','ves','ses','xes','ches','shes')):
             subtype=plural[:-1]
         if subtype is None:return None
         subject=Selector(relation='any',other=True,creature=True,subtype=subtype)
-        return (StaticEffect(subject,int(lord[2]),int(lord[3])),
-                StaticEffect(subject,0,0,grant=lord[4]))
+        return (StaticEffect(subject,int(lord[3]),int(lord[4])),
+                StaticEffect(subject,0,0,grant=lord[5]))
     subtype_stats=re.fullmatch(
         r'Other ([A-Z][a-z]+) creatures you control get \+([0-9]+)/\+([0-9]+)\.',text)
     if subtype_stats:
