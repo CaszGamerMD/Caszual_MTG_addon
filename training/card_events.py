@@ -464,6 +464,26 @@ def parse_card(card: dict) -> Definition:
         if program:
             fields={key:value for key,value in vars(program).items() if key!='keywords'}
             return Definition(**base,abilities=program.keywords,pilot_bonus=int(match[1]),**fields)
+    # Compose an independently parsed self-power mana activation with every
+    # remaining Oracle ability. Neither fragment can swallow unknown text.
+    from composable_oracle import parse_power_mana
+    power_mana = parse_power_mana(text,name,types)
+    if power_mana is not None:
+        fragment = (compile_abilities(power_mana.remaining_text,name)
+                    if power_mana.remaining_text else None)
+        if power_mana.remaining_text and fragment is None:
+            return Definition(**base,abilities=frozenset(),supported=False,
+                              reason='Unparsed rules remaining after power-mana ability')
+        if fragment and (fragment.chosen_type_entry or fragment.devotion or
+                         any(trigger.effect.operation=='pay_return_source' and
+                             trigger.effect.return_source_type not in types
+                             for trigger in fragment.triggers)):
+            return Definition(**base,abilities=frozenset(),supported=False,
+                              reason='Power-mana composition rejected incompatible ability')
+        parts=dict(vars(fragment)) if fragment else {}
+        keywords=parts.pop('keywords',frozenset())
+        return Definition(**base,abilities=keywords,
+                          scaled_mana_tap='power:'+power_mana.symbol,**parts)
     program = compile_abilities(text,name)
     if program and any(trigger.effect.operation=='pay_return_source' and
                        trigger.effect.return_source_type not in types for trigger in program.triggers):
