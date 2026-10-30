@@ -466,6 +466,15 @@ def parse_card(card: dict) -> Definition:
             return Definition(**base,abilities=program.keywords,pilot_bonus=int(match[1]),**fields)
     # Compose an independently parsed self-power mana activation with every
     # remaining Oracle ability. Neither fragment can swallow unknown text.
+    from creature_mana import parse_counted
+    counted_mana=parse_counted(text,types)
+    if counted_mana:
+        mana_rule,remaining=counted_mana
+        program=compile_abilities(remaining,name) if remaining else None
+        if not remaining or _only_static_keyword_program(program):
+            return Definition(**base,abilities=program.keywords if program else frozenset(),
+                static_effects=program.static_effects if program else (),
+                scaled_mana_tap=mana_rule)
     from creature_mana import parse_fixed
     fixed_mana=parse_fixed(text,types)
     if fixed_mana:

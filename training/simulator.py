@@ -4083,6 +4083,15 @@ class Simulator(AdvancedRules):
                     _,symbol,quantity=definition.scaled_mana_tap.split(':')
                     color=mana_pool.COLORS.index(symbol)
                     options=(tuple(int(quantity) if index==color else 0 for index in range(6)),)
+                elif definition.scaled_mana_tap.startswith('count:'):
+                    _,symbol,kind,scope=definition.scaled_mana_tap.split(':')
+                    count=sum((scope=='all' or permanent.controller==seat) and
+                        (game.creature(permanent) if kind=='Creature' else
+                         kind in permanent.definition.subtypes)
+                        for permanent in game.battlefield.values())
+                    if not count:continue
+                    color=mana_pool.COLORS.index(symbol)
+                    options=(tuple(count if index==color else 0 for index in range(6)),)
                 elif definition.scaled_mana_tap.startswith('power:'):
                     symbol=definition.scaled_mana_tap.removeprefix('power:')
                     if symbol not in mana_pool.COLORS[:5]:

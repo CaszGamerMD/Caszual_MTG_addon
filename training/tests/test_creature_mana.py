@@ -47,3 +47,43 @@ class CreatureManaChecks(unittest.TestCase):
         with self.assertRaises(ValueError):sim.activate_scaled_mana(0,elf.card.id,3)
         self.assertFalse(elf.tapped)
         self.assertEqual(sim.players[0].mana_pool[4],0)
+
+    def test_real_counted_mana_programs_and_static_anthem_composition(self):
+        cases=[('Priest of Titania','count:G:Elf:all'),
+               ('Elvish Archdruid','count:G:Elf:controller'),
+               ('Circle of Dreams Druid','count:G:Creature:controller')]
+        for name,expected in cases:
+            raw=self.lookup[name]
+            card=s.import_diagnostic_card(self.rules,raw,0,'count-'+name,{'Green'})
+            self.assertEqual(card.kind,'creature',name)
+            self.assertEqual(card.event_definition.scaled_mana_tap,expected)
+            if name=='Elvish Archdruid':self.assertEqual(len(card.event_definition.static_effects),1)
+            unseen=dict(raw,name='Unseen Tribal Conductor',oracleText=raw['oracleText'].replace('Elf','Goblin').replace('{G}','{R}'),colors=['Red'],colorIdentity=['Red'])
+            other=s.import_diagnostic_card(self.rules,unseen,0,'new',{'Red'})
+            self.assertEqual(other.kind,'creature')
+            self.assertEqual(other.event_definition.scaled_mana_tap,expected.replace('Elf','Goblin').replace(':G:',':R:'))
+            bad=dict(unseen,oracleText=unseen['oracleText']+'\nDestroy all lands.')
+            self.assertEqual(s.import_diagnostic_card(self.rules,bad,0,'bad',{'Red'}).kind,'unsupported')
+
+    def test_counted_mana_updates_after_token_entry_and_opponent_removal(self):
+        sim,cards=self.fixture(['Priest of Titania','Elvish Archdruid','Circle of Dreams Druid'])
+        priest=self.put(sim,cards['Priest of Titania'])
+        arch=self.put(sim,cards['Elvish Archdruid'])
+        circle=self.put(sim,cards['Circle of Dreams Druid'])
+        for permanent in (priest,arch,circle):permanent.fresh=False
+        def amount(permanent):return dict(sim.mana_sources(0))[permanent.card.id][0][4]
+        self.assertEqual((amount(priest),amount(arch),amount(circle)),(3,3,3))
+        elf=s.EventDefinition('Enemy Elf',frozenset({'Creature'}),frozenset({'Elf'}),False,1,1,frozenset())
+        token=s.Card('enemy-elf','Enemy Elf','creature',event_definition=elf,is_token=True)
+        sim.enter_creature(token,sim.players[1]);sim.resolve_entry_triggers([],token)
+        self.assertEqual((amount(priest),amount(arch),amount(circle)),(4,3,3))
+        ally=s.Card('ally-elf','Ally Elf','creature',event_definition=elf,is_token=True)
+        sim.enter_creature(ally,sim.players[0]);sim.resolve_entry_triggers([],ally)
+        self.assertEqual((amount(priest),amount(arch),amount(circle)),(5,4,4))
+        enemy=next(p for p in sim.players[1].battlefield if p.card.id==token.id)
+        sim.send_to_destination(sim.players[1],enemy)
+        self.assertEqual((amount(priest),amount(arch),amount(circle)),(4,4,4))
+        sim.stack.priority=0
+        sim.activate_scaled_mana(0,priest.card.id,4)
+        self.assertEqual(sim.players[0].mana_pool[4],4)
+        sim.invariant()
