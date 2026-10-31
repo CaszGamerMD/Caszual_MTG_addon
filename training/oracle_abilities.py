@@ -473,6 +473,11 @@ def compile_abilities(text, name=''):
             short=name.split(' ',1)[0].rstrip(',')
             text=re.sub(r'(?<= on )'+re.escape(short)+r'(?=\.| instead\.)','this creature',text)
         if ',' in name:
+            # Oracle sometimes shortens legendary names to the part before
+            # the comma (e.g. "General Kreat deals ..."). Replace the complete
+            # shortened name before trying single-word self references.
+            prefix=name.split(',',1)[0]
+            text=re.sub(r'\b'+re.escape(prefix)+r"(?= deals\b)",'this creature',text)
             text=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= isn't a creature| enters| attacks|\'s power)",'this creature',text)
     triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0;cost_reductions=[];counter_replacements=[];token_replacements=[];token_action_triggers=[];token_leave_triggers=[];entry_counter_grants=[];attack_watchers=[];chosen_type_entry=False;opponent_life_gain_becomes_loss=False;prevent_combat_damage_to_attackers=False
     for line in text.splitlines():
