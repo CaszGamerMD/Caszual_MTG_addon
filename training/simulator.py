@@ -4301,7 +4301,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.token_ability_choices(seat))
             actions.extend(self.scaled_mana_choices(seat))
             actions.extend(self.sacrifice_choices(seat))
-        actions.extend(self.sacrifice_token_choices(seat))
+            actions.extend(self.sacrifice_token_choices(seat))
             actions.extend(self.discard_token_choices(seat))
             actions.extend(self.sacrifice_team_choices(seat))
             actions.extend(self.sacrifice_protection_choices(seat))
