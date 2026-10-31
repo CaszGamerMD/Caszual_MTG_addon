@@ -7,6 +7,79 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class RaidEntryReplacementChecks(unittest.TestCase):
+    def test_real_rigging_runner_receives_raid_counter_only_after_attack(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14509839-mono-red-gobs.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Rigging Runner')
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(definition.raid_entry_counters,1)
+        self.assertIn('first strike',definition.abilities)
+        without=Game()
+        unit=Permanent('fresh',definition,0)
+        without.enter(unit)
+        self.assertEqual(unit.counters,0)
+        with_raid=Game(attacked_this_turn={0})
+        friendly=Permanent('friendly',definition,0)
+        enemy=Permanent('enemy',definition,1)
+        with_raid.enter_batch([friendly,enemy])
+        self.assertEqual(friendly.counters,1)
+        self.assertEqual(enemy.counters,0)
+        self.assertFalse(any(e['kind']=='trigger' for e in with_raid.events))
+        with_raid.attacked_this_turn.clear()
+        later=Permanent('next_turn',definition,0)
+        with_raid.enter(later)
+        self.assertEqual(later.counters,0)
+        with s.RulesBridge() as rules:
+            imported=s.import_diagnostic_card(rules,raw,0,'rigging',{'Red'})
+            self.assertEqual(imported.kind,'creature')
+            self.assertEqual(imported.event_definition.raid_entry_counters,1)
+
+    def test_unseen_raid_counter_scales_and_rejects_extra_text(self):
+        raw=dict(name='Unseen Raider',types=['Creature'],subTypes=['Goblin'],
+            power='2',toughness='2',manaCost='{R}',
+            oracleText=('Haste\nRaid — This creature enters with two +1/+1 counters '
+                        'on it if you attacked this turn.'))
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(definition.raid_entry_counters,2)
+        self.assertIn('haste',definition.abilities)
+        game=Game(attacked_this_turn={1})
+        raider=Permanent('raider',definition,1)
+        game.enter(raider)
+        self.assertEqual(raider.counters,2)
+        self.assertFalse(parse_card(dict(raw,
+            oracleText=raw['oracleText']+'\nGain infinite life.')).supported)
+
+    def test_sandbox_declared_attack_persists_in_new_event_snapshot(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14509839-mono-red-gobs.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Rigging Runner')
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'rigging',{'Red'})
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card],
+                                             s.demo_deck(1)),diagnostic=True)
+            owner=sim.players[0]
+            (owner.hand if card in owner.hand else owner.library).remove(card)
+            other=s.EventDefinition('Unknown Attacker',frozenset({'Creature'}),
+                frozenset({'Goblin'}),False,1,1,frozenset())
+            attacker=s.Card('attacker','Unknown Attacker','creature',power=1,
+                toughness=1,event_definition=other,is_token=True)
+            sim.resolve_entry_triggers(sim.enter_creature(attacker,owner),attacker)
+            for p in owner.battlefield:p.fresh=False
+            sim.phase='attack';sim.stack.priority=sim.active
+            sim.declare_attackers(['attacker'])
+            self.assertEqual(sim.attacked_this_turn,{0})
+            sim.resolve_entry_triggers(sim.enter_creature(card,owner),card)
+            entered=next(p for p in owner.battlefield if p.card.id==card.id)
+            self.assertEqual(entered.counters,1)
+            self.assertEqual(sim.event_game('main').battlefield[card.id].counters,1)
+            sim.invariant()
+
+
 class UnrestrictedDeathTriggerChecks(unittest.TestCase):
     def test_real_lumberknot_observes_all_creature_deaths(self):
         import json
