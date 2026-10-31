@@ -89,6 +89,8 @@ class Definition:
     attack_effects: tuple = ()
     group_attack_subtype_tokens: tuple = ()  # Once per declared combat group, not per attacker.
     sacrifice_token_activations: tuple = ()  # (mana cost, sacrificed subtype, token spec)
+    once_tribal_entry_tokens: tuple = ()  # (subtype, spec, excludes source, once per turn)
+    tribal_pump_activations: tuple = ()  # (cost, subtype, power, toughness, keyword)
     attachment: tuple = ()
     activations: tuple = ()
     self_pump: tuple = ()  # Mana cost, power, toughness until EOT.
@@ -401,6 +403,20 @@ def parse_card(card: dict) -> Definition:
         return Definition(**base,abilities=frozenset(),attachment=umbra,umbra_armor=True)
     attachment=parse_with_intrinsic(text,types,subtypes)
     if attachment:return Definition(**base,abilities=attachment[0],attachment=attachment[1])
+    # Compose a once-per-turn tribal group entry trigger with a paid team
+    # combat activation. Reject any remaining Oracle text unless separately
+    # and completely compiled by the normal parser.
+    from tribal_group_abilities import parse as parse_tribal_group
+    tribal_group=parse_tribal_group(text,types)
+    if tribal_group:
+        entry_rule,pump_rule,remainder=tribal_group
+        program=compile_abilities(remainder,name) if remainder else None
+        if not remainder or program:
+            fields=dict(vars(program)) if program else {}
+            abilities=fields.pop('keywords',frozenset())
+            return Definition(**base,abilities=abilities,
+                once_tribal_entry_tokens=(entry_rule,) if entry_rule else (),
+                tribal_pump_activations=(pump_rule,) if pump_rule else (),**fields)
     # Sacrifice is paid before the token ability is placed on the stack.
     # The rest of the card must independently parse without ignored text.
     sacrifice_lines=text.splitlines()
