@@ -63,6 +63,14 @@ def queue_end_step(sim):
             controller=emblem.owner,emblemId=emblem.id,
             source=emblem.origin.id,name=emblem.origin.name),emblem.origin))
 
+def _subtype_forms(oracle_plural):
+    """Possible singular creature subtypes from a quantified Oracle noun."""
+    forms=[oracle_plural]
+    if oracle_plural.endswith('s'):forms.append(oracle_plural[:-1])
+    if oracle_plural.endswith('ves'):forms.append(oracle_plural[:-3]+'f')
+    if oracle_plural.endswith('ies'):forms.append(oracle_plural[:-3]+'y')
+    return tuple(dict.fromkeys(forms))
+
 def resolve_end_step(sim,event,card):
     controller=event['controller']
     emblem=next((x for x in sim.emblems[controller]
@@ -70,9 +78,10 @@ def resolve_end_step(sim,event,card):
     if emblem is None:raise RuntimeError('Unknown emblem on stack')
     program=emblem.program
     game=sim.event_game('main')
+    forms=_subtype_forms(program.counted_subtype)
     count=sum(1 for state in game.battlefield.values()
               if state.controller==controller and game.creature(state)
-              and has_subtype(state.definition,program.counted_subtype))
+              and any(has_subtype(state.definition,singular) for singular in forms))
     amount=program.base+count
     if amount>1000:raise RuntimeError('Emblem token quantity exceeds supported safety limit')
     spec=dict(asdict(program.token),amount=amount,keywords=[])
