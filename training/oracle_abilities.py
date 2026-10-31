@@ -372,6 +372,8 @@ KEYWORDS = {'flash','flying','first strike','double strike','lifelink','vigilanc
             'plainswalk','islandwalk','swampwalk','mountainwalk','forestwalk','shroud','fear'} | {'protection from '+color for color in ('white','blue','black','red','green')}
 
 def selector(text):
+    # Unqualified 'a creature dies' sees any controller and every simultaneous death.
+    if text=='a creature':return Selector(creature=True)
     # Landfall is a permanent-entry event, not a creature trigger.
     if text == 'a land you control': return Selector(relation='controller',permanent_type='Land')
     if text == 'this creature': return Selector(self_only=True,creature=True)
