@@ -1,0 +1,91 @@
+name: MTG Oracle LLM comprehension - bounded live exam
+
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - training/semantic_run_config.json
+      - .github/workflows/semantic-oracle-live.yml
+  workflow_dispatch:
+    inputs:
+      rounds:
+        description: '5 cards per round; first try 1, then 3 for a 15-card exam'
+        required: true
+        default: '1'
+        type: choice
+        options: ['1', '3']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mtg-oracle-llm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  understand:
+    # Only the owner's experiment branch is allowed to use this repository secret.
+    if: github.repository == 'CaszGamerMD/Caszual_MTG_addon' && github.ref == 'refs/heads/experiment/commander-ai-golem'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Check bounded run configuration
+        id: config
+        env:
+          RUN_MODE: ${{ github.event_name }}
+          MANUAL_ROUNDS: ${{ inputs.rounds || '' }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          settings=json.loads(Path('training/semantic_run_config.json').read_text())
+          if set(settings)!={'cards_per_round','rounds','model','run_id'}:
+              raise ValueError('Unexpected semantic run configuration')
+          if type(settings['cards_per_round']) is not int or settings['cards_per_round']!=5:
+              raise ValueError('Only five cards per round are allowed')
+          rounds=(int(os.environ['MANUAL_ROUNDS'])
+                  if os.environ['RUN_MODE']=='workflow_dispatch' else settings['rounds'])
+          if type(rounds) is not int or rounds not in (1,3):
+              raise ValueError('Only 5 or 15 model-read cards are allowed per run')
+          if settings['model']!='gpt-6-astra':
+              raise ValueError('Model change requires explicit workflow review')
+          if not isinstance(settings['run_id'],str) or not settings['run_id']:
+              raise ValueError('Run ID required for audit')
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:
+              out.write('cards=5\nrounds='+str(rounds)+'\nmodel='+settings['model']+'\n')
+          print('Bounded diagnostic LLM exam:',5*rounds,'random Commander cards; run',settings['run_id'])
+          PY
+      - name: Verify semantic reader contract locally
+        run: |
+          python -m unittest discover -s training/tests -p test_oracle_semantic_reader.py -q
+          python -m unittest discover -s training/tests -p test_scryfall_random_exam.py -q
+      - name: Read five random cards with the configured model
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CARDS: ${{ steps.config.outputs.cards }}
+          ROUNDS: ${{ steps.config.outputs.rounds }}
+          MODEL: ${{ steps.config.outputs.model }}
+        run: |
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            echo 'OPENAI_API_KEY is not available to this workflow; no API request made.' >&2
+            exit 1
+          fi
+          python -u training/scryfall_random_exam.py \
+            --count "$CARDS" --rounds "$ROUNDS" --semantic-model "$MODEL" \
+            --out training/reports/live-oracle-semantic-exam
+      - name: Retain random sources, diagnostic verdicts and semantic proposals
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-semantic-live-${{ github.run_id }}
+          path: training/reports/live-oracle-semantic-exam/
+          if-no-files-found: warn
+          retention-days: 30
