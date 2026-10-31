@@ -34,6 +34,13 @@ ROLE_BY_KIND = {
 }
 
 
+def _strategy_role(step):
+    # Losing your *own* life is a cost/drawback, not opponent damage output.
+    if step['operation']=='lose_life' and step.get('recipient') in ('self','controller'):
+        return None
+    return ROLE_BY_OPERATION.get(step['operation'])
+
+
 def _effect_steps(effect):
     """Flatten a known ordered effect into individual ordered mechanics."""
     if effect.operation == 'ordered_effects':
@@ -57,6 +64,12 @@ def compiled_knowledge(card: s.Card) -> dict:
     if card.kind in ROLE_BY_KIND:
         roles.add(ROLE_BY_KIND[card.kind])
     entries=[]
+    if card.kind=='sequence_spell' and card.sequence_effects:
+        steps=[step for part in card.sequence_effects for step in _effect_steps(part)]
+        entries.append(dict(timing='spell_resolution',event='resolve',steps=steps))
+        for step in steps:
+            role=_strategy_role(step)
+            if role:roles.add(role)
     if definition:
         for trig in definition.triggers:
             steps=_effect_steps(trig.effect)
@@ -68,7 +81,7 @@ def compiled_knowledge(card: s.Card) -> dict:
                                creature=trig.subject.creature),
                   steps=list(steps)))
             for item in steps:
-                role=ROLE_BY_OPERATION.get(item['operation'])
+                role=_strategy_role(item)
                 if role:roles.add(role)
         if definition.scaled_mana_tap:
             family=definition.scaled_mana_tap

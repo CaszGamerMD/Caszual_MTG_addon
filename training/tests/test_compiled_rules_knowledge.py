@@ -56,6 +56,19 @@ class CompiledKnowledgeTests(unittest.TestCase):
         self.assertEqual(k['rules'],[])
         self.assertTrue(k['diagnosticOnly'])
 
+    def test_standalone_sequence_exposes_ordered_executable_spell_evidence(self):
+        raw=dict(ELVES['commanders'][0],name='Unknown library exchange',
+                 types=['Sorcery'],superTypes=[],subTypes=[],
+                 manaCost='{1}{B}',oracleText='You draw two cards and lose 2 life.')
+        k=compile_knowledge(self.rules,raw)
+        self.assertTrue(k['supported'])
+        self.assertEqual(k['kind'],'sequence_spell')
+        self.assertEqual(k['rules'],[dict(timing='spell_resolution',event='resolve',
+            steps=[dict(operation='draw_cards',amount=2,recipient='controller',optional=False),
+                   dict(operation='lose_life',amount=2,recipient='self',optional=False)])])
+        self.assertIn('card_engine',k['roles'])
+        self.assertNotIn('damage_payoff',k['roles'])
+
     def test_deck_evidence_contains_explicit_uncompiled_cards(self):
         limited=dict(sourceDeckId=42,name='Unknown',
                      commanders=ELVES['commanders'],

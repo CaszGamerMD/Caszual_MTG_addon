@@ -214,6 +214,7 @@ class Card:
     prevent_all_combat_damage: bool = False  # Until cleanup, all combat damage is prevented.
     prevent_player_combat_damage: bool = False  # Combat damage to the spell's controller only.
     populate: bool = False  # Copy a controlled creature token on resolution, if any.
+    sequence_effects: tuple = ()  # Fully compiled, target-free Oracle instructions in order.
     mana_as_any_color: bool = False
     color_draw_cost: str = ''
     # Modal double-faced cards are one physical card. The front card is kept
@@ -465,6 +466,8 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.kind=='prevention_spell' and (
                         card.prevent_all_combat_damage or card.prevent_player_combat_damage):
+                    continue
+                if self.diagnostic and card.kind=='sequence_spell' and card.sequence_effects:
                     continue
                 if card.kind not in ("land", "creature", "spell"):
                     self.pause("Unsupported sandbox card kind: " + card.kind, card)
@@ -1064,7 +1067,7 @@ class Simulator(AdvancedRules):
 
     def response_choices(self,seat):
         if seat!=self.stack.priority: return ()
-        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','mana_spell','scaled_damage_spell','token_spell','counter_spell','removal_spell','modifier_spell','blink_spell','prevention_spell',
+        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','sequence_spell','mana_spell','scaled_damage_spell','token_spell','counter_spell','removal_spell','modifier_spell','blink_spell','prevention_spell',
             'creature','enchantment','artifact','equipment','vehicle','station','planeswalker')
                      and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
@@ -2767,6 +2770,18 @@ class Simulator(AdvancedRules):
                      actor=controller,source=card.name,
                      scope='all' if card.prevent_all_combat_damage else 'controller')
             if card.populate:self.populate_token(controller,card)
+            return
+        if card.kind=='sequence_spell':
+            if not card.sequence_effects:raise RuntimeError('Uncompiled sequence spell')
+            # Reuse the same ordered-effect executor as triggered abilities;
+            # the spell has already moved to its graveyard (or was a copy).
+            steps=[dict(operation=part.operation,amount=part.amount,
+                        recipient=part.recipient,gain=part.gain)
+                   for part in card.sequence_effects]
+            self._resolve_entry_effects([dict(operation='ordered_effects',
+                controller=controller,source=card.id,name=card.name,
+                effect='; then '.join(part.operation for part in card.sequence_effects),
+                steps=steps)],card)
             return
         if card.kind=='graveyard_return_spell':
             target=next((c for c in self.graveyard_subtype_targets(controller,card.graveyard_return_subtype)
@@ -4723,7 +4738,7 @@ class Simulator(AdvancedRules):
                     actions.append(Candidate(c.id+':spellback','cast_modal_back',c.id,
                         features=features(power=back.power,toughness=back.toughness),
                         label='Cast '+back.name))
-                if c.kind in ("creature", "vehicle", "enchantment", "spell", "mana_spell", "scaled_damage_spell", "token_spell", "prevention_spell", "mana_artifact", "equipment", "planeswalker", "station", "artifact") and self.payment(c)["paid"]:
+                if c.kind in ("creature", "vehicle", "enchantment", "spell", "sequence_spell", "mana_spell", "scaled_damage_spell", "token_spell", "prevention_spell", "mana_artifact", "equipment", "planeswalker", "station", "artifact") and self.payment(c)["paid"]:
                     if c.draw and len(p.library) < c.draw:
                         continue  # never choose a known self-decking draw spell
                     keywords = c.traits.split(";")[-1].split(",") if c.traits else []
@@ -5365,6 +5380,21 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                 'prevent_player_combat_damage':bool(protection[1]),
                 'populate':bool(protection[2])}
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
+            and rules.query('cost',cost)['supported']):
+        from oracle_abilities import effect as parse_oracle_effect
+        oracle=rule_text(definition.get('oracleText',''))
+        program=parse_oracle_effect(oracle[:1].lower()+oracle[1:]) if oracle else None
+        # Executable target-free atoms only. Additional clauses, modes, choices,
+        # targets or other Oracle text must reject the *whole* card.
+        if (program is not None and program.operation=='ordered_effects'
+                and 2<=len(program.steps)<=8
+                and all(step.operation in ('draw_cards','gain_life','lose_life')
+                        and step.recipient in ('controller','self')
+                        and not step.optional and not step.steps and not step.gain
+                        and not step.controller_loss and step.amount>0
+                        for step in program.steps)):
+            parsed={'kind':'sequence_spell','sequence_effects':program.steps}
+    if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
             and rule_text(definition.get('oracleText',''))=="Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle."
             and rules.query('cost',cost)['supported']):
         parsed={'kind':'removal_spell','removal':'exile_creature_basic_land'}
@@ -5452,6 +5482,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         prevent_all_combat_damage=parsed.get('prevent_all_combat_damage',False),
         prevent_player_combat_damage=parsed.get('prevent_player_combat_damage',False),
         populate=parsed.get('populate',False),
+        sequence_effects=parsed.get('sequence_effects',()),
         mana_as_any_color=parsed.get('mana_as_any_color',False),color_draw_cost=parsed.get('color_draw_cost',''),
         target_modifier=parsed.get('target_modifier',()),modal_sweeps=parsed.get('modal_sweeps',()),sweep_reward=parsed.get('sweep_reward',()),
         instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),

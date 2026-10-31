@@ -33,10 +33,20 @@ def parse_sequence(text: str, atom):
     if len(pieces)<2 or len(pieces)>8:
         return None
     compiled=[]
+    subject_is_you=False
     for piece in pieces:
         chunk=piece.strip()
         if not chunk:
             return None
+        # A coordinated verb shares its explicit subject: "You draw two cards
+        # and lose 2 life." The second atom still belongs to the controller.
+        # Never infer a subject across an unsupported or target-dependent verb.
+        if re.match(r'^you\s+',chunk,re.IGNORECASE):
+            subject_is_you=True
+        elif subject_is_you and re.match(r'^(draw|gain|lose)\b',chunk,re.IGNORECASE):
+            chunk='you '+chunk
+        else:
+            subject_is_you=False
         chunk=chunk[0].lower()+chunk[1:]+"."
         parsed=atom(chunk)
         if parsed is None or parsed.operation not in _SAFE:
