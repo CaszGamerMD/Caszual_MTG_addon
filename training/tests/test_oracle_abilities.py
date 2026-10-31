@@ -202,7 +202,7 @@ class TribalInterveningIfChecks(unittest.TestCase):
             ally_def=s.EventDefinition('Ally',frozenset({'Creature'}),frozenset({'Elf'}),
                 False,1,1,frozenset())
             ally=s.Card('ally','Ally','creature',event_definition=ally_def,
-                        power=1,toughness=1)
+                        power=1,toughness=1,is_token=True)
             sim.enter_creature(ally,owner)
             pending=sim.enter_creature(card,owner)
             sim.resolve_entry_triggers(pending,card)
