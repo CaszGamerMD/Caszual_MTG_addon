@@ -7,6 +7,72 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class TribalSacrificeTokenChecks(unittest.TestCase):
+    def test_unseen_death_trigger_and_paid_tribal_sacrifice_compose(self):
+        text=("Whenever this creature or another Goblin you control dies, "
+              "this creature deals 1 damage to any target.\n"
+              "{3}{R}, Sacrifice a Goblin: Create two 1/1 red Goblin creature tokens.")
+        raw=dict(name='Unseen Goblin Chief',types=['Creature'],
+                 subTypes=['Goblin'],power='2',toughness='2',oracleText=text)
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(len(definition.triggers),1)
+        self.assertEqual(definition.triggers[0].subject.self_or_controlled_subtype,'Goblin')
+        self.assertEqual(definition.triggers[0].effect.operation,'damage_any_target')
+        self.assertEqual(len(definition.sacrifice_token_activations),1)
+        mana,subtype,spec=definition.sacrifice_token_activations[0]
+        self.assertEqual((mana,subtype,spec.amount),('{3}{R}','Goblin',2))
+        goblin=Definition('Other Goblin',frozenset({'Creature'}),
+            frozenset({'Goblin'}),False,1,1,frozenset())
+        game=Game()
+        game.enter(Permanent('source',definition,0))
+        game.enter(Permanent('friend',goblin,0))
+        game.enter(Permanent('enemy',goblin,1))
+        self.assertEqual(len(game.death_triggers(['friend'])),1)
+        self.assertEqual(len(game.death_triggers(['enemy'])),0)
+        self.assertEqual(len(game.death_triggers(['source'])),1)
+        self.assertEqual(len(game.death_triggers(['source','friend'])),2)
+        self.assertFalse(parse_card(dict(raw,oracleText=text+'\nWin the game.')).supported)
+
+    def test_real_pashalik_pays_cost_and_pings_before_creating_two_tokens(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14509839-mono-red-gobs.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Pashalik Mons')
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'pashalik',{'Red'})
+            self.assertNotEqual(card.kind,'unsupported')
+            lands=[s.Card('mana'+str(i),'Mana','land',mask=63) for i in range(4)]
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card]+lands,
+                                            s.demo_deck(1)),diagnostic=True)
+            sim.manual_priority=True;sim.phase='main';sim.stack.priority=0
+            player=sim.players[0]
+            (player.hand if card in player.hand else player.library).remove(card)
+            for land in lands:
+                (player.hand if land in player.hand else player.library).remove(land)
+                player.battlefield.append(s.Permanent(land))
+            pending=sim.enter_creature(card,player);sim.resolve_entry_triggers(pending,card)
+            goblin=s.EventDefinition('Test Goblin',frozenset({'Creature'}),
+                frozenset({'Goblin'}),False,1,1,frozenset())
+            victim=s.Card('victim','Test Goblin','creature',power=1,toughness=1,
+                          event_definition=goblin,is_token=True)
+            pending=sim.enter_creature(victim,player);sim.resolve_entry_triggers(pending,victim)
+            previous=sim.players[1].life
+            sim.activate_sacrifice_tokens(0,card.id,victim.id)
+            self.assertFalse(any(p.card.id==victim.id for p in player.battlefield))
+            self.assertEqual(len(sim.stack.items),2)
+            while sim.stack.items:sim.pass_priority(sim.stack.priority)
+            created=[p for p in player.battlefield if p.card.is_token]
+            self.assertEqual(len(created),2)
+            self.assertEqual(sim.players[1].life,previous-1)
+            self.assertEqual(sum(p.card.event_definition and
+                                 'Goblin' in p.card.event_definition.subtypes
+                                 for p in created),2)
+            sim.invariant()
+
+
 class CollectiveTribalAttackChecks(unittest.TestCase):
     def test_unseen_group_tribal_attack_program_composes_other_etb_trigger(self):
         raw=dict(name='Unseen Goblin Captain',types=['Creature'],subTypes=['Goblin'],
