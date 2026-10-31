@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import scryfall_random_exam as e
+import oracle_semantic_reader as semantic
 
 
 def fixture(n=1, **options):
@@ -83,6 +84,28 @@ class ScryfallRandomExamTests(unittest.TestCase):
         self.assertIn('token_supply',row['hypotheticalRoles'])
         self.assertEqual(row['confirmedRoles'],[])
         self.assertEqual(row['gap'],'unparsed second instruction')
+
+    def test_semantic_exam_is_separate_from_diagnostic_compilation(self):
+        source=fixture(9,oracle_text='You draw two cards and lose 2 life.',
+                       type_line='Sorcery',mana_cost='{1}{B}')
+        converted=e.convert_scryfall(source)
+        words=semantic.oracle_units(converted)[0]
+        candidate=dict(units=[dict(face_index=0,line_index=0,
+            source=words.source,category='spell_effect',timing='',cost='',
+            operations=[dict(verb='draw',evidence='draw two cards',amount='two',
+                             subject='',recipient='',object='cards',qualifier=''),
+                        dict(verb='lose_life',evidence='lose 2 life',amount='2',
+                             subject='',recipient='',object='life',qualifier='')],
+            needs=['stack_resolution'],explanation='Two ordered steps')],
+            summary='Model guess, not verified',uncertainties=[])
+        compiled=dict(batches=[dict(cards=[dict(executableDiagnostic=False)])])
+        with patch.object(semantic,'request_model',return_value=candidate) as model:
+            result=e.semantic_exam([(source,converted)],compiled,'test-model')
+        model.assert_called_once_with(converted,model='test-model')
+        self.assertFalse(result['cards'][0]['executableDiagnostic'])
+        self.assertFalse(result['learningEligible'])
+        self.assertFalse(result['semanticAccuracyVerified'])
+        self.assertEqual(result['capabilities'][0]['unsupportedDiagnosticCards'],1)
 
 
 if __name__=='__main__':

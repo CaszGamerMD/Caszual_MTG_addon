@@ -66,6 +66,12 @@ python3 training/oracle_semantic_batch.py \
   --out training/reports/oracle-semantic-audit
 ```
 
+The existing random-card benchmark also supports an explicit
+`--semantic-model gpt-6-astra` flag. If supplied, its same 5x3 unselected
+sample gets a separate `semantic-proposals.json` alongside the original
+`results.json`; diagnostic acceptance remains the same independent verdict.
+Without that flag, the benchmark remains free of model calls and charges.
+
 In this development environment the API key is **not configured**, so only
 the offline preparation and mocked protocol tests were run. Do not claim an
 LLM passed 15 cards based on a prepared request or on the validator alone.

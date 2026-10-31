@@ -164,12 +164,28 @@ def exam(draws, rules, count):
                 interpretation='Diagnostic importer accepted = text recognized, NOT validated game execution; no rules training from unsupported cards')
 
 
+def semantic_exam(draws, compiled: dict, model: str) -> dict:
+    """Optional model comprehension audit, never an executable-rules fallback.
+
+    Request all source cards, not merely the current small set of accepted
+    diagnostic cards. Compare proposed mechanic families to independently
+    compiled verdicts; never substitute model agreement for rule support.
+    """
+    from oracle_semantic_reader import request_model, report
+    cards=[raw for _,raw in draws]
+    rows=[row for batch in compiled['batches'] for row in batch['cards']]
+    if len(cards)!=len(rows):raise ValueError('Semantic and diagnostic sample sizes disagree')
+    proposals=[request_model(card,model=model) for card in cards]
+    return report(cards,proposals,[row['executableDiagnostic'] for row in rows])
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--count',type=int,default=5)
     p.add_argument('--rounds',type=int,default=1)
     p.add_argument('--source',type=Path,help='Re-examine a saved scryfall-source.json without redrawing cards')
     p.add_argument('--exclude-source',type=Path,help='Previously examined Scryfall source cards to exclude from fresh random draws')
+    p.add_argument('--semantic-model',default='',help='Optional explicit Responses model for separate LLM comprehension audit; requires OPENAI_API_KEY and incurs API charges')
     p.add_argument('--out',type=Path,default=HERE/'reports/random-commander-exam')
     a=p.parse_args()
     if a.source:
@@ -192,6 +208,13 @@ def main():
     with s.RulesBridge() as rules:
         data=exam(draws,rules,a.count)
     s.write_json(a.out/'results.json',data)
+    if a.semantic_model:
+        interpretations=semantic_exam(draws,data,a.semantic_model)
+        s.write_json(a.out/'semantic-proposals.json',interpretations)
+        print('RANDOM_CARD_SEMANTICS '+json.dumps(dict(
+            cards=interpretations['totalCards'],sourceLines=interpretations['sourceLines'],
+            accuracyVerified=False,executablePromotion=False,
+            capabilityFamilies=len(interpretations['capabilities']))),flush=True)
     for batch in data['batches']:
         for row in batch['cards']:
             print('RANDOM_CARD_RESULT '+json.dumps(
