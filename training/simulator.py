@@ -209,6 +209,7 @@ class Card:
     graveyard_return_subtype: str = ""
     target_modifier: tuple = ()  # (power, toughness, keyword choices, conditional draw subtype).
     modifier_program: object | None = None  # Independently compiled target/temporary/conditional blocks.
+    loyalty_program: object | None = None  # Full verified planeswalker loyalty ability program.
     modal_sweeps: tuple = ()  # Ordered destroy modes, with two indices selected on casting.
     modal_target_program: object | None = None  # Verified targeted modal instruction program.
     sweep_reward: tuple = ()  # (nontoken only, Treasures per destroyed creature, tapped).
@@ -260,6 +261,7 @@ class Permanent:
     lost_abilities: dict[str,int] = field(default_factory=dict)
     temporary_ability_times: dict[str,int] = field(default_factory=dict)
     loyalty: int | None = None
+    loyalty_activated_turn: int = -1  # Once per turn per planeswalker.
     charge_counters: int = 0
     chosen_subtype: str = ''
     keyword_counters: frozenset[str] = frozenset()
@@ -1056,6 +1058,9 @@ class Simulator(AdvancedRules):
             self._resolving_stack=True
             try:
                 if item.payload[0].get('operation')=='spell': self.resolve_spell(item.payload[0],item.payload[1])
+                elif item.payload[0].get('operation')=='loyalty_ability':
+                    from planeswalker_runtime import resolve as resolve_loyalty
+                    resolve_loyalty(self,item.payload[0],item.payload[1])
                 else: self._resolve_entry_effects([item.payload[0]],item.payload[1])
             finally:
                 self._resolving_stack=False
@@ -4858,6 +4863,8 @@ class Simulator(AdvancedRules):
                                for card in p.hand if card.modal_land_face is not None)
             if self.diagnostic: actions.extend(self.activation_choices(seat, {"crew","saddle"}))
             actions.extend(self.special_choices(seat))
+            from planeswalker_runtime import legal as legal_loyalty
+            actions.extend(legal_loyalty(self,seat))
             actions.extend(self.enchantment_copy_choices(seat))
             actions.extend(self.class_level_choices(seat))
             actions.extend(self.equip_choices(seat))
@@ -5024,7 +5031,7 @@ class Simulator(AdvancedRules):
             raise RuntimeError("Agent attempted an illegal action")
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
-        if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
+        if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station","activate_loyalty",
                            "history_tokens","activate_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_scaled_life","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_tribal_pump","activate_tap_damage","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
             self.turn_development[seat]=True
         return choice
@@ -5112,6 +5119,9 @@ class Simulator(AdvancedRules):
                 self.activate_history(self.active,choice.card_id)
             elif choice.kind=='activate_class_level':
                 self.activate_class_level(self.active,choice.card_id)
+            elif choice.kind=='activate_loyalty':
+                from planeswalker_runtime import activate as activate_loyalty
+                activate_loyalty(self,self.active,choice.card_id,choice.activation_index)
             elif choice.kind=='copy_enchantment_ability':
                 self.activate_enchantment_copy(self.active,choice.card_id,choice.target_stack)
             elif choice.kind=='activate_strip':
@@ -5482,6 +5492,17 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         return Card(uid,definition['name'],'unsupported')
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
+    from planeswalker_loyalty import compile_card as compile_planeswalker
+    loyalty_program=compile_planeswalker(definition)
+    if (parsed['kind']=='unsupported' and loyalty_program is not None
+            and rules.query('cost',definition.get('manaCost') or '')['supported']):
+        parsed={'kind':'planeswalker','loyalty_program':loyalty_program,
+                'event':EventDefinition(definition['name'],frozenset({'Planeswalker'}),
+                    frozenset(definition.get('subTypes') or ()),
+                    'Legendary' in (definition.get('superTypes') or ()),0,0,
+                    frozenset(),colors=frozenset(definition.get('colors') or ()),
+                    mana_cost=definition.get('manaCost') or '',
+                    loyalty=loyalty_program.starting_loyalty)}
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
                or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.group_attack_subtype_tokens or event_definition.sacrifice_token_activations or event_definition.once_tribal_entry_tokens or event_definition.tribal_pump_activations or event_definition.group_token_entry_counters or event_definition.raid_entry_counters or event_definition.skip_untap_step or event_definition.death_untap_self or event_definition.tap_damage_amount or event_definition.scaled_life_tap or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace", "shroud", "flash",
                         "flying", "reach", "haste", "first strike", "double strike",
@@ -5491,6 +5512,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                       for ability in event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.self_pump or event_definition.team_keyword_pump or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
+            and "Planeswalker" not in definition.get("types",[])  # Never promote partial loyalty Oracle text.
             and (rules.query("cost",cost)["supported"] or "Land" in event_definition.types and not cost)):
         keywords = sorted(event_definition.abilities)
         parsed = {"kind":("vehicle" if "Vehicle" in event_definition.subtypes else
@@ -5720,7 +5742,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         sequence_effects=parsed.get('sequence_effects',()),
         counted_program=parsed.get('counted_program'),
         mana_as_any_color=parsed.get('mana_as_any_color',False),color_draw_cost=parsed.get('color_draw_cost',''),
-        target_modifier=parsed.get('target_modifier',()),modifier_program=parsed.get('modifier_program'),modal_sweeps=parsed.get('modal_sweeps',()),modal_target_program=parsed.get('modal_target_program'),sweep_reward=parsed.get('sweep_reward',()),
+        target_modifier=parsed.get('target_modifier',()),modifier_program=parsed.get('modifier_program'),loyalty_program=parsed.get('loyalty_program'),modal_sweeps=parsed.get('modal_sweeps',()),modal_target_program=parsed.get('modal_target_program'),sweep_reward=parsed.get('sweep_reward',()),
         instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),

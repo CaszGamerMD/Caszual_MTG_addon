@@ -1,0 +1,43 @@
+name: Planeswalker loyalty foundation - safe offline tests
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - training/simulator.py
+      - training/planeswalker_loyalty.py
+      - training/planeswalker_runtime.py
+      - training/tests/test_planeswalker_loyalty.py
+      - .github/workflows/commander-planeswalker-foundation.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  loyalty-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile training source
+        run: python -m compileall -q training
+      - name: Test generic loyalty activation, costs, resolution and safety
+        run: python -m unittest discover -s training/tests -p test_planeswalker_loyalty.py -v
+      - name: Keep existing multi-mode loyalty-counter interaction working
+        run: |
+          python -m unittest discover -s training/tests -p test_modal_multi_target.py -v
+          python -m unittest discover -s training/tests -p test_modal_target_cast.py -v
+      - name: Rerun all seven saved deck diagnostics offline
+        run: python training/diagnostic_coverage.py
+      - name: Retain audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: planeswalker-deck-diagnostic
+          path: training/reports/diagnostic-coverage.json
+          retention-days: 7
