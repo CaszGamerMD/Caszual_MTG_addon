@@ -261,6 +261,7 @@ class Permanent:
     lost_abilities: dict[str,int] = field(default_factory=dict)
     temporary_ability_times: dict[str,int] = field(default_factory=dict)
     loyalty: int | None = None
+    phased_out: bool = False
     loyalty_activated_turn: int = -1  # Once per turn per planeswalker.
     charge_counters: int = 0
     chosen_subtype: str = ''
@@ -539,7 +540,7 @@ class Simulator(AdvancedRules):
         c = effective or item.card
         return {"id": c.id, "name": c.name, "kind": "aura" if item.bestowed else ("enchantment" if not effective and c.event_definition and c.event_definition.devotion else c.kind), "power": c.power,
                 "toughness": c.toughness, "traits": c.traits, "tapped": item.tapped,
-                "fresh": item.fresh, "saddled": item.saddled, "counters": item.counters, "isCreature": effective is not None, "bestowed": item.bestowed, "attachedTo": item.attached_to,
+                "fresh": item.fresh, "saddled": item.saddled, "phasedOut": item.phased_out, "counters": item.counters, "isCreature": effective is not None, "bestowed": item.bestowed, "attachedTo": item.attached_to,
                 "hexproof": bool(state and game.has(state,'hexproof')), "wardCosts": list(game.ward_costs(state)) if state else [], "loyalty": item.loyalty, "chargeCounters": item.charge_counters,"classLevel": item.class_level if item.card.event_definition and item.card.event_definition.class_program else None,
                 "loreCounters":item.lore_counters if item.card.event_definition and item.card.event_definition.saga_chapter_scale else None}
 
@@ -622,6 +623,7 @@ class Simulator(AdvancedRules):
                          attacked_this_turn=self.attacked_this_turn)
         for seat, player in enumerate(self.players):
             for item in player.battlefield:
+                if item.phased_out:continue  # Phased-out objects do not exist for game rules.
                 card = item.card
                 definition = card.event_definition
                 if definition is None:
@@ -1076,6 +1078,9 @@ class Simulator(AdvancedRules):
                 elif item.payload[0].get('operation')=='emblem_combat_search':
                     from planeswalker_emblems import resolve_combat_search
                     resolve_combat_search(self,item.payload[0],item.payload[1])
+                elif item.payload[0].get('operation')=='phase_on_entry_end_step':
+                    from planeswalker_phasing import resolve_end_step as resolve_phase_out
+                    resolve_phase_out(self,item.payload[0],item.payload[1])
                 else: self._resolve_entry_effects([item.payload[0]],item.payload[1])
             finally:
                 self._resolving_stack=False
@@ -5077,6 +5082,8 @@ class Simulator(AdvancedRules):
                 return False
             if self.phase == "end": self.active = 1 - self.active
             self.turn += 1
+            from planeswalker_phasing import phase_in_on_untap
+            phase_in_on_untap(self,self.active)
             from planeswalker_duration import beginning_of_turn
             beginning_of_turn(self,self.active)
             self.once_per_turn_entries.clear()
@@ -5360,6 +5367,8 @@ class Simulator(AdvancedRules):
                 self._waiting_triggers.extend(self.queue_life_counter_triggers(game))
                 from planeswalker_emblems import queue_end_step
                 queue_end_step(self)
+                from planeswalker_phasing import queue_end_step as queue_phase_out
+                queue_phase_out(self)
                 self.resolve_entry_triggers([],Card('end-step','End step','spell'))
                 return True
             if self.stack.items:

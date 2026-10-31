@@ -9,7 +9,7 @@ def legal(sim,seat):
     result=[]
     for item in sim.players[seat].battlefield:
         card=item.card
-        if card.kind!='planeswalker' or card.loyalty_program is None:
+        if item.phased_out or card.kind!='planeswalker' or card.loyalty_program is None:
             continue
         if item.loyalty is None or item.loyalty_activated_turn==sim.turn:
             continue

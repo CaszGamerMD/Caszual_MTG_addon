@@ -31,6 +31,7 @@ class MillThenOptionalCreatureReturn:
 class PlaneswalkerProgram:
     starting_loyalty: int
     abilities: tuple[LoyaltyAbility,...]
+    phase_on_entry_end_step: bool = False
 
 def compile_card(card):
     if card.get('layout','normal')!='normal' or card.get('faces'):
@@ -46,6 +47,15 @@ def compile_card(card):
     if not 0<=amount<=1000:return None
     lines=(card.get('oracleText') or '').strip().splitlines()
     if not 1<=len(lines)<=6:return None
+    phase_on_entry=False
+    if lines and lines[0].startswith('At the beginning of your end step,'):
+        phase=re.fullmatch(
+            r'At the beginning of your end step, if (.+?) entered this turn, '
+            r'(?:he|she|they|it) phases? out\.',lines[0])
+        if not phase or phase[1]!=card.get('name'):return None
+        phase_on_entry=True
+        lines=lines[1:]
+    if not lines:return None
     abilities=[]
     for line in lines:
         m=re.fullmatch(r'([+\-−])([0-9]+): (.+)',line)
@@ -98,7 +108,7 @@ def compile_card(card):
         if program.blocks[0].operation not in ('draw_cards','gain_life','create_tokens'):
             return None
         abilities.append(LoyaltyAbility(delta,program))
-    return PlaneswalkerProgram(amount,tuple(abilities))
+    return PlaneswalkerProgram(amount,tuple(abilities),phase_on_entry)
 
 def inspect_card(card):
     """Read-only blockers for deck study; this never enables unsupported cards."""

@@ -11,6 +11,8 @@ on:
       - training/tests/test_planeswalker_conditional.py
       - training/planeswalker_duration.py
       - training/planeswalker_emblems.py
+      - training/planeswalker_phasing.py
+      - training/tests/test_planeswalker_phasing.py
       - training/tests/test_planeswalker_combat_emblem.py
       - training/tests/test_planeswalker_emblems.py
       - training/tests/test_planeswalker_composed.py
@@ -43,6 +45,8 @@ jobs:
         run: python -m unittest discover -s training/tests -p test_planeswalker_composed.py -v
       - name: Verify persistent loyalty emblems and delayed stack triggers
         run: python -m unittest discover -s training/tests -p test_planeswalker_emblems.py -v
+      - name: Verify full Kaito Oracle, phasing and untap timing
+        run: python -m unittest discover -s training/tests -p test_planeswalker_phasing.py -v
       - name: Test combat-damage emblems and library tutor
         run: python -m unittest discover -s training/tests -p test_planeswalker_combat_emblem.py -v
       - name: Test conditional card draw and unblocked Ninja rules
