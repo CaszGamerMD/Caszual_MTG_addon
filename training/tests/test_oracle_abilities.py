@@ -7,6 +7,55 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class CounterDependentKeywordChecks(unittest.TestCase):
+    def test_real_bramblewood_paragon_grants_live_trample(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14435337-lupitas-elves.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Bramblewood Paragon')
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(len(definition.entry_counter_grants),1)
+        self.assertEqual(len(definition.static_effects),1)
+        self.assertTrue(definition.static_effects[0].requires_plus_one_counter)
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'bramble',{'Green'})
+            self.assertNotEqual(card.kind,'unsupported')
+        warrior=Definition('Unknown Warrior',frozenset({'Creature'}),
+                           frozenset({'Warrior'}),False,1,1,frozenset())
+        elf=Definition('Unknown Elf',frozenset({'Creature'}),
+                       frozenset({'Elf'}),False,1,1,frozenset())
+        game=Game()
+        source=Permanent('paragon',definition,0)
+        game.enter(source)
+        ally=Permanent('warrior',warrior,0)
+        enemy=Permanent('enemy',warrior,1)
+        other=Permanent('elf',elf,0)
+        game.enter(ally)
+        game.enter(enemy)
+        game.enter(other)
+        self.assertEqual(ally.counters,1)
+        self.assertEqual(enemy.counters,0)
+        self.assertEqual(other.counters,0)
+        self.assertTrue(game.has(ally,'trample'))
+        self.assertFalse(game.has(other,'trample'))
+        self.assertFalse(game.has(enemy,'trample'))
+        ally.counters=0
+        self.assertFalse(game.has(ally,'trample'))
+        other.counters=1
+        self.assertTrue(game.has(other,'trample'))
+        del game.battlefield['paragon']
+        self.assertFalse(game.has(other,'trample'))
+
+    def test_unknown_counter_keyword_and_remainder(self):
+        raw=dict(name='Unseen Trainer',types=['Creature'],
+                 power='2',toughness='2',
+                 oracleText='Each creature you control with a +1/+1 counter on it has trample.')
+        self.assertTrue(parse_card(raw).supported)
+        self.assertFalse(parse_card(dict(raw,
+            oracleText=raw['oracleText']+' You win the game.')).supported)
+
+
 class SubtypeCountedLifeChecks(unittest.TestCase):
     def test_renamed_tribal_life_tap_and_unknown_remainder(self):
         for subtype,scope in [('Elf','all'),('Goblin','controller'),('Faerie','all')]:
