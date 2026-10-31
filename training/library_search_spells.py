@@ -52,33 +52,39 @@ def resolve(sim,seat,source,program):
         raise RuntimeError('Library search lacks compiled instructions')
     player=sim.players[seat]
     found=None
+    # The selected card is momentarily in transit between zones. Log only
+    # after placement so the simulator's per-event conservation invariant
+    # still runs without weakening its checks.
+    messages=[]
+    def emit(kind,message,**details):
+        messages.append((kind,message,details))
     for step in program.steps:
         if step=='search':
             matches=[c for c in player.library if matching(c,program)]
             # Documented deterministic agent choice, not a named-card shortcut.
             found=min(matches,key=lambda c:c.id) if matches else None
             if found is not None:player.library.remove(found)
-            sim.log('library_search','Search a private library for a matching card.',
+            emit('library_search','Search a private library for a matching card.',
                     actor=seat,source=source.name,selector=program.selector,
                     found=bool(found))
         elif step=='reveal':
             if found is not None:
-                sim.log('search_reveal','Reveal searched card.',
+                emit('search_reveal','Reveal searched card.',
                         actor=seat,source=source.name,card=found.name)
         elif step=='shuffle':
             sim.library_random_sequence+=1
             random.Random(f'{sim.seed}:library:{sim.library_random_sequence}').shuffle(player.library)
-            sim.log('library_shuffle','Shuffle library following search.',
+            emit('library_shuffle','Shuffle library following search.',
                     actor=seat,source=source.name)
         elif step=='put_top':
             if found is not None:
                 player.library.append(found)  # Simulator draws from the end.
-                sim.log('search_put_top','Put searched card on top of library.',
+                emit('search_put_top','Put searched card on top of library.',
                         actor=seat,source=source.name,card=found.name)
         elif step=='put_hand':
             if found is not None:
                 player.hand.append(found)
-                sim.log('search_put_hand','Put searched card into hand.',
+                emit('search_put_hand','Put searched card into hand.',
                         actor=seat,source=source.name)
         elif step=='discard_random':
             if player.hand:
@@ -88,7 +94,7 @@ def resolve(sim,seat,source,program):
                 ).randrange(len(player.hand))
                 card=player.hand.pop(index)
                 player.graveyard.append(card)
-                sim.log('random_discard','Discard a randomly selected card from hand.',
+                emit('random_discard','Discard a randomly selected card from hand.',
                         actor=seat,source=source.name,card=card.name)
         else:
             raise RuntimeError('Unsupported library search instruction: '+step)
@@ -96,3 +102,5 @@ def resolve(sim,seat,source,program):
             player.hand+player.library+player.graveyard+player.exile
             +[p.card for p in player.battlefield]):
         raise RuntimeError('Searched card lost during resolution')
+    for kind,message,details in messages:
+        sim.log(kind,message,**details)
