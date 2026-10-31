@@ -187,6 +187,7 @@ class Card:
     x_effect: str = ""
     token_count: int = 0
     token_count_rule: tuple = ()  # Live (creature subtype, controller/all) on resolution.
+    mana_count_rule: tuple = ()  # Live (color, creature subtype, controller/all) on resolution.
     token_definition: EventDefinition | None = None
     token_tapped: bool = False
     is_token: bool = False
@@ -436,6 +437,8 @@ class Simulator(AdvancedRules):
                 if self.diagnostic and card.event_definition and card.event_definition.supported:
                     continue
                 if self.diagnostic and card.kind == "token_spell" and card.token_count > 0 and card.token_definition is not None:
+                    continue
+                if self.diagnostic and card.kind=='mana_spell' and card.mana_count_rule:
                     continue
                 if self.diagnostic and card.kind == "mana_artifact" and len(card.mana_production)==6:
                     continue
@@ -1037,7 +1040,7 @@ class Simulator(AdvancedRules):
 
     def response_choices(self,seat):
         if seat!=self.stack.priority: return ()
-        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','token_spell','counter_spell','removal_spell','modifier_spell','blink_spell',
+        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','mana_spell','token_spell','counter_spell','removal_spell','modifier_spell','blink_spell',
             'creature','enchantment','artifact','equipment','vehicle','station','planeswalker')
                      and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
@@ -2725,6 +2728,16 @@ class Simulator(AdvancedRules):
                 token_triggers.extend(self.event_game('main').token_action_events('create',controller,created))
                 self.resolve_entry_triggers(token_triggers, card)
                 if self.finished: return False
+        if card.kind=='mana_spell':
+            symbol,subtype,scope=card.mana_count_rule
+            game=self.event_game('main')
+            count=sum((scope=='all' or state.controller==controller) and game.creature(state)
+                      and (subtype=='Creature' or has_subtype(state.definition,subtype))
+                      for state in game.battlefield.values())
+            self.players[controller].mana_pool[mana_pool.COLORS.index(symbol)]+=count
+            self.log('resolve_mana_spell','Mana spell adds mana using the live creature count.',
+                     actor=controller,source=card.name,mana=symbol,subtype=subtype,
+                     scope=scope,amount=count)
         if card.kind == "spell":
             for _ in range(card.draw): self.draw(controller)
             self.gain_life(controller,card.life)
@@ -4435,7 +4448,7 @@ class Simulator(AdvancedRules):
                     actions.append(Candidate(c.id+':spellback','cast_modal_back',c.id,
                         features=features(power=back.power,toughness=back.toughness),
                         label='Cast '+back.name))
-                if c.kind in ("creature", "vehicle", "enchantment", "spell", "token_spell", "mana_artifact", "equipment", "planeswalker", "station", "artifact") and self.payment(c)["paid"]:
+                if c.kind in ("creature", "vehicle", "enchantment", "spell", "mana_spell", "token_spell", "mana_artifact", "equipment", "planeswalker", "station", "artifact") and self.payment(c)["paid"]:
                     if c.draw and len(p.library) < c.draw:
                         continue  # never choose a known self-decking draw spell
                     keywords = c.traits.split(";")[-1].split(",") if c.traits else []
@@ -4982,6 +4995,12 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                       "token_definition":template,"token_tapped":token_spec.tapped}
         else:
             parsed = diagnostic_land(definition, identity) or parsed
+    from variable_mana_spells import parse as parse_variable_mana_spell
+    scaled_mana=parse_variable_mana_spell(rule_text(definition.get('oracleText','')),
+                                          definition.get('types',[]))
+    if (parsed['kind']=='unsupported' and scaled_mana
+            and rules.query('cost',cost)['supported']):
+        parsed={'kind':'mana_spell','mana_count_rule':scaled_mana}
     from variable_token_spells import parse as parse_variable_token_spell
     scaled_tokens=parse_variable_token_spell(rule_text(definition.get('oracleText','')),
                                                definition.get('types',[]))
@@ -5138,6 +5157,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         basic_land="Basic" in definition.get("superTypes", []), snow="Snow" in definition.get("superTypes", []), event_definition=parsed.get("event") or (event_definition if event_definition.supported and "Planeswalker" in event_definition.types else None),
         storm=parsed.get("storm",False), x_effect=parsed.get("x_effect",""), token_count=parsed.get("token_count",0),
         token_count_rule=parsed.get('token_count_rule',()),
+        mana_count_rule=parsed.get('mana_count_rule',()),
         token_definition=parsed.get("token_definition"),token_tapped=parsed.get("token_tapped",False),
         printed_types=tuple(definition.get('types',[])),
         printed_mana_value=library_effects.mana_value(cost) if definition.get('layout','normal') in ('normal','token') else None,
