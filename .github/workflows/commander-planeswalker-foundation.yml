@@ -6,6 +6,9 @@ on:
       - training/simulator.py
       - training/planeswalker_loyalty.py
       - training/planeswalker_runtime.py
+      - training/planeswalker_strategy.py
+      - training/planeswalker_strategy_skirmishes.py
+      - training/tests/test_planeswalker_strategy.py
       - training/planeswalker_conditional.py
       - training/advanced_simulator.py
       - training/tests/test_planeswalker_conditional.py
@@ -51,6 +54,10 @@ jobs:
         run: python -m unittest discover -s training/tests -p test_planeswalker_combat_emblem.py -v
       - name: Test conditional card draw and unblocked Ninja rules
         run: python -m unittest discover -s training/tests -p test_planeswalker_conditional.py -v
+      - name: Validate situational loyalty AI decision quality
+        run: python -m unittest discover -s training/tests -p test_planeswalker_strategy.py -v
+      - name: Simulate seeded AI against AI planeswalker skirmishes
+        run: python training/planeswalker_strategy_skirmishes.py
       - name: Verify real saved-deck planeswalker evidence
         run: |
           python -m unittest discover -s training/tests -p test_planeswalker_inventory.py -v
@@ -69,4 +76,5 @@ jobs:
           path: |
             training/reports/diagnostic-coverage.json
             training/reports/planeswalker-capabilities.json
+            training/reports/planeswalker-strategy-skirmishes.json
           retention-days: 7

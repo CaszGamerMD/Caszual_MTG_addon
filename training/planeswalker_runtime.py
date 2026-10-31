@@ -19,15 +19,14 @@ def legal(sim,seat):
             if ability.target_kind=='up_to_one_creature':
                 options+=tuple(permanent.card.id for _,permanent
                                in sim.creature_targets(seat,card))
-            power=(sum(block.amount for block in ability.program.blocks)
-                   if ability.effect_kind=='atomic' else
-                   ability.program.amount if ability.effect_kind=='mill_optional_creature_return'
-                   else 1)
+            from planeswalker_strategy import evaluate
             for target in options:
+                evaluation=evaluate(sim,seat,item,ability,target)
                 result.append(Candidate(card.id+':loyalty:'+str(index)+':target='+target,
-                    'activate_loyalty',card.id,features=features(
-                        power=power+(1 if target else 0)),
-                    label='Activate loyalty '+str(ability.delta)+' of '+card.name,
+                    'activate_loyalty',card.id,
+                    features=features(power=evaluation.value),
+                    label='Activate loyalty '+str(ability.delta)+' of '+card.name+
+                          ' ('+evaluation.reason+')',
                     activation_index=index,target_permanent=target))
     return tuple(result)
 

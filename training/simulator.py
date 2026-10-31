@@ -330,7 +330,8 @@ class Policy:
             raise ValueError("No legal action")
         # Identical observations give identical decisions. No access to the engine or replay.
         development={"cast","cast_commander","cast_flashback","bestow","equip","station",
-                     "history_tokens","activate_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip"}
+                     "activate_loyalty","history_tokens","activate_tokens","activate_self_pump",
+                     "activate_team_keyword_pump","activate_strip"}
         def utility(action):
             score=sum(w*f for w,f in zip(self.weights,action.features))
             if observation.phase in ("main","second_main") and not observation.developed_this_turn:
