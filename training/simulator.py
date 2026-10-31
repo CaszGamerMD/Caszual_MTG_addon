@@ -773,6 +773,7 @@ class Simulator(AdvancedRules):
                     raise ValueError('Illegal keyword counter choice')
             elif keyword_choice is not None:raise ValueError('Card has no keyword counter choice')
             entrants.append(EventPermanent(card.id,replace(definition,mana_cost=card.mana_cost),controller,tapped=enters_tapped,
+                                           token=card.is_token,
                                            attached_to=attached_targets.get(card.id),chosen_subtype=chosen_types.get(card.id,''),
                                            keyword_counters=frozenset((keyword_choice,)) if keyword_choice else frozenset()))
         game.life_totals={seat:p.life for seat,p in enumerate(self.players)}
@@ -5102,7 +5103,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.group_attack_subtype_tokens or event_definition.sacrifice_token_activations or event_definition.once_tribal_entry_tokens or event_definition.tribal_pump_activations or event_definition.scaled_life_tap or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace", "shroud", "flash",
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.group_attack_subtype_tokens or event_definition.sacrifice_token_activations or event_definition.once_tribal_entry_tokens or event_definition.tribal_pump_activations or event_definition.group_token_entry_counters or event_definition.scaled_life_tap or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace", "shroud", "flash",
                         "flying", "reach", "haste", "first strike", "double strike",
                         "vigilance", "lifelink", "deathtouch", "trample",
                         "defender", "indestructible", "changeling"} & event_definition.abilities)
