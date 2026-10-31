@@ -361,6 +361,13 @@ def selector(text):
     if text=='another creature you control of the chosen type':
         return Selector(relation='controller',other=True,creature=True,chosen_subtype=True)
     if text in ('this land','this artifact','this enchantment','this permanent'):return Selector(self_only=True)
+    # A tribe with "you control" excludes opposing creatures. Unlike the
+    # unrestricted phrase, it also includes the source's own death.
+    self_or_owned_tribe=re.fullmatch(
+        r'this creature or another ([A-Z][a-z]+)(?: creature)? you control',text)
+    if self_or_owned_tribe:
+        return Selector(creature=True,
+                        self_or_controlled_subtype=self_or_owned_tribe[1])
     # Death/entry triggers like "this creature or another Zombie" watch
     # both the source and matching creatures from either controller.
     self_or_tribe=re.fullmatch(r'this creature or another ([A-Z][a-z]+)(?: creature)?',text)
