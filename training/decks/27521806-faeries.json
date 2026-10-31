@@ -914,7 +914,8 @@
       "power": "",
       "toughness": "",
       "layout": "normal",
-      "faces": []
+      "faces": [],
+      "loyalty": "3"
     },
     {
       "name": "Liliana, Heretical Healer // Liliana, Defiant Necromancer",
@@ -1011,7 +1012,8 @@
       "power": "",
       "toughness": "",
       "layout": "normal",
-      "faces": []
+      "faces": [],
+      "loyalty": "3"
     },
     {
       "name": "Marauding Blight-Priest",

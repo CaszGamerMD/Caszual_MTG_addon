@@ -6,6 +6,9 @@ on:
       - training/simulator.py
       - training/planeswalker_loyalty.py
       - training/planeswalker_runtime.py
+      - training/planeswalker_inventory.py
+      - training/decks/**
+      - training/tests/test_planeswalker_inventory.py
       - training/tests/test_planeswalker_loyalty.py
       - .github/workflows/commander-planeswalker-foundation.yml
   workflow_dispatch:
@@ -28,6 +31,10 @@ jobs:
         run: python -m compileall -q training
       - name: Test generic loyalty activation, costs, resolution and safety
         run: python -m unittest discover -s training/tests -p test_planeswalker_loyalty.py -v
+      - name: Verify real saved-deck planeswalker evidence
+        run: |
+          python -m unittest discover -s training/tests -p test_planeswalker_inventory.py -v
+          python training/planeswalker_inventory.py
       - name: Keep existing multi-mode loyalty-counter interaction working
         run: |
           python -m unittest discover -s training/tests -p test_modal_multi_target.py -v
@@ -39,5 +46,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: planeswalker-deck-diagnostic
-          path: training/reports/diagnostic-coverage.json
+          path: |
+            training/reports/diagnostic-coverage.json
+            training/reports/planeswalker-capabilities.json
           retention-days: 7
