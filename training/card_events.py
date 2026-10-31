@@ -682,6 +682,7 @@ class Game:
     life_totals: dict[int, int] = field(default_factory=lambda: {0:40, 1:40})
     _next_token: int = 0
     clock: int = 0
+    once_per_turn_entries: set = field(default_factory=set)
 
     def timestamp(self):
         self.clock+=1
@@ -963,6 +964,22 @@ class Game:
                         if trigger.effect.operation=='self_sacrifice_unless_bounce':
                             data['entryAt']=permanent.entered_at
                         self.emit("trigger",**data)
+                # Batch-wide "one or more" entry abilities are not per-entrant.
+                # State is shared across event-kernel snapshots for one turn.
+                for subtype,spec,exclude_self,once in watcher.definition.once_tribal_entry_tokens:
+                    if (watcher.controller!=permanent.controller or
+                            not self.creature(permanent) or
+                            not has_subtype(permanent.definition,subtype) or
+                            exclude_self and watcher.id==permanent.id):
+                        continue
+                    key=(watcher.id,watcher.entered_at,subtype)
+                    if once and key in self.once_per_turn_entries:continue
+                    if once:self.once_per_turn_entries.add(key)
+                    self.emit('trigger',operation='create_tokens',
+                              effect='once-per-turn collective tribal entry token creation',
+                              source=watcher.id,name=watcher.definition.name,
+                              controller=watcher.controller,
+                              tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords)))
             # These are triggered abilities, modeled as immediate resolutions in this
             # focused prototype. The full engine must provide stack/priority.
             watched = any(x.id != permanent.id and x.controller == permanent.controller
