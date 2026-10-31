@@ -7,6 +7,56 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class VariableManaSpellChecks(unittest.TestCase):
+    def test_unseen_tribal_mana_spell_rejects_unparsed_text(self):
+        from variable_mana_spells import parse
+        self.assertEqual(parse('Add {G} for each Elf you control.',['Sorcery']),
+                         ('G','Elf','controller'))
+        self.assertEqual(parse('Add {R} for each Goblin on the battlefield.',['Instant']),
+                         ('R','Goblin','all'))
+        self.assertEqual(parse('Add {U} for each creature on the battlefield.',['Kindred','Instant']),
+                         ('U','Creature','all'))
+        self.assertIsNone(parse('Add {R} for each Goblin on the battlefield. Win the game.',['Instant']))
+        self.assertIsNone(parse('Add {R} for each Goblin on the battlefield.',['Creature']))
+
+    def test_real_brightstone_ritual_uses_live_both_player_count(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14509839-mono-red-gobs.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Brightstone Ritual')
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'ritual',{'Red'})
+            self.assertEqual(card.kind,'mana_spell')
+            self.assertEqual(card.mana_count_rule,('R','Goblin','all'))
+            land=s.Card('red-land','Mountain','land',mask=8)
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card,land],
+                                            s.demo_deck(1)),diagnostic=True)
+            sim.manual_priority=True;sim.phase='main';sim.stack.priority=0
+            owner=sim.players[0]
+            for item in (card,land):
+                (owner.hand if item in owner.hand else owner.library).remove(item)
+            owner.hand.append(card);owner.battlefield.append(s.Permanent(land))
+            def put(identifier,seat,subtypes,abilities=()):
+                d=s.EventDefinition(identifier,frozenset({'Creature'}),
+                    frozenset(subtypes),False,1,1,frozenset(abilities))
+                token=s.Card(identifier,identifier,'creature',
+                    event_definition=d,is_token=True,power=1,toughness=1)
+                pending=sim.enter_creature(token,sim.players[seat])
+                sim.resolve_entry_triggers(pending,token)
+            put('friend',0,('Goblin',))
+            put('enemy',1,('Goblin',))
+            put('shapeshifter',0,('Shapeshifter',),('changeling',))
+            put('elf',0,('Elf',))
+            sim.cast_spell(0,card)
+            self.assertTrue(sim.stack.items)
+            victim=next(item for item in owner.battlefield if item.card.id=='friend')
+            sim.send_to_destination(owner,victim)
+            while sim.stack.items:sim.pass_priority(sim.stack.priority)
+            self.assertEqual(owner.mana_pool[3],2)
+            self.assertIn(card,owner.graveyard)
+            sim.invariant()
+
+
 class VariableTokenSpellChecks(unittest.TestCase):
     def test_unseen_token_quantity_uses_generic_whole_text_grammar(self):
         from variable_token_spells import parse
