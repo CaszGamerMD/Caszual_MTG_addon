@@ -1556,6 +1556,50 @@ class Simulator(AdvancedRules):
                  actor=seat,source=source_id,target=land_id,stackId=frame.id)
         if not self.manual_priority and not self._resolving_stack:self.drain_priority()
 
+    def scaled_life_choices(self,seat):
+        """Offer a tap ability using the live battlefield, including changelings."""
+        choices=[]
+        game=self.event_game('main')
+        for source in self.players[seat].battlefield:
+            definition=source.card.event_definition
+            if not definition or not definition.scaled_life_tap or source.tapped:
+                continue
+            state=game.battlefield.get(source.card.id)
+            if not state or (source.fresh and game.creature(state) and not game.has(state,'haste')):
+                continue
+            factor,subtype,scope=definition.scaled_life_tap
+            count=sum((other.controller==seat or scope=='all') and
+                      (game.creature(other) if subtype=='Creature' else
+                       has_subtype(other.definition,subtype))
+                      for other in game.battlefield.values())
+            amount=factor*count
+            if amount>0:
+                choices.append(Candidate(source.card.id+':life','activate_scaled_life',
+                    source.card.id,features=features(life=amount),
+                    label='Tap '+source.card.name+' to gain '+str(amount)+' life'))
+        return choices
+
+    def activate_scaled_life(self,seat,source_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        definition=source.card.event_definition if source else None
+        if not definition or not definition.scaled_life_tap or source.tapped:
+            raise ValueError('No untapped life-counting ability source')
+        game=self.event_game('main');state=game.battlefield.get(source_id)
+        if not state or (source.fresh and game.creature(state) and not game.has(state,'haste')):
+            raise ValueError('Cannot activate life-counting tap ability with summoning sickness')
+        factor,subtype,scope=definition.scaled_life_tap
+        count=sum((other.controller==seat or scope=='all') and
+                  (game.creature(other) if subtype=='Creature' else
+                   has_subtype(other.definition,subtype))
+                  for other in game.battlefield.values())
+        amount=factor*count
+        source.tapped=True
+        self.gain_life(seat,amount)
+        self.log('activate_scaled_life','Player taps a source to gain life per matching permanent.',
+                 actor=seat,source=source_id,subtype=subtype,count=count,amount=amount)
+        self.resolve_entry_triggers([],source.card)
+
     def scaled_mana_choices(self,seat):
         choices=[]
         game=self.event_game('main')
@@ -2293,6 +2337,7 @@ class Simulator(AdvancedRules):
         actions.extend(self.enchantment_copy_choices(seat))
         actions.extend(self.token_ability_choices(seat))
         actions.extend(self.scaled_mana_choices(seat))
+        actions.extend(self.scaled_life_choices(seat))
         actions.extend(self.sacrifice_choices(seat))
         actions.extend(self.sacrifice_token_choices(seat))
         actions.extend(self.discard_token_choices(seat))
@@ -2355,6 +2400,9 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_scaled_mana':
             self.activate_scaled_mana(seat,choice.card_id,choice.x_value)
+            return 'activate'
+        if choice.kind=='activate_scaled_life':
+            self.activate_scaled_life(seat,choice.card_id)
             return 'activate'
         if choice.kind=='activate_discard_tokens':
             self.activate_discard_tokens(seat,choice.card_id,choice.discard_id)
@@ -4300,6 +4348,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.equip_choices(seat))
             actions.extend(self.token_ability_choices(seat))
             actions.extend(self.scaled_mana_choices(seat))
+            actions.extend(self.scaled_life_choices(seat))
             actions.extend(self.sacrifice_choices(seat))
             actions.extend(self.sacrifice_token_choices(seat))
             actions.extend(self.discard_token_choices(seat))
@@ -4449,7 +4498,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
-                           "history_tokens","activate_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
+                           "history_tokens","activate_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_scaled_life","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
             self.turn_development[seat]=True
         return choice
 
@@ -4550,6 +4599,8 @@ class Simulator(AdvancedRules):
                 self.activate_tribal_tokens(self.active,choice.card_id)
             elif choice.kind=='activate_scaled_mana':
                 self.activate_scaled_mana(self.active,choice.card_id,choice.x_value)
+            elif choice.kind=='activate_scaled_life':
+                self.activate_scaled_life(self.active,choice.card_id)
             elif choice.kind=='activate_discard_tokens':
                 self.activate_discard_tokens(self.active,choice.card_id,choice.discard_id)
             elif choice.kind=='activate_sacrifice_tokens':
@@ -4893,7 +4944,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.group_attack_subtype_tokens or event_definition.sacrifice_token_activations or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace", "shroud", "flash",
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.group_attack_subtype_tokens or event_definition.sacrifice_token_activations or event_definition.scaled_life_tap or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace", "shroud", "flash",
                         "flying", "reach", "haste", "first strike", "double strike",
                         "vigilance", "lifelink", "deathtouch", "trample",
                         "defender", "indestructible", "changeling"} & event_definition.abilities)
