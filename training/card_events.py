@@ -88,6 +88,7 @@ class Definition:
     static_effects: tuple[StaticEffect, ...] = ()
     attack_effects: tuple = ()
     group_attack_subtype_tokens: tuple = ()  # Once per declared combat group, not per attacker.
+    sacrifice_token_activations: tuple = ()  # (mana cost, sacrificed subtype, token spec)
     attachment: tuple = ()
     activations: tuple = ()
     self_pump: tuple = ()  # Mana cost, power, toughness until EOT.
@@ -399,6 +400,25 @@ def parse_card(card: dict) -> Definition:
         return Definition(**base,abilities=frozenset(),attachment=umbra,umbra_armor=True)
     attachment=parse_with_intrinsic(text,types,subtypes)
     if attachment:return Definition(**base,abilities=attachment[0],attachment=attachment[1])
+    # Sacrifice is paid before the token ability is placed on the stack.
+    # The rest of the card must independently parse without ignored text.
+    sacrifice_lines=text.splitlines()
+    sacrifice_pattern=(r'((?:\{(?:[0-9]+|[WUBRGC])\})+), '
+                       r'Sacrifice an? ([A-Z][a-z]+): (Create .+)')
+    sacrifice_matches=[(i,re.fullmatch(sacrifice_pattern,line))
+                       for i,line in enumerate(sacrifice_lines)]
+    sacrifice_matches=[(i,match) for i,match in sacrifice_matches if match]
+    if len(sacrifice_matches)==1 and 'Creature' in types:
+        from oracle_abilities import parse_token_creation
+        index,match=sacrifice_matches[0]
+        spec=parse_token_creation(match[3])
+        remainder='\n'.join(line for i,line in enumerate(sacrifice_lines) if i!=index)
+        program=compile_abilities(remainder,name) if remainder else None
+        if spec and (not remainder or program):
+            fields=dict(vars(program)) if program else {}
+            abilities=fields.pop('keywords',frozenset())
+            return Definition(**base,abilities=abilities,
+                sacrifice_token_activations=((match[1],match[2],spec),),**fields)
     # A collective attack trigger fires once for a simultaneous declaration,
     # independently of how many matching creatures attack in that group.
     # The remaining Oracle text must independently compile in full.
