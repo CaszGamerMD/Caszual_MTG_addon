@@ -219,6 +219,7 @@ class Card:
     populate: bool = False  # Copy a controlled creature token on resolution, if any.
     sequence_effects: tuple = ()  # Fully compiled, target-free Oracle instructions in order.
     counted_program: object | None = None  # Verified resolution-time quantity expressions.
+    library_search_program: object | None = None  # Full-text search, reveal, shuffle, destination, discard.
     mana_as_any_color: bool = False
     color_draw_cost: str = ''
     # Modal double-faced cards are one physical card. The front card is kept
@@ -1102,7 +1103,7 @@ class Simulator(AdvancedRules):
 
     def response_choices(self,seat):
         if seat!=self.stack.priority: return ()
-        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','sequence_spell','modal_target_spell','mana_spell','scaled_damage_spell','token_spell','counter_spell','removal_spell','modifier_spell','blink_spell','prevention_spell',
+        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','sequence_spell','library_search_spell','modal_target_spell','mana_spell','scaled_damage_spell','token_spell','counter_spell','removal_spell','modifier_spell','blink_spell','prevention_spell',
             'creature','enchantment','artifact','equipment','vehicle','station','planeswalker')
                      and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
@@ -2998,6 +2999,10 @@ class Simulator(AdvancedRules):
                      actor=controller,source=card.name,
                      scope='all' if card.prevent_all_combat_damage else 'controller')
             if card.populate:self.populate_token(controller,card)
+            return
+        if card.kind=='library_search_spell':
+            from library_search_spells import resolve
+            resolve(self,controller,card,card.library_search_program)
             return
         if card.kind=='sequence_spell':
             if not card.sequence_effects:raise RuntimeError('Uncompiled sequence spell')
@@ -4984,7 +4989,7 @@ class Simulator(AdvancedRules):
                     actions.append(Candidate(c.id+':spellback','cast_modal_back',c.id,
                         features=features(power=back.power,toughness=back.toughness),
                         label='Cast '+back.name))
-                if c.kind in ("creature", "vehicle", "enchantment", "spell", "sequence_spell", "counted_spell", "mana_spell", "scaled_damage_spell", "token_spell", "prevention_spell", "mana_artifact", "equipment", "planeswalker", "station", "artifact") and self.payment(c)["paid"]:
+                if c.kind in ("creature", "vehicle", "enchantment", "spell", "sequence_spell", "library_search_spell", "counted_spell", "mana_spell", "scaled_damage_spell", "token_spell", "prevention_spell", "mana_artifact", "equipment", "planeswalker", "station", "artifact") and self.payment(c)["paid"]:
                     if c.draw and len(p.library) < c.draw:
                         continue  # never choose a known self-decking draw spell
                     keywords = c.traits.split(";")[-1].split(",") if c.traits else []
@@ -5759,6 +5764,12 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     if (parsed['kind']=='unsupported' and modal_target
             and rules.query('cost',cost)['supported']):
         parsed={'kind':'modal_target_spell','modal_target_program':modal_target}
+    from library_search_spells import compile_card as compile_library_search
+    library_search=compile_library_search(rule_text(definition.get('oracleText','')),
+                                         definition.get('types',[]))
+    if (parsed['kind']=='unsupported' and library_search is not None
+            and rules.query('cost',cost)['supported']):
+        parsed={'kind':'library_search_spell','library_search_program':library_search}
     from artifact_color_mana import parse as parse_artifact_color_mana
     color_program=parse_artifact_color_mana(rule_text(definition.get('oracleText','')),definition.get('types',[]))
     if parsed['kind']=='unsupported' and color_program and rules.query('cost',cost)['supported']:
@@ -5774,6 +5785,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         populate=parsed.get('populate',False),
         sequence_effects=parsed.get('sequence_effects',()),
         counted_program=parsed.get('counted_program'),
+        library_search_program=parsed.get('library_search_program'),
         mana_as_any_color=parsed.get('mana_as_any_color',False),color_draw_cost=parsed.get('color_draw_cost',''),
         target_modifier=parsed.get('target_modifier',()),modifier_program=parsed.get('modifier_program'),loyalty_program=parsed.get('loyalty_program'),modal_sweeps=parsed.get('modal_sweeps',()),modal_target_program=parsed.get('modal_target_program'),sweep_reward=parsed.get('sweep_reward',()),
         instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
