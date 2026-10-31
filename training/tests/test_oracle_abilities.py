@@ -7,6 +7,101 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class OncePerTurnTribalEntryChecks(unittest.TestCase):
+    @staticmethod
+    def unseen(subtype='Elf'):
+        plural={'Elf':'Elves','Goblin':'Goblins','Wolf':'Wolves'}[subtype]
+        return dict(name='Unseen Tribal Leader',types=['Creature'],
+            subTypes=[subtype],power='2',toughness='2',
+            manaCost='{5}{G}{G}',
+            oracleText=('Whenever one or more other '+plural+' you control enter, '
+                        'create a 1/1 green Elf Warrior creature token. '
+                        'This ability triggers only once each turn.\n'
+                        '{5}{G}{G}: '+plural+' you control get +2/+2 and gain '
+                        'deathtouch until end of turn.'))
+
+    def test_unseen_tribes_compile_and_fail_closed(self):
+        for subtype in ('Elf','Goblin','Wolf'):
+            raw=self.unseen(subtype)
+            definition=parse_card(raw)
+            self.assertTrue(definition.supported,definition.reason)
+            self.assertEqual(definition.once_tribal_entry_tokens[0][0],subtype)
+            self.assertEqual(definition.tribal_pump_activations[0][1],subtype)
+            self.assertEqual(definition.tribal_pump_activations[0][-1],'deathtouch')
+            self.assertFalse(parse_card(dict(raw,
+                oracleText=raw['oracleText']+'\nWin the game.')).supported)
+
+    def test_group_entry_fires_once_per_batch_and_turn(self):
+        definition=parse_card(self.unseen())
+        ally=Definition('Unknown Elf',frozenset({'Creature'}),
+            frozenset({'Elf'}),False,1,1,frozenset())
+        enemy=Definition('Enemy Elf',frozenset({'Creature'}),
+            frozenset({'Elf'}),False,1,1,frozenset())
+        game=Game()
+        game.enter(Permanent('source',definition,0))
+        self.assertFalse(any(e['kind']=='trigger' for e in game.events))
+        game.enter_batch([Permanent('first',ally,0),Permanent('second',ally,0)])
+        pending=[e for e in game.events if e['kind']=='trigger']
+        self.assertEqual(len(pending),1)
+        self.assertEqual(pending[0]['operation'],'create_tokens')
+        self.assertEqual(pending[0]['tokenSpec']['subtypes'],('Elf','Warrior'))
+        game.events.clear()
+        game.enter(Permanent('enemy',enemy,1))
+        game.enter(Permanent('third',ally,0))
+        self.assertFalse(any(e['kind']=='trigger' for e in game.events))
+        game.once_per_turn_entries.clear()
+        game.events.clear()
+        game.enter(Permanent('fourth',ally,0))
+        self.assertEqual(len([e for e in game.events if e['kind']=='trigger']),1)
+
+    def test_real_warmaster_token_limit_and_paid_keyword_boost(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14435337-lupitas-elves.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Elvish Warmaster')
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'warmaster',{'Green'})
+            self.assertNotEqual(card.kind,'unsupported')
+            self.assertTrue(card.event_definition.once_tribal_entry_tokens)
+            self.assertTrue(card.event_definition.tribal_pump_activations)
+            lands=[s.Card('mana'+str(i),'Forest','land',mask=16) for i in range(7)]
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card]+lands,
+                s.demo_deck(1)),diagnostic=True)
+            sim.manual_priority=True;sim.phase='main';sim.stack.priority=0
+            owner=sim.players[0]
+            for item in [card,*lands]:
+                (owner.hand if item in owner.hand else owner.library).remove(item)
+            owner.battlefield.extend(s.Permanent(land) for land in lands)
+            sim.resolve_entry_triggers(sim.enter_creature(card,owner),card)
+            d=s.EventDefinition('Unknown Elf',frozenset({'Creature'}),
+                frozenset({'Elf'}),False,1,1,frozenset())
+            first=s.Card('first','Unknown Elf','creature',power=1,toughness=1,
+                event_definition=d,is_token=True)
+            second=s.Card('second','Unknown Elf','creature',power=1,toughness=1,
+                event_definition=d,is_token=True)
+            pending=sim.enter_creatures([first,second],owner)
+            sim.resolve_entry_triggers(pending,first)
+            while sim.stack.items:sim.pass_priority(sim.stack.priority)
+            spawned=[p for p in owner.battlefield if p.card.id.startswith('token-')]
+            self.assertEqual(len(spawned),1)
+            another=s.Card('third','Unknown Elf','creature',power=1,toughness=1,
+                event_definition=d,is_token=True)
+            sim.resolve_entry_triggers(sim.enter_creature(another,owner),another)
+            self.assertEqual(len([p for p in owner.battlefield
+                                  if p.card.id.startswith('token-')]),1)
+            sim.activate_tribal_pump(0,card.id)
+            self.assertTrue(sim.stack.items)
+            while sim.stack.items:sim.pass_priority(sim.stack.priority)
+            for ident in (card.id,first.id,second.id,another.id,spawned[0].card.id):
+                permanent=next(p for p in owner.battlefield if p.card.id==ident)
+                result=sim.effective_card(permanent)
+                self.assertIn('deathtouch',result.traits)
+                self.assertEqual(result.power,4 if ident==card.id else 3)
+            self.assertEqual(sum(p.tapped for p in owner.battlefield
+                if p.card.kind=='land'),7)
+            sim.invariant()
+
+
 class ScaledDamageSpellChecks(unittest.TestCase):
     def test_unseen_whole_oracle_scaled_damage_spell(self):
         from variable_damage_spells import parse
