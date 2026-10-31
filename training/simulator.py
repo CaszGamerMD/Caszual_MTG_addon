@@ -429,6 +429,7 @@ class Simulator(AdvancedRules):
         self._end_step_triggers_queued=False
         self.token_sequence = 0
         self.effect_clock = 0
+        self.once_per_turn_entries=set()
         self.library_random_sequence = 0
         self.log("setup", "Two independent agents use frozen policies; sandbox rules apply.")
         for player in self.players:
@@ -587,7 +588,8 @@ class Simulator(AdvancedRules):
     def event_game(self, phase: str) -> EventGame:
         """Adapt public battlefield state to the shared type-aware event kernel."""
         game = EventGame(turn_player=self.active, phase=phase,clock=self.effect_clock,
-                         life_totals={seat:player.life for seat,player in enumerate(self.players)})
+                         life_totals={seat:player.life for seat,player in enumerate(self.players)},
+                         once_per_turn_entries=self.once_per_turn_entries)
         for seat, player in enumerate(self.players):
             for item in player.battlefield:
                 card = item.card
@@ -4607,6 +4609,7 @@ class Simulator(AdvancedRules):
                 return False
             if self.phase == "end": self.active = 1 - self.active
             self.turn += 1
+            self.once_per_turn_entries.clear()
             self.stack.active=self.active;self.stack.priority=self.active
             self.land_played = False
             self.land_plays_this_turn = 0
@@ -5025,7 +5028,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.group_attack_subtype_tokens or event_definition.sacrifice_token_activations or event_definition.scaled_life_tap or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace", "shroud", "flash",
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.group_attack_subtype_tokens or event_definition.sacrifice_token_activations or event_definition.once_tribal_entry_tokens or event_definition.tribal_pump_activations or event_definition.scaled_life_tap or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace", "shroud", "flash",
                         "flying", "reach", "haste", "first strike", "double strike",
                         "vigilance", "lifelink", "deathtouch", "trample",
                         "defender", "indestructible", "changeling"} & event_definition.abilities)
