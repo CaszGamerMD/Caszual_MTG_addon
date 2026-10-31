@@ -129,6 +129,7 @@ class Definition:
     linked_exile: str = ''  # Separate ETB-exile and LTB-return triggers, with source identity.
     tribal_tap_tokens: tuple = ()  # (token spec, counted subtype), evaluated on resolution.
     scaled_mana_tap: str = ''  # Tap for X mana of one chosen color, based on permanents.
+    scaled_life_tap: tuple = ()  # (life each, subtype, controller/all) for tap abilities.
     living_weapon: bool = False  # ETB create 0/0 Phyrexian Germ, then attach.
     sacrifice_ability: tuple = ()  # (effect, sacrificed subtype, effect parameter).
     land_counter_ability: str = ''  # Mana cost for tap-to-counter-each-controlled-creature.
@@ -526,6 +527,10 @@ def parse_card(card: dict) -> Definition:
             return Definition(**base,abilities=program.keywords if program else frozenset(),
                 static_effects=program.static_effects if program else (),
                 scaled_mana_tap=mana_rule)
+    from creature_life import parse_counted as parse_counted_life
+    counted_life=parse_counted_life(text,types)
+    if counted_life:
+        return Definition(**base,abilities=frozenset(),scaled_life_tap=counted_life)
     from creature_mana import parse_fixed
     fixed_mana=parse_fixed(text,types)
     if fixed_mana:
