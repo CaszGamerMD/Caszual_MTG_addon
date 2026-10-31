@@ -211,6 +211,9 @@ class Card:
     modal_sweeps: tuple = ()  # Ordered destroy modes, with two indices selected on casting.
     sweep_reward: tuple = ()  # (nontoken only, Treasures per destroyed creature, tapped).
     forced_sacrifice: tuple = ()  # (opponents/all players, count) on spell resolution.
+    prevent_all_combat_damage: bool = False  # Until cleanup, all combat damage is prevented.
+    prevent_player_combat_damage: bool = False  # Combat damage to the spell's controller only.
+    populate: bool = False  # Copy a controlled creature token on resolution, if any.
     mana_as_any_color: bool = False
     color_draw_cost: str = ''
     # Modal double-faced cards are one physical card. The front card is kept
@@ -426,6 +429,8 @@ class Simulator(AdvancedRules):
         self.linked_exiles={}  # (source id, entry identity) -> cards exiled by its ETB trigger.
         self.life_gained_turn=[0,0]
         self.damage_to_players=[set(),set()]  # Permanent identities that dealt positive damage to each player this turn.
+        self.combat_damage_prevented=False
+        self.combat_damage_prevented_to_players=set()
         self._end_step_triggers_queued=False
         self.token_sequence = 0
         self.effect_clock = 0
@@ -457,6 +462,9 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.blink:continue
                 if self.diagnostic and card.kind=="counter_spell" and card.counter_filter in ("any","creature","noncreature"):
+                    continue
+                if self.diagnostic and card.kind=='prevention_spell' and (
+                        card.prevent_all_combat_damage or card.prevent_player_combat_damage):
                     continue
                 if card.kind not in ("land", "creature", "spell"):
                     self.pause("Unsupported sandbox card kind: " + card.kind, card)
@@ -603,6 +611,11 @@ class Simulator(AdvancedRules):
                                                  card.legendary, card.power, card.toughness, keywords,
                                                  colors=frozenset(card.colors))
                 if item.bestowed:definition=self.bestowed_definition(definition)
+                if definition.chosen_type_identity and item.chosen_subtype:
+                    # This is a battlefield-only type-changing effect. Keep the
+                    # printed Card unchanged in hand, library and graveyard.
+                    definition=replace(definition,subtypes=frozenset(
+                        set(definition.subtypes)|{item.chosen_subtype}))
                 if item.temporary_land_power is not None:
                     definition=replace(definition,
                         types=frozenset(set(definition.types)|{'Creature','Land'}),
@@ -768,6 +781,9 @@ class Simulator(AdvancedRules):
             enters_tapped=self.land_entry_tapped(card,controller,entry_logs) if card.kind=='land' else card.enters_tapped
             if definition.chosen_type_entry:
                 chosen_types[card.id]=self.choose_creature_type(controller,definition,game)
+                if definition.chosen_type_identity:
+                    definition=replace(definition,subtypes=frozenset(
+                        set(definition.subtypes)|{chosen_types[card.id]}))
             keyword_choice=keyword_choices.get(card.id)
             if definition.entry_keyword_choices:
                 if keyword_choice is None:keyword_choice=definition.entry_keyword_choices[0]
@@ -1048,7 +1064,7 @@ class Simulator(AdvancedRules):
 
     def response_choices(self,seat):
         if seat!=self.stack.priority: return ()
-        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','mana_spell','scaled_damage_spell','token_spell','counter_spell','removal_spell','modifier_spell','blink_spell',
+        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','mana_spell','scaled_damage_spell','token_spell','counter_spell','removal_spell','modifier_spell','blink_spell','prevention_spell',
             'creature','enchantment','artifact','equipment','vehicle','station','planeswalker')
                      and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
@@ -2656,6 +2672,40 @@ class Simulator(AdvancedRules):
         elif not self.manual_priority and not self._resolving_stack:
             self.drain_priority()
 
+    def populate_token(self,controller,source):
+        """Populate at resolution: choose a creature token, copying only copiable values.
+
+        Counters, damage, temporary buffs and tapped state are not copied.
+        Complex token programs outside this diagnostic creator fail closed.
+        """
+        from oracle_abilities import KEYWORDS
+        game=self.event_game('main')
+        choices=sorted((item for item in self.players[controller].battlefield
+                        if item.card.is_token and item.card.id in game.battlefield
+                        and game.creature(game.battlefield[item.card.id])),
+                       key=lambda item:item.card.id)
+        if not choices:
+            self.log('populate_empty','Populate resolves without an available creature token.',
+                     actor=controller,source=source.name)
+            return
+        selected=choices[0]
+        definition=selected.card.event_definition
+        if (definition is None or not set(definition.types)<={'Creature','Artifact','Land','Enchantment'}
+                or not definition.abilities<=KEYWORDS or definition.triggers or
+                definition.static_effects or definition.activations or definition.attachment):
+            self.pause('Populate cannot yet copy this token program',source)
+            return
+        spec=dict(amount=1,name=definition.name,power=definition.power,
+                  toughness=definition.toughness,colors=sorted(definition.colors),
+                  subtypes=sorted(definition.subtypes),keywords=sorted(definition.abilities),
+                  legendary=definition.legendary,artifact='Artifact' in definition.types,
+                  land='Land' in definition.types,enchantment='Enchantment' in definition.types,
+                  tapped=False)
+        self._resolve_entry_effects([dict(operation='create_tokens',effect='populate a creature token',
+            source=source.id,controller=controller,name=source.name,tokenSpec=spec)],source)
+        self.log('populate','A creature token is copied using its copiable characteristics.',
+                 actor=controller,source=source.name,copied=selected.card.id)
+
     def resolve_spell(self,event,original):
         controller=event['controller'];p=self.players[controller];card=original
         if event.get('copy'): self.log('spell_copy',f'A copy of {card.name} resolves.',card=card.name)
@@ -2707,6 +2757,16 @@ class Simulator(AdvancedRules):
                 for _ in range(count):
                     self.force_opponent_sacrifice(controller,affected,card)
                     if self.finished:return
+            return
+        if card.kind=='prevention_spell':
+            if not (card.prevent_all_combat_damage or card.prevent_player_combat_damage):
+                raise RuntimeError('Uncompiled prevention spell')
+            if card.prevent_all_combat_damage:self.combat_damage_prevented=True
+            else:self.combat_damage_prevented_to_players.add(controller)
+            self.log('combat_prevention','Combat damage prevention resolves until end of turn.',
+                     actor=controller,source=card.name,
+                     scope='all' if card.prevent_all_combat_damage else 'controller')
+            if card.populate:self.populate_token(controller,card)
             return
         if card.kind=='graveyard_return_spell':
             target=next((c for c in self.graveyard_subtype_targets(controller,card.graveyard_return_subtype)
@@ -3966,8 +4026,13 @@ class Simulator(AdvancedRules):
                 tokens=[]
                 for _ in range(created):
                     self.token_sequence+=1
-                    definition=EventDefinition(" ".join(spec["subtypes"]),frozenset({"Creature"}|({"Land"} if spec.get("land") else set())|({"Enchantment"} if spec.get("enchantment") else set())),frozenset(spec["subtypes"]),
-                        False,spec["power"],spec["toughness"],frozenset(spec["keywords"]),colors=frozenset(spec["colors"]),pilot_bonus=spec.get("contribution_bonus",0))
+                    definition=EventDefinition(spec.get('name') or " ".join(spec["subtypes"]),
+                        frozenset({"Creature"}|({"Land"} if spec.get("land") else set())|
+                                  ({"Enchantment"} if spec.get("enchantment") else set())|
+                                  ({"Artifact"} if spec.get("artifact") else set())),
+                        frozenset(spec["subtypes"]),bool(spec.get('legendary',False)),
+                        spec["power"],spec["toughness"],frozenset(spec["keywords"]),
+                        colors=frozenset(spec["colors"]),pilot_bonus=spec.get("contribution_bonus",0))
                     tokens.append(Card(f"token-{self.token_sequence}",definition.name,"creature",
                         traits=f"{definition.power};{definition.toughness};"+",".join(sorted(definition.abilities)),
                         power=definition.power,toughness=definition.toughness,event_definition=definition,is_token=True))
@@ -4153,6 +4218,10 @@ class Simulator(AdvancedRules):
                 if has(a,'trample'):to_player=power-to_blocker
             elif not context['blocked'] or has(a,'trample'):to_player=power
         if hit_b and a and not self.prevents_attacker_combat_damage(self.active):to_attacker=max(0,b.power)
+        if self.combat_damage_prevented:
+            to_attacker=to_blocker=to_player=0
+        elif 1-self.active in self.combat_damage_prevented_to_players:
+            to_player=0
         if attacker:attacker.marked_damage+=to_attacker
         if blocker:blocker.marked_damage+=to_blocker
         active=self.players[self.active];defender=self.players[1-self.active]
@@ -4507,8 +4576,13 @@ class Simulator(AdvancedRules):
         return mana_pool.plan(cost,player.mana_pool,sources,x,spend_as_any_color=any_color)
 
     def damage(self, a: Card, b: Card | None) -> dict:
-        return self.rules.query("combat", a.traits, b.traits if b else "",
-                                self.players[self.active].life, self.players[1 - self.active].life)
+        outcome=self.rules.query("combat", a.traits, b.traits if b else "",
+                                 self.players[self.active].life, self.players[1 - self.active].life)
+        if self.combat_damage_prevented:
+            outcome.update(damage=0,attackerDies=False,blockerDies=False,gainA=0,gainB=0)
+        elif 1-self.active in self.combat_damage_prevented_to_players:
+            outcome.update(damage=0)
+        return outcome
 
     def activation_choices(self, seat: int, kinds: set[str]) -> list[Candidate]:
         """Offer a minimally costly legal crew/saddle activation without hiding card effects."""
@@ -4649,7 +4723,7 @@ class Simulator(AdvancedRules):
                     actions.append(Candidate(c.id+':spellback','cast_modal_back',c.id,
                         features=features(power=back.power,toughness=back.toughness),
                         label='Cast '+back.name))
-                if c.kind in ("creature", "vehicle", "enchantment", "spell", "mana_spell", "scaled_damage_spell", "token_spell", "mana_artifact", "equipment", "planeswalker", "station", "artifact") and self.payment(c)["paid"]:
+                if c.kind in ("creature", "vehicle", "enchantment", "spell", "mana_spell", "scaled_damage_spell", "token_spell", "prevention_spell", "mana_artifact", "equipment", "planeswalker", "station", "artifact") and self.payment(c)["paid"]:
                     if c.draw and len(p.library) < c.draw:
                         continue  # never choose a known self-decking draw spell
                     keywords = c.traits.split(";")[-1].split(",") if c.traits else []
@@ -4939,7 +5013,8 @@ class Simulator(AdvancedRules):
             effective_blocker = self.effective_card(b) if b else None
             if effective_attacker is None: raise RuntimeError("Attacker is no longer a creature")
             early={item.card.id for item,card in ((a,effective_attacker),(b,effective_blocker)) if item and card and any(k in card.traits.split(';')[-1].split(',') for k in ('first strike','double strike'))}
-            if early or a.marked_damage or (b and b.marked_damage):
+            if (early or a.marked_damage or (b and b.marked_damage)
+                    or 1-self.active in self.combat_damage_prevented_to_players):
                 self.combat_context=dict(attacker=a.card.id,blocker=b.card.id if b else None,blocked=b is not None,early=early)
                 self.log('block',choice.label,actor=1-self.active,blocker=b.card.id if b else None)
                 self.phase='first_damage' if early else 'regular_damage'
@@ -4971,11 +5046,11 @@ class Simulator(AdvancedRules):
             death_triggers = game.death_triggers(dead_ids)
             dealt=[]
             if b:
-                attack_damage=max(0,effective_attacker.power)
+                attack_damage=0 if self.combat_damage_prevented else max(0,effective_attacker.power)
                 if 'trample' in effective_attacker.traits.split(';')[-1].split(','):
                     attack_damage=min(attack_damage,1 if 'deathtouch' in effective_attacker.traits.split(';')[-1].split(',') else max(0,effective_blocker.toughness))
                 if attack_damage:dealt.append(dict(source=a.card.id,target=b.card.id,amount=attack_damage))
-                defense_damage=max(0,effective_blocker.power)
+                defense_damage=0 if self.combat_damage_prevented else max(0,effective_blocker.power)
                 if defense_damage and not self.prevents_attacker_combat_damage(self.active):
                     dealt.append(dict(source=b.card.id,target=a.card.id,amount=defense_damage))
             if d['damage']>0:dealt.append(dict(source=a.card.id,target=None,amount=d['damage']))
@@ -4983,9 +5058,9 @@ class Simulator(AdvancedRules):
             self.log("block", choice.label, actor=1-self.active,
                      blocker=b.card.id if b else None)
             if b:
-                if not self.prevents_attacker_combat_damage(self.active):
+                if not self.combat_damage_prevented and not self.prevents_attacker_combat_damage(self.active):
                     a.marked_damage+=max(0,effective_blocker.power)
-                dealt=max(0,effective_attacker.power)
+                dealt=0 if self.combat_damage_prevented else max(0,effective_attacker.power)
                 abilities=effective_attacker.traits.split(';')[-1].split(',')
                 if 'trample' in abilities:
                     dealt=min(dealt,1 if 'deathtouch' in abilities else max(0,effective_blocker.toughness))
@@ -5030,6 +5105,8 @@ class Simulator(AdvancedRules):
             self.phase='cleanup'
             return True
         elif self.phase == "cleanup":
+            self.combat_damage_prevented=False
+            self.combat_damage_prevented_to_players.clear()
             self.exile_cast_permissions={key:value for key,value in self.exile_cast_permissions.items()
                 if not (value[0]==self.active and value[1]<=self.turn)}
             # Deterministic discard is a declared sandbox rule, not a learned policy.
@@ -5278,6 +5355,15 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
             and rule_text(definition.get('oracleText',''))=='Destroy target creature.' and rules.query('cost',cost)['supported']):
         parsed={'kind':'removal_spell','removal':'destroy'}
+    protection=re.fullmatch(
+        r'Prevent all combat damage that would be dealt( to you)? this turn\.( Populate\.)?',
+        rule_text(definition.get('oracleText','')))
+    if (parsed['kind']=='unsupported' and definition.get('types')==['Instant']
+            and protection and rules.query('cost',cost)['supported']):
+        parsed={'kind':'prevention_spell',
+                'prevent_all_combat_damage':not bool(protection[1]),
+                'prevent_player_combat_damage':bool(protection[1]),
+                'populate':bool(protection[2])}
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
             and rule_text(definition.get('oracleText',''))=="Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle."
             and rules.query('cost',cost)['supported']):
@@ -5363,6 +5449,9 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         parsed={"kind":"mana_artifact","mana_production":output}
     return Card(id=uid, name=definition["name"], kind=parsed["kind"],blink=parsed.get("blink",False),rebound=parsed.get("rebound",False),blink_to_controller=parsed.get("blink_to_controller",False),flashback_cost=parsed.get("flashback_cost",""),graveyard_return_subtype=parsed.get("graveyard_return_subtype",""),
         forced_sacrifice=parsed.get('forced_sacrifice',()),
+        prevent_all_combat_damage=parsed.get('prevent_all_combat_damage',False),
+        prevent_player_combat_damage=parsed.get('prevent_player_combat_damage',False),
+        populate=parsed.get('populate',False),
         mana_as_any_color=parsed.get('mana_as_any_color',False),color_draw_cost=parsed.get('color_draw_cost',''),
         target_modifier=parsed.get('target_modifier',()),modal_sweeps=parsed.get('modal_sweeps',()),sweep_reward=parsed.get('sweep_reward',()),
         instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),

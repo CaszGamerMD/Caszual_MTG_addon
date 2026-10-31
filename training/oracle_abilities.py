@@ -121,6 +121,7 @@ class Program:
     chosen_type_entry: bool = False
     opponent_life_gain_becomes_loss: bool = False
     prevent_combat_damage_to_attackers: bool = False
+    chosen_type_identity: bool = False  # Self gains the type selected as it enters.
 
 def static_effect(text):
     # Global keyword grants apply to both players, not just the controller.
@@ -209,10 +210,11 @@ def static_effect(text):
         return StaticEffect(Selector(relation='controller' if must[3] else 'any',
                              other=bool(must[1]),creature=True,subtype=must[2]),
                             0,0,must_attack=True)
-    chosen=re.fullmatch(r'Creatures you control of the chosen type get \+([0-9]+)/\+([0-9]+)\.',text)
+    chosen=re.fullmatch(r'(Other creatures|Creatures) you control of the chosen type get \+([0-9]+)/\+([0-9]+)\.',text)
     if chosen:
-        return StaticEffect(Selector(relation='controller',creature=True,chosen_subtype=True),
-                            int(chosen[1]),int(chosen[2]))
+        return StaticEffect(Selector(relation='controller',other=chosen[1]=='Other creatures',
+                                     creature=True,chosen_subtype=True),
+                            int(chosen[2]),int(chosen[3]))
     # A continuous prohibition is not a temporary timestamped ability loss:
     # the keyword cannot be granted again while this source is present.
     denial=re.fullmatch(r"Creatures your opponents control lose (.+) and can't have or gain \1\.",text)
@@ -505,7 +507,7 @@ def compile_abilities(text, name=''):
             prefix=name.split(',',1)[0]
             text=re.sub(r'\b'+re.escape(prefix)+r"(?= deals\b)",'this creature',text)
             text=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= isn't a creature| enters| attacks|\'s power)",'this creature',text)
-    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0;cost_reductions=[];counter_replacements=[];token_replacements=[];token_action_triggers=[];token_leave_triggers=[];entry_counter_grants=[];attack_watchers=[];chosen_type_entry=False;opponent_life_gain_becomes_loss=False;prevent_combat_damage_to_attackers=False
+    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0;cost_reductions=[];counter_replacements=[];token_replacements=[];token_action_triggers=[];token_leave_triggers=[];entry_counter_grants=[];attack_watchers=[];chosen_type_entry=False;chosen_type_identity=False;opponent_life_gain_becomes_loss=False;prevent_combat_damage_to_attackers=False
     for line in text.splitlines():
         line=line.strip()
         if not line: continue
@@ -532,6 +534,10 @@ def compile_abilities(text, name=''):
             if chosen_type_entry:return None
             chosen_type_entry=True
             continue
+        if line=='This creature is the chosen type in addition to its other types.':
+            if chosen_type_identity:return None
+            chosen_type_identity=True
+            continue
         flying_attacks=re.fullmatch(
             r'Whenever a creature with flying attacks( you)?, (it loses flying until end of turn|this enchantment deals ([1-9][0-9]*) damage to it)\.',
             line)
@@ -552,6 +558,15 @@ def compile_abilities(text, name=''):
             word=entry_counters[2]
             number={'an':1,'one':1,'two':2,'three':3}.get(word) or int(word)
             entry_counter_grants.append((Selector(relation='controller',other=True,creature=True,subtype=entry_counters[1]),number))
+            continue
+        chosen_counters=re.fullmatch(
+            r'Each other creature you control of the chosen type enters with (an|one|two|three|[1-9][0-9]*) additional \+1/\+1 counters? on it\.',
+            line)
+        if chosen_counters:
+            word=chosen_counters[1]
+            number={'an':1,'one':1,'two':2,'three':3}.get(word)
+            entry_counter_grants.append((Selector(relation='controller',other=True,creature=True,
+                                                  chosen_subtype=True),number if number is not None else int(word)))
             continue
         condition=re.fullmatch(r"As long as your devotion to (white|blue|black|red|green) is less than (one|two|three|four|five|six|seven|eight|nine|[1-9][0-9]*), this creature isn't a creature\.",line)
         if condition:
@@ -828,11 +843,13 @@ def compile_abilities(text, name=''):
                  any(part.operation=='create_tokens' for part in action.steps))) and not subject.self_only:
             return None  # Repeating token engines need bounded stack/loop handling.
         triggers.append(Trigger(event,subject,action))
-    chosen_type_used=(any(e.subject.chosen_subtype for e in static_effects)
+    chosen_type_used=(chosen_type_identity
+                      or any(e.subject.chosen_subtype for e in static_effects)
                       or any(trigger.subject.chosen_subtype for trigger in triggers)
+                      or any(selector.chosen_subtype for selector,_ in entry_counter_grants)
                       or any('chosen_creature_type' in names for names,_ in cost_reductions))
     if chosen_type_entry != chosen_type_used:return None
-    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers),tuple(token_leave_triggers),tuple(entry_counter_grants),tuple(attack_watchers),chosen_type_entry,opponent_life_gain_becomes_loss,prevent_combat_damage_to_attackers) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers or token_leave_triggers or entry_counter_grants or attack_watchers or opponent_life_gain_becomes_loss or prevent_combat_damage_to_attackers or keywords else None
+    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers),tuple(token_leave_triggers),tuple(entry_counter_grants),tuple(attack_watchers),chosen_type_entry,opponent_life_gain_becomes_loss,prevent_combat_damage_to_attackers,chosen_type_identity) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers or token_leave_triggers or entry_counter_grants or attack_watchers or chosen_type_identity or opponent_life_gain_becomes_loss or prevent_combat_damage_to_attackers or keywords else None
 
 def matches(subject, source, entered, is_creature):
     return ((not subject.self_only or source.id==entered.id)

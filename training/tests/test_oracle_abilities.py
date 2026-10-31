@@ -160,6 +160,7 @@ class RaidEntryReplacementChecks(unittest.TestCase):
                                              s.demo_deck(1)),diagnostic=True)
             owner=sim.players[0]
             (owner.hand if card in owner.hand else owner.library).remove(card)
+            owner.hand.append(card)  # Keep the physical card accounted for until it enters.
             other=s.EventDefinition('Unknown Attacker',frozenset({'Creature'}),
                 frozenset({'Goblin'}),False,1,1,frozenset())
             attacker=s.Card('attacker','Unknown Attacker','creature',power=1,
@@ -169,6 +170,7 @@ class RaidEntryReplacementChecks(unittest.TestCase):
             sim.phase='attack';sim.stack.priority=sim.active
             sim.declare_attackers(['attacker'])
             self.assertEqual(sim.attacked_this_turn,{0})
+            owner.hand.remove(card)
             sim.resolve_entry_triggers(sim.enter_creature(card,owner),card)
             entered=next(p for p in owner.battlefield if p.card.id==card.id)
             self.assertEqual(entered.counters,1)

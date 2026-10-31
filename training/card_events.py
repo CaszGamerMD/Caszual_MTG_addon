@@ -132,6 +132,7 @@ class Definition:
     entry_counter_grants: tuple = ()
     attack_watchers: tuple = ()
     chosen_type_entry: bool = False
+    chosen_type_identity: bool = False  # While on battlefield, source has its chosen creature subtype.
     aura_exile: bool = False  # Targeted ETB exile lasting until this Aura leaves.
     linked_exile: str = ''  # Separate ETB-exile and LTB-return triggers, with source identity.
     tribal_tap_tokens: tuple = ()  # (token spec, counted subtype), evaluated on resolution.
@@ -186,6 +187,7 @@ def _only_static_keyword_program(program):
         program.life_addition or program.cost_reductions or program.counter_replacements or
         program.token_replacements or program.token_action_triggers or program.token_leave_triggers or
         program.entry_counter_grants or program.attack_watchers or program.chosen_type_entry or
+        program.chosen_type_identity or
         program.opponent_life_gain_becomes_loss or program.prevent_combat_damage_to_attackers)
 
 def parse_card(card: dict) -> Definition:
@@ -332,6 +334,7 @@ def parse_card(card: dict) -> Definition:
             counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
             token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers,
             attack_watchers=program.attack_watchers,chosen_type_entry=program.chosen_type_entry,
+            chosen_type_identity=program.chosen_type_identity,
             upkeep_attachment_counters=enchantments.upkeep_attachment_counters,
             entry_attachment_counters=enchantments.entry_attachment_counters,
             double_attachment_counters_upkeep=enchantments.double_attachment_counters_upkeep,
@@ -618,6 +621,8 @@ def parse_card(card: dict) -> Definition:
         f"As this {kind.lower()} enters, choose a creature type." in text
         for kind in ("Artifact", "Enchantment", "Creature") if kind in types):
         program = None
+    if program and program.chosen_type_identity and 'Creature' not in types:
+        program = None
     if program is not None and ("Creature" in types or "Enchantment" in types or "Artifact" in types):
         if program.devotion and not {'Creature','Enchantment'}<=types:
             return Definition(**base,abilities=frozenset(),supported=False,reason='Unsupported devotion type transition')
@@ -631,7 +636,8 @@ def parse_card(card: dict) -> Definition:
                           counter_replacements=program.counter_replacements,token_replacements=program.token_replacements,
                           token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers,
                           entry_counter_grants=program.entry_counter_grants,attack_watchers=program.attack_watchers,
-                          chosen_type_entry=program.chosen_type_entry)
+                          chosen_type_entry=program.chosen_type_entry,
+                          chosen_type_identity=program.chosen_type_identity)
     attack_text=text.replace(name,'this creature') if name else text
     if ',' in name:
         short=name.split(',')[0]

@@ -387,6 +387,8 @@ class AdvancedRules:
   touch=set();player_hits=[];damagers={};dealt=[]
   for source,target,amount in assignments:
    source_state=g.battlefield[source]
+   if self.combat_damage_prevented:amount=0
+   if target is None and 1-self.active in self.combat_damage_prevented_to_players:amount=0
    if target is not None and g.protected(g.battlefield[target],source_state.definition.colors):amount=0
    if target in combat['attackers'] and self.prevents_attacker_combat_damage(g.battlefield[target].controller):amount=0
    if amount<=0:continue
