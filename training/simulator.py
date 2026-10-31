@@ -2800,13 +2800,15 @@ class Simulator(AdvancedRules):
                     subtypes=frozenset(spec['subtypes']),power=spec['power'],
                     toughness=spec['toughness'],abilities=frozenset(spec['keywords']),
                     colors=frozenset(spec['colors']))
+                tokens=[]
                 for _ in range(created):
                     self.token_sequence += 1
-                    token = Card(f"token-{self.token_sequence}",definition.name,"creature",
+                    tokens.append(Card(f"token-{self.token_sequence}",definition.name,"creature",
                                  traits=f"{definition.power};{definition.toughness};"+",".join(sorted(definition.abilities)),
                                  power=definition.power,toughness=definition.toughness,
-                                 event_definition=definition,is_token=True)
-                    token_triggers.extend(self.enter_creature(token,p))
+                                 event_definition=definition,is_token=True))
+                if tokens:token_triggers.extend(self.enter_creatures(tokens,p))
+                for token in tokens:
                     next(x for x in p.battlefield if x.card.id==token.id).tapped = card.token_tapped
                     self.log("token", f"Creates a {definition.power}/{definition.toughness} {definition.name} creature token.",
                              card=definition.name, token=token.id)
@@ -3904,14 +3906,16 @@ class Simulator(AdvancedRules):
                 owner.life -= event.get("controllerLoss",0)
                 created=game.token_amount(event['controller'],spec['amount'])
                 event=dict(event,tokenSpec=dict(spec,amount=created))
+                tokens=[]
                 for _ in range(created):
                     self.token_sequence+=1
                     definition=EventDefinition(" ".join(spec["subtypes"]),frozenset({"Creature"}|({"Land"} if spec.get("land") else set())|({"Enchantment"} if spec.get("enchantment") else set())),frozenset(spec["subtypes"]),
                         False,spec["power"],spec["toughness"],frozenset(spec["keywords"]),colors=frozenset(spec["colors"]),pilot_bonus=spec.get("contribution_bonus",0))
-                    token=Card(f"token-{self.token_sequence}",definition.name,"creature",
+                    tokens.append(Card(f"token-{self.token_sequence}",definition.name,"creature",
                         traits=f"{definition.power};{definition.toughness};"+",".join(sorted(definition.abilities)),
-                        power=definition.power,toughness=definition.toughness,event_definition=definition,is_token=True)
-                    pending.extend(self.enter_creature(token,owner))
+                        power=definition.power,toughness=definition.toughness,event_definition=definition,is_token=True))
+                if tokens:pending.extend(self.enter_creatures(tokens,owner))
+                for token in tokens:
                     created_permanent=next(p for p in owner.battlefield if p.card.id==token.id)
                     created_permanent.tapped=spec["tapped"]
                     if spec.get('temporary_haste') or spec.get('must_attack_this_combat'):
@@ -4142,13 +4146,15 @@ class Simulator(AdvancedRules):
         game=self.event_game('main')
         created=game.token_amount(seat,amount)
         pending=list(triggers)
+        tokens=[]
         for _ in range(created):
             self.token_sequence+=1
             definition=EventDefinition('Treasure',frozenset({'Artifact'}),
                 frozenset({'Treasure'}),False,0,0,frozenset())
-            token=Card(f'token-{self.token_sequence}','Treasure','artifact',
-                       event_definition=definition,is_token=True)
-            pending.extend(self.enter_creature(token,self.players[seat]))
+            tokens.append(Card(f'token-{self.token_sequence}','Treasure','artifact',
+                               event_definition=definition,is_token=True))
+        if tokens:pending.extend(self.enter_creatures(tokens,self.players[seat]))
+        for token in tokens:
             next(p for p in self.players[seat].battlefield if p.card.id==token.id).tapped=tapped
         pending.extend(self.event_game('main').token_action_events('create',seat,created))
         self.log('treasure_creation','Create Treasure artifact tokens after destruction.',
