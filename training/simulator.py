@@ -2037,6 +2037,56 @@ class Simulator(AdvancedRules):
                 options.append(('permanent',item.card.id))
         return tuple(options)
 
+    def tap_damage_choices(self,seat):
+        """Pay tap cost now; targeted damage itself uses the normal priority stack."""
+        options=[]
+        game=self.event_game('main')
+        for source in self.players[seat].battlefield:
+            definition=source.card.event_definition
+            if not definition or not definition.tap_damage_amount or source.tapped:continue
+            state=game.battlefield.get(source.card.id)
+            if not state or (source.fresh and game.creature(state) and
+                             not game.has(state,'haste')):continue
+            event=dict(controller=seat,sourceColors=source.card.colors)
+            for kind,target in self.damage_trigger_targets(event):
+                encoded=kind+':'+str(target)
+                options.append(Candidate(source.card.id+':tap-damage:'+encoded,
+                    'activate_tap_damage',source.card.id,
+                    features=features(damage=definition.tap_damage_amount
+                                      if (kind,target)==('player',1-seat) else 0),
+                    label='Tap '+source.card.name+' to damage '+encoded,
+                    target_permanent=encoded))
+        return options
+
+    def activate_tap_damage(self,seat,source_id,target):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((item for item in self.players[seat].battlefield
+                     if item.card.id==source_id),None)
+        definition=source.card.event_definition if source else None
+        if not definition or not definition.tap_damage_amount or source.tapped:
+            raise ValueError('No available tap-damage activation')
+        game=self.event_game('main')
+        state=game.battlefield.get(source_id)
+        if not state or (source.fresh and game.creature(state) and
+                         not game.has(state,'haste')):
+            raise ValueError('Cannot pay tap cost with summoning sickness')
+        allowed=self.damage_trigger_targets(dict(controller=seat,
+                                                  sourceColors=source.card.colors))
+        if ':' not in target:raise ValueError('Missing any-target choice')
+        kind,raw_target=target.split(':',1)
+        value=int(raw_target) if kind=='player' and raw_target.isdecimal() else raw_target
+        if (kind,value) not in allowed:raise ValueError('Illegal damage target')
+        source.tapped=True
+        event=dict(operation='damage_any_target',effect='targeted tap-damage activation',
+                   source=source_id,name=source.card.name,controller=seat,
+                   sourceColors=list(source.card.colors),targetKind=kind,target=value,
+                   amount=definition.tap_damage_amount,optional=False)
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_tap_damage','Tap cost paid and damage ability placed on stack.',
+                 actor=seat,source=source_id,target=target,stackId=frame.id)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
     def scaled_damage_targets(self,seat,card):
         """Encoded legal player/planeswalker targets, never creature targets."""
         if not card.scaled_damage_rule:return ()
@@ -2427,6 +2477,7 @@ class Simulator(AdvancedRules):
         actions.extend(self.sacrifice_choices(seat))
         actions.extend(self.sacrifice_token_choices(seat))
         actions.extend(self.tribal_pump_choices(seat))
+        actions.extend(self.tap_damage_choices(seat))
         actions.extend(self.discard_token_choices(seat))
         actions.extend(self.sacrifice_team_choices(seat))
         actions.extend(self.sacrifice_protection_choices(seat))
@@ -2495,6 +2546,9 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_discard_tokens':
             self.activate_discard_tokens(seat,choice.card_id,choice.discard_id)
+            return 'activate'
+        if choice.kind=='activate_tap_damage':
+            self.activate_tap_damage(seat,choice.card_id,choice.target_permanent)
             return 'activate'
         if choice.kind=='activate_tribal_pump':
             self.activate_tribal_pump(seat,choice.card_id,choice.activation_index)
@@ -4515,6 +4569,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.sacrifice_choices(seat))
             actions.extend(self.sacrifice_token_choices(seat))
             actions.extend(self.tribal_pump_choices(seat))
+            actions.extend(self.tap_damage_choices(seat))
             actions.extend(self.discard_token_choices(seat))
             actions.extend(self.sacrifice_team_choices(seat))
             actions.extend(self.sacrifice_protection_choices(seat))
@@ -4665,7 +4720,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
-                           "history_tokens","activate_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_scaled_life","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_tribal_pump","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
+                           "history_tokens","activate_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_scaled_life","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_tribal_pump","activate_tap_damage","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
             self.turn_development[seat]=True
         return choice
 
@@ -4774,6 +4829,8 @@ class Simulator(AdvancedRules):
                 self.activate_scaled_life(self.active,choice.card_id)
             elif choice.kind=='activate_discard_tokens':
                 self.activate_discard_tokens(self.active,choice.card_id,choice.discard_id)
+            elif choice.kind=='activate_tap_damage':
+                self.activate_tap_damage(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind=='activate_tribal_pump':
                 self.activate_tribal_pump(self.active,choice.card_id,choice.activation_index)
             elif choice.kind=='activate_sacrifice_tokens':
