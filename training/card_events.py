@@ -732,6 +732,7 @@ class Game:
                 power_bonus+=power*count;toughness_bonus+=toughness*count
             for effect in self.static_effects(source):
                 if not matches(effect.subject,source,p,True): continue
+                if effect.requires_plus_one_counter and p.counters<=0:continue
                 if effect.requires_keyword and not self.has(p,effect.requires_keyword):continue
                 if effect.requires_attachment and not any(
                     item.attached_to==p.id and item.definition.attachment and
@@ -788,6 +789,7 @@ class Game:
                 grants.append(stamp)
             if any(effect.grant==ability and matches(effect.subject,source,p,self.creature(p))
                    and (not effect.requires_keyword or ability!=effect.requires_keyword and self.has(p,effect.requires_keyword))
+                   and (not effect.requires_plus_one_counter or p.counters>0)
                    and (not effect.requires_attachment or any(
                        item.attached_to==p.id and item.definition.attachment and
                        item.definition.attachment[0] in ('aura','equipment')
