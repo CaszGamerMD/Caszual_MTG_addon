@@ -1986,6 +1986,34 @@ class Simulator(AdvancedRules):
                 options.append(('permanent',item.card.id))
         return tuple(options)
 
+    def scaled_damage_targets(self,seat,card):
+        """Encoded legal player/planeswalker targets, never creature targets."""
+        if not card.scaled_damage_rule:return ()
+        game=self.event_game('main')
+        options=['player:'+str(actor) for actor in range(len(self.players))]
+        for owner,player in enumerate(self.players):
+            for item in player.battlefield:
+                state=game.battlefield.get(item.card.id)
+                if not state or 'Planeswalker' not in state.definition.types:continue
+                if game.has(state,'shroud') or (owner!=seat and game.has(state,'hexproof')):continue
+                if game.protected(state,card.colors):continue
+                options.append('planeswalker:'+item.card.id)
+        return tuple(options)
+
+    def scaled_damage_choices(self,seat,card,kind='cast'):
+        """Each legal target is its own candidate for the strategic policy."""
+        game=self.event_game('main')
+        subtype,scope,_=card.scaled_damage_rule
+        count=sum((scope=='all' or state.controller==seat) and game.creature(state)
+                  and (subtype=='Creature' or has_subtype(state.definition,subtype))
+                  for state in game.battlefield.values())
+        return tuple(Candidate(card.id+':target='+target,kind,card.id,
+            features=features(damage=count if target=='player:'+str(1-seat) else 0,
+                              power=count if target.startswith('planeswalker:') else 0,
+                              cost=len(self.payment(card,seat=seat).get('sources',[]))),
+            label='Cast '+card.name+' targeting '+target,target_permanent=target)
+            for target in self.scaled_damage_targets(seat,card))
+
     def choose_damage_target(self,event,options):
         """Deterministic diagnostic policy, overridable by a future agent."""
         opponent=('player',1-event['controller'])
@@ -2363,6 +2391,8 @@ class Simulator(AdvancedRules):
                 actions.extend(self.blink_choices(seat,card))
             elif card.kind=='removal_spell':
                 actions.extend(self.removal_choices(seat,card,'respond'))
+            elif card.kind=='scaled_damage_spell':
+                actions.extend(self.scaled_damage_choices(seat,card,'respond'))
             elif card.kind=='counter_spell':
                 actions.extend(Candidate(card.id+':target='+str(frame.id),'respond',card.id,
                     features=features(power=2 if frame.controller!=seat else -100,
@@ -2467,6 +2497,8 @@ class Simulator(AdvancedRules):
         if (card.kind=='aura' or bestow) and target not in {p.card.id for _,p in
                 (self.aura_targets(seat,card) if card.kind=='aura' and not bestow else self.creature_targets(seat,card))}:
             raise ValueError('Illegal Aura target')
+        if card.kind=='scaled_damage_spell' and target not in self.scaled_damage_targets(seat,card):
+            raise ValueError('Scaled damage requires a legal player or planeswalker target')
         if card.kind=='modifier_spell' and target not in {item.card.id for _,item in self.creature_targets(seat,card)}:
             raise ValueError('Temporary modifier requires a legal creature target')
         if card.kind=='modifier_spell' and keyword_choice is not None and keyword_choice not in card.target_modifier[2]:
@@ -4448,6 +4480,9 @@ class Simulator(AdvancedRules):
                     continue
                 if c.kind=='removal_spell' and self.payment(c)['paid']:
                     actions.extend(self.removal_choices(seat,c,'cast'))
+                    continue
+                if c.kind=='scaled_damage_spell' and self.payment(c)['paid']:
+                    actions.extend(self.scaled_damage_choices(seat,c,'cast'))
                     continue
                 if c.kind=='modifier_spell' and self.payment(c)['paid']:
                     actions.extend(Candidate(c.id+':target='+target.card.id,'cast',c.id,
