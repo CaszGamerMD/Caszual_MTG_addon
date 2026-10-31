@@ -91,6 +91,7 @@ class Definition:
     sacrifice_token_activations: tuple = ()  # (mana cost, sacrificed subtype, token spec)
     once_tribal_entry_tokens: tuple = ()  # (subtype, spec, excludes source, once per turn)
     tribal_pump_activations: tuple = ()  # (cost, subtype, power, toughness, keyword)
+    group_token_entry_counters: int = 0  # One counter trigger per simultaneous token batch.
     attachment: tuple = ()
     activations: tuple = ()
     self_pump: tuple = ()  # Mana cost, power, toughness until EOT.
@@ -403,6 +404,19 @@ def parse_card(card: dict) -> Definition:
         return Definition(**base,abilities=frozenset(),attachment=umbra,umbra_armor=True)
     attachment=parse_with_intrinsic(text,types,subtypes)
     if attachment:return Definition(**base,abilities=attachment[0],attachment=attachment[1])
+    from group_token_entries import parse as parse_group_token_entry
+    group_lines=text.splitlines()
+    group_rules=[(i,parse_group_token_entry(line,types)) for i,line in enumerate(group_lines)]
+    group_rules=[(i,amount) for i,amount in group_rules if amount]
+    if len(group_rules)==1:
+        index,amount=group_rules[0]
+        remainder='\n'.join(line for i,line in enumerate(group_lines) if i!=index)
+        program=compile_abilities(remainder,name) if remainder else None
+        if not remainder or program:
+            fields=dict(vars(program)) if program else {}
+            abilities=fields.pop('keywords',frozenset())
+            return Definition(**base,abilities=abilities,
+                              group_token_entry_counters=amount,**fields)
     # Compose a once-per-turn tribal group entry trigger with a paid team
     # combat activation. Reject any remaining Oracle text unless separately
     # and completely compiled by the normal parser.
