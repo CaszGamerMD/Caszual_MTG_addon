@@ -1169,6 +1169,64 @@ class Simulator(AdvancedRules):
                             target_permanent=target.card.id))
         return choices
 
+    def sacrifice_token_choices(self,seat):
+        """Choose an actual creature for the sacrifice cost, not the effect."""
+        game=self.event_game('main');choices=[]
+        for source in self.players[seat].battlefield:
+            definition=source.card.event_definition
+            if not definition:continue
+            for index,(cost,subtype,spec) in enumerate(definition.sacrifice_token_activations):
+                payment=self.payment(replace(source.card,mana_cost=cost),
+                                     seat=seat,spell_cost=False)
+                if not payment['paid']:continue
+                for victim in self.players[seat].battlefield:
+                    state=game.battlefield.get(victim.card.id)
+                    if state is None or not game.creature(state) or not has_subtype(state.definition,subtype):
+                        continue
+                    choices.append(Candidate(
+                        source.card.id+':sac-token:'+victim.card.id+':'+str(index),
+                        'activate_sacrifice_tokens',source.card.id,
+                        features=features(power=spec.amount*spec.power,
+                                          cost=1+len(payment['sources'])),
+                        label='Sacrifice '+victim.card.name+' with '+source.card.name,
+                        tap_ids=(victim.card.id,),activation_index=index))
+        return choices
+
+    def activate_sacrifice_tokens(self,seat,source_id,victim_id,index=0):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        player=self.players[seat]
+        source=next((p for p in player.battlefield if p.card.id==source_id),None)
+        activations=(source.card.event_definition.sacrifice_token_activations
+                     if source and source.card.event_definition else ())
+        if not 0<=index<len(activations):raise ValueError('No sacrifice-token ability')
+        cost,subtype,spec=activations[index]
+        victim=next((p for p in player.battlefield if p.card.id==victim_id),None)
+        game=self.event_game('main')
+        state=game.battlefield.get(victim_id)
+        if victim is None or state is None or not game.creature(state) or not has_subtype(state.definition,subtype):
+            raise ValueError('Sacrifice cost must be paid with a controlled creature of that subtype')
+        payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
+        if not payment['paid']:raise ValueError('Cannot pay sacrifice-token activation')
+        # A creature dying as a cost creates independent triggers above the
+        # activated ability. Its controller pays the cost even if it is the
+        # activation's source and moves to the command zone.
+        triggers=game.death_triggers([victim_id])
+        if victim.card.is_token:triggers.extend(game.token_action_events('sacrifice',seat,1))
+        for permanent in player.battlefield:
+            if permanent.card.id in payment['sources']:permanent.tapped=True
+        player.mana_pool=list(payment['pool'])
+        self.send_to_destination(player,victim,snapshot=game)
+        effect=dict(operation='create_tokens',effect='sacrifice-cost token creation',
+                    source=source_id,name=source.card.name,controller=seat,
+                    tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords)))
+        frame=self.stack.push(seat,(effect,source.card),source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_sacrifice_tokens','Mana and creature sacrifice paid before ability resolves.',
+                 actor=seat,source=source_id,victim=victim_id,stackId=frame.id,
+                 manaSources=payment['sources'],manaPool=list(player.mana_pool))
+        self.resolve_entry_triggers(triggers,source.card)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
     def discard_token_choices(self,seat):
         """A discard is a paid cost; only cards in this player's own hand are choices."""
         choices=[];player=self.players[seat]
@@ -2236,6 +2294,7 @@ class Simulator(AdvancedRules):
         actions.extend(self.token_ability_choices(seat))
         actions.extend(self.scaled_mana_choices(seat))
         actions.extend(self.sacrifice_choices(seat))
+        actions.extend(self.sacrifice_token_choices(seat))
         actions.extend(self.discard_token_choices(seat))
         actions.extend(self.sacrifice_team_choices(seat))
         actions.extend(self.sacrifice_protection_choices(seat))
@@ -2299,6 +2358,9 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_discard_tokens':
             self.activate_discard_tokens(seat,choice.card_id,choice.discard_id)
+            return 'activate'
+        if choice.kind=='activate_sacrifice_tokens':
+            self.activate_sacrifice_tokens(seat,choice.card_id,choice.tap_ids[0],choice.activation_index)
             return 'activate'
         if choice.kind=='activate_sacrifice_mana':
             self.activate_sacrifice_mana(seat,choice.card_id,choice.tap_ids[0])
@@ -4239,6 +4301,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.token_ability_choices(seat))
             actions.extend(self.scaled_mana_choices(seat))
             actions.extend(self.sacrifice_choices(seat))
+        actions.extend(self.sacrifice_token_choices(seat))
             actions.extend(self.discard_token_choices(seat))
             actions.extend(self.sacrifice_team_choices(seat))
             actions.extend(self.sacrifice_protection_choices(seat))
@@ -4386,7 +4449,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
-                           "history_tokens","activate_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana","activate_sacrifice_boost","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
+                           "history_tokens","activate_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
             self.turn_development[seat]=True
         return choice
 
@@ -4489,6 +4552,8 @@ class Simulator(AdvancedRules):
                 self.activate_scaled_mana(self.active,choice.card_id,choice.x_value)
             elif choice.kind=='activate_discard_tokens':
                 self.activate_discard_tokens(self.active,choice.card_id,choice.discard_id)
+            elif choice.kind=='activate_sacrifice_tokens':
+                self.activate_sacrifice_tokens(self.active,choice.card_id,choice.tap_ids[0],choice.activation_index)
             elif choice.kind=='activate_sacrifice_mana':
                 self.activate_sacrifice_mana(self.active,choice.card_id,choice.tap_ids[0])
             elif choice.kind=='activate_sacrifice_boost':
@@ -4828,7 +4893,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.group_attack_subtype_tokens or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace", "shroud", "flash",
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.group_attack_subtype_tokens or event_definition.sacrifice_token_activations or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace", "shroud", "flash",
                         "flying", "reach", "haste", "first strike", "double strike",
                         "vigilance", "lifelink", "deathtouch", "trample",
                         "defender", "indestructible", "changeling"} & event_definition.abilities)
