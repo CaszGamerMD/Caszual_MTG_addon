@@ -483,6 +483,9 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.kind=='counted_spell' and card.counted_program:
                     continue
+                if (self.diagnostic and card.kind=='library_search_spell'
+                        and card.library_search_program is not None):
+                    continue
                 if (self.diagnostic and card.kind=='planeswalker'
                         and card.loyalty_program is not None):
                     continue
