@@ -107,6 +107,40 @@ class ScryfallRandomExamTests(unittest.TestCase):
         self.assertFalse(result['semanticAccuracyVerified'])
         self.assertEqual(result['capabilities'][0]['unsupportedDiagnosticCards'],1)
 
+    def test_bad_model_proposal_is_isolated_without_losing_other_cards(self):
+        source=fixture(1,oracle_text='Draw a card.',type_line='Sorcery')
+        converted=e.convert_scryfall(source)
+        unit=semantic.oracle_units(converted)[0]
+        good=dict(units=[dict(face_index=0,line_index=0,source=unit.source,
+            category='spell_effect',timing='',cost='',
+            operations=[dict(verb='draw',evidence='Draw a card',amount='',
+                             subject='',recipient='',object='card',qualifier='')],
+            needs=['stack_resolution'],explanation='Draw a card')],
+            summary='Unverified',uncertainties=[])
+        sources=[fixture(n,oracle_text='Draw a card.',type_line='Sorcery')
+                 for n in (1,2,3)]
+        draws=[(s,e.convert_scryfall(s)) for s in sources]
+        compiled=dict(batches=[dict(cards=[dict(executableDiagnostic=False)
+                         for _ in draws])])
+        with patch.object(semantic,'request_model',side_effect=[
+                good,semantic.SemanticProposalError('Unsupported verb evidence'),good]):
+            result=e.semantic_exam(draws,compiled,'test-model')
+        self.assertEqual(result['totalCards'],3)
+        self.assertEqual(result['proposalChecked'],2)
+        self.assertEqual(result['proposalRejected'],1)
+        self.assertEqual(result['cards'][1]['semanticStatus'],'rejected-unverified')
+        self.assertEqual(result['cards'][1]['rejectionReason'],'Unsupported verb evidence')
+        self.assertEqual(result['cards'][1]['units'],[])
+        self.assertEqual(result['capabilities'][0]['cardCount'],2)
+        self.assertFalse(result['learningEligible'])
+
+    def test_authentication_and_transport_errors_still_abort_semantic_exam(self):
+        source=fixture(1,oracle_text='Draw a card.')
+        compiled=dict(batches=[dict(cards=[dict(executableDiagnostic=False)])])
+        with patch.object(semantic,'request_model',side_effect=PermissionError('401')):
+            with self.assertRaises(PermissionError):
+                e.semantic_exam([(source,e.convert_scryfall(source))],compiled,'test-model')
+
 
 if __name__=='__main__':
     unittest.main()

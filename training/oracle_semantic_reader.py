@@ -236,7 +236,10 @@ def validate_proposal(card: dict, proposed: dict) -> dict:
                 raise SemanticProposalError('Proposed amount is not present in Oracle text')
             if op['verb'] in ANCHORS and not any(
                     word in evidence.casefold() for word in ANCHORS[op['verb']]):
-                raise SemanticProposalError('Proposed operation is not grounded in its verb')
+                raise SemanticProposalError(
+                    'Proposed operation is not grounded in its verb: '
+                    f"{op['verb']} from {evidence[:160]!r} on line "
+                    f"{source.face_index}:{source.line_index}")
         if unit['category']!='modal_header':
             for clause in instruction_clauses(source.source):
                 if not any(op['evidence'] in clause for op in ops):
@@ -245,14 +248,27 @@ def validate_proposal(card: dict, proposed: dict) -> dict:
     return proposed
 
 
-def report(cards: list[dict], proposals: list[dict], executable: list[bool] | None = None) -> dict:
-    """Group proposed mechanics across a batch without promoting any card."""
-    if len(cards)!=len(proposals) or executable is not None and len(executable)!=len(cards):
+def report(cards: list[dict], proposals: list[dict | None],
+           executable: list[bool] | None = None,
+           failures: list[str | None] | None = None) -> dict:
+    """Group validated mechanics; retain rejected cards without accepting guesses."""
+    if (len(cards)!=len(proposals) or executable is not None and len(executable)!=len(cards)
+            or failures is not None and len(failures)!=len(cards)):
         raise ValueError('One semantic proposal and diagnostic verdict are required per card')
+    if failures is None:failures=[None]*len(cards)
     families=defaultdict(lambda:dict(cards=set(),unsupported=set(),lines=0,examples=[]))
-    rows=[]
-    for i,(card,candidate) in enumerate(zip(cards,proposals)):
+    rows=[];checked=0
+    for i,(card,candidate,problem) in enumerate(zip(cards,proposals,failures)):
+        if candidate is None:
+            if not problem:raise ValueError('Rejected card requires a rejection reason')
+            rows.append(dict(card=card.get('name',''),fingerprint=fingerprint(card),
+                semanticStatus='rejected-unverified',semanticAccuracyVerified=False,
+                executableDiagnostic=executable[i] if executable is not None else None,
+                units=[],summary='',uncertainties=[],rejectionReason=problem))
+            continue
+        if problem:raise ValueError('Accepted card cannot have a rejection reason')
         validate_proposal(card,candidate)
+        checked+=1
         for unit in candidate['units']:
             for cap in set(unit['needs']):
                 family=families[cap];family['cards'].add(i);family['lines']+=1
@@ -277,7 +293,8 @@ def report(cards: list[dict], proposals: list[dict], executable: list[bool] | No
                 -x['cardCount'],x['capability']))
     return dict(schemaVersion=1,kind='oracle-semantic-proposals',
                 totalCards=len(cards),sourceLines=sum(len(oracle_units(c)) for c in cards),
-                proposalChecked=len(rows),semanticAccuracyVerified=False,
+                proposalChecked=checked,proposalRejected=len(rows)-checked,
+                semanticAccuracyVerified=False,
                 learningEligible=False,
                 notice=('Text-evidence validation is NOT semantic correctness, rules '
                         'compilation, or legal gameplay; model programs cannot execute.'),

@@ -171,12 +171,24 @@ def semantic_exam(draws, compiled: dict, model: str) -> dict:
     diagnostic cards. Compare proposed mechanic families to independently
     compiled verdicts; never substitute model agreement for rule support.
     """
-    from oracle_semantic_reader import request_model, report
+    from oracle_semantic_reader import SemanticProposalError, request_model, report
     cards=[raw for _,raw in draws]
     rows=[row for batch in compiled['batches'] for row in batch['cards']]
     if len(cards)!=len(rows):raise ValueError('Semantic and diagnostic sample sizes disagree')
-    proposals=[request_model(card,model=model) for card in cards]
-    return report(cards,proposals,[row['executableDiagnostic'] for row in rows])
+    proposals=[];failures=[]
+    for card in cards:
+        try:
+            candidate=request_model(card,model=model)
+        except SemanticProposalError as exc:
+            # An ungrounded interpretation fails closed for this card only.
+            # Authentication, transport and unexpected failures still abort.
+            proposals.append(None)
+            failures.append(str(exc))
+        else:
+            proposals.append(candidate)
+            failures.append(None)
+    return report(cards,proposals,[row['executableDiagnostic'] for row in rows],
+                  failures=failures)
 
 
 def main():
@@ -213,6 +225,8 @@ def main():
         s.write_json(a.out/'semantic-proposals.json',interpretations)
         print('RANDOM_CARD_SEMANTICS '+json.dumps(dict(
             cards=interpretations['totalCards'],sourceLines=interpretations['sourceLines'],
+            proposalsAccepted=interpretations['proposalChecked'],
+            proposalsRejected=interpretations['proposalRejected'],
             accuracyVerified=False,executablePromotion=False,
             capabilityFamilies=len(interpretations['capabilities']))),flush=True)
     for batch in data['batches']:

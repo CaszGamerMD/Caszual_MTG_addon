@@ -39,6 +39,8 @@ class SemanticReaderTests(unittest.TestCase):
                            category='triggered')
         result=semantic.report([raw],[candidate],executable=[False])
         self.assertEqual(result['cards'][0]['executableDiagnostic'],False)
+        self.assertEqual(result['proposalChecked'],1)
+        self.assertEqual(result['proposalRejected'],0)
         self.assertFalse(result['cards'][0]['semanticAccuracyVerified'])
         self.assertFalse(result['learningEligible'])
         self.assertEqual([x['verb'] for x in result['cards'][0]['units'][0]['operations']],
