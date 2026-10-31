@@ -7,6 +7,71 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class AttachedPermanentScalingChecks(unittest.TestCase):
+    def test_unseen_aura_equipment_and_equip_only_lords(self):
+        examples=(
+            ('Aura and Equipment',2,2,('aura','equipment')),
+            ('Equipment',3,0,('equipment',)),
+            ('Aura',1,1,('aura',)),
+        )
+        for phrase,power,toughness,kinds in examples:
+            raw=dict(name='Unseen Attacker',types=['Creature'],
+                subTypes=['Goblin'],power='1',toughness='1',
+                oracleText=(f'This creature gets +{power}/+{toughness} '
+                            f'for each {phrase} attached to it.'))
+            parsed=parse_card(raw)
+            self.assertTrue(parsed.supported,parsed.reason)
+            effect=parsed.static_effects[0]
+            self.assertEqual((effect.power,effect.toughness,
+                              effect.attachment_count_kinds),
+                             (power,toughness,kinds))
+            self.assertFalse(parse_card(dict(raw,
+                oracleText=raw['oracleText']+' Draw ten cards.')).supported)
+
+    def test_real_champion_and_gaveleer_stats_follow_live_attachments(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14509839-mono-red-gobs.json').read_text())
+        for name,per_equipment,per_aura in [
+                ('Champion of the Flame',(2,2),(2,2)),
+                ('Goblin Gaveleer',(2,0),(0,0))]:
+            raw=next(c for c in deck['mainboard'] if c['name']==name)
+            definition=parse_card(raw)
+            self.assertTrue(definition.supported,definition.reason)
+            self.assertEqual(len(definition.static_effects),1)
+            with s.RulesBridge() as rules:
+                card=s.import_diagnostic_card(rules,raw,0,'creature',{'Red'})
+                self.assertEqual(card.kind,'creature')
+            g=Game()
+            hero=Permanent('hero',definition,0)
+            g.enter(hero)
+            aura_def=Definition('Unseen Aura',frozenset({'Enchantment'}),
+                frozenset({'Aura'}),False,0,0,frozenset(),
+                attachment=('aura','',(),0,0))
+            equip_def=Definition('Unseen Equipment',frozenset({'Artifact'}),
+                frozenset({'Equipment'}),False,0,0,frozenset(),
+                attachment=('equipment','',(),0,0))
+            aura=Permanent('aura',aura_def,0,attached_to='hero')
+            first=Permanent('first',equip_def,0,attached_to='hero')
+            second=Permanent('second',equip_def,1,attached_to='hero')
+            for p in (aura,first,second):g.enter(p)
+            self.assertEqual(g.stats(hero),
+                (definition.power+per_equipment[0]*2+per_aura[0],
+                 definition.toughness+per_equipment[1]*2+per_aura[1]))
+            # The affected creature's controller does not own all equipment.
+            # Attachment, not equipment controller, determines the bonus.
+            g.battlefield['second'].attached_to=None
+            self.assertEqual(g.stats(hero),
+                (definition.power+per_equipment[0]+per_aura[0],
+                 definition.toughness+per_equipment[1]+per_aura[1]))
+            g.leave('first')
+            self.assertEqual(g.stats(hero),
+                (definition.power+per_aura[0],
+                 definition.toughness+per_aura[1]))
+            g.leave('aura')
+            self.assertEqual(g.stats(hero),(definition.power,definition.toughness))
+
+
 class CollectiveTokenEntryChecks(unittest.TestCase):
     def test_unseen_token_batch_counter_stacks_once_per_group(self):
         raw=dict(name='Unseen Token Watcher',types=['Creature'],
