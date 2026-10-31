@@ -137,7 +137,7 @@ def static_effect(text):
                             0,0,grant=counter_keyword[1],requires_plus_one_counter=True)
     per_attachment=re.fullmatch(
         r'This creature gets ([+-][0-9]+)/([+-][0-9]+) for each '
-        r'(Equipment|Aura|Aura and Equipment) attached to it\\.',text)
+        r'(Equipment|Aura|Aura and Equipment) attached to it\.',text)
     if per_attachment:
         kinds={'Equipment':('equipment',),'Aura':('aura',),
                'Aura and Equipment':('aura','equipment')}[per_attachment[3]]
