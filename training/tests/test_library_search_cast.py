@@ -114,7 +114,9 @@ class LibrarySearchCastTests(unittest.TestCase):
         library_before=len(p.library)
         sim.cast_spell(0,spell)
         self.drain(sim)
-        self.assertEqual(len(p.hand),hand_before)
+        # The cast spell itself left the hand before the search (+1)
+        # and the random discard (-1), so the net hand change is -1.
+        self.assertEqual(len(p.hand),hand_before-1)
         self.assertEqual(len(p.library),library_before-1)
         discarded=[x for x in sim.events if x['kind']=='random_discard']
         self.assertEqual(len(discarded),1)
