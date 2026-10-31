@@ -208,6 +208,7 @@ class Card:
     flashback_cost: str = ""
     graveyard_return_subtype: str = ""
     target_modifier: tuple = ()  # (power, toughness, keyword choices, conditional draw subtype).
+    modifier_program: object | None = None  # Independently compiled target/temporary/conditional blocks.
     modal_sweeps: tuple = ()  # Ordered destroy modes, with two indices selected on casting.
     sweep_reward: tuple = ()  # (nontoken only, Treasures per destroyed creature, tapped).
     forced_sacrifice: tuple = ()  # (opponents/all players, count) on spell resolution.
@@ -250,6 +251,7 @@ class Permanent:
     temporary_power: int = 0
     temporary_toughness: int = 0
     temporary_abilities: frozenset[str] = frozenset()
+    temporary_set_colors: frozenset[str] | None = None  # Last color-setting effect, until cleanup.
     bestowed: bool = False
     entered_at: int = 0
     attachment_at: int = 0
@@ -455,7 +457,7 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.kind == "x_spell" and card.x_effect in ("tokens","draw","life"):
                     continue
-                if self.diagnostic and card.kind=='modifier_spell' and card.target_modifier:
+                if self.diagnostic and card.kind=='modifier_spell' and (card.target_modifier or card.modifier_program):
                     continue
                 if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_artifact_creature_token","destroy_artifact","exile_creature_life","exile_creature_basic_land","exile_creature_damaged_you","destroy_all_creatures","destroy_toughness_min","destroy_creatures_reward","modal_sweep"):
                     continue
@@ -624,6 +626,8 @@ class Simulator(AdvancedRules):
                         types=frozenset(set(definition.types)|{'Creature','Land'}),
                         subtypes=frozenset(set(definition.subtypes)|{item.temporary_land_subtype}),
                         power=item.temporary_land_power,toughness=item.temporary_land_power)
+                if item.temporary_set_colors is not None:
+                    definition=replace(definition,colors=item.temporary_set_colors)
                 if definition.class_program and item.class_level>=2:
                     program=definition.class_program
                     anthem=StaticEffect(Selector(relation='controller',creature=True),
@@ -717,6 +721,7 @@ class Simulator(AdvancedRules):
                         "shroud", "fear", "plainswalk", "islandwalk", "swampwalk", "mountainwalk", "forestwalk"):
             if game.has(state, ability): keywords.add(ability)
         return replace(item.card, kind="creature", power=power, toughness=toughness,
+                       colors=tuple(sorted(state.definition.colors)),
                        traits=f"{power};{toughness};"+",".join(sorted(keywords)))
 
     def land_entry_tapped(self,card,seat,entry_logs):
@@ -2627,9 +2632,11 @@ class Simulator(AdvancedRules):
             raise ValueError('Illegal Aura target')
         if card.kind=='scaled_damage_spell' and target not in self.scaled_damage_targets(seat,card):
             raise ValueError('Scaled damage requires a legal player or planeswalker target')
-        if card.kind=='modifier_spell' and target not in {item.card.id for _,item in self.creature_targets(seat,card)}:
+        if card.kind=='modifier_spell' and card.modifier_program:
+            target=card.modifier_program.targets.bind(target,{item.card.id for _,item in self.creature_targets(seat,card)})
+        elif card.kind=='modifier_spell' and target not in {item.card.id for _,item in self.creature_targets(seat,card)}:
             raise ValueError('Temporary modifier requires a legal creature target')
-        if card.kind=='modifier_spell' and keyword_choice is not None and keyword_choice not in card.target_modifier[2]:
+        if card.kind=='modifier_spell' and keyword_choice is not None and keyword_choice not in (card.target_modifier[2] if card.target_modifier else ()):
             raise ValueError('Unknown keyword choice')
         if card.kind=='removal_spell' and card.removal not in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min','destroy_creatures_reward','modal_sweep') and target not in {item.card.id for _,item in self.removal_targets(seat,card)}:
             raise ValueError('Removal requires a legal permanent target')
@@ -2708,6 +2715,62 @@ class Simulator(AdvancedRules):
             source=source.id,controller=controller,name=source.name,tokenSpec=spec)],source)
         self.log('populate','A creature token is copied using its copiable characteristics.',
                  actor=controller,source=source.name,copied=selected.card.id)
+
+    def resolve_composed_modifier(self,event,card):
+        """Execute verified typed steps inside an already-resolving spell frame.
+
+        Targets were selected before paying mana. Check legality again now;
+        independent later steps resolve only if at least one selected target
+        remains legal (or the legal up-to-N selection was empty).
+        """
+        from oracle_abilities import Effect
+        from semantic_execution_blocks import compile_effects
+        program=card.modifier_program
+        controller=event['controller']
+        raw_target=event.get('target')
+        selected=(raw_target,) if isinstance(raw_target,str) else tuple(raw_target or ())
+        legal={item.card.id:item for _,item in self.creature_targets(controller,card)}
+        targets=[legal[key] for key in selected if key in legal]
+        if selected and not targets:
+            self.log('modifier_fizzle','All selected targets became illegal before resolution.',
+                     actor=controller,source=card.name,targetPermanent=selected)
+            return
+        for step in program.steps:
+            if step.condition and not step.condition.holds(self.event_game('main'),controller):
+                self.log('modifier_condition_failed','A verified spell condition was not met.',
+                         actor=controller,source=card.name,
+                         requiredPermanentType=step.condition.permanent_type_or_subtype)
+                continue
+            if step.operation=='modify_targets':
+                game=self.event_game('main')
+                change=step.modifier
+                for item in targets:
+                    state=game.battlefield.get(item.card.id)
+                    if state is None:continue
+                    state.temporary_power+=change.power
+                    state.temporary_toughness+=change.toughness
+                    if change.keyword:game.grant_temporary(state,change.keyword)
+                self.sync_events(game)
+                if change.set_color:
+                    for item in targets:
+                        if any(item in player.battlefield for player in self.players):
+                            item.temporary_set_colors=frozenset({change.set_color})
+                self.log('modifier_block','Targeted temporary modifier block resolves.',
+                         actor=controller,source=card.name,
+                         targetPermanents=[item.card.id for item in targets],
+                         power=change.power,toughness=change.toughness,
+                         keyword=change.keyword,setColor=change.set_color)
+            else:
+                # Lower a trusted, fully typed atom to the existing handler.
+                atom=(Effect('draw_cards',step.amount) if step.operation=='draw_cards'
+                      else Effect('create_tokens',step.amount,token=step.token))
+                block=compile_effects((atom,)).blocks[0]
+                self._resolve_entry_effects([dict(controller=controller,source=card.id,
+                    name=card.name,effect=step.operation,**block.event_step())],card)
+            if self.finished:return
+        # State-based actions are checked after the entire spell finishes,
+        # not between its individual written instructions.
+        self.resolve_entry_triggers(self.state_based_actions(),card)
 
     def resolve_spell(self,event,original):
         controller=event['controller'];p=self.players[controller];card=original
@@ -2789,6 +2852,9 @@ class Simulator(AdvancedRules):
                 self.log('graveyard_return','A subtype card is returned from graveyard to hand.',
                          actor=controller,card=target.name,source=card.name)
             else:self.log('illegal_target','Graveyard-return target no longer exists.',actor=controller,source=card.name)
+            return
+        if card.kind=='modifier_spell' and card.modifier_program:
+            self.resolve_composed_modifier(event,card)
             return
         if card.kind=='modifier_spell':
             target=next((item for _,item in self.creature_targets(controller,card)
@@ -4713,9 +4779,13 @@ class Simulator(AdvancedRules):
                     actions.extend(self.scaled_damage_choices(seat,c,'cast'))
                     continue
                 if c.kind=='modifier_spell' and self.payment(c)['paid']:
+                    modifier=(c.modifier_program.steps[0].modifier if c.modifier_program
+                              else None)
+                    friendly=(modifier.power+modifier.toughness>=0 if modifier
+                              else c.target_modifier[0]+c.target_modifier[1]>=0)
                     actions.extend(Candidate(c.id+':target='+target.card.id,'cast',c.id,
                         features=features(power=1 if ((owner==seat)==
-                            (c.target_modifier[0]+c.target_modifier[1]>=0)) else -1),
+                            friendly) else -1),
                         label='Cast '+c.name+' targeting '+target.card.name,
                         target_permanent=target.card.id)
                         for owner,target in self.creature_targets(seat,c))
@@ -5131,6 +5201,7 @@ class Simulator(AdvancedRules):
                 for item in player.battlefield:
                     item.marked_damage=0;item.regeneration_shields=0
                     item.temporary_land_power=None;item.temporary_land_subtype=''
+                    item.temporary_set_colors=None
             game = self.event_game("cleanup")
             game.cleanup()
             self.sync_events(game)
@@ -5469,6 +5540,11 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                                      definition.get('types',[]))
     if parsed['kind']=='unsupported' and modifier and rules.query('cost',cost)['supported']:
         parsed={'kind':'modifier_spell','target_modifier':modifier}
+    from composed_modifier_blocks import parse as parse_composed_modifier
+    modifier_program=parse_composed_modifier(rule_text(definition.get('oracleText','')),
+                                             definition.get('types',[]))
+    if parsed['kind']=='unsupported' and modifier_program and rules.query('cost',cost)['supported']:
+        parsed={'kind':'modifier_spell','modifier_program':modifier_program}
     from artifact_color_mana import parse as parse_artifact_color_mana
     color_program=parse_artifact_color_mana(rule_text(definition.get('oracleText','')),definition.get('types',[]))
     if parsed['kind']=='unsupported' and color_program and rules.query('cost',cost)['supported']:
@@ -5484,7 +5560,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         populate=parsed.get('populate',False),
         sequence_effects=parsed.get('sequence_effects',()),
         mana_as_any_color=parsed.get('mana_as_any_color',False),color_draw_cost=parsed.get('color_draw_cost',''),
-        target_modifier=parsed.get('target_modifier',()),modal_sweeps=parsed.get('modal_sweeps',()),sweep_reward=parsed.get('sweep_reward',()),
+        target_modifier=parsed.get('target_modifier',()),modifier_program=parsed.get('modifier_program'),modal_sweeps=parsed.get('modal_sweeps',()),sweep_reward=parsed.get('sweep_reward',()),
         instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),

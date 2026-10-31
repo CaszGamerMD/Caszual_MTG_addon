@@ -63,9 +63,43 @@ draw, self/opponent life loss, controller life gain, scry, surveil, mill and
 creature-token creation with a complete `TokenSpec`. This is a *foundation*
 for reuse, not a claim that the language model can correctly bind all values.
 Amounts must presently be bounded literal integers; recipients are a checked
-enum. Targets, duration, arbitrary conditions, variable amounts and timing
-remain explicit next-stage typed bindings. A matching handler name alone is
-insufficient: even a model proposal with all operations mapped cannot execute.
+enum. General targets, durations, arbitrary conditions, variable amounts and
+timing remain explicit next-stage typed bindings. A matching handler name alone
+is insufficient: even a model proposal with all operations mapped cannot execute.
+
+### Four-step targeted-modifier increment
+
+`training/composed_modifier_blocks.py` independently verifies a **limited,
+complete** family of targeted instants/sorceries and composes these typed
+blocks without dispatching on card names:
+
+1. **Target binding:** exactly one target creature, or zero to two distinct
+   target creatures. The existing engine verifies hexproof, shroud and
+   protection at cast time **before paying** and again at resolution. If all
+   chosen targets are illegal, the whole spell fizzles; if some remain legal,
+   only those receive the modifier. Choosing zero targets for an "up to"
+   instruction is legal.
+2. **Temporary modifier:** signed P/T deltas, a verified keyword grant, or a
+   color-setting effect, all expiring at the same turn's cleanup. Multiple
+   targets share the same checked instruction, applied to each legal target.
+3. **Conditional follow-on effects:** a typed "if you control an [type or
+   subtype]" predicate evaluated at resolution, then existing ordered card
+   draw or complete creature-token creation blocks. Effects with independent
+   sentences still require the preceding targeted spell to resolve.
+4. **Oracle evidence acceptance:** verb anchors recognize standalone keyword
+   names (for example "Haste") and stat-characteristic phrases ("power and
+   toughness") while still rejecting fabricated verbs and source omissions.
+
+The whole-text parser currently covers forms such as *Strength of Arms*,
+*Aphotic Wisps*, *Cutthroat Maneuver*, and unknown names or changed P/T values
+with the same grammar. It rejects unknown extra sentences, unsupported keyword
+names, targeting modes beyond this family and non-instant/sorcery card types.
+The trusted compiler—not a language-model proposal—sets `modifier_program`;
+the simulator then uses its real payment, priority stack, event kernel and
+cleanup. Independent tests exercise delayed resolution, two-target partial
+failure, color/keyword expiration, conditional token creation and failed cast
+legality. These tests demonstrate an increment in *mechanical* reuse, not
+general semantic verification or full Commander legality.
 
 This is the intended progression:
 
@@ -128,14 +162,15 @@ sample gets a separate `semantic-proposals.json` alongside the original
 `results.json`; diagnostic acceptance remains the same independent verdict.
 Without that flag, the benchmark remains free of model calls and charges.
 
-**Live status:** The GitHub owner-branch `OPENAI_API_KEY` now successfully
-completed a bounded five-card run (5 model proposals, 10 Oracle lines, 10
-candidate capability families, 0/5 accepted by the independent diagnostic
-executor). The subsequent 15-card attempt stopped on an ungrounded model verb
-before it could save a full semantic report. Per-card semantic rejection was
-then isolated, preserving other accepted proposals while still aborting on
-authentication or transport failures. A new 15-card batch has **not** been
-run with the isolation fix. Neither test is a correctness certification.
+**Live status:** The GitHub owner-branch `OPENAI_API_KEY` successfully ran a
+bounded 15-card sample after per-card semantic rejection isolation (12 accepted
+evidence-checked proposals, 3 rejected, 35 proposed operations, 4 potential
+handler matches, and 0/15 supported by the independent diagnostic executor
+at that snapshot). The evidence validator had false negatives for standalone
+"Haste" and "power and toughness" wording, addressed above. These are
+proposal-format/evidence results, **not** verified semantic correctness or a
+fresh 15-card executable-coverage claim; the four-step increment is tested on
+specified mechanics separately. No new paid model batch is implied.
 
 ## Next interpreter milestones
 

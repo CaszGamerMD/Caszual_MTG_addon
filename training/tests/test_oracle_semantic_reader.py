@@ -119,6 +119,24 @@ class SemanticReaderTests(unittest.TestCase):
         self.assertEqual(len(semantic.instruction_clauses(attack['oracleText'])),2)
         self.assertEqual(len(semantic.instruction_clauses(draw['oracleText'])),2)
 
+    def test_keyword_and_characteristic_evidence_without_fabricating_actions(self):
+        # Common Oracle keyword lines and static characteristic wording should
+        # survive the *evidence* check, without becoming executable gameplay.
+        haste=card('Unknown swift creature','Haste')
+        candidate=proposal(haste,[[operation('grant_ability','Haste')]],
+                           ('keyword_rule',),category='keyword')
+        self.assertIs(semantic.validate_proposal(haste,candidate),candidate)
+        characteristic=card('Unknown scaling creature',
+                            'This creature\'s power and toughness are each equal to twice '
+                            'the number of creatures you control.')
+        candidate=proposal(characteristic,[[operation('modify_stats','power and toughness')]],
+                           ('static_modifier',),category='static')
+        self.assertIs(semantic.validate_proposal(characteristic,candidate),candidate)
+        bad=proposal(haste,[[operation('draw','Haste')]],
+                     ('keyword_rule',),category='keyword')
+        with self.assertRaisesRegex(semantic.SemanticProposalError,'not grounded'):
+            semantic.validate_proposal(haste,bad)
+
     def test_unknown_operations_are_explicit_not_dropped(self):
         raw=card('Unfamiliar','You win the game if you control seven Mountains.')
         candidate=proposal(raw)
