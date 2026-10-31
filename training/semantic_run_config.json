@@ -1,6 +1,6 @@
 {
   "cards_per_round": 5,
-  "rounds": 1,
+  "rounds": 3,
   "model": "gpt-6-astra",
-  "run_id": "first-five-retry-after-key-update-20261031"
+  "run_id": "first-fifteen-live-semantic-evaluation-20261031"
 }

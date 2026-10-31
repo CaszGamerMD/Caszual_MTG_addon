@@ -81,6 +81,32 @@ jobs:
           python -u training/scryfall_random_exam.py \
             --count "$CARDS" --rounds "$ROUNDS" --semantic-model "$MODEL" \
             --out training/reports/live-oracle-semantic-exam
+      - name: Audit model proposals in bounded job logs
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('training/reports/live-oracle-semantic-exam/semantic-proposals.json')
+          report = json.loads(path.read_text(encoding='utf-8'))
+          for card in report['cards']:
+              print('SEMANTIC_CARD ' + json.dumps({
+                  'card': card['card'],
+                  'units': [{
+                      'source': u['source'],
+                      'category': u['category'],
+                      'needs': u['needs'],
+                      'operations': [{
+                          'verb': op['verb'], 'evidence': op['evidence'],
+                          'amount': op['amount'], 'recipient': op['recipient']
+                      } for op in u['operations']]
+                  } for u in card['units']],
+                  'uncertainties': card['uncertainties']
+              }, ensure_ascii=False))
+          print('SEMANTIC_CAPABILITIES ' + json.dumps([
+              {k: c[k] for k in ('capability', 'cardCount', 'unsupportedDiagnosticCards')}
+              for c in report['capabilities']
+          ]))
+          PY
       - name: Retain random sources, diagnostic verdicts and semantic proposals
         if: always()
         uses: actions/upload-artifact@v4
