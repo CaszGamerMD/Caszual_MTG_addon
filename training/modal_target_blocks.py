@@ -11,6 +11,7 @@ class Mode:
     operation: str
     target_kind: str
     amount: int = 0
+    token: object | None = None
 
 @dataclass(frozen=True)
 class ModalProgram:
@@ -31,6 +32,9 @@ _RULES = (
     (re.compile(r"Deal ([1-9][0-9]*) damage to target creature\.", re.I), "damage"),
     (re.compile(r"Exile target card from a graveyard\.", re.I), "exile_graveyard"),
     (re.compile(r"(.+?) deals ([1-9][0-9]*) damage to target creature\."), "source_damage"),
+    (re.compile(r"Target player gains ([1-9][0-9]*) life\."), "gain_life"),
+    (re.compile(r"Target player creates (.+)\."), "create_player_tokens"),
+    (re.compile(r"Counter target loyalty ability of a planeswalker\."), "counter_loyalty"),
 )
 
 def parse(text, types, card_name=""):
@@ -61,6 +65,17 @@ def parse(text, types, card_name=""):
                     if amount > 1000:
                         return None
                     mode = Mode("damage", "creature", amount)
+                elif operation == 'gain_life':
+                    amount=int(match.group(1))
+                    if amount>1000:return None
+                    mode=Mode('gain_life','player',amount)
+                elif operation == 'create_player_tokens':
+                    from oracle_abilities import parse_token_creation
+                    token=parse_token_creation('Create '+match.group(1)+'.')
+                    if token is None or token.amount>1000:return None
+                    mode=Mode('create_tokens','player',token.amount,token)
+                elif operation == 'counter_loyalty':
+                    mode=Mode('counter_ability','loyalty_ability')
                 elif operation == "exile_graveyard":
                     mode = Mode("exile", "graveyard")
                 else:

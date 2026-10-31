@@ -296,7 +296,7 @@ class Candidate:
     tap_ids: tuple[str, ...] = ()
     x_value: int | None = None
     target_stack: int | None = None
-    target_permanent: str = ""
+    target_permanent: str | tuple = ""
     activation_index: int = 0
     attack_ids: tuple[str, ...] = ()
     blocks: tuple = ()
@@ -2368,6 +2368,9 @@ class Simulator(AdvancedRules):
 
     def modal_target_choices(self,seat,card,kind):
         """Each candidate binds the chosen mode to its own legal target."""
+        if card.modal_target_program.choose>1:
+            from modal_multi_target import choices
+            return choices(self,seat,card,kind)
         result=[]
         for index,mode in enumerate(card.modal_target_program.modes):
             for owner,item in self.modal_target_options(seat,card,index):
@@ -2409,7 +2412,10 @@ class Simulator(AdvancedRules):
         return tuple(choices)
 
     def resolve_modal_target(self,event,card):
-        """Resolve the chosen mode only, without silently falling back."""
+        """Resolve only compiled chosen modes, never silently fall back."""
+        if card.modal_target_program.choose>1:
+            from modal_multi_target import resolve
+            return resolve(self,event,card)
         controller=event['controller']
         selected=event.get('modalModes',())
         try:
@@ -2613,6 +2619,8 @@ class Simulator(AdvancedRules):
                 actions.extend(self.blink_choices(seat,card))
             elif card.kind=='removal_spell':
                 actions.extend(self.removal_choices(seat,card,'respond'))
+            elif card.kind=='modal_target_spell':
+                actions.extend(self.modal_target_choices(seat,card,'respond'))
             elif card.kind=='scaled_damage_spell':
                 actions.extend(self.scaled_damage_choices(seat,card,'respond'))
             elif card.kind=='counter_spell':
@@ -2735,7 +2743,10 @@ class Simulator(AdvancedRules):
             raise ValueError('Unknown keyword choice')
         if card.kind=='removal_spell' and card.removal not in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min','destroy_creatures_reward','modal_sweep') and target not in {item.card.id for _,item in self.removal_targets(seat,card)}:
             raise ValueError('Removal requires a legal permanent target')
-        if card.modal_target_program:
+        if card.modal_target_program and card.modal_target_program.choose>1:
+            from modal_multi_target import bind
+            target=bind(self,seat,card,tuple(modal_modes),target)
+        elif card.modal_target_program:
             selected=card.modal_target_program.bind(tuple(modal_modes))
             if len(selected)!=1:
                 raise ValueError('This modal spell requires exactly one supported mode')
@@ -2778,7 +2789,13 @@ class Simulator(AdvancedRules):
         # Casting is the event: place its abilities above the spell itself.
         # Countering the spell later cannot undo a triggered ability.
         cast_triggers=self.event_game('main').cast_triggers(card,seat)
-        wards=self.target_triggers(frame,target)
+        if card.modal_target_program and card.modal_target_program.choose>1:
+            from modal_multi_target import options,identifier
+            wards=[trigger for index,mode,target_id in zip(modal_modes,
+                   card.modal_target_program.bind(tuple(modal_modes)),target)
+                   if mode.target_kind in ('artifact','enchantment','creature')
+                   for trigger in self.target_triggers(frame,target_id)]
+        else:wards=self.target_triggers(frame,target)
         if cast_triggers or wards:
             self.resolve_entry_triggers(cast_triggers+wards,card,priority=seat)
         elif not self.manual_priority and not self._resolving_stack:
@@ -5684,7 +5701,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     from modal_target_blocks import parse as parse_modal_target
     modal_target=parse_modal_target(rule_text(definition.get('oracleText','')),
                                     definition.get('types',[]),definition.get('name',''))
-    if (parsed['kind']=='unsupported' and modal_target and modal_target.choose==1
+    if (parsed['kind']=='unsupported' and modal_target
             and rules.query('cost',cost)['supported']):
         parsed={'kind':'modal_target_spell','modal_target_program':modal_target}
     from artifact_color_mana import parse as parse_artifact_color_mana
