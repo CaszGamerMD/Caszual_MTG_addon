@@ -2773,17 +2773,13 @@ class Simulator(AdvancedRules):
             return
         if card.kind=='sequence_spell':
             if not card.sequence_effects:raise RuntimeError('Uncompiled sequence spell')
-            # Reuse the same ordered-effect executor as triggered abilities;
-            # the spell has already moved to its graveyard (or was a copy).
-            steps=[dict(operation=part.operation,amount=part.amount,
-                        recipient=part.recipient,gain=part.gain,
-                        **({'tokenSpec':dict(asdict(part.token),
-                            keywords=sorted(part.token.keywords))} if part.token else {}))
-                   for part in card.sequence_effects]
-            self._resolve_entry_effects([dict(operation='ordered_effects',
-                controller=controller,source=card.id,name=card.name,
-                effect='; then '.join(part.operation for part in card.sequence_effects),
-                steps=steps)],card)
+            # Compile the *entire* trusted sequence to reusable typed blocks.
+            # Model proposals have no route here; payment, legality, stack
+            # placement and graveyard movement were handled by cast/resolve.
+            from semantic_execution_blocks import compile_effects
+            program=compile_effects(card.sequence_effects)
+            self._resolve_entry_effects([program.stack_event(
+                controller=controller,source=card.id,name=card.name)],card)
             return
         if card.kind=='graveyard_return_spell':
             target=next((c for c in self.graveyard_subtype_targets(controller,card.graveyard_return_subtype)
