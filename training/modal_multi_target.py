@@ -121,6 +121,6 @@ def resolve(sim,event,card):
                 sim.log('modal_damage','Modal creature damage resolves.',
                         source=card.name,amount=mode.amount,targetPermanent=obj.card.id)
             else:raise RuntimeError('Unknown compiled modal operation')
-        if sim.finished:return
-        sim.resolve_entry_triggers(sim.state_based_actions(),card)
-        if sim.finished:return
+    # A resolving spell is a single event for state-based-action timing.
+    # Check after all its printed modes, never between their instructions.
+    sim.resolve_entry_triggers(sim.state_based_actions(),card)
