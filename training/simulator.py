@@ -1178,6 +1178,52 @@ class Simulator(AdvancedRules):
                             target_permanent=target.card.id))
         return choices
 
+    def tribal_pump_choices(self,seat):
+        """Mana-paid subtype boosts do not tap their source or require haste."""
+        choices=[]
+        for source in self.players[seat].battlefield:
+            definition=source.card.event_definition
+            if not definition:continue
+            for index,(cost,subtype,power,toughness,keyword) in enumerate(
+                    definition.tribal_pump_activations):
+                payment=self.payment(replace(source.card,mana_cost=cost),
+                                     seat=seat,spell_cost=False)
+                if not payment['paid']:continue
+                game=self.event_game('main')
+                matching=sum(other.controller==seat and game.creature(other)
+                             and has_subtype(other.definition,subtype)
+                             for other in game.battlefield.values())
+                choices.append(Candidate(source.card.id+':tribal-pump:'+str(index),
+                    'activate_tribal_pump',source.card.id,
+                    features=features(power=matching*power,toughness=matching*toughness,
+                                      cost=len(payment['sources'])),
+                    label='Boost '+subtype+' team with '+source.card.name,
+                    activation_index=index))
+        return choices
+
+    def activate_tribal_pump(self,seat,source_id,index=0):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        activations=(source.card.event_definition.tribal_pump_activations
+                     if source and source.card.event_definition else ())
+        if not 0<=index<len(activations):raise ValueError('No tribal pump activation')
+        cost,subtype,power,toughness,keyword=activations[index]
+        payment=self.payment(replace(source.card,mana_cost=cost),
+                             seat=seat,spell_cost=False)
+        if not payment['paid']:raise ValueError('Cannot pay tribal pump cost')
+        for item in self.players[seat].battlefield:
+            if item.card.id in payment['sources']:item.tapped=True
+        self.players[seat].mana_pool=list(payment['pool'])
+        event=dict(operation='tribal_team_pump',source=source_id,
+                   controller=seat,name=source.card.name,subtype=subtype,
+                   power=power,toughness=toughness,keyword=keyword)
+        frame=self.stack.push(seat,(event,source.card),
+                              source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_tribal_pump','Paid subtype-wide combat ability placed on stack.',
+                 actor=seat,source=source_id,subtype=subtype,stackId=frame.id)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
     def sacrifice_token_choices(self,seat):
         """Choose an actual creature for the sacrifice cost, not the effect."""
         game=self.event_game('main');choices=[]
@@ -2377,6 +2423,7 @@ class Simulator(AdvancedRules):
         actions.extend(self.scaled_life_choices(seat))
         actions.extend(self.sacrifice_choices(seat))
         actions.extend(self.sacrifice_token_choices(seat))
+        actions.extend(self.tribal_pump_choices(seat))
         actions.extend(self.discard_token_choices(seat))
         actions.extend(self.sacrifice_team_choices(seat))
         actions.extend(self.sacrifice_protection_choices(seat))
@@ -2445,6 +2492,9 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_discard_tokens':
             self.activate_discard_tokens(seat,choice.card_id,choice.discard_id)
+            return 'activate'
+        if choice.kind=='activate_tribal_pump':
+            self.activate_tribal_pump(seat,choice.card_id,choice.activation_index)
             return 'activate'
         if choice.kind=='activate_sacrifice_tokens':
             self.activate_sacrifice_tokens(seat,choice.card_id,choice.tap_ids[0],choice.activation_index)
@@ -4431,6 +4481,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.scaled_life_choices(seat))
             actions.extend(self.sacrifice_choices(seat))
             actions.extend(self.sacrifice_token_choices(seat))
+            actions.extend(self.tribal_pump_choices(seat))
             actions.extend(self.discard_token_choices(seat))
             actions.extend(self.sacrifice_team_choices(seat))
             actions.extend(self.sacrifice_protection_choices(seat))
@@ -4581,7 +4632,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station",
-                           "history_tokens","activate_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_scaled_life","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
+                           "history_tokens","activate_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_scaled_life","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_tribal_pump","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
             self.turn_development[seat]=True
         return choice
 
@@ -4687,6 +4738,8 @@ class Simulator(AdvancedRules):
                 self.activate_scaled_life(self.active,choice.card_id)
             elif choice.kind=='activate_discard_tokens':
                 self.activate_discard_tokens(self.active,choice.card_id,choice.discard_id)
+            elif choice.kind=='activate_tribal_pump':
+                self.activate_tribal_pump(self.active,choice.card_id,choice.activation_index)
             elif choice.kind=='activate_sacrifice_tokens':
                 self.activate_sacrifice_tokens(self.active,choice.card_id,choice.tap_ids[0],choice.activation_index)
             elif choice.kind=='activate_sacrifice_mana':
