@@ -7,6 +7,71 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class CollectiveTokenEntryChecks(unittest.TestCase):
+    def test_unseen_token_batch_counter_stacks_once_per_group(self):
+        raw=dict(name='Unseen Token Watcher',types=['Creature'],
+                 subTypes=['Elf'],power='1',toughness='1',
+                 oracleText=('Whenever one or more tokens you control enter, '
+                             'put a +1/+1 counter on this creature.'))
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(definition.group_token_entry_counters,1)
+        token_def=Definition('Token',frozenset({'Creature'}),frozenset({'Goblin'}),
+            False,1,1,frozenset())
+        g=Game()
+        g.enter(Permanent('watcher',definition,0))
+        g.events.clear()
+        g.enter_batch([Permanent('one',token_def,0,token=True),
+                       Permanent('two',token_def,0,token=True),
+                       Permanent('three',token_def,0,token=True)])
+        triggers=[e for e in g.events if e['kind']=='trigger']
+        self.assertEqual(len(triggers),1)
+        self.assertEqual(triggers[0]['operation'],'self_counter')
+        self.assertEqual(triggers[0]['amount'],1)
+        g.events.clear()
+        g.enter_batch([Permanent('opponent',token_def,1,token=True),
+                       Permanent('nontoken',token_def,0)])
+        self.assertFalse(any(e['kind']=='trigger' for e in g.events))
+        g.events.clear()
+        g.enter_batch([Permanent('four',token_def,0,token=True)])
+        self.assertEqual(len([e for e in g.events if e['kind']=='trigger']),1)
+        self.assertFalse(parse_card(dict(raw,oracleText=raw['oracleText']
+                                        +'\nWin the game.')).supported)
+
+    def test_real_cloakwood_swarmkeeper_counts_each_token_group_once(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14435337-lupitas-elves.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Cloakwood Swarmkeeper')
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'swarmkeeper',{'Green'})
+            self.assertEqual(card.kind,'creature')
+            self.assertEqual(card.event_definition.group_token_entry_counters,1)
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card],
+                                            s.demo_deck(1)),diagnostic=True)
+            sim.manual_priority=True;sim.phase='main';sim.stack.priority=0
+            owner=sim.players[0]
+            (owner.hand if card in owner.hand else owner.library).remove(card)
+            sim.resolve_entry_triggers(sim.enter_creature(card,owner),card)
+            source=next(p for p in owner.battlefield if p.card.id==card.id)
+            def group(controller,amount):
+                event=dict(operation='create_tokens',source='test-ability',
+                    controller=controller,name='Unknown Token Creator',
+                    tokenSpec=dict(amount=amount,power=1,toughness=1,
+                        colors=['Green'],subtypes=['Elf','Warrior'],
+                        keywords=[],tapped=False,land=False))
+                sim._resolve_entry_effects([event],card)
+                while sim.stack.items:sim.pass_priority(sim.stack.priority)
+            group(0,3)
+            self.assertEqual(source.counters,1)
+            group(1,2)
+            self.assertEqual(source.counters,1)
+            group(0,2)
+            self.assertEqual(source.counters,2)
+            self.assertEqual(len([p for p in owner.battlefield if p.card.is_token]),5)
+            sim.invariant()
+
+
 class OncePerTurnTribalEntryChecks(unittest.TestCase):
     @staticmethod
     def unseen(subtype='Elf'):
