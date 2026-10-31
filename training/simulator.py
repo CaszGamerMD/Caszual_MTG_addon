@@ -1073,6 +1073,9 @@ class Simulator(AdvancedRules):
                 elif item.payload[0].get('operation')=='emblem_end_step':
                     from planeswalker_emblems import resolve_end_step
                     resolve_end_step(self,item.payload[0],item.payload[1])
+                elif item.payload[0].get('operation')=='emblem_combat_search':
+                    from planeswalker_emblems import resolve_combat_search
+                    resolve_combat_search(self,item.payload[0],item.payload[1])
                 else: self._resolve_entry_effects([item.payload[0]],item.payload[1])
             finally:
                 self._resolving_stack=False
@@ -4490,6 +4493,8 @@ class Simulator(AdvancedRules):
         triggers=game.death_triggers([item.card.id for item in dead])
         triggers.extend(game.aura_damage_triggers(dealt,1-self.active))
         if to_player and attacker:
+            from planeswalker_emblems import combat_hit_events
+            self._waiting_triggers.extend(combat_hit_events(self,(attacker.card.id,),self.active))
             triggers.extend(game.combat_draw_triggers(attacker.card.id))
             from oracle_abilities import matches, event_data
             for watcher in game.battlefield.values():
