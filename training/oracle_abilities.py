@@ -67,6 +67,7 @@ class StaticEffect:
     must_attack: bool = False  # Continuous requirement: attack each combat if able.
     requires_attachment: bool = False  # Enchanted/equipped creature only.
     requires_keyword: str = ''  # Dynamic keyword filter on affected creature.
+    requires_plus_one_counter: bool = False  # Live +1/+1 counters on target.
 
 @dataclass(frozen=True)
 class Effect:
@@ -127,6 +128,12 @@ def static_effect(text):
     if global_grant:
         if global_grant[1] not in KEYWORDS-{'flash'}:return None
         return StaticEffect(Selector(creature=True),0,0,grant=global_grant[1])
+    counter_keyword=re.fullmatch(
+        r'Each creature you control with a \+1/\+1 counter on it has ([a-z ]+)\.',text)
+    if counter_keyword:
+        if counter_keyword[1] not in KEYWORDS-{'flash'}:return None
+        return StaticEffect(Selector(relation='controller',creature=True),
+                            0,0,grant=counter_keyword[1],requires_plus_one_counter=True)
     # A global subtype anthem applies to both players' creatures, unlike
     # "you control" lords. Do not infer the controller from a card name.
     global_subtype=re.fullmatch(
