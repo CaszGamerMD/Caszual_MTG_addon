@@ -92,6 +92,7 @@ class Definition:
     once_tribal_entry_tokens: tuple = ()  # (subtype, spec, excludes source, once per turn)
     tribal_pump_activations: tuple = ()  # (cost, subtype, power, toughness, keyword)
     group_token_entry_counters: int = 0  # One counter trigger per simultaneous token batch.
+    raid_entry_counters: int = 0  # Replacement: enter with counters if controller attacked this turn.
     attachment: tuple = ()
     activations: tuple = ()
     self_pump: tuple = ()  # Mana cost, power, toughness until EOT.
@@ -404,6 +405,15 @@ def parse_card(card: dict) -> Definition:
         return Definition(**base,abilities=frozenset(),attachment=umbra,umbra_armor=True)
     attachment=parse_with_intrinsic(text,types,subtypes)
     if attachment:return Definition(**base,abilities=attachment[0],attachment=attachment[1])
+    from raid_entry_counters import parse as parse_raid_counters
+    raid=parse_raid_counters(text,types)
+    if raid:
+        amount,remainder=raid
+        program=compile_abilities(remainder,name) if remainder else None
+        if not remainder or program:
+            fields=dict(vars(program)) if program else {}
+            abilities=fields.pop('keywords',frozenset())
+            return Definition(**base,abilities=abilities,raid_entry_counters=amount,**fields)
     from group_token_entries import parse as parse_group_token_entry
     group_lines=text.splitlines()
     group_rules=[(i,parse_group_token_entry(line,types)) for i,line in enumerate(group_lines)]
@@ -697,6 +707,7 @@ class Game:
     _next_token: int = 0
     clock: int = 0
     once_per_turn_entries: set = field(default_factory=set)
+    attacked_this_turn: set = field(default_factory=set)
 
     def timestamp(self):
         self.clock+=1
@@ -926,6 +937,8 @@ class Game:
                 bonus=sum(amount for source in incumbents
                           for selector,amount in source.definition.entry_counter_grants
                           if matches(selector,source,permanent,True))
+                if permanent.controller in self.attacked_this_turn:
+                    bonus+=permanent.definition.raid_entry_counters
                 if bonus:entry_counters[permanent.id]=bonus
             permanent.entered_at=self.timestamp()
             if 'Planeswalker' in permanent.definition.types and permanent.loyalty is None:permanent.loyalty=permanent.definition.loyalty
