@@ -228,6 +228,7 @@ class AdvancedRules:
   if len(required & set(ids))<required_count:raise ValueError('Required attacker omitted')
   if maximum is not None and len(ids)>maximum:raise ValueError('Too many attackers against tapped restriction')
   if not ids:self.phase='second_main';return
+  self.attacked_this_turn.add(self.active)
   self.group_combat=dict(attackers=list(ids),declared=list(ids),blocks={},blocked=set(),early=None,block_limit=None)
   g=self.event_game('combat');events=[]
   for identifier in ids:
