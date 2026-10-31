@@ -7,6 +7,102 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class TapDamageAndUntapChecks(unittest.TestCase):
+    def test_real_sharpshooter_parses_composed_cost_and_death_trigger(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14509839-mono-red-gobs.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Goblin Sharpshooter')
+        parsed=parse_card(raw)
+        self.assertTrue(parsed.supported,parsed.reason)
+        self.assertTrue(parsed.skip_untap_step)
+        self.assertTrue(parsed.death_untap_self)
+        self.assertEqual(parsed.tap_damage_amount,1)
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'sharpshooter',{'Red'})
+            self.assertEqual(card.kind,'creature')
+        creature=Definition('Unseen Creature',frozenset({'Creature'}),
+                            frozenset(),False,1,1,frozenset())
+        game=Game()
+        game.enter(Permanent('sharpshooter',parsed,0))
+        game.enter(Permanent('friend',creature,0))
+        game.enter(Permanent('opponent',creature,1))
+        events=game.death_triggers(['friend','opponent'])
+        untaps=[e for e in events if e.get('operation')=='untap_self']
+        self.assertEqual(len(untaps),2)
+        self.assertEqual({e['source'] for e in untaps},{'sharpshooter'})
+        self.assertFalse(parse_card(dict(raw,
+            oracleText=raw['oracleText']+'\nWin the game.')).supported)
+
+    def test_unseen_tap_damage_requires_readiness_and_excludes_shrouded_target(self):
+        raw=dict(name='Unseen Sharpshooter',types=['Creature'],
+            subTypes=['Goblin'],manaCost='{R}',power='1',toughness='1',
+            oracleText='{T}: This creature deals 2 damage to any target.')
+        parsed=parse_card(raw)
+        self.assertTrue(parsed.supported,parsed.reason)
+        self.assertEqual(parsed.tap_damage_amount,2)
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'shooter',{'Red'})
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card],
+                                             s.demo_deck(1)),diagnostic=True)
+            sim.manual_priority=True;sim.phase='main';sim.stack.priority=0
+            owner=sim.players[0]
+            (owner.hand if card in owner.hand else owner.library).remove(card)
+            sim.resolve_entry_triggers(sim.enter_creature(card,owner),card)
+            source=next(p for p in owner.battlefield if p.card.id==card.id)
+            with self.assertRaises(ValueError):
+                sim.activate_tap_damage(0,card.id,'player:1')
+            self.assertFalse(source.tapped)
+            source.fresh=False
+            before=sim.players[1].life
+            sim.activate_tap_damage(0,card.id,'player:1')
+            self.assertTrue(source.tapped)
+            self.assertEqual(sim.players[1].life,before)
+            with self.assertRaises(ValueError):
+                sim.activate_tap_damage(0,card.id,'player:1')
+            while sim.stack.items:sim.pass_priority(sim.stack.priority)
+            self.assertEqual(sim.players[1].life,before-2)
+            sim.invariant()
+
+    def test_real_sharpshooter_untaps_only_on_death_not_normal_untap(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14509839-mono-red-gobs.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Goblin Sharpshooter')
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'sharpshooter',{'Red'})
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card],
+                                             s.demo_deck(1)),diagnostic=True)
+            sim.manual_priority=True;sim.phase='main';sim.stack.priority=0
+            owner=sim.players[0]
+            (owner.hand if card in owner.hand else owner.library).remove(card)
+            sim.resolve_entry_triggers(sim.enter_creature(card,owner),card)
+            source=next(p for p in owner.battlefield if p.card.id==card.id)
+            source.fresh=False
+            sim.activate_tap_damage(0,card.id,'player:1')
+            while sim.stack.items:sim.pass_priority(sim.stack.priority)
+            self.assertTrue(source.tapped)
+            victim_def=s.EventDefinition('Other Creature',frozenset({'Creature'}),
+                frozenset({'Elf'}),False,1,1,frozenset())
+            victim=s.Card('enemy','Other Creature','creature',power=1,
+                toughness=1,event_definition=victim_def,is_token=True)
+            sim.resolve_entry_triggers(sim.enter_creature(victim,sim.players[1]),victim)
+            snapshot=sim.event_game('main')
+            triggers=snapshot.death_triggers([victim.id])
+            target=next(p for p in sim.players[1].battlefield if p.card.id==victim.id)
+            sim.send_to_destination(sim.players[1],target,snapshot=snapshot)
+            sim.resolve_entry_triggers(triggers,card)
+            self.assertTrue(source.tapped)
+            while sim.stack.items:sim.pass_priority(sim.stack.priority)
+            self.assertFalse(source.tapped)
+            source.tapped=True
+            sim.active=1;sim.phase='end';sim.stack.priority=1
+            sim.step()
+            self.assertEqual(sim.active,0)
+            self.assertTrue(source.tapped)
+            sim.invariant()
+
+
 class RaidEntryReplacementChecks(unittest.TestCase):
     def test_real_rigging_runner_receives_raid_counter_only_after_attack(self):
         import json
