@@ -33,10 +33,14 @@ class ComposedLoyaltyTests(unittest.TestCase):
         lands=[s.Card('pw-mana-'+str(i),'Mana','land',mask=63) for i in range(6)]
         opponent=s.Card('pw-opponent-creature','Two-power creature','creature',
                         power=2,toughness=creature_toughness,
-                        traits='2;'+str(creature_toughness)+';')
+                        traits='2;'+str(creature_toughness)+';',
+                        event_definition=s.EventDefinition('Two-power creature',
+                            frozenset({'Creature'}),frozenset(),False,2,
+                            creature_toughness,frozenset()))
         sim=s.Simulator(self.rules,53,
             decks=(s.demo_deck(0)+[pw]+lands,s.demo_deck(1)+[opponent]),
             diagnostic=True)
+        self.assertFalse(sim.finished,sim.questions)
         sim.phase='main';sim.manual_priority=True
         me,them=sim.players
         for c in [pw]+lands:
