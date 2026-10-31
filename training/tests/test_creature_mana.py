@@ -87,3 +87,51 @@ class CreatureManaChecks(unittest.TestCase):
         sim.activate_scaled_mana(0,priest.card.id,4)
         self.assertEqual(sim.players[0].mana_pool[4],4)
         sim.invariant()
+
+    def test_real_gaears_cradle_uses_land_mana_with_live_creature_count(self):
+        from card_events import parse_card
+        raw=self.lookup["Gaea's Cradle"]
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(definition.scaled_mana_tap,'count:G:Creature:controller')
+        cradle=s.import_diagnostic_card(self.rules,raw,0,'cradle',{'Green'})
+        self.assertEqual(cradle.kind,'land')
+        self.assertEqual(cradle.event_definition.scaled_mana_tap,
+                         'count:G:Creature:controller')
+        renamed=dict(raw,name='Unseen Creature Grove',
+            oracleText=raw['oracleText'].replace('{G}','{R}'),
+            colorIdentity=['Red'])
+        other=s.import_diagnostic_card(self.rules,renamed,0,'grove',{'Red'})
+        self.assertEqual(other.kind,'land')
+        self.assertEqual(other.event_definition.scaled_mana_tap,
+                         'count:R:Creature:controller')
+        bad=dict(raw,oracleText=raw['oracleText']+'\nWin the game.')
+        self.assertEqual(s.import_diagnostic_card(self.rules,bad,0,'bad',{'Green'}).kind,
+                         'unsupported')
+        sim=s.Simulator(self.rules,42,decks=(s.demo_deck(0)+[cradle],
+                                            s.demo_deck(1)),diagnostic=True)
+        owner=sim.players[0]
+        (owner.hand if cradle in owner.hand else owner.library).remove(cradle)
+        owner.battlefield.append(s.Permanent(cradle))
+        self.assertFalse(any(choice.card_id==cradle.id
+                             for choice in sim.scaled_mana_choices(0)))
+        definition=s.EventDefinition('Unknown Elf',frozenset({'Creature'}),
+             frozenset({'Elf'}),False,1,1,frozenset())
+        opponent=s.Card('enemy','Unknown Elf','creature',
+                        event_definition=definition,is_token=True)
+        sim.enter_creature(opponent,sim.players[1])
+        sim.resolve_entry_triggers([],opponent)
+        self.assertFalse(any(choice.card_id==cradle.id
+                             for choice in sim.scaled_mana_choices(0)))
+        for name in ('friendly','second'):
+            ally=s.Card(name,'Unknown Elf','creature',
+                        event_definition=definition,is_token=True)
+            sim.enter_creature(ally,owner)
+            sim.resolve_entry_triggers([],ally)
+        self.assertEqual(dict(sim.mana_sources(0))[cradle.id],((0,0,0,0,2,0),))
+        sim.stack.priority=0
+        sim.activate_scaled_mana(0,cradle.id,4)
+        self.assertEqual(owner.mana_pool[4],2)
+        self.assertTrue(next(p.tapped for p in owner.battlefield
+                             if p.card.id==cradle.id))
+        sim.invariant()
