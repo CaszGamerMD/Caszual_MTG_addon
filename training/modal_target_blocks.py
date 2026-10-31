@@ -56,7 +56,7 @@ def parse(text, types):
                     amount = int(match.group(1))
                     if amount > 1000:
                         return None
-                    mode = Mode(operation, "creature", amount)
+                    mode = Mode("damage", "creature", amount)
                 else:
                     mode = Mode(operation, match.group(1).lower())
                 break

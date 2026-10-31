@@ -210,6 +210,7 @@ class Card:
     target_modifier: tuple = ()  # (power, toughness, keyword choices, conditional draw subtype).
     modifier_program: object | None = None  # Independently compiled target/temporary/conditional blocks.
     modal_sweeps: tuple = ()  # Ordered destroy modes, with two indices selected on casting.
+    modal_target_program: object | None = None  # Verified targeted modal instruction program.
     sweep_reward: tuple = ()  # (nontoken only, Treasures per destroyed creature, tapped).
     forced_sacrifice: tuple = ()  # (opponents/all players, count) on spell resolution.
     prevent_all_combat_damage: bool = False  # Until cleanup, all combat damage is prevented.
@@ -1075,7 +1076,7 @@ class Simulator(AdvancedRules):
 
     def response_choices(self,seat):
         if seat!=self.stack.priority: return ()
-        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','sequence_spell','mana_spell','scaled_damage_spell','token_spell','counter_spell','removal_spell','modifier_spell','blink_spell','prevention_spell',
+        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','sequence_spell','modal_target_spell','mana_spell','scaled_damage_spell','token_spell','counter_spell','removal_spell','modifier_spell','blink_spell','prevention_spell',
             'creature','enchantment','artifact','equipment','vehicle','station','planeswalker')
                      and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
@@ -2335,6 +2336,52 @@ class Simulator(AdvancedRules):
                 targets.append((seat,item))
         return tuple(targets)
 
+    def modal_target_options(self, seat, card, index):
+        """Recompute legal targets for the selected verified mode.
+
+        Battlefield target protection/hexproof/shroud is checked here and
+        again on resolution. Graveyard cards are separate zone objects.
+        """
+        if card.modal_target_program is None:
+            return ()
+        mode = card.modal_target_program.modes[index]
+        if mode.target_kind == 'graveyard':
+            return tuple((owner, other) for owner,player in enumerate(self.players)
+                         for other in player.graveyard)
+        game = self.event_game('main')
+        result = []
+        for owner,player in enumerate(self.players):
+            for item in player.battlefield:
+                state = game.battlefield.get(item.card.id)
+                if state is None:
+                    continue
+                if mode.target_kind == 'creature':
+                    matches = game.creature(state)
+                else:
+                    matches = mode.target_kind.title() in state.definition.types
+                if (not matches or game.has(state,'shroud')
+                        or owner != seat and game.has(state,'hexproof')
+                        or game.protected(state,card.colors)):
+                    continue
+                result.append((owner,item))
+        return tuple(result)
+
+    def modal_target_choices(self,seat,card,kind):
+        """Each candidate binds the chosen mode to its own legal target."""
+        result=[]
+        for index,mode in enumerate(card.modal_target_program.modes):
+            for owner,item in self.modal_target_options(seat,card,index):
+                useful=(owner!=seat and mode.operation in ('destroy','exile','damage'))
+                result.append(Candidate(card.id+':mode='+str(index)+':target='+item.id
+                    if mode.target_kind=='graveyard' else
+                    card.id+':mode='+str(index)+':target='+item.card.id,
+                    kind,card.id,features=features(power=2 if useful else -1),
+                    label='Cast '+card.name+' choosing mode '+str(index+1)+' targeting '+
+                          (item.name if mode.target_kind=='graveyard' else item.card.name),
+                    target_permanent=item.id if mode.target_kind=='graveyard' else item.card.id,
+                    modal_modes=(index,)))
+        return tuple(result)
+
     def removal_choices(self,seat,card,kind):
         if card.removal=='modal_sweep':
             return tuple(Candidate(card.id+':modes='+str(i)+','+str(j),kind,card.id,
@@ -2360,6 +2407,51 @@ class Simulator(AdvancedRules):
                 features=features(power=2 if useful else -100,cost=len(projected.get('sources',[]))),
                 label='Cast '+card.name+' targeting '+item.card.name,target_permanent=item.card.id))
         return tuple(choices)
+
+    def resolve_modal_target(self,event,card):
+        """Resolve the chosen mode only, without silently falling back."""
+        controller=event['controller']
+        selected=event.get('modalModes',())
+        try:
+            (mode,)=card.modal_target_program.bind(selected)
+        except (ValueError,TypeError):
+            raise RuntimeError('Corrupt modal target on stack')
+        target_id=event.get('target')
+        target=next(((owner,item) for owner,item in
+                     self.modal_target_options(controller,card,selected[0])
+                     if (item.id if mode.target_kind=='graveyard' else item.card.id)==target_id),None)
+        if target is None:
+            self.log('modal_target_fizzle','Chosen mode has no legal target at resolution.',
+                     source=card.name,actor=controller,mode=selected[0],target=target_id)
+            return
+        owner,item=target
+        if mode.target_kind=='graveyard':
+            self.players[owner].graveyard.remove(item)
+            self.players[owner].exile.append(item)
+            self.log('modal_exile','A chosen modal effect exiles a targeted graveyard card.',
+                     source=card.name,actor=controller,target=target_id,mode=selected[0])
+            self.resolve_entry_triggers([],card)
+            return
+        game=self.event_game('main')
+        state=game.battlefield.get(item.card.id)
+        if mode.operation=='destroy':
+            if state and game.has(state,'indestructible'):
+                self.log('indestructible','Chosen destruction cannot destroy an indestructible permanent.',
+                         source=card.name,targetPermanent=item.card.id)
+                return
+            self.destroy_batch(((owner,item),),card,reason='modal_destroy')
+        elif mode.operation=='exile':
+            self.send_to_destination(self.players[owner],item,snapshot=game,to_exile=True)
+            self.log('modal_exile','Chosen modal effect exiles a permanent.',
+                     source=card.name,targetPermanent=item.card.id)
+            self.resolve_entry_triggers([],card)
+        elif mode.operation=='damage':
+            item.marked_damage+=mode.amount
+            self.log('modal_damage','Chosen modal effect deals damage to a creature.',
+                     source=card.name,amount=mode.amount,targetPermanent=item.card.id)
+            self.resolve_entry_triggers(self.state_based_actions(),card)
+        else:
+            raise RuntimeError('Unsupported modal operation at resolution')
 
     def creature_board_destruction_set(self, minimum_toughness=0):
         """Determine a simultaneous, non-targeted creature destruction set.
@@ -2643,12 +2735,19 @@ class Simulator(AdvancedRules):
             raise ValueError('Unknown keyword choice')
         if card.kind=='removal_spell' and card.removal not in ('opponent_nonlands','destroy_all_creatures','destroy_toughness_min','destroy_creatures_reward','modal_sweep') and target not in {item.card.id for _,item in self.removal_targets(seat,card)}:
             raise ValueError('Removal requires a legal permanent target')
+        if card.modal_target_program:
+            selected=card.modal_target_program.bind(tuple(modal_modes))
+            if len(selected)!=1:
+                raise ValueError('This modal spell requires exactly one supported mode')
+            if target not in {item.id if selected[0].target_kind=='graveyard' else item.card.id
+                              for _,item in self.modal_target_options(seat,card,modal_modes[0])}:
+                raise ValueError('Selected modal mode requires its own legal target')
         if card.modal_sweeps:
             if len(modal_modes)!=2 or tuple(sorted(set(modal_modes)))!=tuple(modal_modes) or any(
                     not isinstance(i,int) or i<0 or i>=len(card.modal_sweeps) for i in modal_modes):
                 raise ValueError('Choose two distinct legal modes on casting')
-        elif modal_modes:
-            raise ValueError('Spell has no modal destruction choices')
+        elif modal_modes and not card.modal_target_program:
+            raise ValueError('Spell has no modal choices')
         if card.kind=='graveyard_return_spell' and target not in {c.id for c in self.graveyard_subtype_targets(seat,card.graveyard_return_subtype)}:
             raise ValueError('Graveyard return requires legal target')
         if card.kind=='counter_spell' and target not in {f.id for f in self.counter_targets(card)}:
@@ -2670,7 +2769,7 @@ class Simulator(AdvancedRules):
         frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'keywordChoice':keyword_choice or (card.target_modifier[2][0] if card.target_modifier and card.target_modifier[2] else None),'modalModes':tuple(modal_modes),'fromHand':not rebound and not flashback and not commander and not exile_permission},card),card.name)
         self.log('cast',f'Player {seat+1} casts {card.name}.',actor=seat,card=card.name,
                  manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,bestow=bestow,rebound=rebound,flashback=flashback,exilePermission=exile_permission,targetStack=target if card.kind=='counter_spell' else None,
-                 targetPermanent=target if card.kind in ('removal_spell','modifier_spell') else None)
+                 targetPermanent=target if card.kind in ('removal_spell','modifier_spell','modal_target_spell') else None)
         self.stack.priority=seat
         self.log('stack_push',f'{card.name} goes on the stack.',stackId=frame.id,controller=seat)
         if card.storm:
@@ -2836,6 +2935,9 @@ class Simulator(AdvancedRules):
         elif card.kind=='mana_artifact': p.battlefield.append(Permanent(card))
         elif not event.get('copy'):
             (p.exile if event.get('flashback') else p.graveyard).append(original)
+        if card.kind=='modal_target_spell':
+            self.resolve_modal_target(event,card)
+            return
         if card.kind=='sacrifice_spell':
             scope,count=card.forced_sacrifice
             for affected in range(len(self.players)):
@@ -4798,6 +4900,9 @@ class Simulator(AdvancedRules):
                         features=features(power=1 if owner==seat else -100),label='Cast '+c.name,target_permanent=target.card.id)
                         for owner,target in self.aura_targets(seat,c))
                     continue
+                if c.kind=='modal_target_spell' and self.payment(c)['paid']:
+                    actions.extend(self.modal_target_choices(seat,c,'cast'))
+                    continue
                 if c.kind=='removal_spell' and self.payment(c)['paid']:
                     actions.extend(self.removal_choices(seat,c,'cast'))
                     continue
@@ -5576,6 +5681,12 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                                          definition.get('types',[]))
     if parsed['kind']=='unsupported' and counted_program and rules.query('cost',cost)['supported']:
         parsed={'kind':'counted_spell','counted_program':counted_program}
+    from modal_target_blocks import parse as parse_modal_target
+    modal_target=parse_modal_target(rule_text(definition.get('oracleText','')),
+                                    definition.get('types',[]),definition.get('name',''))
+    if (parsed['kind']=='unsupported' and modal_target and modal_target.choose==1
+            and rules.query('cost',cost)['supported']):
+        parsed={'kind':'modal_target_spell','modal_target_program':modal_target}
     from artifact_color_mana import parse as parse_artifact_color_mana
     color_program=parse_artifact_color_mana(rule_text(definition.get('oracleText','')),definition.get('types',[]))
     if parsed['kind']=='unsupported' and color_program and rules.query('cost',cost)['supported']:
@@ -5592,7 +5703,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         sequence_effects=parsed.get('sequence_effects',()),
         counted_program=parsed.get('counted_program'),
         mana_as_any_color=parsed.get('mana_as_any_color',False),color_draw_cost=parsed.get('color_draw_cost',''),
-        target_modifier=parsed.get('target_modifier',()),modifier_program=parsed.get('modifier_program'),modal_sweeps=parsed.get('modal_sweeps',()),sweep_reward=parsed.get('sweep_reward',()),
+        target_modifier=parsed.get('target_modifier',()),modifier_program=parsed.get('modifier_program'),modal_sweeps=parsed.get('modal_sweeps',()),modal_target_program=parsed.get('modal_target_program'),sweep_reward=parsed.get('sweep_reward',()),
         instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),

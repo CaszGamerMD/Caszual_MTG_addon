@@ -1,0 +1,45 @@
+name: Modal Oracle target integration and deck coverage
+on:
+  push:
+    branches: [experiment/commander-ai-golem]
+    paths:
+      - training/simulator.py
+      - training/modal_target_blocks.py
+      - training/tests/test_modal_target_blocks.py
+      - training/tests/test_modal_target_cast.py
+      - .github/workflows/commander-modal-targets.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  modal-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile source syntax
+        run: python -m compileall -q training
+      - name: Mode parsing and gameplay integration
+        run: |
+          python -m unittest discover -s training/tests -p test_modal_target_blocks.py -v
+          python -m unittest discover -s training/tests -p test_modal_target_cast.py -v
+      - name: Existing combat, removal and stack regressions
+        run: |
+          python -m unittest discover -s training/tests -p test_composed_modifier_blocks.py -v
+          python -m unittest discover -s training/tests -p test_priority_stack.py -v
+      - name: Audit all saved decks without OpenAI API
+        run: python training/diagnostic_coverage.py
+      - name: Upload offline deck coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modal-deck-coverage
+          path: training/reports/diagnostic-coverage.json
+          retention-days: 7
