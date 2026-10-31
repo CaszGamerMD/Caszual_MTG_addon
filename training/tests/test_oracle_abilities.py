@@ -7,6 +7,66 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class VariableTokenSpellChecks(unittest.TestCase):
+    def test_unseen_token_quantity_uses_generic_whole_text_grammar(self):
+        from variable_token_spells import parse
+        for subtype,scope in [('Elf','controller'),('Goblin','controller'),
+                              ('Faerie','all'),('Creature','all')]:
+            noun='creature' if subtype=='Creature' else subtype
+            relation='you control' if scope=='controller' else 'on the battlefield'
+            oracle=('Create two 1/1 green Elf Warrior creature tokens for each '
+                    +noun+' '+relation+'.')
+            spec,kind,found_scope=parse(oracle,['Kindred','Sorcery'])
+            self.assertEqual((spec.amount,kind,found_scope),(2,subtype,scope))
+            self.assertIsNone(parse(oracle+' Draw seven cards.',['Sorcery']))
+            self.assertIsNone(parse(oracle,['Creature']))
+
+    def test_real_elvish_promenade_counts_at_resolution_and_changelings(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14435337-lupitas-elves.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Elvish Promenade')
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'promenade',{'Green'})
+            self.assertEqual(card.kind,'token_spell')
+            self.assertEqual(card.token_count_rule,('Elf','controller'))
+            self.assertEqual(card.token_definition.subtypes,frozenset({'Elf','Warrior'}))
+            lands=[s.Card('mana'+str(i),'Forest','land',mask=16) for i in range(5)]
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card]+lands,
+                                            s.demo_deck(1)),diagnostic=True)
+            sim.manual_priority=True;sim.phase='main';sim.stack.priority=0
+            owner=sim.players[0]
+            for item in [card,*lands]:
+                (owner.hand if item in owner.hand else owner.library).remove(item)
+            owner.hand.append(card)
+            owner.battlefield.extend(s.Permanent(land) for land in lands)
+            def token(identifier,seat,subtypes,abilities=()):
+                definition=s.EventDefinition(identifier,frozenset({'Creature'}),
+                    frozenset(subtypes),False,1,1,frozenset(abilities))
+                t=s.Card(identifier,identifier,'creature',power=1,toughness=1,
+                    event_definition=definition,is_token=True)
+                pending=sim.enter_creature(t,sim.players[seat])
+                sim.resolve_entry_triggers(pending,t)
+                return t
+            token('friend',0,('Elf',))
+            token('changeling',0,('Shapeshifter',),('changeling',))
+            token('enemy',1,('Elf',))
+            token('nonelf',0,('Goblin',))
+            sim.cast_spell(0,card)
+            self.assertTrue(sim.stack.items)
+            # The original Elf leaves after casting. Only changeling still
+            # qualifies; opponent's Elf and own Goblin cannot inflate X.
+            friend=next(p for p in owner.battlefield if p.card.id=='friend')
+            sim.send_to_destination(owner,friend)
+            while sim.stack.items:sim.pass_priority(sim.stack.priority)
+            created=[p for p in owner.battlefield if p.card.id.startswith('token-')]
+            self.assertEqual(len(created),1)
+            self.assertEqual(created[0].card.event_definition.subtypes,
+                             frozenset({'Elf','Warrior'}))
+            self.assertIn(card,owner.graveyard)
+            sim.invariant()
+
+
 class CounterDependentKeywordChecks(unittest.TestCase):
     def test_real_bramblewood_paragon_grants_live_trample(self):
         import json
