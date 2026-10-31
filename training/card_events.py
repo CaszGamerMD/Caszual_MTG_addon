@@ -771,7 +771,14 @@ class Game:
                     for item in self.battlefield.values()):continue
                 if effect.life_min and self.life_totals.get(source.controller,0)<effect.life_min:continue
                 if effect.condition and not any(matches(effect.condition,source,x,self.creature(x)) for x in self.battlefield.values()): continue
-                if effect.share_types:
+                if effect.attachment_count_kinds:
+                    # Check *live* Aura and Equipment attachments. An Aura,
+                    # Equipment, or controller change affects this immediately.
+                    multiplier=sum(bool(item.definition.attachment) and
+                                   item.attached_to==p.id and
+                                   item.definition.attachment[0] in effect.attachment_count_kinds
+                                   for item in self.battlefield.values())
+                elif effect.share_types:
                     multiplier=sum(other.id!=p.id and self.creature(other)
                                    and shares_creature_type(p.definition,other.definition)
                                    for other in self.battlefield.values())
