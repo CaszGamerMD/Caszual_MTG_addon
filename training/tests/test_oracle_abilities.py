@@ -7,6 +7,70 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class ScaledDamageSpellChecks(unittest.TestCase):
+    def test_unseen_whole_oracle_scaled_damage_spell(self):
+        from variable_damage_spells import parse
+        for name,subtype,plural in [('Unseen Goblin Spell','Goblin','Goblins'),
+                                    ('Unseen Elf Spell','Elf','Elves'),
+                                    ('Unseen Wolf Spell','Wolf','Wolves')]:
+            raw=(name+' deals damage to target player or planeswalker equal to '
+                 'the number of '+plural+' you control.')
+            self.assertEqual(parse(raw,name,['Sorcery']),
+                             (subtype,'controller','player or planeswalker'))
+            self.assertIsNone(parse(raw+'\nDraw ten cards.',name,['Sorcery']))
+            self.assertIsNone(parse(raw,name,['Creature']))
+            self.assertIsNone(parse(raw,'A different name',['Sorcery']))
+        self.assertEqual(parse('This spell deals damage to target player or planeswalker equal '
+                               'to the number of creatures on the battlefield.',
+                               'Totally Unknown', ['Instant']),
+                         ('Creature','all','player or planeswalker'))
+
+    def test_real_goblin_war_strike_locks_player_target_but_counts_at_resolution(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14509839-mono-red-gobs.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Goblin War Strike')
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'war-strike',{'Red'})
+            self.assertEqual(card.kind,'scaled_damage_spell')
+            self.assertEqual(card.scaled_damage_rule,('Goblin','controller',
+                                                     'player or planeswalker'))
+            land=s.Card('red-source','Mountain','land',mask=8)
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card,land],
+                                             s.demo_deck(1)),diagnostic=True)
+            sim.manual_priority=True;sim.phase='main';sim.stack.priority=0
+            owner=sim.players[0]
+            for item in (card,land):
+                (owner.hand if item in owner.hand else owner.library).remove(item)
+            owner.hand.append(card);owner.battlefield.append(s.Permanent(land))
+            goblin_def=s.EventDefinition('Unknown Goblin',frozenset({'Creature'}),
+                frozenset({'Goblin'}),False,1,1,frozenset())
+            shapeshifter_def=s.EventDefinition('Unknown Shapeshifter',
+                frozenset({'Creature'}),frozenset({'Shapeshifter'}),False,1,1,
+                frozenset({'changeling'}))
+            for identifier,definition,seat in [
+                    ('first',goblin_def,0),('enemy',goblin_def,1)]:
+                token=s.Card(identifier,'Unknown Goblin','creature',power=1,toughness=1,
+                    event_definition=definition,is_token=True)
+                sim.resolve_entry_triggers(sim.enter_creature(token,sim.players[seat]),token)
+            self.assertIn('player:1',sim.scaled_damage_targets(0,card))
+            self.assertNotIn('creature:first',sim.scaled_damage_targets(0,card))
+            with self.assertRaises(ValueError):
+                sim.cast_spell(0,card,target='creature:first')
+            sim.cast_spell(0,card,target='player:1')
+            self.assertTrue(sim.stack.items)
+            first=next(p for p in owner.battlefield if p.card.id=='first')
+            sim.send_to_destination(owner,first)
+            newcomer=s.Card('newcomer','Unknown Shapeshifter','creature',power=1,
+                toughness=1,event_definition=shapeshifter_def,is_token=True)
+            sim.resolve_entry_triggers(sim.enter_creature(newcomer,owner),newcomer)
+            # The opposing Goblin does not count, but our changeling does.
+            before=sim.players[1].life
+            while sim.stack.items:sim.pass_priority(sim.stack.priority)
+            self.assertEqual(sim.players[1].life,before-1)
+            self.assertIn(card,owner.graveyard)
+            sim.invariant()
+
 class VariableManaSpellChecks(unittest.TestCase):
     def test_unseen_tribal_mana_spell_rejects_unparsed_text(self):
         from variable_mana_spells import parse
