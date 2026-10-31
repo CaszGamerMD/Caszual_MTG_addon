@@ -6,6 +6,8 @@ on:
       - training/simulator.py
       - training/planeswalker_loyalty.py
       - training/planeswalker_runtime.py
+      - training/planeswalker_duration.py
+      - training/tests/test_planeswalker_composed.py
       - training/planeswalker_inventory.py
       - training/decks/**
       - training/tests/test_planeswalker_inventory.py
@@ -31,6 +33,8 @@ jobs:
         run: python -m compileall -q training
       - name: Test generic loyalty activation, costs, resolution and safety
         run: python -m unittest discover -s training/tests -p test_planeswalker_loyalty.py -v
+      - name: Test composed targeted and graveyard loyalty blocks
+        run: python -m unittest discover -s training/tests -p test_planeswalker_composed.py -v
       - name: Verify real saved-deck planeswalker evidence
         run: |
           python -m unittest discover -s training/tests -p test_planeswalker_inventory.py -v

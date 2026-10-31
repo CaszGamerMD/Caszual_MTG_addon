@@ -14,6 +14,18 @@ from semantic_execution_blocks import compile_effects,BlockCompilationError
 class LoyaltyAbility:
     delta: int
     program: object
+    target_kind: str = ''
+    effect_kind: str = 'atomic'
+
+@dataclass(frozen=True)
+class TimedCreatureModifier:
+    power: int
+    toughness: int
+    expires: str = 'controller_next_turn'
+
+@dataclass(frozen=True)
+class MillThenOptionalCreatureReturn:
+    amount: int
 
 @dataclass(frozen=True)
 class PlaneswalkerProgram:
@@ -44,6 +56,25 @@ def compile_card(card):
         body=m[3]
         # Reject choices, targeting, clauses, and all hidden effects instead
         # of dropping unrecognized text. Keep full text in the evidence.
+        targeted=re.fullmatch(
+            r'Up to one target creature gets ([+-][0-9]+)/([+-][0-9]+) until your next turn\.',
+            body)
+        if targeted:
+            power,toughness=int(targeted[1]),int(targeted[2])
+            if not -20<=power<=20 or not -20<=toughness<=20:return None
+            abilities.append(LoyaltyAbility(delta,TimedCreatureModifier(power,toughness),
+                                            'up_to_one_creature','timed_modifier'))
+            continue
+        mill=re.fullmatch(
+            r'Mill (one|two|three|[1-9][0-9]*) cards?, then you may return '
+            r'a creature card from your graveyard to your hand\.',body)
+        if mill:
+            count={'one':1,'two':2,'three':3}.get(mill[1])
+            if count is None:count=int(mill[1])
+            if count>1000:return None
+            abilities.append(LoyaltyAbility(delta,MillThenOptionalCreatureReturn(count),
+                                            effect_kind='mill_optional_creature_return'))
+            continue
         parsed=effect(body[:1].lower()+body[1:])
         if parsed is None:return None
         try:program=compile_effects((parsed,))

@@ -432,6 +432,7 @@ class Simulator(AdvancedRules):
         self._draining_priority=False
         self._resolving_stack=False
         self._waiting_triggers=[]
+        self.loyalty_long_modifiers=[]  # Identity-bound until-controller-next-turn effects.
         self.aura_exiles={}  # Aura object id -> (owner seat, physical card) still in exile.
         self.linked_exiles={}  # (source id, entry identity) -> cards exiled by its ETB trigger.
         self.life_gained_turn=[0,0]
@@ -5060,6 +5061,8 @@ class Simulator(AdvancedRules):
                 return False
             if self.phase == "end": self.active = 1 - self.active
             self.turn += 1
+            from planeswalker_duration import beginning_of_turn
+            beginning_of_turn(self,self.active)
             self.once_per_turn_entries.clear()
             self.attacked_this_turn.clear()
             self.stack.active=self.active;self.stack.priority=self.active
@@ -5121,7 +5124,7 @@ class Simulator(AdvancedRules):
                 self.activate_class_level(self.active,choice.card_id)
             elif choice.kind=='activate_loyalty':
                 from planeswalker_runtime import activate as activate_loyalty
-                activate_loyalty(self,self.active,choice.card_id,choice.activation_index)
+                activate_loyalty(self,self.active,choice.card_id,choice.activation_index,choice.target_permanent)
             elif choice.kind=='copy_enchantment_ability':
                 self.activate_enchantment_copy(self.active,choice.card_id,choice.target_stack)
             elif choice.kind=='activate_strip':
@@ -5362,6 +5365,8 @@ class Simulator(AdvancedRules):
                     item.temporary_set_colors=None
             game = self.event_game("cleanup")
             game.cleanup()
+            from planeswalker_duration import after_cleanup
+            after_cleanup(self,game)
             self.sync_events(game)
             for owner in self.players:
                 for attached in list(owner.battlefield):

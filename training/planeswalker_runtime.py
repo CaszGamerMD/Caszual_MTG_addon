@@ -15,14 +15,23 @@ def legal(sim,seat):
             continue
         for index,ability in enumerate(card.loyalty_program.abilities):
             if item.loyalty+ability.delta<0:continue
-            power=sum(block.amount for block in ability.program.blocks)
-            result.append(Candidate(card.id+':loyalty:'+str(index),
-                'activate_loyalty',card.id,features=features(power=power),
-                label='Activate loyalty '+str(ability.delta)+' of '+card.name,
-                activation_index=index))
+            options=('',)
+            if ability.target_kind=='up_to_one_creature':
+                options+=tuple(permanent.card.id for _,permanent
+                               in sim.creature_targets(seat,card))
+            power=(sum(block.amount for block in ability.program.blocks)
+                   if ability.effect_kind=='atomic' else
+                   ability.program.amount if ability.effect_kind=='mill_optional_creature_return'
+                   else 1)
+            for target in options:
+                result.append(Candidate(card.id+':loyalty:'+str(index)+':target='+target,
+                    'activate_loyalty',card.id,features=features(
+                        power=power+(1 if target else 0)),
+                    label='Activate loyalty '+str(ability.delta)+' of '+card.name,
+                    activation_index=index,target_permanent=target))
     return tuple(result)
 
-def activate(sim,seat,source_id,index):
+def activate(sim,seat,source_id,index,target=''):
     if type(index) is not int:raise ValueError('Invalid loyalty ability index')
     selected=next((item for item in sim.players[seat].battlefield
                    if item.card.id==source_id),None)
@@ -33,7 +42,7 @@ def activate(sim,seat,source_id,index):
     if not 0<=index<len(card.loyalty_program.abilities):
         raise ValueError('Unknown loyalty ability')
     if not any(x.card_id==source_id and x.activation_index==index
-               for x in legal(sim,seat)):
+               and x.target_permanent==target for x in legal(sim,seat)):
         raise ValueError('Loyalty activation timing, cost or limit invalid')
     ability=card.loyalty_program.abilities[index]
     # The loyalty change is a COST, paid before the opponent gets priority.
@@ -42,7 +51,7 @@ def activate(sim,seat,source_id,index):
     sim.stack.active=sim.active
     frame=sim.stack.push(seat,(dict(operation='loyalty_ability',
         sourceType='Planeswalker',controller=seat,source=card.id,
-        abilityIndex=index,program=ability.program),card),
+        abilityIndex=index,program=ability.program,target=target),card),
         card.name+' loyalty '+str(ability.delta))
     sim.stack.priority=seat
     sim.log('loyalty_activation','Loyalty counters paid and ability added to stack.',
@@ -54,11 +63,52 @@ def activate(sim,seat,source_id,index):
 
 def resolve(sim,event,card):
     plan=event.get('program')
-    if card.loyalty_program is None or not any(
-            step.program is plan for step in card.loyalty_program.abilities):
+    index=event.get('abilityIndex')
+    if (card.loyalty_program is None or type(index) is not int
+            or index<0 or index>=len(card.loyalty_program.abilities)
+            or card.loyalty_program.abilities[index].program is not plan):
         raise RuntimeError('Unverified loyalty stack program')
-    sim._resolve_entry_effects([plan.stack_event(
-        controller=event['controller'],source=card.id,name=card.name)],card)
+    ability=card.loyalty_program.abilities[index]
+    if ability.effect_kind=='atomic':
+        sim._resolve_entry_effects([plan.stack_event(
+            controller=event['controller'],source=card.id,name=card.name)],card)
+    elif ability.effect_kind=='timed_modifier':
+        from planeswalker_duration import apply
+        target=event.get('target','')
+        if target:
+            legal={permanent.card.id:permanent for _,permanent
+                   in sim.creature_targets(event['controller'],card)}
+            if target not in legal:
+                sim.log('loyalty_target_fizzle','The loyalty target became illegal.',
+                        source=card.id,target=target)
+                return
+            apply(sim,legal[target],event['controller'],plan.power,plan.toughness)
+            sim.log('loyalty_timed_modifier','Targeted loyalty effect lasts until your next turn.',
+                    actor=event['controller'],source=card.id,target=target,
+                    power=plan.power,toughness=plan.toughness)
+        else:
+            sim.log('loyalty_no_target','Optional creature target was not selected.',
+                    actor=event['controller'],source=card.id)
+        sim.resolve_entry_triggers(sim.state_based_actions(),card)
+    elif ability.effect_kind=='mill_optional_creature_return':
+        sim._resolve_entry_effects([dict(operation='mill_cards',controller=event['controller'],
+            source=card.id,name=card.name,amount=plan.amount,
+            recipient='controller')],card)
+        player=sim.players[event['controller']]
+        choices=tuple(x for x in player.graveyard if x.kind=='creature'
+                      or 'Creature' in x.printed_types)
+        # The current diagnostic policy elects to return the lowest stable id.
+        # The choice is after milling, and may include a previously milled card.
+        if choices:
+            chosen=min(choices,key=lambda x:x.id)
+            player.graveyard.remove(chosen);player.hand.append(chosen)
+            sim.log('loyalty_graveyard_return','An optional creature card is returned.',
+                    actor=event['controller'],source=card.id,card=chosen.name)
+        else:
+            sim.log('loyalty_no_return','No creature card is available to return.',
+                    actor=event['controller'],source=card.id)
+    else:
+        raise RuntimeError('Unhandled compiled loyalty ability kind')
     sim.log('loyalty_resolve','Planeswalker loyalty ability resolves.',
             actor=event['controller'],source=card.id,
             index=event['abilityIndex'])
