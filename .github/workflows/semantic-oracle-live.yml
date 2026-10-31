@@ -67,7 +67,7 @@ jobs:
         run: |
           python -m unittest discover -s training/tests -p test_oracle_semantic_reader.py -q
           python -m unittest discover -s training/tests -p test_scryfall_random_exam.py -q
-      - name: Read five random cards with the configured model
+      - name: Read bounded random cards with the configured model
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           CARDS: ${{ steps.config.outputs.cards }}
@@ -83,6 +83,10 @@ jobs:
             --out training/reports/live-oracle-semantic-exam
       - name: Audit model proposals in bounded job logs
         run: |
+          python training/semantic_block_audit.py \
+            --source training/reports/live-oracle-semantic-exam/scryfall-source.json \
+            --proposals training/reports/live-oracle-semantic-exam/semantic-proposals.json \
+            --out training/reports/live-oracle-semantic-exam/semantic-block-audit.json
           python - <<'PY'
           import json
           from pathlib import Path
@@ -91,6 +95,8 @@ jobs:
           for card in report['cards']:
               print('SEMANTIC_CARD ' + json.dumps({
                   'card': card['card'],
+                  'status': card['semanticStatus'],
+                  'rejectionReason': card.get('rejectionReason', ''),
                   'units': [{
                       'source': u['source'],
                       'category': u['category'],
@@ -106,6 +112,12 @@ jobs:
               {k: c[k] for k in ('capability', 'cardCount', 'unsupportedDiagnosticCards')}
               for c in report['capabilities']
           ]))
+          blocks = json.loads(Path('training/reports/live-oracle-semantic-exam/semantic-block-audit.json').read_text(encoding='utf-8'))
+          print('SEMANTIC_BLOCK_AUDIT ' + json.dumps({
+              key: blocks[key] for key in ('totalCards', 'evidenceCheckedCards',
+                  'rejectedCards', 'potentialHandlerOperations',
+                  'missingHandlerOperations', 'handlerCounts', 'verbCounts')
+          }))
           PY
       - name: Retain random sources, diagnostic verdicts and semantic proposals
         if: always()
