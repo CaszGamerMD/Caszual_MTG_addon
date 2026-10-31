@@ -3967,6 +3967,15 @@ class Simulator(AdvancedRules):
                     message=f"{event['name']}: enchanted creature receives counters."
                 else:
                     message=f"{event['name']}: no currently enchanted creature."
+            elif event.get('operation')=='untap_self':
+                source=next((item for player in self.players for item in player.battlefield
+                             if item.card.id==event['source']),None)
+                if source and source.card.event_definition and source.card.event_definition.death_untap_self:
+                    source.tapped=False
+                self.log('untap_self','Death-triggered untap resolves.',
+                         actor=event['controller'],source=event['source'],
+                         untapped=source is not None)
+                continue
             elif event.get('operation')=='self_counter':
                 if event.get('optional') and not self.choose_optional_self_counter(event):
                     message=f"{event['name']}: its controller declines the counter."
@@ -4696,7 +4705,9 @@ class Simulator(AdvancedRules):
             self.phase = "untap"
             p = self.players[self.active]
             for x in p.battlefield:
-                x.tapped, x.fresh = False, False
+                if not (x.card.event_definition and x.card.event_definition.skip_untap_step):
+                    x.tapped=False
+                x.fresh=False
             self.log("untap", f"Player {self.active + 1} starts turn {self.turn} and untaps.")
         elif self.phase == "untap":
             self.phase = "upkeep"
@@ -5106,7 +5117,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     parsed = audit_card(rules, definition)
     event_definition = parse_event_card(definition)
     allowed = (definition["name"] in ("Kolodin, Triumph Caster", "Zurgo Helmsmasher", "Brightfield Mustang", "Nested Shambler")
-               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.group_attack_subtype_tokens or event_definition.sacrifice_token_activations or event_definition.once_tribal_entry_tokens or event_definition.tribal_pump_activations or event_definition.group_token_entry_counters or event_definition.raid_entry_counters or event_definition.scaled_life_tap or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace", "shroud", "flash",
+               or bool(event_definition.triggers or event_definition.static_effects or event_definition.attack_effects or event_definition.group_attack_subtype_tokens or event_definition.sacrifice_token_activations or event_definition.once_tribal_entry_tokens or event_definition.tribal_pump_activations or event_definition.group_token_entry_counters or event_definition.raid_entry_counters or event_definition.skip_untap_step or event_definition.death_untap_self or event_definition.tap_damage_amount or event_definition.scaled_life_tap or event_definition.attachment or event_definition.activations or event_definition.devotion or event_definition.bestow or bool({"hexproof", "menace", "shroud", "flash",
                         "flying", "reach", "haste", "first strike", "double strike",
                         "vigilance", "lifelink", "deathtouch", "trample",
                         "defender", "indestructible", "changeling"} & event_definition.abilities)
