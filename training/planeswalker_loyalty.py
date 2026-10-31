@@ -83,6 +83,13 @@ def compile_card(card):
             if emblem is None:return None
             abilities.append(LoyaltyAbility(delta,emblem,effect_kind='emblem'))
             continue
+        from planeswalker_conditional import compile_ability,DrawThenConditionalDiscard,UnblockableTokenProgram
+        candidate=compile_ability(body)
+        if candidate is not None:
+            family=('draw_conditional_discard' if isinstance(candidate,DrawThenConditionalDiscard)
+                    else 'unblockable_tokens')
+            abilities.append(LoyaltyAbility(delta,candidate,effect_kind=family))
+            continue
         parsed=effect(body[:1].lower()+body[1:])
         if parsed is None:return None
         try:program=compile_effects((parsed,))

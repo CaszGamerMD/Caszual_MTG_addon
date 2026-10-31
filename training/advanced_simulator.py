@@ -186,6 +186,7 @@ class AdvancedRules:
   g=self.event_game('combat');a=g.battlefield.get(attacker.card.id);b=g.battlefield.get(blocker.card.id)
   return bool(a and b and g.creature(a) and g.creature(b) and not blocker.tapped
    and not self.landwalk_unblockable(attacker,g)
+   and not g.has(a,'unblockable')
    and not self.blocker_power_forbidden(attacker,blocker,g)
    and (not g.has(a,'fear') or 'Artifact' in b.definition.types or 'Black' in b.definition.colors)
    and (not g.has(a,'flying') or g.has(b,'flying') or g.has(b,'reach'))

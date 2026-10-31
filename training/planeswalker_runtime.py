@@ -110,6 +110,9 @@ def resolve(sim,event,card):
     elif ability.effect_kind=='emblem':
         from planeswalker_emblems import create
         create(sim,event['controller'],plan,card)
+    elif ability.effect_kind in ('draw_conditional_discard','unblockable_tokens'):
+        from planeswalker_conditional import resolve as resolve_conditional
+        resolve_conditional(sim,event,card,ability)
     else:
         raise RuntimeError('Unhandled compiled loyalty ability kind')
     sim.log('loyalty_resolve','Planeswalker loyalty ability resolves.',
