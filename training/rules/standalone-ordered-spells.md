@@ -8,8 +8,11 @@
   life.` Both verbs still compile as independent existing `Effect` atoms.
 - For ordinary Instant/Sorcery cards, `import_diagnostic_card` now accepts a
   **whole-text** `ordered_effects` program containing two through eight
-  self/controller draw, gain-life, and lose-life instructions. Each must be
-  target-free and mandatory; unknown text rejects the entire card.
+  self/controller draw, gain-life, lose-life, scry, surveil, or explicit token-
+  creation instructions. Independent period-terminated Oracle lines can also
+  compose, so token creation followed by surveil/scry does not require a
+  special card parser. Each instruction must be target-free and mandatory;
+  unknown text rejects the entire card.
 - `sequence_spell` resolves using the **same** `_resolve_entry_effects` ordered
   executor as a triggered sequence. Nothing executes when the spell is cast:
   it waits on the stack, then draws/gains/loses in Oracle order at resolution.
@@ -22,14 +25,15 @@ result is promoted to `learningEligible=true`.
 
 ## Probes and boundaries
 
-- The real paper-legal **Night's Whisper** card compiles without any special
-  case. Changed names, amounts, costs, and Instant timing are tested.
+- The real paper-legal **Night's Whisper** and **Muse's Encouragement** cards
+  compile without name cases. Changed names, amounts, costs, Instant timing,
+  and an unseen two-tapped-Elk-then-scry program are tested.
 - A three-instruction unseen spell exercises shared subject and sequential
   gain, draw, then loss.
 - Extra sentences, choices, targets, conditional costs, and unrelated card
   types must fail closed rather than execute partial instructions.
-- The saved 15-card random Scryfall snapshot changes from **0 to 1** accepted
-  diagnostic cards; this is 1/15 **importer coverage**, not full game proof.
+- The saved 15-card random Scryfall snapshot changes from **0 to 2** accepted
+  diagnostic cards; this is 2/15 **importer coverage**, not full game proof.
 
 Run `python3 -m unittest discover -s training/tests -q` and optionally
 `python3 training/scryfall_random_exam.py --count 5 --rounds 3 --source

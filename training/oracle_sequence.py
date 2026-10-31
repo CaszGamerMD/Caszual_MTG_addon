@@ -29,7 +29,15 @@ def parse_sequence(text: str, atom):
     """Return a tuple of fully parsed atomic Effect objects, or None."""
     if not text.endswith("."):
         return None
-    pieces = _SEP.split(text[:-1])
+    if '\n' in text:
+        # Scryfall puts independent Oracle sentences on separate lines,
+        # including spells which create a token and then surveil. Accept
+        # only whole, period-terminated lines, never a leftover fragment.
+        lines=text.splitlines()
+        if any(not line or not line.endswith('.') for line in lines):return None
+        pieces=[line[:-1] for line in lines]
+    else:
+        pieces = _SEP.split(text[:-1])
     if len(pieces)<2 or len(pieces)>8:
         return None
     compiled=[]
@@ -43,7 +51,7 @@ def parse_sequence(text: str, atom):
         # Never infer a subject across an unsupported or target-dependent verb.
         if re.match(r'^you\s+',chunk,re.IGNORECASE):
             subject_is_you=True
-        elif subject_is_you and re.match(r'^(draw|gain|lose)\b',chunk,re.IGNORECASE):
+        elif '\n' not in text and subject_is_you and re.match(r'^(draw|gain|lose)\b',chunk,re.IGNORECASE):
             chunk='you '+chunk
         else:
             subject_is_you=False

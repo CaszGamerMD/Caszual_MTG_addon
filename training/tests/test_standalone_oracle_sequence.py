@@ -1,6 +1,7 @@
 """Target-free spells reuse the ordered Oracle effect interpreter, fail closed."""
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
@@ -83,6 +84,48 @@ class StandaloneOracleSequenceChecks(unittest.TestCase):
         self.assertEqual(sim.players[0].life,42)
         self.assertEqual(len(sim.players[0].library),before-2)
         sim.invariant()
+
+    def test_muses_encouragement_creates_token_then_surveils_on_resolution(self):
+        oracle=('Create a 3/3 blue and red Elemental creature token with flying.\n'
+                'Surveil 2. (Look at the top two cards of your library, then put any number '
+                'of them into your graveyard and the rest on top of your library in any order.)')
+        card=self.card(oracle,name="Muse's Encouragement",types=('Instant',),cost='{3}{U}')
+        self.assertEqual(card.kind,'sequence_spell')
+        self.assertEqual([step.operation for step in card.sequence_effects],
+                         ['create_tokens','surveil'])
+        sim=self.fixture(card)
+        p=sim.players[0];before=len(p.library)
+        sim.cast_spell(0,card)
+        self.assertFalse(any(x.card.is_token for x in p.battlefield))
+        with patch.object(sim,'choose_surveil_graveyard',return_value=True):
+            self.drain(sim)
+        self.assertEqual(len(p.library),before-2)
+        self.assertEqual(len(p.graveyard),3)  # Spell, plus two surveilled cards.
+        tokens=[x for x in p.battlefield if x.card.is_token]
+        self.assertEqual(len(tokens),1)
+        self.assertEqual((tokens[0].card.power,tokens[0].card.toughness),(3,3))
+        self.assertEqual(tokens[0].card.event_definition.colors,frozenset({'Blue','Red'}))
+        self.assertIn('flying',tokens[0].card.event_definition.abilities)
+        token_event=next(i for i,e in enumerate(sim.events)
+                         if e['details'].get('operation')=='create_tokens')
+        surveil_event=next(i for i,e in enumerate(sim.events) if e['kind']=='surveil')
+        self.assertLess(token_event,surveil_event)
+        sim.invariant()
+
+    def test_unseen_tapped_token_and_scry_sequence_with_strict_remainder(self):
+        oracle='Create two tapped 2/3 green Elk creature tokens with reach.\nScry 3.'
+        card=self.card(oracle,name='Unfamiliar forest vision',types=('Sorcery',),cost='{2}{G}')
+        self.assertEqual(card.kind,'sequence_spell')
+        sim=self.fixture(card)
+        sim.cast_spell(0,card);self.drain(sim)
+        tokens=[x for x in sim.players[0].battlefield if x.card.is_token]
+        self.assertEqual(len(tokens),2)
+        self.assertTrue(all(x.tapped and 'reach' in x.card.event_definition.abilities
+                            for x in tokens))
+        self.assertTrue(any(e['kind']=='scry' for e in sim.events))
+        sim.invariant()
+        self.assertEqual(self.card(oracle+'\nSacrifice any number of creatures.',
+                           name='Unknown impossible addendum').kind,'unsupported')
 
     def test_unknown_remainder_targets_choices_and_nonspells_reject(self):
         for text in ('You draw two cards and lose 2 life. Gain 4 life.',

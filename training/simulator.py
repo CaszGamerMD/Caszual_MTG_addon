@@ -2776,7 +2776,9 @@ class Simulator(AdvancedRules):
             # Reuse the same ordered-effect executor as triggered abilities;
             # the spell has already moved to its graveyard (or was a copy).
             steps=[dict(operation=part.operation,amount=part.amount,
-                        recipient=part.recipient,gain=part.gain)
+                        recipient=part.recipient,gain=part.gain,
+                        **({'tokenSpec':dict(asdict(part.token),
+                            keywords=sorted(part.token.keywords))} if part.token else {}))
                    for part in card.sequence_effects]
             self._resolve_entry_effects([dict(operation='ordered_effects',
                 controller=controller,source=card.id,name=card.name,
@@ -5388,10 +5390,12 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         # targets or other Oracle text must reject the *whole* card.
         if (program is not None and program.operation=='ordered_effects'
                 and 2<=len(program.steps)<=8
-                and all(step.operation in ('draw_cards','gain_life','lose_life')
+                and all(step.operation in ('draw_cards','gain_life','lose_life',
+                                           'create_tokens','scry','surveil')
                         and step.recipient in ('controller','self')
                         and not step.optional and not step.steps and not step.gain
                         and not step.controller_loss and step.amount>0
+                        and (step.operation!='create_tokens' or step.token is not None)
                         for step in program.steps)):
             parsed={'kind':'sequence_spell','sequence_effects':program.steps}
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
