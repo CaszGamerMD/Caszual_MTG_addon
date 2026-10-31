@@ -68,6 +68,7 @@ class StaticEffect:
     requires_attachment: bool = False  # Enchanted/equipped creature only.
     requires_keyword: str = ''  # Dynamic keyword filter on affected creature.
     requires_plus_one_counter: bool = False  # Live +1/+1 counters on target.
+    attachment_count_kinds: tuple[str, ...] = ()  # Per attached Aura or Equipment, not merely attached state.
 
 @dataclass(frozen=True)
 class Effect:
@@ -134,6 +135,15 @@ def static_effect(text):
         if counter_keyword[1] not in KEYWORDS-{'flash'}:return None
         return StaticEffect(Selector(relation='controller',creature=True),
                             0,0,grant=counter_keyword[1],requires_plus_one_counter=True)
+    per_attachment=re.fullmatch(
+        r'This creature gets ([+-][0-9]+)/([+-][0-9]+) for each '
+        r'(Equipment|Aura|Aura and Equipment) attached to it\\.',text)
+    if per_attachment:
+        kinds={'Equipment':('equipment',),'Aura':('aura',),
+               'Aura and Equipment':('aura','equipment')}[per_attachment[3]]
+        return StaticEffect(Selector(self_only=True,creature=True),
+                            int(per_attachment[1]),int(per_attachment[2]),
+                            attachment_count_kinds=kinds)
     # A global subtype anthem applies to both players' creatures, unlike
     # "you control" lords. Do not infer the controller from a card name.
     global_subtype=re.fullmatch(
