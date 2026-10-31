@@ -3706,6 +3706,21 @@ class Simulator(AdvancedRules):
                         finally:self._rebound_permission=None
                     else:self.log('rebound_declined','No chosen legal non-token target; the spell remains exiled.',actor=owner)
                 continue
+            if event.get('operation')=='tribal_team_pump':
+                game=self.event_game('main');affected=[]
+                for state in game.battlefield.values():
+                    if (state.controller!=event['controller'] or not game.creature(state)
+                            or not has_subtype(state.definition,event['subtype'])):
+                        continue
+                    state.temporary_power+=event['power']
+                    state.temporary_toughness+=event['toughness']
+                    game.grant_temporary(state,event['keyword'])
+                    affected.append(state.id)
+                self.sync_events(game)
+                self.log('tribal_team_pump','Paid tribal boost resolves on current members.',
+                         actor=event['controller'],subtype=event['subtype'],
+                         keyword=event['keyword'],affected=affected)
+                continue
             if event.get('operation')=='team_keyword_pump':
                 game=self.event_game('main');affected=[]
                 for state in game.battlefield.values():
