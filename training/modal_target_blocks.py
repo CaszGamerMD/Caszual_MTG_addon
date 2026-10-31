@@ -29,9 +29,11 @@ _RULES = (
     (re.compile(r"Destroy target (artifact|enchantment)\.", re.I), "destroy"),
     (re.compile(r"Exile target (artifact|enchantment)\.", re.I), "exile"),
     (re.compile(r"Deal ([1-9][0-9]*) damage to target creature\.", re.I), "damage"),
+    (re.compile(r"Exile target card from a graveyard\.", re.I), "exile_graveyard"),
+    (re.compile(r"(.+?) deals ([1-9][0-9]*) damage to target creature\."), "source_damage"),
 )
 
-def parse(text, types):
+def parse(text, types, card_name=""):
     """Accept only complete, explicitly supported choose-one/two modal spells."""
     if not isinstance(text, str) or not set(types).intersection(("Instant", "Sorcery")):
         return None
@@ -52,11 +54,15 @@ def parse(text, types):
         for pattern, operation in _RULES:
             match = pattern.fullmatch(clause)
             if match:
-                if operation == "damage":
-                    amount = int(match.group(1))
+                if operation in ("damage", "source_damage"):
+                    if operation=="source_damage" and card_name and match.group(1)!=card_name:
+                        return None
+                    amount = int(match.group(2) if operation=="source_damage" else match.group(1))
                     if amount > 1000:
                         return None
                     mode = Mode("damage", "creature", amount)
+                elif operation == "exile_graveyard":
+                    mode = Mode("exile", "graveyard")
                 else:
                     mode = Mode(operation, match.group(1).lower())
                 break
