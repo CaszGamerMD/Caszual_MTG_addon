@@ -479,8 +479,7 @@ class Simulator(AdvancedRules):
                 if self.diagnostic and card.kind=='counted_spell' and card.counted_program:
                     continue
                 if (self.diagnostic and card.kind=='planeswalker'
-                        and card.loyalty_program is not None
-                        and card.event_definition and card.event_definition.supported):
+                        and card.loyalty_program is not None):
                     continue
                 if card.kind not in ("land", "creature", "spell"):
                     self.pause("Unsupported sandbox card kind: " + card.kind, card)
