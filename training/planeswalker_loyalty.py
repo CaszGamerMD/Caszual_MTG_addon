@@ -75,6 +75,14 @@ def compile_card(card):
             abilities.append(LoyaltyAbility(delta,MillThenOptionalCreatureReturn(count),
                                             effect_kind='mill_optional_creature_return'))
             continue
+        # Parse the complete emblem instruction, including the quoted
+        # delayed trigger. Do not permit unsupported embedded clauses.
+        if body.startswith('You get an emblem with '):
+            from planeswalker_emblems import compile_emblem
+            emblem=compile_emblem(body)
+            if emblem is None:return None
+            abilities.append(LoyaltyAbility(delta,emblem,effect_kind='emblem'))
+            continue
         parsed=effect(body[:1].lower()+body[1:])
         if parsed is None:return None
         try:program=compile_effects((parsed,))

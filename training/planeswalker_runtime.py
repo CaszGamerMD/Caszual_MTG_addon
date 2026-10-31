@@ -107,6 +107,9 @@ def resolve(sim,event,card):
         else:
             sim.log('loyalty_no_return','No creature card is available to return.',
                     actor=event['controller'],source=card.id)
+    elif ability.effect_kind=='emblem':
+        from planeswalker_emblems import create
+        create(sim,event['controller'],plan,card)
     else:
         raise RuntimeError('Unhandled compiled loyalty ability kind')
     sim.log('loyalty_resolve','Planeswalker loyalty ability resolves.',

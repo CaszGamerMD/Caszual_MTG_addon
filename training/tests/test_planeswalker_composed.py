@@ -68,13 +68,13 @@ class ComposedLoyaltyTests(unittest.TestCase):
             'Mill two cards','Mill three cards'),name='Unseen new planeswalker')
         self.assertEqual(compile_card(altered).abilities[0].program.power,-3)
         self.assertEqual(compile_card(altered).abilities[1].program.amount,3)
-        for text in (LILIANA_PAIR+'\n'+LILIANA_ULTIMATE,
-                     LILIANA_PAIR.replace('a creature card','any card'),
+        self.assertIsNotNone(compile_card(self.raw(text=LILIANA_PAIR+'\n'+LILIANA_ULTIMATE)))
+        for text in (LILIANA_PAIR.replace('a creature card','any card'),
                      LILIANA_PAIR.replace('until your next turn','until end of turn'),
                      LILIANA_PAIR+'\nAt end step, draw a card.'):
             with self.subTest(text=text):
                 self.assertIsNone(compile_card(self.raw(text=text)))
-        self.assertFalse(inspect_card(self.raw(text=LILIANA_PAIR+'\n'+LILIANA_ULTIMATE))['executionReady'])
+        self.assertTrue(inspect_card(self.raw(text=LILIANA_PAIR+'\n'+LILIANA_ULTIMATE))['executionReady'])
 
     def test_target_binding_before_payment_and_no_target_is_allowed(self):
         sim,pw,target=self.setup_game()

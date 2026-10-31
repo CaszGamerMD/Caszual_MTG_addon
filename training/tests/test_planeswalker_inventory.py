@@ -19,7 +19,8 @@ class SavedPlaneswalkerChecks(unittest.TestCase):
             with self.subTest(name=name):
                 card=names[name]
                 self.assertEqual(card['startingLoyalty'],'3')
-                self.assertFalse(card['executionReady'])
+                self.assertEqual(card['executionReady'],
+                                 name=='Liliana, the Last Hope')
                 self.assertEqual(len(card['loyaltyAbilities']),3)
         self.assertFalse(result['learningEligible'])
 

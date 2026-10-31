@@ -433,6 +433,8 @@ class Simulator(AdvancedRules):
         self._resolving_stack=False
         self._waiting_triggers=[]
         self.loyalty_long_modifiers=[]  # Identity-bound until-controller-next-turn effects.
+        self.emblems={0:[],1:[]}  # Owned nonpermanent objects surviving their source.
+        self.emblem_sequence=0
         self.aura_exiles={}  # Aura object id -> (owner seat, physical card) still in exile.
         self.linked_exiles={}  # (source id, entry identity) -> cards exiled by its ETB trigger.
         self.life_gained_turn=[0,0]
@@ -550,7 +552,10 @@ class Simulator(AdvancedRules):
                              "commanderInZone": p.command_zone is not None,
                              "commanderDamage": dict(p.commander_damage),
                              "graveyard": [{"id": c.id, "name": c.name} for c in p.graveyard],
-                             "exile": [{"id":c.id,"name":c.name} for c in p.exile]}
+                             "exile": [{"id":c.id,"name":c.name} for c in p.exile],
+                             **({"emblems":[{"id":e.id,"name":e.origin.name,
+                                     "trigger":"controller_end_step"} for e in self.emblems[i]]}
+                                if self.emblems[i] else {})}
                             for i, p in enumerate(self.players)]}
 
     def invariant(self):
@@ -1065,6 +1070,9 @@ class Simulator(AdvancedRules):
                 elif item.payload[0].get('operation')=='loyalty_ability':
                     from planeswalker_runtime import resolve as resolve_loyalty
                     resolve_loyalty(self,item.payload[0],item.payload[1])
+                elif item.payload[0].get('operation')=='emblem_end_step':
+                    from planeswalker_emblems import resolve_end_step
+                    resolve_end_step(self,item.payload[0],item.payload[1])
                 else: self._resolve_entry_effects([item.payload[0]],item.payload[1])
             finally:
                 self._resolving_stack=False
@@ -5345,6 +5353,8 @@ class Simulator(AdvancedRules):
                     source=next(item.card for item in self.players[self.active].battlefield if item.card.id==event['source'])
                     self._waiting_triggers.append((event,source))
                 self._waiting_triggers.extend(self.queue_life_counter_triggers(game))
+                from planeswalker_emblems import queue_end_step
+                queue_end_step(self)
                 self.resolve_entry_triggers([],Card('end-step','End step','spell'))
                 return True
             if self.stack.items:
