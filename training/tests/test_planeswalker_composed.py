@@ -100,6 +100,8 @@ class ComposedLoyaltyTests(unittest.TestCase):
         sim.phase='cleanup'
         sim._step()
         self.assertEqual((target.temporary_power,target.temporary_toughness),(-2,-1))
+        self.assertEqual(sim.phase,'end',(sim.phase,sim.result,sim.events[-5:]))
+        self.assertFalse(sim.finished,(sim.result,sim.events[-7:]))
         sim._step() # opponent turn begins
         self.assertEqual(sim.active,1)
         sim.phase='cleanup';sim._step()
