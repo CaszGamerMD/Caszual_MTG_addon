@@ -930,6 +930,7 @@ class Game:
             bonus=entry_counters.get(permanent.id,0)
             if bonus:
                 permanent.counters+=self.counter_amount(permanent.id,bonus,sources=incumbents)
+        group_token_watchers=set()
         for permanent in permanents:
             self.emit("enters", id=permanent.id, name=permanent.definition.name,
                       controller=permanent.controller, types=sorted(permanent.definition.types),
@@ -955,6 +956,17 @@ class Game:
                           source=permanent.id,name=permanent.definition.name,controller=permanent.controller,
                           amount=permanent.definition.entry_attachment_counters)
             for watcher in list(self.battlefield.values()):
+                # A single simultaneous token batch triggers this ability only
+                # once per source, even when ten or more tokens enter together.
+                if (permanent.token and watcher.controller==permanent.controller
+                        and watcher.definition.group_token_entry_counters
+                        and watcher.id not in group_token_watchers):
+                    group_token_watchers.add(watcher.id)
+                    self.emit('trigger',operation='self_counter',
+                        effect='counter after one or more controlled tokens enter',
+                        source=watcher.id,name=watcher.definition.name,
+                        controller=watcher.controller,
+                        amount=watcher.definition.group_token_entry_counters)
                 if (watcher.definition.modal_role_choices
                         and watcher.controller==permanent.controller
                         and self.creature(permanent)
