@@ -93,6 +93,9 @@ class Definition:
     tribal_pump_activations: tuple = ()  # (cost, subtype, power, toughness, keyword)
     group_token_entry_counters: int = 0  # One counter trigger per simultaneous token batch.
     raid_entry_counters: int = 0  # Replacement: enter with counters if controller attacked this turn.
+    skip_untap_step: bool = False  # Static restriction applies only to regular untap step.
+    death_untap_self: bool = False  # Each creature death creates an independent untap trigger.
+    tap_damage_amount: int = 0  # Tap cost deals n damage to a chosen any-target on the stack.
     attachment: tuple = ()
     activations: tuple = ()
     self_pump: tuple = ()  # Mana cost, power, toughness until EOT.
@@ -405,6 +408,17 @@ def parse_card(card: dict) -> Definition:
         return Definition(**base,abilities=frozenset(),attachment=umbra,umbra_armor=True)
     attachment=parse_with_intrinsic(text,types,subtypes)
     if attachment:return Definition(**base,abilities=attachment[0],attachment=attachment[1])
+    from tap_damage_abilities import parse as parse_tap_damage
+    tap_program=parse_tap_damage(text,types)
+    if tap_program:
+        skip_untap,death_untap,amount,remainder=tap_program
+        program=compile_abilities(remainder,name) if remainder else None
+        if not remainder or program:
+            fields=dict(vars(program)) if program else {}
+            abilities=fields.pop('keywords',frozenset())
+            return Definition(**base,abilities=abilities,
+                skip_untap_step=skip_untap,death_untap_self=death_untap,
+                tap_damage_amount=amount,**fields)
     from raid_entry_counters import parse as parse_raid_counters
     raid=parse_raid_counters(text,types)
     if raid:
@@ -1149,6 +1163,12 @@ class Game:
                                  "dead":creature.id,"effect":"create tapped Squirrels",
                                  "amount":max(0,self.stats(creature)[0])})
         for watcher in self.battlefield.values():
+            if watcher.definition.death_untap_self:
+                for creature in dead:
+                    triggers.append(dict(operation='untap_self',
+                        effect='untap this creature when a creature dies',
+                        source=watcher.id,name=watcher.definition.name,
+                        controller=watcher.controller))
             for trigger in watcher.definition.triggers:
                 for creature in dead:
                     if trigger.event == "dies" and matches(trigger.subject,watcher,creature,True):
