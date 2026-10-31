@@ -52,7 +52,12 @@ def compile_card(card):
         phase=re.fullmatch(
             r'At the beginning of your end step, if (.+?) entered this turn, '
             r'(?:he|she|they|it) phases? out\.',lines[0])
-        if not phase or phase[1]!=card.get('name'):return None
+        if not phase:return None
+        printed=card.get('name','')
+        # Oracle often refers to a planeswalker by its first name (Kaito)
+        # rather than the full printed card name (Kaito Shizuki).
+        if not (phase[1]==printed or printed.startswith(phase[1]+' ')):
+            return None
         phase_on_entry=True
         lines=lines[1:]
     if not lines:return None
