@@ -15,7 +15,7 @@ def parse_fixed(text, types):
 
 def parse_counted(text, types):
     """Consume one subtype/creature-count mana clause; preserve all other lines."""
-    if 'Creature' not in types:
+    if not {'Creature','Land'}.intersection(types):
         return None
     lines=[line.strip() for line in text.splitlines() if line.strip()]
     pattern=r'\{T\}: Add \{([WUBRG])\} for each ([A-Z][a-z]+|creature) (you control|on the battlefield)\.'
