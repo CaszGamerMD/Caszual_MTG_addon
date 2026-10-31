@@ -186,6 +186,7 @@ class Card:
     storm: bool = False
     x_effect: str = ""
     token_count: int = 0
+    token_count_rule: tuple = ()  # Live (creature subtype, controller/all) on resolution.
     token_definition: EventDefinition | None = None
     token_tapped: bool = False
     is_token: bool = False
@@ -2688,7 +2689,14 @@ class Simulator(AdvancedRules):
             for resolution in range(1):
                 token_triggers = []
                 game=self.event_game('main')
-                created=game.token_amount(controller,card.token_count)
+                quantity=card.token_count
+                if card.token_count_rule:
+                    subtype,scope=card.token_count_rule
+                    quantity*=sum((scope=='all' or state.controller==controller)
+                        and game.creature(state)
+                        and (subtype=='Creature' or has_subtype(state.definition,subtype))
+                        for state in game.battlefield.values())
+                created=game.token_amount(controller,quantity)
                 template=card.token_definition
                 if template is None: raise RuntimeError("Missing parsed token characteristics")
                 spec=game.replace_creature_token_spec(controller,dict(
@@ -4974,6 +4982,20 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                       "token_definition":template,"token_tapped":token_spec.tapped}
         else:
             parsed = diagnostic_land(definition, identity) or parsed
+    from variable_token_spells import parse as parse_variable_token_spell
+    scaled_tokens=parse_variable_token_spell(rule_text(definition.get('oracleText','')),
+                                               definition.get('types',[]))
+    if (parsed['kind']=='unsupported' and scaled_tokens
+            and rules.query('cost',cost)['supported']):
+        spec,subtype,scope=scaled_tokens
+        template=EventDefinition(' '.join(spec.subtypes),
+            frozenset({'Creature'}|({'Land'} if spec.land else set())|
+                      ({'Enchantment'} if spec.enchantment else set())),
+            frozenset(spec.subtypes),False,spec.power,spec.toughness,
+            spec.keywords,colors=frozenset(spec.colors))
+        parsed={'kind':'token_spell','token_count':spec.amount,
+                'token_count_rule':(subtype,scope),
+                'token_definition':template,'token_tapped':spec.tapped}
     storm_text=rule_text(definition.get('oracleText',''))
     storm_lines=storm_text.splitlines()
     if (parsed['kind']=='unsupported' and definition.get('types')==['Sorcery'] and len(storm_lines)==2
@@ -5115,6 +5137,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         land_subtypes=tuple(definition.get("subTypes", [])),
         basic_land="Basic" in definition.get("superTypes", []), snow="Snow" in definition.get("superTypes", []), event_definition=parsed.get("event") or (event_definition if event_definition.supported and "Planeswalker" in event_definition.types else None),
         storm=parsed.get("storm",False), x_effect=parsed.get("x_effect",""), token_count=parsed.get("token_count",0),
+        token_count_rule=parsed.get('token_count_rule',()),
         token_definition=parsed.get("token_definition"),token_tapped=parsed.get("token_tapped",False),
         printed_types=tuple(definition.get('types',[])),
         printed_mana_value=library_effects.mana_value(cost) if definition.get('layout','normal') in ('normal','token') else None,
