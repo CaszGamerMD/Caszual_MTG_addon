@@ -7,6 +7,57 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class SubtypeCountedLifeChecks(unittest.TestCase):
+    def test_renamed_tribal_life_tap_and_unknown_remainder(self):
+        for subtype,scope in [('Elf','all'),('Goblin','controller'),('Faerie','all')]:
+            phrase='on the battlefield' if scope=='all' else 'you control'
+            raw=dict(name='Unseen Healer',types=['Creature'],
+                subTypes=[subtype],power='1',toughness='1',
+                oracleText=f'{{T}}: You gain 2 life for each {subtype} {phrase}.')
+            definition=parse_card(raw)
+            self.assertTrue(definition.supported,definition.reason)
+            self.assertEqual(definition.scaled_life_tap,(2,subtype,scope))
+            self.assertFalse(parse_card(dict(raw,
+                oracleText=raw['oracleText']+'\nCreate an unknown reward.')).supported)
+
+    def test_real_wellwisher_counts_both_players_and_changelings(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14435337-lupitas-elves.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Wellwisher')
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(definition.scaled_life_tap,(1,'Elf','all'))
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'wellwisher',{'Green'})
+            self.assertNotEqual(card.kind,'unsupported')
+            sim=s.Simulator(rules,42,decks=(s.demo_deck(0)+[card],
+                s.demo_deck(1)),diagnostic=True)
+            sim.manual_priority=True;sim.phase='main';sim.stack.priority=0
+            owner=sim.players[0]
+            (owner.hand if card in owner.hand else owner.library).remove(card)
+            pending=sim.enter_creature(card,owner)
+            sim.resolve_entry_triggers(pending,card)
+            original=next(p for p in owner.battlefield if p.card.id==card.id)
+            for index,(seat,subtypes,keywords) in enumerate([
+                    (0,('Elf',),()),(1,('Elf',),()),
+                    (0,('Shapeshifter',),('changeling',))]):
+                creature=s.EventDefinition('Unknown Ally',frozenset({'Creature'}),
+                    frozenset(subtypes),False,1,1,frozenset(keywords))
+                unit=s.Card('ally'+str(index),'Unknown Ally','creature',
+                    power=1,toughness=1,event_definition=creature,is_token=True)
+                pending=sim.enter_creature(unit,sim.players[seat])
+                sim.resolve_entry_triggers(pending,unit)
+            before=owner.life
+            with self.assertRaises(ValueError):sim.activate_scaled_life(0,card.id)
+            original.fresh=False
+            sim.activate_scaled_life(0,card.id)
+            self.assertEqual(owner.life,before+4)
+            self.assertTrue(original.tapped)
+            with self.assertRaises(ValueError):sim.activate_scaled_life(0,card.id)
+            sim.invariant()
+
+
 class TribalSacrificeTokenChecks(unittest.TestCase):
     def test_unseen_death_trigger_and_paid_tribal_sacrifice_compose(self):
         text=("Whenever this creature or another Goblin you control dies, "
