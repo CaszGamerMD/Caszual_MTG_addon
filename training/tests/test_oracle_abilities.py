@@ -7,6 +7,51 @@ from card_events import parse_card, Game, Permanent, Definition
 from oracle_abilities import compile_abilities, parse_token_creation
 import simulator as s
 
+class UnrestrictedDeathTriggerChecks(unittest.TestCase):
+    def test_real_lumberknot_observes_all_creature_deaths(self):
+        import json
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks'/
+                         '14435337-lupitas-elves.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Lumberknot')
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(len(definition.triggers),1)
+        self.assertEqual(definition.triggers[0].event,'dies')
+        self.assertEqual(definition.triggers[0].effect.operation,'self_counter')
+        self.assertEqual(definition.triggers[0].subject.relation,'any')
+        with s.RulesBridge() as rules:
+            card=s.import_diagnostic_card(rules,raw,0,'lumberknot',{'Green'})
+            self.assertEqual(card.kind,'creature')
+        any_creature=Definition('Unknown',frozenset({'Creature'}),
+            frozenset({'Goblin'}),False,1,1,frozenset())
+        game=Game()
+        watcher=Permanent('lumber',definition,0)
+        game.enter(watcher)
+        game.enter(Permanent('friendly',any_creature,0))
+        game.enter(Permanent('hostile',any_creature,1))
+        death_events=game.death_triggers(['friendly','hostile'])
+        self.assertEqual(len([x for x in death_events if x.get('operation')=='self_counter']),2)
+        # Both opposing and allied deaths are observed independently.
+        self.assertEqual({x['source'] for x in death_events},{'lumber'})
+        self.assertFalse(parse_card(dict(raw,oracleText=raw['oracleText']
+                                        +'\nDraw ten cards.')).supported)
+
+    def test_unseen_any_creature_death_triggers_repeatedly(self):
+        raw=dict(name='Unseen Death Watcher',types=['Creature'],subTypes=['Elf'],
+                 power='2',toughness='2',
+                 oracleText='Whenever a creature dies, put two +1/+1 counters on this creature.')
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        game=Game()
+        game.enter(Permanent('watcher',definition,0))
+        other=Definition('Unknown',frozenset({'Creature'}),frozenset(),
+                         False,1,1,frozenset())
+        game.enter(Permanent('enemy',other,1))
+        events=game.death_triggers(['enemy'])
+        self.assertEqual(len(events),1)
+        self.assertEqual(events[0]['amount'],2)
+
+
 class AttachedPermanentScalingChecks(unittest.TestCase):
     def test_unseen_aura_equipment_and_equip_only_lords(self):
         examples=(
