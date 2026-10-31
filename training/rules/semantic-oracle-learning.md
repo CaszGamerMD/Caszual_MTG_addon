@@ -101,6 +101,52 @@ failure, color/keyword expiration, conditional token creation and failed cast
 legality. These tests demonstrate an increment in *mechanical* reuse, not
 general semantic verification or full Commander legality.
 
+### Resolution-time quantified effect blocks
+
+`training/counted_effect_blocks.py` adds an immutable `BattlefieldCount`
+operand and `QuantityBlock` compiler. Unlike a literal amount, this operand
+is bound to current `EventGame` state at the **moment its instruction resolves**:
+
+- Relation: permanents you control, permanents opponents control, or any
+  permanent on the battlefield.
+- Kind: creature, artifact, enchantment, land, planeswalker, or a named subtype
+  such as Elf; optional tapped/untapped or nontoken qualification.
+- Effect: multiply a verified literal factor for draw, gain life or creature
+  token creation. The resulting complete `Effect`/`TokenSpec` passes through
+  the same atomic compiler as literal effects. Zero skips only that operation;
+  counts beyond the sandbox's 1000-effect bound pause with an explicit question
+  instead of silently truncating the amount.
+
+The whole-text importer accepts counted spells with additional verified
+fixed steps, and the **same quantity block** can be used after a targeted
+temporary modifier, including one with an Equipment condition. A sequence
+that creates creatures and then draws once per creature recomputes the second
+count after the new tokens exist. This deliberately avoids evaluating count
+expressions at cast time. Unknown clauses, costs, targets, linked quantities,
+unsupported effects, and invalid filter phrases still reject the entire
+program. A model proposal remains untrusted, never executable.
+
+The read-only semantic block inspector now reports `candidateCountOperand`
+when a model operation's potential handler matches a single independently
+parsed count operand in the complete Oracle line. The report records the
+relation, type/subtype, status filter and literal factor for review, but
+retains `executionReady=false`, `approved=false` and
+`learningEligible=false`. This exposes reusable operand families in LLM
+batch audits without treating model claims as gameplay instructions.
+
+Examples of mechanically reusable wording include:
+
+```
+Draw a card for each creature you control.
+You gain 2 life for each Elf you control.
+Create a 1/1 green Saproling creature token for each creature you control.
+Target creature gets +1/+1 until end of turn. Draw a card for each creature you control.
+```
+
+This is a **bounded quantity-binding increment**, not implementation of
+arbitrary numeric Oracle expressions, linked "this way" events, modal choice,
+or triggered abilities with variable amounts.
+
 This is the intended progression:
 
 1. **Read** every source line and face (untrusted semantic proposal).

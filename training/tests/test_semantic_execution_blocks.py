@@ -92,6 +92,26 @@ class SemanticExecutionBlocksChecks(unittest.TestCase):
         with self.assertRaises(ValueError):
             inspect_semantic_proposal(card,proposal)
 
+    def test_counted_oracle_exposes_read_only_candidate_operands_not_execution(self):
+        oracle='Draw a card for each creature you control.'
+        card=dict(name='Unknown quantity',layout='normal',types=['Sorcery'],
+                  oracleText=oracle)
+        proposal=dict(units=[dict(face_index=0,line_index=0,source=oracle,
+            category='spell_effect',timing='',cost='',operations=[dict(
+                verb='draw',evidence='Draw a card',amount='a',subject='you',
+                recipient='you',object='card',qualifier='for each creature you control')],
+            needs=['stack_resolution'],explanation='Untrusted interpretation')],
+            summary='Untrusted',uncertainties=[])
+        report=inspect_semantic_proposal(card,proposal)
+        self.assertEqual(report['candidateOperations'],1)
+        self.assertEqual(report['handlerCandidates'],1)
+        self.assertEqual(report['candidates'][0]['candidateCountOperand'],dict(
+            relation='controller',cardType='Creature',subtype='',tapped=None,
+            nontoken=False,factor=1))
+        self.assertFalse(report['executionReady'])
+        self.assertFalse(report['approved'])
+        self.assertFalse(report['learningEligible'])
+
     def test_saved_report_audit_preserves_rejections_and_source_binding(self):
         sources=[self.source(1,'Draw a card.'),self.source(2,'Draw a card.')]
         cards=[convert_scryfall(source) for source in sources]

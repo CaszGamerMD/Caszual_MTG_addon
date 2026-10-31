@@ -133,10 +133,24 @@ def inspect_semantic_proposal(card: dict, proposal: dict) -> dict:
     dependencies, timing, legality or that the model interpreted text right.
     """
     from oracle_semantic_reader import fingerprint, validate_proposal
+    from counted_effect_blocks import parse as parse_counted_effects
     validate_proposal(card,proposal)
     candidates=[]
     for unit in proposal['units']:
+        # This is read-only discovery: a count operand independently found in
+        # the exact whole Oracle line is a potential handler argument, NEVER
+        # an accepted value from the model or executable permission.
+        counts=parse_counted_effects(unit['source'],card.get('types',()))
+        counted_steps=[step for step in counts.steps if step.count] if counts else []
         for op in unit['operations']:
+            handler=SEMANTIC_HANDLER_CANDIDATES.get(op['verb'])
+            matches=[step for step in counted_steps if step.base.operation==handler]
+            count_binding=None
+            if len(matches)==1:
+                count=matches[0].count
+                count_binding=dict(relation=count.relation,cardType=count.card_type,
+                    subtype=count.subtype,tapped=count.tapped,nontoken=count.nontoken,
+                    factor=matches[0].base.amount)
             candidates.append(dict(sourceOrder=len(candidates),faceIndex=unit['face_index'],
                 lineIndex=unit['line_index'],source=unit['source'],
                 category=unit['category'],verb=op['verb'],
@@ -147,7 +161,7 @@ def inspect_semantic_proposal(card: dict, proposal: dict) -> dict:
                 qualifierExpression=op['qualifier'],
                 timingExpression=unit['timing'],
                 costExpression=unit['cost'],
-                candidateHandler=SEMANTIC_HANDLER_CANDIDATES.get(op['verb']),
+                candidateHandler=handler,candidateCountOperand=count_binding,
                 dependencies=list(unit['needs'])))
     return dict(kind='untrusted-semantic-block-candidates',
                 fingerprint=fingerprint(card),

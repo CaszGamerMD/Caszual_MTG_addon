@@ -207,6 +207,38 @@ class ComposedModifierBlockChecks(unittest.TestCase):
                                     if x.card.kind=='land'))
         sim.invariant()
 
+    def test_counted_follow_on_uses_same_quantity_block_at_resolution(self):
+        oracle=('Target creature gets +1/+1 until end of turn. '
+                'Draw a card for each creature you control.')
+        spell=self.card(oracle,name='Unfamiliar adaptive blessing')
+        self.assertEqual(spell.kind,'modifier_spell')
+        self.assertIsNotNone(spell.modifier_program.steps[1].count)
+        sim,allies,_,_=self.fixture(spell)
+        before=len(sim.players[0].library)
+        sim.cast_spell(0,spell,target=allies[0].id)
+        sim.players[0].battlefield.remove(self.permanent(sim,allies[1]))
+        sim.players[0].graveyard.append(allies[1])
+        self.drain(sim)
+        self.assertEqual(self.permanent(sim,allies[0]).temporary_power,1)
+        self.assertEqual(len(sim.players[0].library),before-1)
+        self.assertEqual([e['details']['quantity'] for e in sim.events
+                          if e['kind']=='counted_binding'],[1])
+        sim.invariant()
+
+    def test_conditional_counted_token_follow_on_reuses_two_bindings(self):
+        oracle=('Target creature gets +1/+1 until end of turn. '
+                'If you control an Equipment, create a 1/1 green Elf creature token '
+                'for each creature you control.')
+        spell=self.card(oracle,name='Unfamiliar scaling recruitment')
+        self.assertEqual(spell.kind,'modifier_spell')
+        sim,allies,_,_=self.fixture(spell,with_equipment=True)
+        sim.cast_spell(0,spell,target=allies[0].id)
+        self.drain(sim)
+        self.assertEqual(len(self.tokens(sim)),2)
+        self.assertEqual([e['details']['quantity'] for e in sim.events
+                          if e['kind']=='counted_binding'],[2])
+        sim.invariant()
+
 
 if __name__=='__main__':
     unittest.main()

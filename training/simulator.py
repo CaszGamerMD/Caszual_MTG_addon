@@ -216,6 +216,7 @@ class Card:
     prevent_player_combat_damage: bool = False  # Combat damage to the spell's controller only.
     populate: bool = False  # Copy a controlled creature token on resolution, if any.
     sequence_effects: tuple = ()  # Fully compiled, target-free Oracle instructions in order.
+    counted_program: object | None = None  # Verified resolution-time quantity expressions.
     mana_as_any_color: bool = False
     color_draw_cost: str = ''
     # Modal double-faced cards are one physical card. The front card is kept
@@ -470,6 +471,8 @@ class Simulator(AdvancedRules):
                         card.prevent_all_combat_damage or card.prevent_player_combat_damage):
                     continue
                 if self.diagnostic and card.kind=='sequence_spell' and card.sequence_effects:
+                    continue
+                if self.diagnostic and card.kind=='counted_spell' and card.counted_program:
                     continue
                 if card.kind not in ("land", "creature", "spell"):
                     self.pause("Unsupported sandbox card kind: " + card.kind, card)
@@ -2716,6 +2719,22 @@ class Simulator(AdvancedRules):
         self.log('populate','A creature token is copied using its copiable characteristics.',
                  actor=controller,source=source.name,copied=selected.card.id)
 
+    def resolve_quantity_block(self,step,controller,card):
+        """Common atomic execution edge for counted and targeted spell programs."""
+        from semantic_execution_blocks import BlockCompilationError
+        game=self.event_game('main')
+        count=step.count.evaluate(game,controller) if step.count else 1
+        try:block=step.bind(game,controller)
+        except BlockCompilationError:
+            self.pause('Bound battlefield quantity exceeds supported atomic limits',card)
+            return
+        self.log('counted_binding','A verified quantity binds at resolution.',
+                 actor=controller,source=card.name,operation=step.base.operation,
+                 factor=step.base.amount,quantity=count,amount=step.base.amount*count)
+        if block:
+            self._resolve_entry_effects([dict(controller=controller,source=card.id,
+                name=card.name,effect=step.base.operation,**block.event_step())],card)
+
     def resolve_composed_modifier(self,event,card):
         """Execute verified typed steps inside an already-resolving spell frame.
 
@@ -2725,6 +2744,7 @@ class Simulator(AdvancedRules):
         """
         from oracle_abilities import Effect
         from semantic_execution_blocks import compile_effects
+        from counted_effect_blocks import QuantityBlock
         program=card.modifier_program
         controller=event['controller']
         raw_target=event.get('target')
@@ -2763,10 +2783,10 @@ class Simulator(AdvancedRules):
             else:
                 # Lower a trusted, fully typed atom to the existing handler.
                 atom=(Effect('draw_cards',step.amount) if step.operation=='draw_cards'
+                      else Effect('gain_life',step.amount) if step.operation=='gain_life'
                       else Effect('create_tokens',step.amount,token=step.token))
                 block=compile_effects((atom,)).blocks[0]
-                self._resolve_entry_effects([dict(controller=controller,source=card.id,
-                    name=card.name,effect=step.operation,**block.event_step())],card)
+                self.resolve_quantity_block(QuantityBlock(block,step.count),controller,card)
             if self.finished:return
         # State-based actions are checked after the entire spell finishes,
         # not between its individual written instructions.
@@ -2843,6 +2863,12 @@ class Simulator(AdvancedRules):
             program=compile_effects(card.sequence_effects)
             self._resolve_entry_effects([program.stack_event(
                 controller=controller,source=card.id,name=card.name)],card)
+            return
+        if card.kind=='counted_spell':
+            if not card.counted_program:raise RuntimeError('Uncompiled counted spell')
+            for step in card.counted_program.steps:
+                self.resolve_quantity_block(step,controller,card)
+                if self.finished:return
             return
         if card.kind=='graveyard_return_spell':
             target=next((c for c in self.graveyard_subtype_targets(controller,card.graveyard_return_subtype)
@@ -4806,7 +4832,7 @@ class Simulator(AdvancedRules):
                     actions.append(Candidate(c.id+':spellback','cast_modal_back',c.id,
                         features=features(power=back.power,toughness=back.toughness),
                         label='Cast '+back.name))
-                if c.kind in ("creature", "vehicle", "enchantment", "spell", "sequence_spell", "mana_spell", "scaled_damage_spell", "token_spell", "prevention_spell", "mana_artifact", "equipment", "planeswalker", "station", "artifact") and self.payment(c)["paid"]:
+                if c.kind in ("creature", "vehicle", "enchantment", "spell", "sequence_spell", "counted_spell", "mana_spell", "scaled_damage_spell", "token_spell", "prevention_spell", "mana_artifact", "equipment", "planeswalker", "station", "artifact") and self.payment(c)["paid"]:
                     if c.draw and len(p.library) < c.draw:
                         continue  # never choose a known self-decking draw spell
                     keywords = c.traits.split(";")[-1].split(",") if c.traits else []
@@ -5545,6 +5571,11 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                                              definition.get('types',[]))
     if parsed['kind']=='unsupported' and modifier_program and rules.query('cost',cost)['supported']:
         parsed={'kind':'modifier_spell','modifier_program':modifier_program}
+    from counted_effect_blocks import parse as parse_counted_effects
+    counted_program=parse_counted_effects(rule_text(definition.get('oracleText','')),
+                                         definition.get('types',[]))
+    if parsed['kind']=='unsupported' and counted_program and rules.query('cost',cost)['supported']:
+        parsed={'kind':'counted_spell','counted_program':counted_program}
     from artifact_color_mana import parse as parse_artifact_color_mana
     color_program=parse_artifact_color_mana(rule_text(definition.get('oracleText','')),definition.get('types',[]))
     if parsed['kind']=='unsupported' and color_program and rules.query('cost',cost)['supported']:
@@ -5559,6 +5590,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         prevent_player_combat_damage=parsed.get('prevent_player_combat_damage',False),
         populate=parsed.get('populate',False),
         sequence_effects=parsed.get('sequence_effects',()),
+        counted_program=parsed.get('counted_program'),
         mana_as_any_color=parsed.get('mana_as_any_color',False),color_draw_cost=parsed.get('color_draw_cost',''),
         target_modifier=parsed.get('target_modifier',()),modifier_program=parsed.get('modifier_program'),modal_sweeps=parsed.get('modal_sweeps',()),sweep_reward=parsed.get('sweep_reward',()),
         instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),

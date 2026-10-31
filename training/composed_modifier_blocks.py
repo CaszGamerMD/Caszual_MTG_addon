@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import re
 
 from oracle_abilities import KEYWORDS, TokenSpec, effect, parse_token_creation
+from counted_effect_blocks import BattlefieldCount, parse as parse_counted_effects
 
 
 @dataclass(frozen=True)
@@ -64,14 +65,17 @@ class SpellStep:
     amount: int = 0
     token: TokenSpec | None = None
     condition: ControlCondition | None = None
+    count: BattlefieldCount | None = None
 
     def __post_init__(self):
+        if self.count is not None and not isinstance(self.count,BattlefieldCount):
+            raise ValueError('Malformed count binding')
         if self.operation=='modify_targets':
-            if self.modifier is None or self.amount or self.token or self.condition:
+            if self.modifier is None or self.amount or self.token or self.condition or self.count:
                 raise ValueError('Malformed temporary modifier block')
-        elif self.operation=='draw_cards':
+        elif self.operation in ('draw_cards','gain_life'):
             if self.modifier or self.token or type(self.amount) is not int or not 1<=self.amount<=1000:
-                raise ValueError('Malformed draw block')
+                raise ValueError('Malformed draw/life block')
         elif self.operation=='create_tokens':
             if self.modifier or not isinstance(self.token,TokenSpec) or self.amount!=self.token.amount:
                 raise ValueError('Malformed token block')
@@ -130,13 +134,22 @@ def parse(text: str, types: list[str] | tuple[str, ...]) -> ComposedModifierProg
             condition=ControlCondition(match[1])
             instruction=match[2][:1].upper()+match[2][1:]+'.'
         atom=effect(instruction[:1].lower()+instruction[1:])
-        if atom is not None and atom.operation=='draw_cards' and atom.amount>0:
-            steps.append(SpellStep('draw_cards',amount=atom.amount,condition=condition))
+        if atom is not None and atom.operation in ('draw_cards','gain_life') and atom.amount>0:
+            steps.append(SpellStep(atom.operation,amount=atom.amount,condition=condition))
             continue
         token=parse_token_creation(instruction)
         if token:
             steps.append(SpellStep('create_tokens',amount=token.amount,token=token,
                                    condition=condition))
+            continue
+        # The same independently checked count block may follow a targeted
+        # modifier. Its current battlefield operands bind at resolution.
+        counted=parse_counted_effects(instruction,types)
+        if counted and len(counted.steps)==1:
+            bound=counted.steps[0]
+            steps.append(SpellStep(bound.base.operation,amount=bound.base.amount,
+                                   token=bound.base.token,condition=condition,
+                                   count=bound.count))
             continue
         return None
     return ComposedModifierProgram(targets,tuple(steps))
