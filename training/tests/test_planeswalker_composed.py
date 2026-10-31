@@ -96,6 +96,7 @@ class ComposedLoyaltyTests(unittest.TestCase):
         activate(sim,0,pw.id,0,target.card.id)
         self.drain(sim)
         self.assertEqual((target.temporary_power,target.temporary_toughness),(-2,-1))
+        self.assertFalse(sim.finished,(sim.result,sim.events[-8:]))
         self.assertEqual(sim.event_game('main').stats(sim.event_game('main').battlefield[target.card.id]),(0,1))
         sim.phase='cleanup'
         sim._step()
