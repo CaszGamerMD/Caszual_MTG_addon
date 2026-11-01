@@ -197,6 +197,7 @@ class Card:
     instant: bool = False
     counter_filter: str = ""
     removal: str = ""
+    removal_target_types: tuple[str, ...] = ()  # Compiled target filter for destroy-and-create spells.
     removal_min_toughness: int = 0
     removal_no_regenerate: bool = False
     printed_types: tuple[str, ...] = ()
@@ -469,7 +470,7 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.kind=='modifier_spell' and (card.target_modifier or card.modifier_program):
                     continue
-                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_artifact_creature_token","destroy_artifact","exile_creature_life","exile_creature_basic_land","exile_creature_damaged_you","destroy_all_creatures","destroy_toughness_min","destroy_creatures_reward","modal_sweep"):
+                if self.diagnostic and card.kind=="removal_spell" and card.removal in ("destroy","opponent_nonlands","destroy_artifact_enchantment","destroy_target_token","destroy_artifact","exile_creature_life","exile_creature_basic_land","exile_creature_damaged_you","destroy_all_creatures","destroy_toughness_min","destroy_creatures_reward","modal_sweep"):
                     continue
                 if self.diagnostic and card.kind=="graveyard_return_spell" and card.graveyard_return_subtype:
                     continue
@@ -2348,18 +2349,19 @@ class Simulator(AdvancedRules):
             return tuple((seat,item) for seat,item in self.creature_targets(controller,source)
                          if item.card.id in self.damage_to_players[controller])
         if source.removal in ('destroy','exile_creature_life','exile_creature_basic_land'):return self.creature_targets(controller,source)
-        if source.removal not in ('destroy_artifact_enchantment','destroy_artifact_creature_token','destroy_artifact'):return ()
+        if source.removal not in ('destroy_artifact_enchantment','destroy_target_token','destroy_artifact'):return ()
         game=self.event_game('main')
         targets=[]
         for seat,player in enumerate(self.players):
             for item in player.battlefield:
                 types=set(item.card.printed_types)
                 if item.card.event_definition:types.update(item.card.event_definition.types)
-                allowed=({'Artifact','Enchantment'} if source.removal=='destroy_artifact_enchantment' else
-                         {'Artifact'} if source.removal=='destroy_artifact' else {'Artifact','Creature'})
-                if not types.intersection(allowed) and not (source.removal=='destroy_artifact_creature_token' and
-                        item.card.id in game.battlefield and game.creature(game.battlefield[item.card.id])):continue
                 state=game.battlefield.get(item.card.id)
+                if state is None:continue  # Phased-out objects have no game-rule presence.
+                allowed=({'Artifact','Enchantment'} if source.removal=='destroy_artifact_enchantment' else
+                         {'Artifact'} if source.removal=='destroy_artifact' else set(source.removal_target_types))
+                if not (source.removal=='destroy_target_token' and 'Permanent' in allowed):
+                    if not types.intersection(allowed) and not (state and 'Creature' in allowed and game.creature(state)):continue
                 if state and game.has(state,'shroud'):continue
                 if state and seat!=controller and game.has(state,'hexproof'):continue
                 if state and game.protected(state,source.colors):continue
@@ -2910,11 +2912,12 @@ class Simulator(AdvancedRules):
             if step.operation=='modify_targets':
                 game=self.event_game('main')
                 change=step.modifier
+                scale=change.scale.evaluate(game,controller) if change.scale else 1
                 for item in targets:
                     state=game.battlefield.get(item.card.id)
                     if state is None:continue
-                    state.temporary_power+=change.power
-                    state.temporary_toughness+=change.toughness
+                    state.temporary_power+=change.power*scale
+                    state.temporary_toughness+=change.toughness*scale
                     if change.keyword:game.grant_temporary(state,change.keyword)
                 self.sync_events(game)
                 if change.set_color:
@@ -2924,7 +2927,7 @@ class Simulator(AdvancedRules):
                 self.log('modifier_block','Targeted temporary modifier block resolves.',
                          actor=controller,source=card.name,
                          targetPermanents=[item.card.id for item in targets],
-                         power=change.power,toughness=change.toughness,
+                         power=change.power*scale,toughness=change.toughness*scale,
                          keyword=change.keyword,setColor=change.set_color)
             else:
                 # Lower a trusted, fully typed atom to the existing handler.
@@ -3091,7 +3094,7 @@ class Simulator(AdvancedRules):
                 return
             owner,item=target;game=self.event_game('main')
             state=game.battlefield.get(item.card.id)
-            if card.removal=='destroy_artifact_creature_token':
+            if card.removal=='destroy_target_token':
                 indestructible=bool(state and game.has(state,'indestructible'))
                 if indestructible:
                     self.log('indestructible','Target cannot be destroyed, but the remaining spell instruction still resolves.',
@@ -5688,7 +5691,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
             and damage_removal and rules.query('cost',cost)['supported']):
         parsed={'kind':'removal_spell','removal':'exile_creature_damaged_you'}
-    ox= re.fullmatch(r'Destroy target (artifact or creature|creature or artifact)\. Its controller creates (.+)\.',destruction)
+    ox= re.fullmatch(r'Destroy target (permanent|artifact or creature|creature or artifact|artifact|creature|enchantment|land|planeswalker)\. Its controller creates (.+)\.',destruction)
     if parsed['kind']=='unsupported' and ox and definition.get('types') in (['Instant'],['Sorcery']) and rules.query('cost',cost)['supported']:
         spec=parse_token_creation('Create '+ox[2]+'.')
         if spec is not None:
@@ -5697,7 +5700,10 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                           ({'Enchantment'} if spec.enchantment else set())),
                 frozenset(spec.subtypes),False,spec.power,spec.toughness,
                 spec.keywords,colors=frozenset(spec.colors))
-            parsed={'kind':'removal_spell','removal':'destroy_artifact_creature_token',
+            target_types=(('Permanent',) if ox[1]=='permanent' else
+                          tuple(part.title() for part in ox[1].split(' or ')))
+            parsed={'kind':'removal_spell','removal':'destroy_target_token',
+                    'removal_target_types':target_types,
                     'token_count':spec.amount,'token_definition':template,
                     'token_tapped':spec.tapped}
     if (parsed['kind']=='unsupported' and definition.get('types') in (['Instant'],['Sorcery'])
@@ -5791,7 +5797,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         library_search_program=parsed.get('library_search_program'),
         mana_as_any_color=parsed.get('mana_as_any_color',False),color_draw_cost=parsed.get('color_draw_cost',''),
         target_modifier=parsed.get('target_modifier',()),modifier_program=parsed.get('modifier_program'),loyalty_program=parsed.get('loyalty_program'),modal_sweeps=parsed.get('modal_sweeps',()),modal_target_program=parsed.get('modal_target_program'),sweep_reward=parsed.get('sweep_reward',()),
-        instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
+        instant=("Instant" in definition.get("types",[]) or bool(event_definition.supported and "flash" in event_definition.abilities)), counter_filter=parsed.get("counter_filter",""), removal=parsed.get("removal",""), removal_target_types=parsed.get("removal_target_types",()), removal_min_toughness=parsed.get("removal_min_toughness",0), removal_no_regenerate=parsed.get("removal_no_regenerate",False), mana_cost=cost, mana_production=parsed.get("mana_production",()), traits=parsed.get("traits", ""), power=parsed.get("power", 0),
         toughness=parsed.get("toughness", 0), mask=parsed.get("mask", 0),
         enters_tapped=parsed.get("tapped", False), draw=parsed.get("draw", 0),
         life=parsed.get("life", 0), land_rule=parsed.get("land_rule", ""),

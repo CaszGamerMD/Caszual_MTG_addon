@@ -29,7 +29,8 @@ class DestroyAndCreateChecks(unittest.TestCase):
     def test_unknown_card_name_compiles_and_extra_text_rejects(self):
         raw=dict(self.lookup['Bovine Intervention'],name='Unknown cow ritual')
         card=s.import_diagnostic_card(self.rules,raw,0,'cow',{'White'})
-        self.assertEqual((card.kind,card.removal),('removal_spell','destroy_artifact_creature_token'))
+        self.assertEqual((card.kind,card.removal),('removal_spell','destroy_target_token'))
+        self.assertEqual(set(card.removal_target_types),{'Artifact','Creature'})
         self.assertEqual((card.token_definition.name,card.token_count),('Ox',1))
         raw['oracleText']+='\nDraw three mysterious cards.'
         self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad',{'White'}).kind,'unsupported')
@@ -98,4 +99,65 @@ class DestroyAndCreateChecks(unittest.TestCase):
         self.drain(sim)
         self.assertEqual(len(self.oxen(sim,0)),1)
         self.assertEqual(sim.players[1].life,39)
+        sim.invariant()
+
+    def test_beast_within_and_unseen_permanent_wording_compile_whole_text(self):
+        for name in ('Beast Within','Unseen wilderness removal'):
+            raw=dict(self.lookup['Beast Within'],name=name)
+            card=s.import_diagnostic_card(self.rules,raw,0,'beast',{'Green'})
+            self.assertEqual((card.kind,card.removal),('removal_spell','destroy_target_token'))
+            self.assertEqual(card.removal_target_types,('Permanent',))
+            self.assertEqual((card.token_definition.name,card.token_count),('Beast',1))
+            raw['oracleText']+=' Draw a card.'
+            self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'bad',{'Green'}).kind,'unsupported')
+
+    def test_permanent_target_can_be_land_or_enchantment(self):
+        for types in (('Land',),('Enchantment',),('Planeswalker',)):
+            sim,cards=self.fixture(['Beast Within'])
+            identifier='target-'+types[0]
+            definition=s.EventDefinition(identifier,frozenset(types),frozenset(),False,0,0,frozenset())
+            target=s.Card(identifier,identifier,types[0].lower(),event_definition=definition,
+                          printed_types=types,is_token=True)
+            sim.players[1].battlefield.append(s.Permanent(target))
+            sim.cast_spell(0,cards['Beast Within'],target=identifier)
+            self.assertTrue(any(p.card.id==identifier for p in sim.players[1].battlefield))
+            self.drain(sim)
+            self.assertFalse(any(p.card.id==identifier for p in sim.players[1].battlefield))
+            beasts=[p for p in sim.players[1].battlefield if p.card.name=='Beast']
+            self.assertEqual(len(beasts),1)
+            self.assertEqual((beasts[0].card.power,beasts[0].card.toughness),(3,3))
+            sim.invariant()
+
+    def test_target_controller_gets_token_even_if_permanent_indestructible(self):
+        sim,cards=self.fixture(['Beast Within'])
+        target=self.artifact(sim,abilities=('indestructible',))
+        sim.cast_spell(0,cards['Beast Within'],target=target.card.id)
+        self.drain(sim)
+        self.assertIn(target,sim.players[1].battlefield)
+        self.assertEqual(len([p for p in sim.players[1].battlefield if p.card.name=='Beast']),1)
+        sim.invariant()
+
+    def test_unseen_target_filter_and_token_characteristics(self):
+        raw=dict(self.lookup['Beast Within'],name='Mysterious target and token',
+                 oracleText='Destroy target enchantment. Its controller creates two 1/1 blue Bird creature tokens.')
+        card=s.import_diagnostic_card(self.rules,raw,0,'birds',{'Green'})
+        self.assertEqual(card.removal_target_types,('Enchantment',))
+        self.assertEqual(card.token_count,2)
+        self.assertEqual((card.token_definition.power,card.token_definition.toughness),(1,1))
+        sim,cards=self.fixture(['Beast Within'])
+        sim.players[0].hand.remove(cards['Beast Within'])
+        sim.players[0].hand.append(card)
+        artifact=self.artifact(sim)
+        with self.assertRaisesRegex(ValueError,'legal permanent'):
+            sim.cast_spell(0,card,target=artifact.card.id)
+        sim.invariant()
+
+    def test_phased_out_permanent_cannot_be_targeted_or_create_token(self):
+        sim,cards=self.fixture(['Beast Within'])
+        target=self.artifact(sim)
+        target.phased_out=True
+        with self.assertRaisesRegex(ValueError,'legal permanent'):
+            sim.cast_spell(0,cards['Beast Within'],target=target.card.id)
+        self.assertIn(cards['Beast Within'],sim.players[0].hand)
+        self.assertFalse(any(p.card.name=='Beast' for p in sim.players[1].battlefield))
         sim.invariant()

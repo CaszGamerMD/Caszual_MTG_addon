@@ -32,17 +32,34 @@ class CreatureTargets:
 
 
 @dataclass(frozen=True)
+class DomainCount:
+    """Five distinct basic land subtypes, not the number of basic lands.
+
+    Nonbasic dual lands with basic land subtypes count; duplicate Forests count
+    once. The operand reads the battlefield when the spell resolves.
+    """
+    def evaluate(self, game, controller: int) -> int:
+        basic_types={'Plains','Island','Swamp','Mountain','Forest'}
+        return len({kind for permanent in game.battlefield.values()
+                    if permanent.controller==controller and 'Land' in permanent.definition.types
+                    for kind in permanent.definition.subtypes if kind in basic_types})
+
+
+@dataclass(frozen=True)
 class TemporaryModifier:
     power: int = 0
     toughness: int = 0
     keyword: str = ''
     set_color: str = ''
+    scale: DomainCount | None = None
 
     def __post_init__(self):
         if self.keyword and self.keyword not in KEYWORDS-{'flash'}:
             raise ValueError('Unsupported temporary keyword')
         if self.set_color and self.set_color not in ('White','Blue','Black','Red','Green'):
             raise ValueError('Unsupported temporary color')
+        if self.scale is not None and not isinstance(self.scale,DomainCount):
+            raise ValueError('Unsupported temporary quantity source')
         if not (self.power or self.toughness or self.keyword or self.set_color):
             raise ValueError('Temporary modifier has no effect')
 
@@ -98,6 +115,7 @@ class ComposedModifierProgram:
 
 _FIRST = re.compile(r'(Target creature|Up to two target creatures each) (.+)')
 _STATS = re.compile(r'gets? ([+-][0-9]+)/([+-][0-9]+)(?: and gains? ([a-z ]+))? until end of turn')
+_DOMAIN_STATS = re.compile(r'gets? ([+-][0-9]+)/([+-][0-9]+) until end of turn for each basic land type among lands you control')
 _COLOR = re.compile(r'becomes (white|blue|black|red|green) and gains ([a-z ]+) until end of turn')
 _ABILITY = re.compile(r'gains? ([a-z ]+) until end of turn')
 _CONDITION = re.compile(r'If you control an? ([A-Z][a-z]+), (.+)')
@@ -109,7 +127,7 @@ def parse(text: str, types: list[str] | tuple[str, ...]) -> ComposedModifierProg
     sentences=re.split(r'(?<=\.)\s+(?=[A-Z])',text.strip())
     if not sentences or len(sentences)>8 or any(not s.endswith('.') for s in sentences):
         return None
-    first=_FIRST.fullmatch(sentences[0][:-1])
+    first=_FIRST.fullmatch(re.sub(r'^[A-Z][A-Za-z ]{0,40} — ', '', sentences[0][:-1]))
     if not first:return None
     targets=(CreatureTargets(1,1) if first[1]=='Target creature' else CreatureTargets(0,2))
     body=first[2]
@@ -118,12 +136,16 @@ def parse(text: str, types: list[str] | tuple[str, ...]) -> ComposedModifierProg
         if match:
             modifier=TemporaryModifier(int(match[1]),int(match[2]),match[3] or '')
         else:
-            match=_COLOR.fullmatch(body)
-            if match:modifier=TemporaryModifier(keyword=match[2],set_color=match[1].title())
+            match=_DOMAIN_STATS.fullmatch(body)
+            if match:
+                modifier=TemporaryModifier(int(match[1]),int(match[2]),scale=DomainCount())
             else:
-                match=_ABILITY.fullmatch(body)
-                if not match:return None
-                modifier=TemporaryModifier(keyword=match[1])
+                match=_COLOR.fullmatch(body)
+                if match:modifier=TemporaryModifier(keyword=match[2],set_color=match[1].title())
+                else:
+                    match=_ABILITY.fullmatch(body)
+                    if not match:return None
+                    modifier=TemporaryModifier(keyword=match[1])
     except ValueError:
         return None
     steps=[SpellStep('modify_targets',modifier=modifier)]

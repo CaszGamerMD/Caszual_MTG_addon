@@ -1082,7 +1082,7 @@ class LinkedRemovalGrammarChecks(unittest.TestCase):
                 with s.RulesBridge() as rules:
                     card=s.import_diagnostic_card(rules,raw,0,'intervention',{'White'})
                 self.assertEqual(card.kind,'removal_spell')
-                self.assertEqual(card.removal,'destroy_artifact_creature_token')
+                self.assertEqual(card.removal,'destroy_target_token')
                 self.assertEqual(card.token_count,1)
                 self.assertEqual((card.token_definition.power,card.token_definition.toughness),(2,2))
                 self.assertIn('Ox',card.token_definition.subtypes)

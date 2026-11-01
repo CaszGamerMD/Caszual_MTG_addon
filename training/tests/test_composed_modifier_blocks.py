@@ -1,6 +1,8 @@
 """Verified reusable targeting, temporary, and conditional spell blocks."""
 import sys
+import json
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
@@ -237,6 +239,57 @@ class ComposedModifierBlockChecks(unittest.TestCase):
         self.assertEqual(len(self.tokens(sim)),2)
         self.assertEqual([e['details']['quantity'] for e in sim.events
                           if e['kind']=='counted_binding'],[2])
+        sim.invariant()
+
+    def test_domain_spell_from_elf_deck_and_unseen_wording(self):
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks/14435337-lupitas-elves.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=="Gaea's Might")
+        card=s.import_diagnostic_card(self.rules,raw,0,'gaea',{'Green'})
+        self.assertEqual(card.kind,'modifier_spell')
+        self.assertIsNotNone(card.modifier_program.steps[0].modifier.scale)
+        unfamiliar=self.card('Domain — Target creature gets +2/+1 until end of turn '
+                             'for each basic land type among lands you control.',name='Unknown domain ritual')
+        self.assertEqual(unfamiliar.kind,'modifier_spell')
+        self.assertEqual((unfamiliar.modifier_program.steps[0].modifier.power,
+                          unfamiliar.modifier_program.steps[0].modifier.toughness),(2,1))
+        for unknown in (' Draw a mysterious card.', ' Exile target land.'):
+            with self.subTest(unknown=unknown):
+                self.assertEqual(self.card(raw['oracleText']+unknown).kind,'unsupported')
+
+    def test_domain_counts_distinct_basic_land_types_at_resolution(self):
+        spell=self.card('Domain — Target creature gets +1/+1 until end of turn '
+                        'for each basic land type among lands you control.')
+        sim,allies,_,_=self.fixture(spell)
+        own_lands=[item for item in sim.players[0].battlefield if item.card.kind=='land']
+        for item,subtypes in zip(own_lands,(('Forest',),('Forest',),(),(),())):
+            item.card=replace(item.card,printed_types=('Land',),land_subtypes=subtypes)
+        target=self.permanent(sim,allies[0])
+        sim.cast_spell(0,spell,target=target.card.id)
+        # Change domain on the battlefield *after* casting; a dual typed
+        # nonbasic land adds one new type, but a duplicate Forest adds none.
+        own_lands[1].card=replace(own_lands[1].card,land_subtypes=('Forest','Island'))
+        own_lands[2].card=replace(own_lands[2].card,land_subtypes=('Plains',))
+        self.drain(sim)
+        self.assertEqual((target.temporary_power,target.temporary_toughness),(3,3))
+        self.assertEqual((sim.effective_card(target).power,sim.effective_card(target).toughness),(5,6))
+        sim.phase='cleanup';sim.step()
+        self.assertEqual((target.temporary_power,target.temporary_toughness),(0,0))
+        sim.invariant()
+
+    def test_domain_zero_and_opponent_lands_do_not_borrow_types(self):
+        spell=self.card('Target creature gets +2/+1 until end of turn '
+                        'for each basic land type among lands you control.')
+        sim,allies,opponent,_=self.fixture(spell)
+        target=self.permanent(sim,allies[0])
+        # Move an existing land across control to preserve the physical-card
+        # invariant, then give that land a basic subtype.
+        other=next(item for item in sim.players[0].battlefield if item.card.kind=='land')
+        sim.players[0].battlefield.remove(other)
+        other.card=replace(other.card,printed_types=('Land',),land_subtypes=('Swamp',))
+        sim.players[1].battlefield.append(other)
+        sim.cast_spell(0,spell,target=target.card.id)
+        self.drain(sim)
+        self.assertEqual((target.temporary_power,target.temporary_toughness),(0,0))
         sim.invariant()
 
 

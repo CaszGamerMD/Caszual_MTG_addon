@@ -28,13 +28,19 @@ class BattlefieldCount:
     subtype: str = ''
     tapped: bool | None = None
     nontoken: bool = False
+    min_power: int | None = None
+    min_toughness: int | None = None
 
     def __post_init__(self):
         if (self.relation not in ('controller','opponent','any')
                 or self.card_type not in ('','Creature','Artifact','Enchantment','Land','Planeswalker')
-                or bool(self.card_type)==bool(self.subtype)
+                or not (self.card_type or self.subtype)
                 or self.tapped not in (None,True,False)
-                or type(self.nontoken) is not bool):
+                or type(self.nontoken) is not bool
+                or any(value is not None and (type(value) is not int or not 1<=value<=1000)
+                       for value in (self.min_power,self.min_toughness))
+                or (self.min_power is not None or self.min_toughness is not None)
+                   and self.card_type!='Creature'):
             raise ValueError('Incomplete or unsupported battlefield count')
 
     def evaluate(self, game, controller: int) -> int:
@@ -48,6 +54,8 @@ class BattlefieldCount:
             and (not self.subtype or self.subtype in state.definition.subtypes)
             and (self.tapped is None or state.tapped==self.tapped)
             and (not self.nontoken or not state.token)
+            and (self.min_power is None or game.stats(state)[0]>=self.min_power)
+            and (self.min_toughness is None or game.stats(state)[1]>=self.min_toughness)
             for state in game.battlefield.values())
 
 
@@ -88,22 +96,33 @@ class CountedSpellProgram:
 _COUNTER = re.compile(r'(.+) for each ((?:(?:tapped|untapped|nontoken) )?'
                       r'(?:creature|artifact|enchantment|land|planeswalker|'
                       r'[A-Z][a-z]+)) '
-                      r'(you control|your opponents control|on the battlefield)\.')
+                      r'(you control|your opponents control|on the battlefield)'
+                      r'(?: with (power|toughness) ([1-9][0-9]*) or greater)?\.')
 _OBJECT = re.compile(r'(?:(tapped|untapped|nontoken) )?'
                      r'(creature|artifact|enchantment|land|planeswalker|[A-Z][a-z]+)')
 
 
-def _count_from_text(noun: str, scope: str) -> BattlefieldCount | None:
+def _count_from_text(noun: str, scope: str, characteristic: str | None = None,
+                     threshold: str | None = None) -> BattlefieldCount | None:
     match=_OBJECT.fullmatch(noun)
     if not match:return None
     qualifier,kind=match.groups()
     card_type=_TYPES.get(kind,'')
     # Printed proper nouns are typed creature subtypes; they never match all
     # permanents just because the card name happens to contain that word.
-    return BattlefieldCount(_SCOPES[scope],card_type=card_type,
-                            subtype='' if card_type else kind,
-                            tapped=(True if qualifier=='tapped' else False if qualifier=='untapped'
-                                    else None),nontoken=qualifier=='nontoken')
+    # Creature subtypes are also creatures; a power/toughness measurement is
+    # meaningless on a plain artifact, enchantment or land count.
+    if characteristic and card_type not in ('Creature',''):
+        return None
+    try:
+        return BattlefieldCount(_SCOPES[scope],card_type=card_type or ('Creature' if characteristic else ''),
+                                subtype='' if card_type else kind,
+                                tapped=(True if qualifier=='tapped' else False if qualifier=='untapped'
+                                        else None),nontoken=qualifier=='nontoken',
+                                min_power=int(threshold) if characteristic=='power' else None,
+                                min_toughness=int(threshold) if characteristic=='toughness' else None)
+    except ValueError:
+        return None
 
 
 def parse(text: str, types: list[str] | tuple[str, ...]) -> CountedSpellProgram | None:
@@ -114,8 +133,11 @@ def parse(text: str, types: list[str] | tuple[str, ...]) -> CountedSpellProgram 
         return None
     steps=[]
     for sentence in sentences:
+        # Ability words (e.g. "Ferocious —", "Domain —") are italic flavor
+        # labels in Oracle text; the following complete instruction is rules.
+        sentence=re.sub(r'^[A-Z][A-Za-z ]{0,40} — ', '', sentence)
         match=_COUNTER.fullmatch(sentence)
-        count=_count_from_text(match[2],match[3]) if match else None
+        count=_count_from_text(match[2],match[3],match[4],match[5]) if match else None
         instruction=match[1]+'.' if match else sentence
         atom=effect(instruction[:1].lower()+instruction[1:])
         if atom is None or match and (count is None or atom.operation not in _COUNTED_EFFECTS):

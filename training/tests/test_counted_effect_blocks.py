@@ -1,5 +1,6 @@
 """Resolve verified battlefield-counted effects via existing atomic handlers."""
 import sys
+import json
 import unittest
 from pathlib import Path
 
@@ -163,6 +164,56 @@ class CountedEffectChecks(unittest.TestCase):
         self.assertTrue(any(q['reason'].startswith('Bound battlefield quantity')
                             for q in sim.questions))
         self.assertEqual(len(sim.players[0].library),original)
+
+    def test_shamanic_revelation_reads_both_instructions_and_live_power(self):
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks/14435337-lupitas-elves.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Shamanic Revelation')
+        spell=s.import_diagnostic_card(self.rules,raw,0,'revelation',{'Green'})
+        self.assertEqual(spell.kind,'counted_spell')
+        self.assertEqual([step.base.operation for step in spell.counted_program.steps],
+                         ['draw_cards','gain_life'])
+        self.assertEqual(spell.counted_program.steps[1].count.min_power,4)
+        sim,_,_,_=self.fixture(spell)
+        own=[p for p in sim.players[0].battlefield if p.card.kind=='creature']
+        before=len(sim.players[0].library)
+        sim.cast_spell(0,spell)
+        # The bound creature stats are read on resolution, not at casting.
+        own[0].temporary_power=2
+        own[1].temporary_power=2
+        enemy=sim.players[1].battlefield[0]
+        enemy.temporary_power=9  # Never counted by "you control".
+        self.drain(sim)
+        self.assertEqual(before-len(sim.players[0].library),3)
+        self.assertEqual(sim.players[0].life,48)
+        self.assertEqual([e['details']['amount'] for e in sim.events
+                          if e['kind']=='counted_binding'],[3,8])
+        sim.invariant()
+
+    def test_parameterized_subtype_and_toughness_count(self):
+        spell=self.card('You gain 2 life for each Elf you control with toughness 4 or greater.')
+        self.assertEqual(spell.kind,'counted_spell')
+        self.assertEqual(spell.counted_program.steps[0].count.subtype,'Elf')
+        sim,_,_,_=self.fixture(spell)
+        target=next(p for p in sim.players[0].battlefield if p.card.kind=='creature'
+                    and 'Elf' in p.card.event_definition.subtypes)
+        target.temporary_toughness=1
+        sim.cast_spell(0,spell)
+        self.drain(sim)
+        self.assertEqual(sim.players[0].life,42)
+        sim.invariant()
+
+    def test_ability_word_is_not_an_excuse_to_discard_unknown_clauses(self):
+        supported=self.card('Ferocious — You gain 3 life for each creature you control with power 5 or greater.')
+        self.assertEqual(supported.kind,'counted_spell')
+        for bad in (
+            'Ferocious — You gain 3 life for each creature you control with power 5 or greater. Exile a card.',
+            'You gain 3 life for each land you control with power 5 or greater.',
+            'You gain 3 life for each creature you control with power 0 or greater.',
+            'You gain 3 life for each creature you control with power 4 or less.',
+            'You gain 3 life for each creature you control with power 99999 or greater.',
+        ):
+            with self.subTest(bad=bad):self.assertEqual(self.card(bad).kind,'unsupported')
+        with self.assertRaises(ValueError):BattlefieldCount('controller',card_type='Land',min_power=4)
 
 
 if __name__=='__main__':unittest.main()
