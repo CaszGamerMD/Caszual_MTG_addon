@@ -392,6 +392,10 @@ class AdvancedRules:
    if target is None and 1-self.active in self.combat_damage_prevented_to_players:amount=0
    if target is not None and g.protected(g.battlefield[target],source_state.definition.colors):amount=0
    if target in combat['attackers'] and self.prevents_attacker_combat_damage(g.battlefield[target].controller):amount=0
+   if amount>0:
+    target_seat=1-self.active if target is None else g.battlefield[target].controller
+    amount=self.replaced_damage(amount,live[source].card,source_state.controller,
+                                target_seat,target_permanent=target,combat=True)
    if amount<=0:continue
    if target is None:
     defender=self.players[1-self.active];defender.life-=amount;player_hits.append(source)

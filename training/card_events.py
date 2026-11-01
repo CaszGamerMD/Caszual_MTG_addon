@@ -105,6 +105,7 @@ class Definition:
     entry_top_library_search: object | None = None  # Any-number subtype tutor, reveal/shuffle/top.
     tribal_entry_counter: object | None = None  # Another controlled subtype enters: self counters.
     unique_entry_draw: object | None = None  # Intervening-if name gate on creature entry draw.
+    damage_replacement: object | None = None  # Continuous replacement applied to damage, not life loss.
     self_pump: tuple = ()  # Mana cost, power, toughness until EOT.
     team_keyword_pump: tuple = ()  # Keyword, power, toughness, other only.
     devotion: tuple = ()
@@ -350,6 +351,12 @@ def parse_card(card: dict) -> Definition:
     unique_draw=parse_unique_entry_draw(text,types)
     if unique_draw:
         return Definition(**base,abilities=frozenset(),unique_entry_draw=unique_draw)
+    from damage_replacement_programs import parse as parse_damage_replacement
+    damage_replacement=parse_damage_replacement(text,types)
+    if damage_replacement:
+        return Definition(**base,abilities=frozenset({damage_replacement.intrinsic})
+                          if damage_replacement.intrinsic else frozenset(),
+                          damage_replacement=damage_replacement)
     # Whole-instruction grammar: choose a real keyword counter before entry.
     from keyword_counters import parse_entry_choice
     keyword_choices=parse_entry_choice(text,types)

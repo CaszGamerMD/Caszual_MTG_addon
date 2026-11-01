@@ -590,6 +590,57 @@ class Simulator(AdvancedRules):
                    item.card.event_definition.prevent_combat_damage_to_attackers
                    for item in self.players[seat].battlefield)
 
+    def replaced_damage(self,amount,source_card,source_controller,target_seat,
+                        target_permanent=None,combat=False):
+        """Apply known continuous replacements to *damage*, never life loss.
+
+        No game state is changed here, so this also safely predicts combat
+        results. Later replacement programs use the same event parameters.
+        """
+        amount=max(0,int(amount))
+        if not amount:return 0
+        sources=sorted(((permanent.card.id,owner,
+                         permanent.card.event_definition.damage_replacement)
+                        for owner,player in enumerate(self.players)
+                        for permanent in player.battlefield
+                        if not permanent.phased_out and permanent.card.event_definition
+                        and permanent.card.event_definition.damage_replacement),
+                       # Affected-player diagnostic policy: life floors last,
+                       # then stable IDs for other legal replacement orders.
+                       key=lambda entry:(entry[2].operation=='floor',entry[0]))
+        for _,owner,program in sources:
+            if (program.operation=='floor' and target_permanent is None
+                    and owner==target_seat):
+                amount=min(amount,max(0,self.players[target_seat].life-program.amount))
+            elif (program.operation=='multiply' and program.source_filter=='any'
+                  and program.target_filter=='any_target'):
+                amount*=program.amount
+            elif (program.operation=='multiply' and program.target_filter=='any_target'
+                  and program.source_filter=='controlled_creature' and
+                  owner==source_controller and source_card is not None):
+                game=self.event_game('main')
+                state=game.battlefield.get(source_card.id)
+                creature_source=(game.creature(state) if state else
+                    (source_card.kind=='creature' or 'Creature' in source_card.printed_types or
+                     source_card.event_definition is not None and
+                     'Creature' in source_card.event_definition.types))
+                if creature_source:
+                    amount*=program.amount
+            elif (program.operation=='add' and
+                  program.source_filter=='controlled_red_or_artifact' and
+                  program.target_filter=='opponent_target' and
+                  owner==source_controller and target_seat!=owner and
+                  source_card is not None):
+                colors=set(source_card.colors)
+                types=set(source_card.printed_types)
+                if source_card.event_definition:
+                    colors.update(source_card.event_definition.colors)
+                    types.update(source_card.event_definition.types)
+                if ('Red' in colors or 'R' in colors or 'Artifact' in types or
+                        source_card.kind in ('artifact','equipment','artifact_creature')):
+                    amount+=program.amount
+        return amount
+
     def gain_life(self, seat: int, amount: int):
         """Track life gained, independent of damage/losses and total life change."""
         if amount<0:raise ValueError('Life gain amount must be nonnegative')
@@ -2722,9 +2773,11 @@ class Simulator(AdvancedRules):
                      source=card.name,targetPermanent=item.card.id)
             self.resolve_entry_triggers([],card)
         elif mode.operation=='damage':
-            item.marked_damage+=mode.amount
+            dealt=self.replaced_damage(mode.amount,card,controller,owner,
+                                       target_permanent=item.card.id)
+            item.marked_damage+=dealt
             self.log('modal_damage','Chosen modal effect deals damage to a creature.',
-                     source=card.name,amount=mode.amount,targetPermanent=item.card.id)
+                     source=card.name,amount=dealt,targetPermanent=item.card.id)
             self.resolve_entry_triggers(self.state_based_actions(),card)
         else:
             raise RuntimeError('Unsupported modal operation at resolution')
@@ -4085,6 +4138,7 @@ class Simulator(AdvancedRules):
                 game=self.event_game('main');kind=event.get('targetKind');target=event.get('target')
                 amount=event['amount'];legal=False
                 if kind=='player' and isinstance(target,int) and 0<=target<len(self.players):
+                    amount=self.replaced_damage(amount,card,event['controller'],target)
                     self.players[target].life-=amount;legal=True
                 elif kind=='permanent':
                     state=game.battlefield.get(target)
@@ -4094,6 +4148,8 @@ class Simulator(AdvancedRules):
                             and (state.controller==event['controller'] or not game.has(state,'hexproof'))
                             and not game.protected(state,event.get('sourceColors',()))):
                         legal=True
+                        amount=self.replaced_damage(amount,card,event['controller'],
+                            state.controller,target_permanent=target)
                         if game.creature(state):
                             item.marked_damage+=amount
                             if event.get('lastDeathtouch') and amount>0:
@@ -4172,6 +4228,8 @@ class Simulator(AdvancedRules):
                     item=next((p for player in self.players for p in player.battlefield
                                if p.card.id==target.id),None)
                     if item:
+                        amount=self.replaced_damage(amount,card,event['controller'],
+                            target.controller,target_permanent=target.id)
                         item.marked_damage+=amount;dealt=amount
                 self.log('attacker_damage','An enchantment damages a flying attacker.',
                          actor=event['controller'],targetPermanent=event.get('target'),
@@ -4764,27 +4822,33 @@ class Simulator(AdvancedRules):
                 if any('Planeswalker' in game.battlefield[item.card.id].definition.types and item.loyalty is None for _,item in targets):
                     self.pause('Cannot apply board damage without planeswalker loyalty',card);return
                 opponent=1-event['controller'];amount=event['amount']
-                self.players[opponent].life-=amount
-                self.record_player_damage(opponent,event.get('source'),amount)
+                player_amount=self.replaced_damage(amount,card,event['controller'],opponent)
+                self.players[opponent].life-=player_amount
+                self.record_player_damage(opponent,event.get('source'),player_amount)
                 prevented={item.card.id for _,item in targets if game.protected(game.battlefield[item.card.id],event.get('sourceColors',card.colors))}
-                for _,item in targets:
+                dealt_to={}
+                for owner,item in targets:
                     if item.card.id in prevented:continue
                     state=game.battlefield[item.card.id]
-                    if game.creature(state):item.marked_damage+=amount
-                    if 'Planeswalker' in state.definition.types:item.loyalty=max(0,item.loyalty-amount)
-                if lifelink:self.gain_life(event['controller'],amount*(len(targets)-len(prevented)+1))
+                    dealt=self.replaced_damage(amount,card,event['controller'],owner,
+                                               target_permanent=item.card.id)
+                    dealt_to[item.card.id]=dealt
+                    if game.creature(state):item.marked_damage+=dealt
+                    if 'Planeswalker' in state.definition.types:item.loyalty=max(0,item.loyalty-dealt)
+                if lifelink:self.gain_life(event['controller'],player_amount+sum(dealt_to.values()))
                 dead=[]
                 for owner,item in targets:
                     state=game.battlefield[item.card.id]
                     zero_loyalty='Planeswalker' in state.definition.types and item.loyalty==0
-                    lethal=game.creature(state) and not game.has(state,'indestructible') and (touch and item.card.id not in prevented or item.marked_damage>=game.stats(state)[1])
+                    lethal=game.creature(state) and not game.has(state,'indestructible') and (touch and dealt_to.get(item.card.id,0)>0 or item.marked_damage>=game.stats(state)[1])
                     if zero_loyalty or lethal:dead.append((owner,item))
                 self.log('damage_board',f"{event['name']} deals {amount} damage to the opposing player and their creatures and planeswalkers.",
                          actor=event['controller'],damaged=[item.card.id for _,item in targets],amount=amount,
+                         playerDamage=player_amount,permanentDamage=dealt_to,
                          prevented=sorted(prevented),loyaltyAfter={item.card.id:item.loyalty for _,item in targets if 'Planeswalker' in game.battlefield[item.card.id].definition.types})
-                aura_damage=[dict(source=event['source'],target=None,amount=amount)]
-                aura_damage.extend(dict(source=event['source'],target=item.card.id,amount=amount)
-                                   for _,item in targets if item.card.id not in prevented)
+                aura_damage=[dict(source=event['source'],target=None,amount=player_amount)]
+                aura_damage.extend(dict(source=event['source'],target=identifier,amount=dealt)
+                                   for identifier,dealt in dealt_to.items())
                 pending_aura=game.aura_damage_triggers(aura_damage,opponent)
                 self.destroy_batch(dead,card,reason='damage_deaths')
                 if pending_aura:self.resolve_entry_triggers(pending_aura,card)
@@ -4793,14 +4857,15 @@ class Simulator(AdvancedRules):
                 continue
             elif event.get("operation") == "damage":
                 target = 1-event["controller"]
-                self.players[target].life -= event["amount"]
-                self.record_player_damage(target,event.get("source"),event["amount"])
-                if event["amount"]>0:
+                amount=self.replaced_damage(event['amount'],card,event['controller'],target)
+                self.players[target].life -= amount
+                self.record_player_damage(target,event.get("source"),amount)
+                if amount>0:
                     game=self.event_game('main')
-                    aura_events=game.aura_damage_triggers([dict(source=event['source'],target=None,amount=event['amount'])],target)
+                    aura_events=game.aura_damage_triggers([dict(source=event['source'],target=None,amount=amount)],target)
                     if aura_events:self.resolve_entry_triggers(aura_events,card)
                 # Noncombat damage: never contributes to commander combat damage.
-                message = f"{event['name']} deals {event['amount']} damage to Player {target+1}."
+                message = f"{event['name']} deals {amount} damage to Player {target+1}."
             elif event.get("operation") == "gain_life":
                 source = event["controller"]
                 self.gain_life(source,event["amount"])
@@ -4854,6 +4919,17 @@ class Simulator(AdvancedRules):
             to_attacker=to_blocker=to_player=0
         elif 1-self.active in self.combat_damage_prevented_to_players:
             to_player=0
+        if to_player and attacker:
+            to_player=self.replaced_damage(to_player,attacker.card,self.active,
+                                           1-self.active,combat=True)
+        if to_blocker and attacker and blocker:
+            to_blocker=self.replaced_damage(to_blocker,attacker.card,self.active,
+                                            1-self.active,target_permanent=blocker.card.id,
+                                            combat=True)
+        if to_attacker and blocker and attacker:
+            to_attacker=self.replaced_damage(to_attacker,blocker.card,1-self.active,
+                                             self.active,target_permanent=attacker.card.id,
+                                             combat=True)
         if attacker:attacker.marked_damage+=to_attacker
         if blocker:blocker.marked_damage+=to_blocker
         active=self.players[self.active];defender=self.players[1-self.active]
@@ -5216,6 +5292,12 @@ class Simulator(AdvancedRules):
             outcome.update(damage=0,attackerDies=False,blockerDies=False,gainA=0,gainB=0)
         elif 1-self.active in self.combat_damage_prevented_to_players:
             outcome.update(damage=0)
+        original=outcome['damage']
+        if original>0:
+            outcome['damage']=self.replaced_damage(original,a,self.active,
+                                                  1-self.active,combat=True)
+            if 'lifelink' in a.traits.split(';')[-1].split(','):
+                outcome['gainA']-=original-outcome['damage']
         return outcome
 
     def activation_choices(self, seat: int, kinds: set[str]) -> list[Candidate]:
@@ -5681,7 +5763,9 @@ class Simulator(AdvancedRules):
             if effective_attacker is None: raise RuntimeError("Attacker is no longer a creature")
             early={item.card.id for item,card in ((a,effective_attacker),(b,effective_blocker)) if item and card and any(k in card.traits.split(';')[-1].split(',') for k in ('first strike','double strike'))}
             if (early or a.marked_damage or (b and b.marked_damage)
-                    or 1-self.active in self.combat_damage_prevented_to_players):
+                    or 1-self.active in self.combat_damage_prevented_to_players
+                    or any(item.card.event_definition and item.card.event_definition.damage_replacement
+                           for player in self.players for item in player.battlefield)):
                 self.combat_context=dict(attacker=a.card.id,blocker=b.card.id if b else None,blocked=b is not None,early=early)
                 self.log('block',choice.label,actor=1-self.active,blocker=b.card.id if b else None)
                 self.phase='first_damage' if early else 'regular_damage'
@@ -5948,7 +6032,8 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                               event_definition.entry_group_modifier or
                               event_definition.entry_top_library_search or
                               event_definition.tribal_entry_counter or
-                              event_definition.unique_entry_draw)
+                              event_definition.unique_entry_draw or
+                              event_definition.damage_replacement)
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and "Planeswalker" not in definition.get("types",[])  # Never promote partial loyalty Oracle text.
