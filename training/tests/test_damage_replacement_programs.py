@@ -18,6 +18,8 @@ RED_ARTIFACT_BONUS=('If a red or artifact source you control would deal damage '
                     'it deals that much damage plus 1 instead.')
 GLOBAL_DOUBLE=('Flash\nIf a source would deal damage to a permanent or player, '
                'it deals double that damage to that permanent or player instead.')
+RED_SPELL_BONUS=('If a red spell would deal damage to a permanent or player, '
+                 'it deals that much damage plus 1 to that permanent or player instead.')
 
 
 class DamageReplacementChecks(unittest.TestCase):
@@ -273,6 +275,34 @@ class DamageReplacementChecks(unittest.TestCase):
         source=self.enchantment(GLOBAL_DOUBLE+' Gain 2 life.')
         self.assertEqual(source.kind,'unsupported')
         self.assertIsNone(parse(GLOBAL_DOUBLE,['Instant']))
+
+    def test_sulfuric_vapors_and_renamed_enchantment_share_program(self):
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks/14509839-mono-red-gobs.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=='Sulfuric Vapors')
+        real=s.import_diagnostic_card(self.rules,raw,1,'real-vapors',{'Red'})
+        other=self.enchantment(RED_SPELL_BONUS,name='New spell heat')
+        self.assertEqual(real.kind,'enchantment')
+        self.assertEqual(real.event_definition.damage_replacement,
+                         other.event_definition.damage_replacement)
+
+    def test_red_spell_bonus_affects_both_players_and_permanents_but_not_creatures(self):
+        source=self.enchantment(RED_SPELL_BONUS)
+        sim,attacker=self.fixture(source,owner=1,attacker_colors=('Red',))
+        red=s.Card('new-red-instant','New red instant','spell',colors=frozenset({'Red'}))
+        blue=s.Card('new-blue-instant','New blue instant','spell',colors=frozenset({'Blue'}))
+        for controller,target in ((0,1),(1,0),(1,1)):
+            self.assertEqual(sim.replaced_damage(2,red,controller,target),3)
+            self.assertEqual(sim.replaced_damage(2,red,controller,target,
+                                                target_permanent='new-target'),3)
+            self.assertEqual(sim.replaced_damage(2,blue,controller,target),2)
+            self.assertEqual(sim.replaced_damage(2,attacker,controller,target),2)
+        bonus=self.enchantment(RED_SPELL_BONUS.replace('plus 1','plus 3'),
+                               name='Another spell heat')
+        sim2,_=self.fixture(bonus,owner=1)
+        self.assertEqual(sim2.replaced_damage(2,red,0,1),5)
+        self.assertEqual(self.enchantment(RED_SPELL_BONUS+' Draw a card.').kind,
+                         'unsupported')
+        sim.invariant();sim2.invariant()
 
 
 if __name__=='__main__':unittest.main()

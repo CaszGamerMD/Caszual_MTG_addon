@@ -8,7 +8,7 @@ import argparse
 from card_events import Game as EventGame, Permanent as EventPermanent, Definition as EventDefinition, parse_card as parse_event_card, rule_text
 import base64
 from oracle_abilities import parse_token_creation, StaticEffect, Selector
-from creature_types import has_subtype, has_any_subtype, card_has_subtype, valid_creature_choice
+from creature_types import has_subtype, has_any_subtype, card_has_subtype, valid_creature_choice, shares_creature_type
 import mana_pool
 import opening_hand
 import x_spells
@@ -639,11 +639,31 @@ class Simulator(AdvancedRules):
                 if ('Red' in colors or 'R' in colors or 'Artifact' in types or
                         source_card.kind in ('artifact','equipment','artifact_creature')):
                     amount+=program.amount
+            elif (program.operation=='add' and
+                  program.source_filter=='red_spell' and
+                  program.target_filter=='any_target' and source_card is not None):
+                colors=set(source_card.colors)
+                types=set(source_card.printed_types)
+                if source_card.event_definition:
+                    colors.update(source_card.event_definition.colors)
+                    types.update(source_card.event_definition.types)
+                # A red creature on the battlefield is a source, not a spell.
+                spell_kind=source_card.kind in ('spell','instant','sorcery',
+                    'scaled_damage_spell','modal_target_spell')
+                is_spell=spell_kind or bool(types.intersection({'Instant','Sorcery'}))
+                if is_spell and ('Red' in colors or 'R' in colors):
+                    amount+=program.amount
         return amount
 
     def gain_life(self, seat: int, amount: int):
         """Track life gained, independent of damage/losses and total life change."""
         if amount<0:raise ValueError('Life gain amount must be nonnegative')
+        if amount and any(not p.phased_out and p.card.event_definition and
+                          p.card.event_definition.upkeep_damage_prevention
+                          for owner in self.players for p in owner.battlefield):
+            self.log('life_gain_prevented','Continuous replacement prevents all life gain.',
+                     actor=seat,original=amount,gained=0)
+            return
         # An affected player may order applicable replacements. Choose the
         # opponent's life-gain-to-loss replacement first, avoiding a larger
         # loss from that player's own gain multipliers. Once replaced, this
@@ -3727,6 +3747,26 @@ class Simulator(AdvancedRules):
                 self.outcome()
                 if self.finished:return
                 continue
+            if event.get('operation')=='shared_type_mana':
+                game=self.event_game('main')
+                entering=game.battlefield.get(event['entering'])
+                # If the entrant has left before this stack ability resolves,
+                # use its creature-type snapshot from the triggering event.
+                entry_def=(entering.definition if entering and game.creature(entering)
+                           else EventDefinition('Entering creature',frozenset({'Creature'}),
+                               frozenset(event['enteringSubtypes']),False,0,0,
+                               frozenset({'changeling'}) if event['enteringChangeling'] else frozenset()))
+                amount=sum(other.controller==event['controller'] and game.creature(other)
+                           and shares_creature_type(other.definition,entry_def)
+                           for other in game.battlefield.values())
+                # Optional addition: the deterministic diagnostic policy accepts
+                # the nonnegative mana offer. No mana is produced at count zero.
+                self.players[event['controller']].mana_pool[mana_pool.COLORS.index(event['symbol'])]+=amount
+                self.log('shared_type_mana','Entering creature creates optional shared-type colorless mana.',
+                         actor=event['controller'],source=event['source'],
+                         entering=event['entering'],amount=amount,color=event['symbol'],
+                         enteredStillPresent=bool(entering),accepted=True)
+                continue
             if event.get('operation')=='create_treasures':
                 self.create_treasures(event['controller'],event['amount'],False,card)
                 continue
@@ -4866,6 +4906,17 @@ class Simulator(AdvancedRules):
                     if aura_events:self.resolve_entry_triggers(aura_events,card)
                 # Noncombat damage: never contributes to commander combat damage.
                 message = f"{event['name']} deals {amount} damage to Player {target+1}."
+            elif event.get('operation')=='upkeep_damage_player':
+                target=event['targetPlayer']
+                amount=self.replaced_damage(event['amount'],card,event['controller'],target)
+                self.players[target].life-=amount
+                self.record_player_damage(target,event['source'],amount)
+                if amount>0:
+                    game=self.event_game('main')
+                    aura_events=game.aura_damage_triggers(
+                        [dict(source=event['source'],target=None,amount=amount)],target)
+                    if aura_events:self.resolve_entry_triggers(aura_events,card)
+                message=f"{event['name']} deals {amount} upkeep damage to Player {target+1}."
             elif event.get("operation") == "gain_life":
                 source = event["controller"]
                 self.gain_life(source,event["amount"])
@@ -6033,7 +6084,9 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                               event_definition.entry_top_library_search or
                               event_definition.tribal_entry_counter or
                               event_definition.unique_entry_draw or
-                              event_definition.damage_replacement)
+                              event_definition.damage_replacement or
+                              event_definition.upkeep_damage_prevention or
+                              event_definition.shared_type_mana)
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and "Planeswalker" not in definition.get("types",[])  # Never promote partial loyalty Oracle text.

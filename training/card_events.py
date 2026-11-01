@@ -106,6 +106,8 @@ class Definition:
     tribal_entry_counter: object | None = None  # Another controlled subtype enters: self counters.
     unique_entry_draw: object | None = None  # Intervening-if name gate on creature entry draw.
     damage_replacement: object | None = None  # Continuous replacement applied to damage, not life loss.
+    upkeep_damage_prevention: object | None = None  # Each upkeep: damage active player; prevent all life gain.
+    shared_type_mana: object | None = None  # Any creature ETB: optional colorless mana by shared creature type.
     self_pump: tuple = ()  # Mana cost, power, toughness until EOT.
     team_keyword_pump: tuple = ()  # Keyword, power, toughness, other only.
     devotion: tuple = ()
@@ -357,6 +359,15 @@ def parse_card(card: dict) -> Definition:
         return Definition(**base,abilities=frozenset({damage_replacement.intrinsic})
                           if damage_replacement.intrinsic else frozenset(),
                           damage_replacement=damage_replacement)
+    from upkeep_damage_prevention import parse as parse_upkeep_damage_prevention
+    upkeep_damage_prevention=parse_upkeep_damage_prevention(text,name,types)
+    if upkeep_damage_prevention:
+        return Definition(**base,abilities=frozenset(),
+                          upkeep_damage_prevention=upkeep_damage_prevention)
+    from shared_type_mana import parse as parse_shared_type_mana
+    shared_type_mana=parse_shared_type_mana(text,types)
+    if shared_type_mana:
+        return Definition(**base,abilities=frozenset(),shared_type_mana=shared_type_mana)
     # Whole-instruction grammar: choose a real keyword counter before entry.
     from keyword_counters import parse_entry_choice
     keyword_choices=parse_entry_choice(text,types)
@@ -1043,6 +1054,15 @@ class Game:
                           source=permanent.id,name=permanent.definition.name,controller=permanent.controller,
                           amount=permanent.definition.entry_attachment_counters)
             for watcher in list(self.battlefield.values()):
+                if watcher.definition.shared_type_mana and self.creature(permanent):
+                    self.emit('trigger',operation='shared_type_mana',
+                        effect='optional colorless mana equal to creatures sharing a type',
+                        source=watcher.id,name=watcher.definition.name,
+                        controller=watcher.controller,entering=permanent.id,
+                        enteringSubtypes=sorted(permanent.definition.subtypes),
+                        enteringChangeling='changeling' in permanent.definition.abilities,
+                        optional=watcher.definition.shared_type_mana.optional,
+                        symbol=watcher.definition.shared_type_mana.mana_symbol)
                 counter_rule=watcher.definition.tribal_entry_counter
                 if (counter_rule and watcher.id!=permanent.id and
                         watcher.controller==permanent.controller and
@@ -1157,6 +1177,12 @@ class Game:
         land_counts=land_counts or {}
         triggers = []
         for p in self.battlefield.values():
+            if p.definition.upkeep_damage_prevention:
+                triggers.append(dict(operation='upkeep_damage_player',
+                    effect='damage active player at beginning of upkeep',
+                    source=p.id,name=p.definition.name,controller=p.controller,
+                    event='upkeep',targetPlayer=self.turn_player,
+                    amount=p.definition.upkeep_damage_prevention.damage))
             rule=p.definition.upkeep_token_rule
             if rule and (rule[0]=='each' or p.controller==self.turn_player):
                 if rule[1]!='enchanted' or self.enchanted(p):
