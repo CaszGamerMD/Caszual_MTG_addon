@@ -789,6 +789,17 @@ class Simulator(AdvancedRules):
         return self.enter_creatures([card],player,attached_targets={card.id:attached_to} if attached_to else None,
                                     keyword_choices={card.id:keyword_counter} if keyword_counter else None)
 
+    def unique_entry_name_allowed(self,controller,entering_id,entering_name):
+        """Intervening-if: no other controlled creature or graveyard creature card shares a name."""
+        game=self.event_game('main')
+        if any(state.id!=entering_id and state.controller==controller
+               and game.creature(state) and state.definition.name==entering_name
+               for state in game.battlefield.values()):return False
+        return not any(card.name==entering_name and
+            (card.kind=='creature' or 'Creature' in card.printed_types or
+             card.event_definition is not None and 'Creature' in card.event_definition.types)
+            for card in self.players[controller].graveyard)
+
     def enter_creatures(self, cards, player: Player, bestowed_targets=None, attached_targets=None, keyword_choices=None):
         game=self.event_game('main')
         game._next_token=self.token_sequence
@@ -845,6 +856,18 @@ class Simulator(AdvancedRules):
         self.token_sequence=game._next_token
         self.sync_events(game)
         pending=[event for event in game.events if event['kind']=='trigger']
+        for entrant in entrants:
+            if entrant.token or not game.creature(entrant):continue
+            if not self.unique_entry_name_allowed(entrant.controller,entrant.id,entrant.definition.name):
+                continue
+            for watcher in self.players[entrant.controller].battlefield:
+                spec=(watcher.card.event_definition.unique_entry_draw
+                      if watcher.card.event_definition else None)
+                if spec:
+                    pending.append(dict(operation='unique_creature_entry_draw',
+                        controller=entrant.controller,source=watcher.card.id,
+                        name=watcher.card.name,entering=entrant.id,
+                        entryName=entrant.definition.name,amount=spec.amount))
         # A whole-board entry boost triggers once for each entering creature.
         # The count and affected set are measured when the stack ability
         # resolves, not during this simultaneous entry event.
@@ -1304,24 +1327,29 @@ class Simulator(AdvancedRules):
         for source in self.players[seat].battlefield:
             ability=(source.card.event_definition.attach_equipment_activation
                      if source.card.event_definition else None)
-            if not ability or source.tapped:continue
+            if not ability or (ability.tap_cost and source.tapped):continue
+            if (ability.sorcery_only and (self.stack.items or seat!=self.active or
+                    self.phase not in ('main','second_main'))):continue
             state=game.battlefield.get(source.card.id)
             if (not state or state.controller!=seat or game.creature(state)
-                    and source.fresh and not game.has(state,'haste')):continue
+                    and ability.tap_cost and source.fresh and not game.has(state,'haste')):continue
             payment=self.payment(replace(source.card,mana_cost=ability.mana_cost),
-                seat=seat,spell_cost=False,excluded_sources=(source.card.id,))
+                seat=seat,spell_cost=False,
+                excluded_sources=(source.card.id,) if ability.tap_cost else ())
             if not payment['paid']:continue
             for equipment in self.players[seat].battlefield:
                 equip_state=game.battlefield.get(equipment.card.id)
                 if not equip_state or equip_state.controller!=seat or not (
                         'Equipment' in equip_state.definition.subtypes and
-                        'Artifact' in equip_state.definition.types):continue
+                        'Artifact' in equip_state.definition.types) or (
+                        ability.target_mode=='self' and equipment.card.id==source.card.id):continue
                 if game.has(equip_state,'shroud') or game.protected(equip_state,source.card.colors):
                     continue
                 for owner,creature in self.creature_targets(seat,source.card):
                     # Reattaching to the same creature is still a legal target
                     # and activation, even though it is usually a no-op.
-                    if owner!=seat:continue
+                    if owner!=seat or (ability.target_mode=='self' and
+                            creature.card.id!=source.card.id):continue
                     target=game.battlefield[creature.card.id]
                     if game.protected(target,equipment.card.colors):continue
                     result.append(Candidate(source.card.id+':attach:'+equipment.card.id+':'+creature.card.id,
@@ -1336,10 +1364,14 @@ class Simulator(AdvancedRules):
         source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
         ability=(source.card.event_definition.attach_equipment_activation if source and
                  source.card.event_definition else None)
-        if not ability or source.tapped:raise ValueError('No equipment attachment activation')
+        if not ability or ability.tap_cost and source.tapped:
+            raise ValueError('No equipment attachment activation')
+        if (ability.sorcery_only and (self.stack.items or seat!=self.active or
+                self.phase not in ('main','second_main'))):
+            raise ValueError('Attachment must be activated as a sorcery')
         game=self.event_game('main');source_state=game.battlefield.get(source_id)
         if (not source_state or source_state.controller!=seat or game.creature(source_state)
-                and source.fresh and not game.has(source_state,'haste')):
+                and ability.tap_cost and source.fresh and not game.has(source_state,'haste')):
             raise ValueError('Attachment source is unavailable to tap')
         equipment=next((p for p in self.players[seat].battlefield
                         if p.card.id==equipment_id),None)
@@ -1350,17 +1382,19 @@ class Simulator(AdvancedRules):
                 or 'Artifact' not in equip_state.definition.types
                 or game.has(equip_state,'shroud')
                 or game.protected(equip_state,source.card.colors)
+                or ability.target_mode=='self' and (creature_id!=source_id or equipment_id==source_id)
                 or creature_id not in {p.card.id for owner,p in self.creature_targets(seat,source.card)
                                        if owner==seat}
                 or not target or game.protected(target,equipment.card.colors)):
             raise ValueError('Both attachment targets must be legal')
         payment=self.payment(replace(source.card,mana_cost=ability.mana_cost),
-                             seat=seat,spell_cost=False,excluded_sources=(source_id,))
+                             seat=seat,spell_cost=False,
+                             excluded_sources=(source_id,) if ability.tap_cost else ())
         if not payment['paid']:raise ValueError('Cannot pay attachment activation')
         for permanent in self.players[seat].battlefield:
             if permanent.card.id in payment['sources']:permanent.tapped=True
         self.players[seat].mana_pool=list(payment['pool'])
-        source.tapped=True
+        if ability.tap_cost:source.tapped=True
         event=dict(operation='attach_targeted_equipment',controller=seat,
                    source=source_id,name=source.card.name,
                    equipment=equipment_id,equipmentEntry=equip_state.entered_at,
@@ -4227,6 +4261,19 @@ class Simulator(AdvancedRules):
                 self.outcome()
                 if self.finished:return
                 continue
+            if event.get('operation')=='unique_creature_entry_draw':
+                eligible=self.unique_entry_name_allowed(event['controller'],
+                    event['entering'],event['entryName'])
+                if eligible:
+                    for _ in range(event['amount']):self.draw(event['controller'])
+                self.log('unique_entry_draw' if eligible else 'unique_entry_gate_failed',
+                    'Intervening-if same-name gate checked again at resolution.',
+                    actor=event['controller'],source=event['source'],
+                    entering=event['entering'],entryName=event['entryName'],
+                    drawn=event['amount'] if eligible else 0)
+                self.outcome()
+                if self.finished:return
+                continue
             if event.get('operation')=='opponent_loss_tapped_creatures':
                 game=self.event_game('main')
                 controller=event['controller']
@@ -5899,7 +5946,9 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                               event_definition.counted_pump_activation or
                               event_definition.attach_equipment_activation or
                               event_definition.entry_group_modifier or
-                              event_definition.entry_top_library_search)
+                              event_definition.entry_top_library_search or
+                              event_definition.tribal_entry_counter or
+                              event_definition.unique_entry_draw)
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and "Planeswalker" not in definition.get("types",[])  # Never promote partial loyalty Oracle text.

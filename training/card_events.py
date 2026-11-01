@@ -103,6 +103,8 @@ class Definition:
     attach_equipment_activation: object | None = None  # Tap/cost and two own-permanent targets.
     entry_group_modifier: object | None = None  # Whole-team triggered buff on creature entry.
     entry_top_library_search: object | None = None  # Any-number subtype tutor, reveal/shuffle/top.
+    tribal_entry_counter: object | None = None  # Another controlled subtype enters: self counters.
+    unique_entry_draw: object | None = None  # Intervening-if name gate on creature entry draw.
     self_pump: tuple = ()  # Mana cost, power, toughness until EOT.
     team_keyword_pump: tuple = ()  # Keyword, power, toughness, other only.
     devotion: tuple = ()
@@ -340,6 +342,14 @@ def parse_card(card: dict) -> Definition:
     if entry_top_search:
         return Definition(**base,abilities=frozenset(),
                           entry_top_library_search=entry_top_search)
+    from tribal_entry_counters import parse as parse_tribal_entry_counter
+    tribal_counter=parse_tribal_entry_counter(text,types)
+    if tribal_counter:
+        return Definition(**base,abilities=frozenset(),tribal_entry_counter=tribal_counter)
+    from unique_entry_draw import parse as parse_unique_entry_draw
+    unique_draw=parse_unique_entry_draw(text,types)
+    if unique_draw:
+        return Definition(**base,abilities=frozenset(),unique_entry_draw=unique_draw)
     # Whole-instruction grammar: choose a real keyword counter before entry.
     from keyword_counters import parse_entry_choice
     keyword_choices=parse_entry_choice(text,types)
@@ -1026,6 +1036,15 @@ class Game:
                           source=permanent.id,name=permanent.definition.name,controller=permanent.controller,
                           amount=permanent.definition.entry_attachment_counters)
             for watcher in list(self.battlefield.values()):
+                counter_rule=watcher.definition.tribal_entry_counter
+                if (counter_rule and watcher.id!=permanent.id and
+                        watcher.controller==permanent.controller and
+                        self.creature(permanent) and
+                        has_subtype(permanent.definition,counter_rule.subtype)):
+                    self.emit('trigger',operation='self_counter',
+                        effect='controlled subtype entry puts counters on the surviving source',
+                        source=watcher.id,name=watcher.definition.name,
+                        controller=watcher.controller,amount=counter_rule.amount)
                 # A single simultaneous token batch triggers this ability only
                 # once per source, even when ten or more tokens enter together.
                 if (permanent.token and watcher.controller==permanent.controller

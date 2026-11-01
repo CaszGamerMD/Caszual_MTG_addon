@@ -10,6 +10,7 @@ import simulator as s
 
 
 ORACLE='{T}: Attach target Equipment you control to target creature you control.'
+SELF_ORACLE='{0}: Attach target Equipment you control to this creature. Activate only as a sorcery.'
 
 
 class EquipmentAttachChecks(unittest.TestCase):
@@ -64,6 +65,60 @@ class EquipmentAttachChecks(unittest.TestCase):
         self.assertEqual(card.event_definition.attach_equipment_activation,
                          self.source().event_definition.attach_equipment_activation)
         self.assertEqual(self.source(name='Other equipment engineer').kind,'creature')
+
+    def test_toll_collector_self_attach_is_sorcery_speed_and_does_not_tap(self):
+        deck=json.loads((Path(__file__).resolve().parents[1]/'decks/14509839-mono-red-gobs.json').read_text())
+        raw=next(c for c in deck['mainboard'] if c['name']=="Kazuul's Toll Collector")
+        real=s.import_diagnostic_card(self.rules,raw,0,'real-collector',{'Red'})
+        source=self.source(SELF_ORACLE,name='Fictional scavenger')
+        self.assertEqual(real.kind,'creature')
+        self.assertEqual(real.event_definition.attach_equipment_activation,
+                         source.event_definition.attach_equipment_activation)
+        sim,equipment,allies,_=self.fixture(source)
+        scavenger=next(p for p in sim.players[0].battlefield if p.card==source)
+        scavenger.fresh=True  # not summoning-sick for an ability without {T}
+        sim.active=0;sim.phase='main'
+        actions=[a for a in sim.legal(0) if a.kind=='activate_equipment_attach']
+        self.assertEqual({a.target_permanent for a in actions},{source.id})
+        sim.activate_equipment_attach(0,source.id,equipment.id,source.id)
+        self.assertFalse(scavenger.tapped)
+        self.drain(sim)
+        self.assertEqual(next(p for p in sim.players[0].battlefield
+                              if p.card==equipment).attached_to,source.id)
+        sim.invariant()
+
+    def test_self_attach_cost_timing_and_extra_text_rejection(self):
+        source=self.source(SELF_ORACLE.replace('{0}','{2}'))
+        sim,equipment,allies,_=self.fixture(source)
+        sim.active=0;sim.phase='combat'
+        self.assertFalse([a for a in sim.legal(0) if a.kind=='activate_equipment_attach'])
+        with self.assertRaisesRegex(ValueError,'sorcery'):
+            sim.activate_equipment_attach(0,source.id,equipment.id,source.id)
+        sim.phase='main'
+        with self.assertRaises(ValueError):
+            sim.activate_equipment_attach(0,source.id,equipment.id,allies[0].id)
+        self.assertFalse(any(p.tapped for p in sim.players[0].battlefield))
+        sim.activate_equipment_attach(0,source.id,equipment.id,source.id)
+        self.assertEqual(sum(p.tapped for p in sim.players[0].battlefield),2)
+        self.drain(sim)
+        for text in (SELF_ORACLE+' Draw a card.',
+                     SELF_ORACLE.replace('this creature','target creature you control'),
+                     SELF_ORACLE.replace('Activate only as a sorcery.','')):
+            with self.subTest(text=text):
+                self.assertIsNone(parse(text,['Creature']))
+                self.assertEqual(self.source(text).kind,'unsupported')
+
+    def test_self_attach_does_not_offer_an_untargetable_source(self):
+        source=self.source(SELF_ORACLE)
+        sim,equipment,_,_=self.fixture(source)
+        sim.active=0;sim.phase='main'
+        game=sim.event_game('main')
+        game.grant_temporary(game.battlefield[source.id],'shroud')
+        sim.sync_events(game)
+        self.assertFalse([a for a in sim.legal(0) if a.kind=='activate_equipment_attach'])
+        with self.assertRaises(ValueError):
+            sim.activate_equipment_attach(0,source.id,equipment.id,source.id)
+        sim.invariant()
 
     def test_cast_time_targets_tap_and_resolve_after_source_leaves(self):
         source=self.source()
