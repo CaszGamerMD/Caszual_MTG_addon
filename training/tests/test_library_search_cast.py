@@ -144,4 +144,49 @@ class LibrarySearchCastTests(unittest.TestCase):
         self.assertIn(spell,choices)
         sim.invariant()
 
+    def test_unseen_whole_text_search_to_battlefield_composes_existing_steps(self):
+        raw=dict(TUTOR,name='Unnamed battlefield tutor',types=['Sorcery'],
+                 manaCost='{2}{G}',oracleText=(
+                    'Search your library for a creature card, put it onto the battlefield, then shuffle.'))
+        spell=self.spell(raw)
+        self.assertEqual(spell.kind,'library_search_spell')
+        self.assertEqual(spell.library_search_program.steps,
+                         ('search','put_battlefield','shuffle'))
+        sim,p=self.fixture(spell)
+        matches=[c for c in p.library if c.kind=='creature' or 'Creature' in c.printed_types]
+        found=min(matches,key=lambda c:c.id)
+        before=len(p.library)
+        sim.cast_spell(0,spell)
+        self.assertNotIn(found,[item.card for item in p.battlefield])
+        self.drain(sim)
+        self.assertIn(found,[item.card for item in p.battlefield])
+        self.assertEqual(len(p.library),before-1)
+        self.assertIn(spell,p.graveyard)
+        kinds=[event['kind'] for event in sim.events]
+        self.assertLess(kinds.index('search_put_battlefield'),kinds.index('library_shuffle'))
+        sim.invariant()
+
+    def test_battlefield_search_color_filter_reveal_and_whole_clause_rejection(self):
+        oracle=('Search your library for a green creature card, reveal it, '
+                'put it onto the battlefield, then shuffle.')
+        raw=dict(TUTOR,name='Unseen green finder',types=['Sorcery'],oracleText=oracle)
+        spell=self.spell(raw)
+        self.assertEqual(spell.library_search_program.color,'Green')
+        self.assertEqual(spell.library_search_program.steps,
+                         ('search','reveal','put_battlefield','shuffle'))
+        sim,p=self.fixture(spell)
+        # Library contents are intentionally changed without inventing cards.
+        for card in list(p.library):
+            if card.kind=='creature' and 'Green' in card.colors:
+                p.library.remove(card);p.graveyard.append(card)
+        before=len(p.library)
+        sim.cast_spell(0,spell);self.drain(sim)
+        self.assertEqual(len(p.library),before)
+        self.assertEqual(sum(e['kind']=='search_put_battlefield' for e in sim.events),0)
+        self.assertEqual(sum(e['kind']=='library_shuffle' for e in sim.events),1)
+        for extra in (' Draw a card.', '\nDestroy target artifact.'):
+            with self.subTest(extra=extra):
+                self.assertIsNone(compile_card(oracle+extra,['Sorcery']))
+        sim.invariant()
+
 if __name__=='__main__':unittest.main()

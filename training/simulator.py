@@ -2443,6 +2443,33 @@ class Simulator(AdvancedRules):
                 label='Cast '+card.name+' targeting '+item.card.name,target_permanent=item.card.id))
         return tuple(choices)
 
+    def library_search_sacrifice_choices(self,seat,card,kind):
+        """Bind a controlled permanent as an additional casting cost, not a target."""
+        program=card.library_search_program
+        cost=program.additional_cost if program else None
+        if cost is None:return ()
+        ids=set(cost.eligible_ids(self.event_game('main'),seat))
+        return tuple(Candidate(card.id+':sacrifice='+item.card.id,kind,card.id,
+            features=features(power=1,cost=1+len(self.payment(card,seat=seat).get('sources',[]))),
+            label='Cast '+card.name+' sacrificing '+item.card.name,
+            tap_ids=(item.card.id,))
+            for item in self.players[seat].battlefield if item.card.id in ids)
+
+    def library_search_x_choices(self,seat,card,kind):
+        """Enumerate affordable X payments for a verified bounded search."""
+        program=card.library_search_program
+        if not program or not program.mana_value_limit_x:return ()
+        p=self.players[seat]
+        budget=sum(p.mana_pool)+sum(max(map(sum,options)) for _,options in self.mana_sources(seat))
+        options=[]
+        for x in range(min(1000,budget)+1):
+            payment=self.payment(card,x=x,seat=seat)
+            if not payment['paid']:continue
+            options.append(Candidate(card.id+':x='+str(x),kind,card.id,
+                features=features(power=x,cost=len(payment.get('sources',[]))),
+                label='Cast '+card.name+' with X='+str(x),x_value=x))
+        return tuple(options)
+
     def resolve_modal_target(self,event,card):
         """Resolve only compiled chosen modes, never silently fall back."""
         if card.modal_target_program.choose>1:
@@ -2661,6 +2688,10 @@ class Simulator(AdvancedRules):
                                       cost=len(self.payment(card,seat=seat).get('sources',[]))),
                     label='Cast '+card.name+' targeting '+frame.label,target_stack=frame.id)
                     for frame in self.counter_targets(card))
+            elif card.kind=='library_search_spell' and card.library_search_program.additional_cost:
+                actions.extend(self.library_search_sacrifice_choices(seat,card,'respond'))
+            elif card.kind=='library_search_spell' and card.library_search_program.mana_value_limit_x:
+                actions.extend(self.library_search_x_choices(seat,card,'respond'))
             else: actions.append(Candidate(card.id,'respond',card.id,features(draw=card.draw,life=card.life,
                     power=card.token_count,cost=len(self.payment(card,seat=seat).get('sources',[]))),label='Respond with '+card.name))
         return Observation(seat,self.turn,self.phase,tuple(self.players[seat].hand),
@@ -2742,10 +2773,13 @@ class Simulator(AdvancedRules):
             self.cast_spell(seat,card,exile_permission=True)
             return 'cast'
         card=next(c for c in self.players[seat].hand if c.id==choice.card_id)
-        self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack,modal_modes=choice.modal_modes)
+        self.cast_spell(seat,card,target=choice.target_permanent or choice.target_stack,
+                        modal_modes=choice.modal_modes,
+                        x=choice.x_value if card.library_search_program and card.library_search_program.mana_value_limit_x else None,
+                        sacrifice_id=choice.tap_ids[0] if choice.tap_ids else None)
         return 'cast'
 
-    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None,modal_modes=(),exile_permission=False,zone_card=None):
+    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None,modal_modes=(),exile_permission=False,zone_card=None,sacrifice_id=None):
         player=self.players[seat]
         if not card.instant and seat!=self.stack.priority: raise ValueError('Player lacks priority')
         if self.stack.items:
@@ -2796,6 +2830,16 @@ class Simulator(AdvancedRules):
         if card.kind=='counter_spell' and target not in {f.id for f in self.counter_targets(card)}:
             raise ValueError('Counterspell requires a legal spell target')
         if card.blink and target not in {p.card.id for owner,p in self.creature_targets(seat,card) if owner==seat}:raise ValueError('Blink requires own legal creature')
+        additional=(card.library_search_program.additional_cost
+                    if card.library_search_program else None)
+        if (card.library_search_program and card.library_search_program.mana_value_limit_x
+                and (type(x) is not int or not 0<=x<=1000)):
+            raise ValueError('Variable library search requires a valid declared X')
+        if additional:
+            if sacrifice_id not in additional.eligible_ids(self.event_game('main'),seat):
+                raise ValueError('Additional sacrifice cost requires an eligible controlled permanent')
+        elif sacrifice_id is not None:
+            raise ValueError('Spell has no additional sacrifice cost')
         payment_card=replace(card,mana_cost=card.event_definition.bestow[0]) if bestow else card
         if rebound:payment_card=replace(payment_card,mana_cost='{0}')
         elif flashback:payment_card=replace(payment_card,mana_cost=card.flashback_cost)
@@ -2810,6 +2854,17 @@ class Simulator(AdvancedRules):
         prior=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)
         self.stack.active=self.active
         frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'keywordChoice':keyword_choice or (card.target_modifier[2][0] if card.target_modifier and card.target_modifier[2] else None),'modalModes':tuple(modal_modes),'fromHand':not rebound and not flashback and not commander and not exile_permission},card),card.name)
+        sacrifice_triggers=[]
+        if additional:
+            # Pay the sacrifice as part of casting, after mana abilities but
+            # before any player receives priority. Its death triggers go ABOVE
+            # the spell on the stack and survive if the spell is countered.
+            snapshot=self.event_game('main')
+            victim=next(item for item in player.battlefield if item.card.id==sacrifice_id)
+            sacrifice_triggers=snapshot.death_triggers([sacrifice_id])
+            if victim.card.is_token:
+                sacrifice_triggers.extend(snapshot.token_action_events('sacrifice',seat,1))
+            self.send_to_destination(player,victim,snapshot=snapshot)
         self.log('cast',f'Player {seat+1} casts {card.name}.',actor=seat,card=card.name,
                  manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,bestow=bestow,rebound=rebound,flashback=flashback,exilePermission=exile_permission,targetStack=target if card.kind=='counter_spell' else None,
                  targetPermanent=target if card.kind in ('removal_spell','modifier_spell','modal_target_spell') else None)
@@ -2828,8 +2883,8 @@ class Simulator(AdvancedRules):
                    if mode.target_kind in ('artifact','enchantment','creature')
                    for trigger in self.target_triggers(frame,target_id)]
         else:wards=self.target_triggers(frame,target)
-        if cast_triggers or wards:
-            self.resolve_entry_triggers(cast_triggers+wards,card,priority=seat)
+        if sacrifice_triggers or cast_triggers or wards:
+            self.resolve_entry_triggers(sacrifice_triggers+cast_triggers+wards,card,priority=seat)
         elif not self.manual_priority and not self._resolving_stack:
             self.drain_priority()
 
@@ -3008,7 +3063,7 @@ class Simulator(AdvancedRules):
             return
         if card.kind=='library_search_spell':
             from library_search_spells import resolve
-            resolve(self,controller,card,card.library_search_program)
+            resolve(self,controller,card,card.library_search_program,x=event.get('x'),copy=event.get('copy',False))
             return
         if card.kind=='sequence_spell':
             if not card.sequence_effects:raise RuntimeError('Uncompiled sequence spell')
@@ -4979,6 +5034,13 @@ class Simulator(AdvancedRules):
                         target_permanent=target.card.id)
                         for owner,target in self.creature_targets(seat,c))
                     continue
+                if c.kind=='library_search_spell' and c.library_search_program.additional_cost:
+                    if self.payment(c,seat=seat)['paid']:
+                        actions.extend(self.library_search_sacrifice_choices(seat,c,'cast'))
+                    continue
+                if c.kind=='library_search_spell' and c.library_search_program.mana_value_limit_x:
+                    actions.extend(self.library_search_x_choices(seat,c,'cast'))
+                    continue
                 if c.kind == "x_spell":
                     budget=sum(p.mana_pool)+sum(max(map(sum,options)) for _,options in self.mana_sources(seat))
                     for x in range(budget//c.mana_cost.count('{X}')+1):
@@ -5239,7 +5301,8 @@ class Simulator(AdvancedRules):
                     self.cast_spell(self.active,card,choice.x_value,choice.kind=='cast_commander',
                         modal_modes=choice.modal_modes,target=choice.target_permanent or choice.target_stack,
                         bestow=choice.kind=='bestow',flashback=choice.kind=='cast_flashback',
-                         exile_permission=choice.kind=='cast_exile')
+                         exile_permission=choice.kind=='cast_exile',
+                         sacrifice_id=choice.tap_ids[0] if choice.tap_ids else None)
         elif self.phase == "attack":
             choice = self.decide(self.active)
             if choice.kind=='attack_group':
@@ -5775,9 +5838,13 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         parsed={'kind':'modal_target_spell','modal_target_program':modal_target}
     from library_search_spells import compile_card as compile_library_search
     library_search=compile_library_search(rule_text(definition.get('oracleText','')),
-                                         definition.get('types',[]))
+                                         definition.get('types',[]),definition.get('name',''))
+    library_search_cost_supported=(rules.query('cost',cost)['supported'] or
+        library_search is not None and library_search.mana_value_limit_x and
+        cost.count('{X}')==1 and
+        rules.query('cost',cost.replace('{X}','{0}'))['supported'])
     if (parsed['kind']=='unsupported' and library_search is not None
-            and rules.query('cost',cost)['supported']):
+            and library_search_cost_supported):
         parsed={'kind':'library_search_spell','library_search_program':library_search}
     from artifact_color_mana import parse as parse_artifact_color_mana
     color_program=parse_artifact_color_mana(rule_text(definition.get('oracleText','')),definition.get('types',[]))
