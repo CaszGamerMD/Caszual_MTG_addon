@@ -100,6 +100,9 @@ class Definition:
     activations: tuple = ()
     conditional_draw_activation: object | None = None  # Mana + tap: draw with a same-name gate.
     counted_pump_activation: object | None = None  # Targeted +X/+X from a live creature count.
+    attach_equipment_activation: object | None = None  # Tap/cost and two own-permanent targets.
+    entry_group_modifier: object | None = None  # Whole-team triggered buff on creature entry.
+    entry_top_library_search: object | None = None  # Any-number subtype tutor, reveal/shuffle/top.
     self_pump: tuple = ()  # Mana cost, power, toughness until EOT.
     team_keyword_pump: tuple = ()  # Keyword, power, toughness, other only.
     devotion: tuple = ()
@@ -322,6 +325,21 @@ def parse_card(card: dict) -> Definition:
     if counted_pump:
         return Definition(**base,abilities=frozenset(),
                           counted_pump_activation=counted_pump)
+    from equipment_attach_activations import parse as parse_equipment_attach
+    attach_equipment=parse_equipment_attach(text,types)
+    if attach_equipment:
+        return Definition(**base,abilities=frozenset(),
+                          attach_equipment_activation=attach_equipment)
+    from entry_group_modifiers import parse as parse_entry_group_modifier
+    entry_group_modifier=parse_entry_group_modifier(text,types)
+    if entry_group_modifier:
+        return Definition(**base,abilities=frozenset({entry_group_modifier.intrinsic}),
+                          entry_group_modifier=entry_group_modifier)
+    from entry_library_search import parse as parse_entry_library_search
+    entry_top_search=parse_entry_library_search(text,types)
+    if entry_top_search:
+        return Definition(**base,abilities=frozenset(),
+                          entry_top_library_search=entry_top_search)
     # Whole-instruction grammar: choose a real keyword counter before entry.
     from keyword_counters import parse_entry_choice
     keyword_choices=parse_entry_choice(text,types)

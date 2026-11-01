@@ -845,6 +845,21 @@ class Simulator(AdvancedRules):
         self.token_sequence=game._next_token
         self.sync_events(game)
         pending=[event for event in game.events if event['kind']=='trigger']
+        # A whole-board entry boost triggers once for each entering creature.
+        # The count and affected set are measured when the stack ability
+        # resolves, not during this simultaneous entry event.
+        for entrant in entrants:
+            program=entrant.definition.entry_group_modifier
+            if program and game.creature(entrant):
+                pending.append(dict(operation='entry_group_modifier',controller=entrant.controller,
+                    source=entrant.id,name=entrant.definition.name,
+                    keyword=program.granted,relation=program.count.relation,
+                    subtype=program.count.subtype))
+            search=entrant.definition.entry_top_library_search
+            if search and game.creature(entrant):
+                pending.append(dict(operation='entry_top_library_search',
+                    controller=entrant.controller,source=entrant.id,
+                    name=entrant.definition.name,subtype=search.subtype))
         # Lore is placed as the Saga enters. Chapter abilities are triggered,
         # not resolved during entry, and Chapter III needs the same stack.
         for entrant in entrants:
@@ -1283,6 +1298,79 @@ class Simulator(AdvancedRules):
                     label='Tap '+source.card.name+' to strengthen '+target.card.name,
                     target_permanent=target.card.id))
         return result
+
+    def equipment_attach_choices(self,seat):
+        game=self.event_game('main');result=[]
+        for source in self.players[seat].battlefield:
+            ability=(source.card.event_definition.attach_equipment_activation
+                     if source.card.event_definition else None)
+            if not ability or source.tapped:continue
+            state=game.battlefield.get(source.card.id)
+            if (not state or state.controller!=seat or game.creature(state)
+                    and source.fresh and not game.has(state,'haste')):continue
+            payment=self.payment(replace(source.card,mana_cost=ability.mana_cost),
+                seat=seat,spell_cost=False,excluded_sources=(source.card.id,))
+            if not payment['paid']:continue
+            for equipment in self.players[seat].battlefield:
+                equip_state=game.battlefield.get(equipment.card.id)
+                if not equip_state or equip_state.controller!=seat or not (
+                        'Equipment' in equip_state.definition.subtypes and
+                        'Artifact' in equip_state.definition.types):continue
+                if game.has(equip_state,'shroud') or game.protected(equip_state,source.card.colors):
+                    continue
+                for owner,creature in self.creature_targets(seat,source.card):
+                    # Reattaching to the same creature is still a legal target
+                    # and activation, even though it is usually a no-op.
+                    if owner!=seat:continue
+                    target=game.battlefield[creature.card.id]
+                    if game.protected(target,equipment.card.colors):continue
+                    result.append(Candidate(source.card.id+':attach:'+equipment.card.id+':'+creature.card.id,
+                        'activate_equipment_attach',source.card.id,
+                        features=features(power=.5,cost=len(payment['sources'])),
+                        label='Attach '+equipment.card.name+' to '+creature.card.name,
+                        tap_ids=(equipment.card.id,),target_permanent=creature.card.id))
+        return result
+
+    def activate_equipment_attach(self,seat,source_id,equipment_id,creature_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        ability=(source.card.event_definition.attach_equipment_activation if source and
+                 source.card.event_definition else None)
+        if not ability or source.tapped:raise ValueError('No equipment attachment activation')
+        game=self.event_game('main');source_state=game.battlefield.get(source_id)
+        if (not source_state or source_state.controller!=seat or game.creature(source_state)
+                and source.fresh and not game.has(source_state,'haste')):
+            raise ValueError('Attachment source is unavailable to tap')
+        equipment=next((p for p in self.players[seat].battlefield
+                        if p.card.id==equipment_id),None)
+        equip_state=game.battlefield.get(equipment_id)
+        target=game.battlefield.get(creature_id)
+        if (not equipment or not equip_state or equip_state.controller!=seat
+                or 'Equipment' not in equip_state.definition.subtypes
+                or 'Artifact' not in equip_state.definition.types
+                or game.has(equip_state,'shroud')
+                or game.protected(equip_state,source.card.colors)
+                or creature_id not in {p.card.id for owner,p in self.creature_targets(seat,source.card)
+                                       if owner==seat}
+                or not target or game.protected(target,equipment.card.colors)):
+            raise ValueError('Both attachment targets must be legal')
+        payment=self.payment(replace(source.card,mana_cost=ability.mana_cost),
+                             seat=seat,spell_cost=False,excluded_sources=(source_id,))
+        if not payment['paid']:raise ValueError('Cannot pay attachment activation')
+        for permanent in self.players[seat].battlefield:
+            if permanent.card.id in payment['sources']:permanent.tapped=True
+        self.players[seat].mana_pool=list(payment['pool'])
+        source.tapped=True
+        event=dict(operation='attach_targeted_equipment',controller=seat,
+                   source=source_id,name=source.card.name,
+                   equipment=equipment_id,equipmentEntry=equip_state.entered_at,
+                   target=creature_id,targetEntry=target.entered_at)
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_equipment_attach','Paid and targeted two permanents to attach Equipment.',
+                 actor=seat,source=source_id,equipment=equipment_id,
+                 target=creature_id,manaSources=payment['sources'],stackId=frame.id)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
 
     def activate_counted_pump(self,seat,source_id,target_id):
         if self.stack.priority!=seat:raise ValueError('Player lacks priority')
@@ -2747,6 +2835,7 @@ class Simulator(AdvancedRules):
         actions.extend(self.token_ability_choices(seat))
         actions.extend(self.conditional_draw_choices(seat))
         actions.extend(self.counted_pump_choices(seat))
+        actions.extend(self.equipment_attach_choices(seat))
         actions.extend(self.scaled_mana_choices(seat))
         actions.extend(self.scaled_life_choices(seat))
         actions.extend(self.sacrifice_choices(seat))
@@ -2812,6 +2901,9 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_counted_pump':
             self.activate_counted_pump(seat,choice.card_id,choice.target_permanent)
+            return 'activate'
+        if choice.kind=='activate_equipment_attach':
+            self.activate_equipment_attach(seat,choice.card_id,choice.tap_ids[0],choice.target_permanent)
             return 'activate'
         if choice.kind=='activate_tokens':
             self.activate_tokens(seat,choice.card_id,choice.activation_index)
@@ -4275,6 +4367,34 @@ class Simulator(AdvancedRules):
                          actor=event['controller'],source=event['source'],drawn=event['amount'])
                 self.outcome()
                 continue
+            if event.get('operation')=='attach_targeted_equipment':
+                game=self.event_game('main')
+                equipment=next((p for p in self.players[event['controller']].battlefield
+                    if p.card.id==event['equipment']),None)
+                equip_state=game.battlefield.get(event['equipment'])
+                creature=game.battlefield.get(event['target'])
+                valid=bool(equipment and equip_state and creature
+                    and equip_state.controller==creature.controller==event['controller']
+                    and equip_state.entered_at==event['equipmentEntry']
+                    and creature.entered_at==event['targetEntry']
+                    and 'Equipment' in equip_state.definition.subtypes
+                    and 'Artifact' in equip_state.definition.types
+                    and not game.has(equip_state,'shroud')
+                    and not game.protected(equip_state,card.colors)
+                    and event['target'] in {p.card.id for owner,p in
+                        self.creature_targets(event['controller'],card)
+                        if owner==event['controller']}
+                    and not game.protected(creature,equipment.card.colors))
+                if valid:
+                    equipment.attached_to=event['target']
+                    self.effect_clock+=1;equipment.attachment_at=self.effect_clock
+                    self.resolve_entry_triggers(self.state_based_actions(),card)
+                self.log('equipment_attach' if valid else 'equipment_attach_fizzle',
+                    'Equipment attaches after both targets are verified.' if valid else
+                    'An Equipment attachment target is no longer legal.',
+                    actor=event['controller'],equipment=event['equipment'],
+                    target=event['target'])
+                continue
             if event.get('operation')=='counted_pump':
                 program=card.event_definition.counted_pump_activation if card.event_definition else None
                 if program is None:raise RuntimeError('Unverified counted pump at resolution')
@@ -4292,6 +4412,30 @@ class Simulator(AdvancedRules):
                 self.log('counted_pump','Target gets a boost from live battlefield count.',
                          actor=event['controller'],target=event['target'],amount=amount)
                 self.resolve_entry_triggers(self.state_based_actions(),card)
+                continue
+            if event.get('operation')=='entry_group_modifier':
+                from counted_effect_blocks import BattlefieldCount
+                game=self.event_game('main')
+                binding=BattlefieldCount(event['relation'],card_type='Creature',
+                                         subtype=event['subtype'])
+                amount=binding.evaluate(game,event['controller'])
+                affected=[]
+                for state in game.battlefield.values():
+                    if state.controller!=event['controller'] or not game.creature(state):continue
+                    state.temporary_power+=amount
+                    state.temporary_toughness+=amount
+                    game.grant_temporary(state,event['keyword'])
+                    affected.append(state.id)
+                self.sync_events(game)
+                self.log('entry_group_modifier','Creature entry boosts the current controlled team.',
+                    actor=event['controller'],source=event['source'],amount=amount,
+                    affected=affected,keyword=event['keyword'])
+                self.resolve_entry_triggers(self.state_based_actions(),card)
+                continue
+            if event.get('operation')=='entry_top_library_search':
+                from entry_library_search import EntryTopSearch, resolve
+                resolve(self,event['controller'],event['name'],
+                        EntryTopSearch(event['subtype']))
                 continue
             if event.get('operation')=='self_pump':
                 game=self.event_game('main');source=game.battlefield.get(event['source'])
@@ -5085,6 +5229,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.token_ability_choices(seat))
             actions.extend(self.conditional_draw_choices(seat))
             actions.extend(self.counted_pump_choices(seat))
+            actions.extend(self.equipment_attach_choices(seat))
             actions.extend(self.scaled_mana_choices(seat))
             actions.extend(self.scaled_life_choices(seat))
             actions.extend(self.sacrifice_choices(seat))
@@ -5361,6 +5506,8 @@ class Simulator(AdvancedRules):
                 self.activate_conditional_draw(self.active,choice.card_id)
             elif choice.kind=='activate_counted_pump':
                 self.activate_counted_pump(self.active,choice.card_id,choice.target_permanent)
+            elif choice.kind=='activate_equipment_attach':
+                self.activate_equipment_attach(self.active,choice.card_id,choice.tap_ids[0],choice.target_permanent)
             elif choice.kind=='activate_tokens':
                 self.activate_tokens(self.active,choice.card_id,choice.activation_index)
             elif choice.kind=='activate_self_pump':
@@ -5749,7 +5896,10 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                or any(ability.startswith("protection from ")
                       for ability in event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.self_pump or event_definition.team_keyword_pump or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
     allowed = allowed or bool(event_definition.conditional_draw_activation or
-                              event_definition.counted_pump_activation)
+                              event_definition.counted_pump_activation or
+                              event_definition.attach_equipment_activation or
+                              event_definition.entry_group_modifier or
+                              event_definition.entry_top_library_search)
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and "Planeswalker" not in definition.get("types",[])  # Never promote partial loyalty Oracle text.
