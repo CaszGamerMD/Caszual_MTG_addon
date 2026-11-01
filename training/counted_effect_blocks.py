@@ -12,6 +12,7 @@ import re
 
 from oracle_abilities import Effect, effect
 from semantic_execution_blocks import AtomicBlock, compile_effects
+from creature_types import has_subtype
 
 
 _TYPES = {'creature':'Creature','artifact':'Artifact','enchantment':'Enchantment',
@@ -51,7 +52,8 @@ class BattlefieldCount:
              self.relation=='opponent' and state.controller!=controller)
             and (not self.card_type or (game.creature(state) if self.card_type=='Creature'
                  else self.card_type in state.definition.types))
-            and (not self.subtype or self.subtype in state.definition.subtypes)
+            and (not self.subtype or self.subtype in state.definition.subtypes
+                 or has_subtype(state.definition,self.subtype))
             and (self.tapped is None or state.tapped==self.tapped)
             and (not self.nontoken or not state.token)
             and (self.min_power is None or game.stats(state)[0]>=self.min_power)

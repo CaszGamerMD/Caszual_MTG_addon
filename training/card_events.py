@@ -98,6 +98,8 @@ class Definition:
     tap_damage_amount: int = 0  # Tap cost deals n damage to a chosen any-target on the stack.
     attachment: tuple = ()
     activations: tuple = ()
+    conditional_draw_activation: object | None = None  # Mana + tap: draw with a same-name gate.
+    counted_pump_activation: object | None = None  # Targeted +X/+X from a live creature count.
     self_pump: tuple = ()  # Mana cost, power, toughness until EOT.
     team_keyword_pump: tuple = ()  # Keyword, power, toughness, other only.
     devotion: tuple = ()
@@ -310,6 +312,16 @@ def parse_card(card: dict) -> Definition:
         if card.get('power')!='*' or card.get('toughness')!='*':
             return Definition(**base,abilities=frozenset(),supported=False,reason='Variable characteristic mismatch')
         return Definition(**base,abilities=dynamic_pt[0],dynamic_pt_color=dynamic_pt[1])
+    from conditional_draw_activations import parse as parse_conditional_draw
+    conditional_draw=parse_conditional_draw(text,types)
+    if conditional_draw:
+        return Definition(**base,abilities=frozenset(),
+                          conditional_draw_activation=conditional_draw)
+    from counted_pump_activations import parse as parse_counted_pump
+    counted_pump=parse_counted_pump(text,types)
+    if counted_pump:
+        return Definition(**base,abilities=frozenset(),
+                          counted_pump_activation=counted_pump)
     # Whole-instruction grammar: choose a real keyword counter before entry.
     from keyword_counters import parse_entry_choice
     keyword_choices=parse_entry_choice(text,types)

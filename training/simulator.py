@@ -210,6 +210,7 @@ class Card:
     graveyard_return_subtype: str = ""
     target_modifier: tuple = ()  # (power, toughness, keyword choices, conditional draw subtype).
     modifier_program: object | None = None  # Independently compiled target/temporary/conditional blocks.
+    group_modifier_program: object | None = None  # Resolution-time max-stat team buff.
     loyalty_program: object | None = None  # Full verified planeswalker loyalty ability program.
     modal_sweeps: tuple = ()  # Ordered destroy modes, with two indices selected on casting.
     modal_target_program: object | None = None  # Verified targeted modal instruction program.
@@ -333,7 +334,7 @@ class Policy:
         # Identical observations give identical decisions. No access to the engine or replay.
         development={"cast","cast_commander","cast_flashback","bestow","equip","station",
                      "activate_loyalty","history_tokens","activate_tokens","activate_self_pump",
-                     "activate_team_keyword_pump","activate_strip"}
+                     "activate_team_keyword_pump","activate_strip","activate_conditional_draw"}
         def utility(action):
             score=sum(w*f for w,f in zip(self.weights,action.features))
             if observation.phase in ("main","second_main") and not observation.developed_this_turn:
@@ -483,6 +484,8 @@ class Simulator(AdvancedRules):
                 if self.diagnostic and card.kind=='sequence_spell' and card.sequence_effects:
                     continue
                 if self.diagnostic and card.kind=='counted_spell' and card.counted_program:
+                    continue
+                if self.diagnostic and card.kind=='group_modifier_spell' and card.group_modifier_program:
                     continue
                 if (self.diagnostic and card.kind=='library_search_spell'
                         and card.library_search_program is not None):
@@ -1107,7 +1110,7 @@ class Simulator(AdvancedRules):
 
     def response_choices(self,seat):
         if seat!=self.stack.priority: return ()
-        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','sequence_spell','library_search_spell','modal_target_spell','mana_spell','scaled_damage_spell','token_spell','counter_spell','removal_spell','modifier_spell','blink_spell','prevention_spell',
+        return tuple(c for c in self.players[seat].hand if c.instant and c.kind in ('spell','sequence_spell','library_search_spell','modal_target_spell','mana_spell','scaled_damage_spell','token_spell','counter_spell','removal_spell','modifier_spell','group_modifier_spell','blink_spell','prevention_spell',
             'creature','enchantment','artifact','equipment','vehicle','station','planeswalker')
                      and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
@@ -1217,6 +1220,92 @@ class Simulator(AdvancedRules):
                     result.append(Candidate(source.card.id+':tribal-tap','activate_tribal_tokens',source.card.id,
                         features=features(power=count*spec.power,cost=0),label='Activate '+source.card.name))
         return result
+
+    def conditional_draw_choices(self,seat):
+        game=self.event_game('main');result=[]
+        for source in self.players[seat].battlefield:
+            ability=(source.card.event_definition.conditional_draw_activation
+                     if source.card.event_definition else None)
+            if not ability or source.tapped or not ability.available(game,seat):continue
+            state=game.battlefield.get(source.card.id)
+            if not state or state.controller!=seat or (game.creature(state)
+                    and source.fresh and not game.has(state,'haste')):continue
+            payment=self.payment(replace(source.card,mana_cost=ability.cost),
+                                 seat=seat,spell_cost=False,excluded_sources=(source.card.id,))
+            if payment['paid']:
+                result.append(Candidate(source.card.id+':conditional-draw',
+                    'activate_conditional_draw',source.card.id,
+                    features=features(draw=ability.amount,cost=len(payment['sources'])),
+                    label='Draw with '+source.card.name))
+        return result
+
+    def activate_conditional_draw(self,seat,source_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        ability=(source.card.event_definition.conditional_draw_activation if source and
+                 source.card.event_definition else None)
+        if not ability or source.tapped:raise ValueError('Invalid conditional draw source')
+        game=self.event_game('main');state=game.battlefield.get(source_id)
+        if (not state or state.controller!=seat or not ability.available(game,seat)
+                or game.creature(state) and source.fresh and not game.has(state,'haste')):
+            raise ValueError('Conditional draw activation requirement not met')
+        payment=self.payment(replace(source.card,mana_cost=ability.cost),seat=seat,
+                             spell_cost=False,excluded_sources=(source_id,))
+        if not payment['paid']:raise ValueError('Cannot pay conditional draw activation')
+        for permanent in self.players[seat].battlefield:
+            if permanent.card.id in payment['sources']:permanent.tapped=True
+        self.players[seat].mana_pool=list(payment['pool'])
+        source.tapped=True
+        event=dict(operation='conditional_draw',controller=seat,source=source_id,
+                   amount=ability.amount,name=source.card.name)
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_conditional_draw','Activated named-permanent gated card draw.',
+                 actor=seat,source=source_id,stackId=frame.id,
+                 manaSources=payment['sources'])
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
+    def counted_pump_choices(self,seat):
+        game=self.event_game('main');result=[]
+        for source in self.players[seat].battlefield:
+            program=(source.card.event_definition.counted_pump_activation
+                     if source.card.event_definition else None)
+            if not program or source.tapped:continue
+            state=game.battlefield.get(source.card.id)
+            if (not state or state.controller!=seat
+                    or game.creature(state) and source.fresh and not game.has(state,'haste')):
+                continue
+            amount=program.count.evaluate(game,seat)
+            for owner,target in self.creature_targets(seat,source.card):
+                result.append(Candidate(source.card.id+':counted-pump:'+target.card.id,
+                    'activate_counted_pump',source.card.id,
+                    features=features(power=amount if owner==seat else -amount),
+                    label='Tap '+source.card.name+' to strengthen '+target.card.name,
+                    target_permanent=target.card.id))
+        return result
+
+    def activate_counted_pump(self,seat,source_id,target_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        program=(source.card.event_definition.counted_pump_activation if source and
+                 source.card.event_definition else None)
+        if not program or source.tapped:raise ValueError('No counted tap-pump ability')
+        game=self.event_game('main');state=game.battlefield.get(source_id)
+        if (not state or state.controller!=seat or game.creature(state)
+                and source.fresh and not game.has(state,'haste')):
+            raise ValueError('Cannot tap this source yet')
+        if target_id not in {item.card.id for _,item in self.creature_targets(seat,source.card)}:
+            raise ValueError('Invalid counted pump target')
+        source.tapped=True
+        event=dict(operation='counted_pump',controller=seat,source=source_id,
+                   name=source.card.name,target=target_id)
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_counted_pump','Tap cost paid and targeted boost put on stack.',
+                 actor=seat,source=source_id,target=target_id,stackId=frame.id)
+        wards=self.target_triggers(frame,target_id)
+        if wards:self.resolve_entry_triggers(wards,source.card,priority=seat)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
 
     def sacrifice_choices(self,seat):
         game=self.event_game('main');choices=[]
@@ -2656,6 +2745,8 @@ class Simulator(AdvancedRules):
         actions.extend(self.special_choices(seat))
         actions.extend(self.enchantment_copy_choices(seat))
         actions.extend(self.token_ability_choices(seat))
+        actions.extend(self.conditional_draw_choices(seat))
+        actions.extend(self.counted_pump_choices(seat))
         actions.extend(self.scaled_mana_choices(seat))
         actions.extend(self.scaled_life_choices(seat))
         actions.extend(self.sacrifice_choices(seat))
@@ -2715,6 +2806,12 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_color_draw':
             self.activate_color_draw(seat,choice.card_id)
+            return 'activate'
+        if choice.kind=='activate_conditional_draw':
+            self.activate_conditional_draw(seat,choice.card_id)
+            return 'activate'
+        if choice.kind=='activate_counted_pump':
+            self.activate_counted_pump(seat,choice.card_id,choice.target_permanent)
             return 'activate'
         if choice.kind=='activate_tokens':
             self.activate_tokens(seat,choice.card_id,choice.activation_index)
@@ -3080,6 +3177,10 @@ class Simulator(AdvancedRules):
             for step in card.counted_program.steps:
                 self.resolve_quantity_block(step,controller,card)
                 if self.finished:return
+            return
+        if card.kind=='group_modifier_spell':
+            from group_modifier_spells import resolve
+            resolve(self,controller,card,card.group_modifier_program)
             return
         if card.kind=='graveyard_return_spell':
             target=next((c for c in self.graveyard_subtype_targets(controller,card.graveyard_return_subtype)
@@ -4168,6 +4269,30 @@ class Simulator(AdvancedRules):
                 self.log('team_keyword_pump','Team pump resolves on qualifying creatures.',
                          actor=event['controller'],affected=affected)
                 continue
+            if event.get('operation')=='conditional_draw':
+                for _ in range(event['amount']):self.draw(event['controller'])
+                self.log('conditional_draw','Activated draw resolves after the paid activation.',
+                         actor=event['controller'],source=event['source'],drawn=event['amount'])
+                self.outcome()
+                continue
+            if event.get('operation')=='counted_pump':
+                program=card.event_definition.counted_pump_activation if card.event_definition else None
+                if program is None:raise RuntimeError('Unverified counted pump at resolution')
+                legal={item.card.id for _,item in self.creature_targets(event['controller'],card)}
+                if event['target'] not in legal:
+                    self.log('counted_pump_fizzle','Target is no longer legal when ability resolves.',
+                             actor=event['controller'],target=event['target'])
+                    continue
+                game=self.event_game('main')
+                amount=program.count.evaluate(game,event['controller'])
+                target=game.battlefield[event['target']]
+                target.temporary_power+=amount
+                target.temporary_toughness+=amount
+                self.sync_events(game)
+                self.log('counted_pump','Target gets a boost from live battlefield count.',
+                         actor=event['controller'],target=event['target'],amount=amount)
+                self.resolve_entry_triggers(self.state_based_actions(),card)
+                continue
             if event.get('operation')=='self_pump':
                 game=self.event_game('main');source=game.battlefield.get(event['source'])
                 if source and source.controller==event['controller']:
@@ -4958,6 +5083,8 @@ class Simulator(AdvancedRules):
             actions.extend(self.class_level_choices(seat))
             actions.extend(self.equip_choices(seat))
             actions.extend(self.token_ability_choices(seat))
+            actions.extend(self.conditional_draw_choices(seat))
+            actions.extend(self.counted_pump_choices(seat))
             actions.extend(self.scaled_mana_choices(seat))
             actions.extend(self.scaled_life_choices(seat))
             actions.extend(self.sacrifice_choices(seat))
@@ -5057,7 +5184,7 @@ class Simulator(AdvancedRules):
                     actions.append(Candidate(c.id+':spellback','cast_modal_back',c.id,
                         features=features(power=back.power,toughness=back.toughness),
                         label='Cast '+back.name))
-                if c.kind in ("creature", "vehicle", "enchantment", "spell", "sequence_spell", "library_search_spell", "counted_spell", "mana_spell", "scaled_damage_spell", "token_spell", "prevention_spell", "mana_artifact", "equipment", "planeswalker", "station", "artifact") and self.payment(c)["paid"]:
+                if c.kind in ("creature", "vehicle", "enchantment", "spell", "sequence_spell", "library_search_spell", "counted_spell", "group_modifier_spell", "mana_spell", "scaled_damage_spell", "token_spell", "prevention_spell", "mana_artifact", "equipment", "planeswalker", "station", "artifact") and self.payment(c)["paid"]:
                     if c.draw and len(p.library) < c.draw:
                         continue  # never choose a known self-decking draw spell
                     keywords = c.traits.split(";")[-1].split(",") if c.traits else []
@@ -5127,7 +5254,7 @@ class Simulator(AdvancedRules):
             raise RuntimeError("Agent attempted an illegal action")
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
-        if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station","activate_loyalty",
+        if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station","activate_loyalty","activate_conditional_draw",
                            "history_tokens","activate_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_scaled_life","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_tribal_pump","activate_tap_damage","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
             self.turn_development[seat]=True
         return choice
@@ -5230,6 +5357,10 @@ class Simulator(AdvancedRules):
                 self.activate_graveyard_exile(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind=='activate_color_draw':
                 self.activate_color_draw(self.active,choice.card_id)
+            elif choice.kind=='activate_conditional_draw':
+                self.activate_conditional_draw(self.active,choice.card_id)
+            elif choice.kind=='activate_counted_pump':
+                self.activate_counted_pump(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind=='activate_tokens':
                 self.activate_tokens(self.active,choice.card_id,choice.activation_index)
             elif choice.kind=='activate_self_pump':
@@ -5617,6 +5748,8 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                         "defender", "indestructible", "changeling"} & event_definition.abilities)
                or any(ability.startswith("protection from ")
                       for ability in event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.self_pump or event_definition.team_keyword_pump or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
+    allowed = allowed or bool(event_definition.conditional_draw_activation or
+                              event_definition.counted_pump_activation)
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and "Planeswalker" not in definition.get("types",[])  # Never promote partial loyalty Oracle text.
@@ -5830,6 +5963,11 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                                          definition.get('types',[]))
     if parsed['kind']=='unsupported' and counted_program and rules.query('cost',cost)['supported']:
         parsed={'kind':'counted_spell','counted_program':counted_program}
+    from group_modifier_spells import parse as parse_group_modifier
+    group_modifier=parse_group_modifier(rule_text(definition.get('oracleText','')),
+                                        definition.get('types',[]))
+    if parsed['kind']=='unsupported' and group_modifier and rules.query('cost',cost)['supported']:
+        parsed={'kind':'group_modifier_spell','group_modifier_program':group_modifier}
     from modal_target_blocks import parse as parse_modal_target
     modal_target=parse_modal_target(rule_text(definition.get('oracleText','')),
                                     definition.get('types',[]),definition.get('name',''))
@@ -5861,6 +5999,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         populate=parsed.get('populate',False),
         sequence_effects=parsed.get('sequence_effects',()),
         counted_program=parsed.get('counted_program'),
+        group_modifier_program=parsed.get('group_modifier_program'),
         library_search_program=parsed.get('library_search_program'),
         mana_as_any_color=parsed.get('mana_as_any_color',False),color_draw_cost=parsed.get('color_draw_cost',''),
         target_modifier=parsed.get('target_modifier',()),modifier_program=parsed.get('modifier_program'),loyalty_program=parsed.get('loyalty_program'),modal_sweeps=parsed.get('modal_sweeps',()),modal_target_program=parsed.get('modal_target_program'),sweep_reward=parsed.get('sweep_reward',()),
