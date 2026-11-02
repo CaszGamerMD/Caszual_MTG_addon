@@ -243,6 +243,11 @@ class AdvancedRules:
     if equipment.attached_to==identifier:
      for spec in equipment.definition.equipment_attacks:
       events.append(dict(operation='create_tokens',effect='equipped attack token creation',source=equipment.id,controller=equipment.controller,name=equipment.definition.name,tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords))))
+     if equipment.definition.equipped_attack_counters:
+      events.append(dict(operation='equipped_attack_counter',effect='equipped attack adds counters',
+                         source=equipment.id,controller=equipment.controller,name=equipment.definition.name,
+                         target=identifier,targetEntry=g.battlefield[identifier].entered_at,
+                         amount=equipment.definition.equipped_attack_counters))
   # Attack triggers survive their source leaving before stack resolution.
   for identifier in ids:
    source=g.battlefield[identifier]

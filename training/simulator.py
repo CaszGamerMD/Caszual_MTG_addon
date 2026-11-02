@@ -2384,11 +2384,15 @@ class Simulator(AdvancedRules):
             definition=source.card.event_definition
             if source.card.kind!='equipment' or not definition or not definition.attachment:continue
             cost=definition.attachment[1]
-            if self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)['paid']:
-                for owner,target in self.creature_targets(seat,source.card):
-                    if owner==seat and source.attached_to!=target.card.id:
-                        choices.append(Candidate(source.card.id+':equip:'+target.card.id,'equip',source.card.id,
-                            features=features(power=.5),label='Equip '+source.card.name,target_permanent=target.card.id))
+            normal_paid=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)['paid']
+            token_cost=definition.equipment_token_cost
+            token_paid=bool(token_cost and self.payment(replace(source.card,mana_cost=token_cost),
+                                                           seat=seat,spell_cost=False)['paid'])
+            for owner,target in self.creature_targets(seat,source.card):
+                if owner==seat and source.attached_to!=target.card.id and (
+                        normal_paid or target.card.is_token and token_paid):
+                    choices.append(Candidate(source.card.id+':equip:'+target.card.id,'equip',source.card.id,
+                        features=features(power=.5),label='Equip '+source.card.name,target_permanent=target.card.id))
             alternate=definition.equipment_planeswalker_cost
             if not alternate or not self.payment(replace(source.card,mana_cost=alternate),
                                                  seat=seat,spell_cost=False)['paid']:continue
@@ -2419,6 +2423,11 @@ class Simulator(AdvancedRules):
         else:
             eligible=target in {p.card.id for owner,p in self.creature_targets(seat,source.card) if owner==seat}
             cost=source.card.event_definition.attachment[1]
+            candidate=next((item for item in self.players[seat].battlefield if item.card.id==target),None)
+            token_cost=source.card.event_definition.equipment_token_cost
+            if candidate and candidate.card.is_token and token_cost and self.payment(
+                    replace(source.card,mana_cost=token_cost),seat=seat,spell_cost=False)['paid']:
+                cost=token_cost
         if not eligible or not cost or source.attached_to==target:raise ValueError('Illegal equip target')
         payment=self.payment(replace(source.card,mana_cost=cost),seat=seat,spell_cost=False)
         if not payment['paid']:raise ValueError('Cannot pay equip')
@@ -3727,12 +3736,37 @@ class Simulator(AdvancedRules):
         """Diagnostic decision policy; return False to decline optional mana payment."""
         return True
 
+    def choose_optional_trigger_payment(self,event):
+        """Decision policy for a paid trigger, independent of its effect."""
+        return True
+
     def choose_optional_entry_bounce(self,event,candidates):
         """Deterministic legal choice; callers may supply a different decision policy."""
         return min(candidates,key=lambda item:item.card.id) if candidates else None
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
+            if event.get('paymentCost'):
+                controller=event['controller']
+                cost=event['paymentCost']
+                if not self.choose_optional_trigger_payment(event):
+                    self.log('trigger_payment_declined','Optional triggered mana payment declined.',
+                             actor=controller,source=event['source'],cost=cost)
+                    continue
+                payment=self.payment(replace(card,mana_cost=cost),seat=controller,spell_cost=False)
+                if not payment['paid']:
+                    self.log('trigger_payment_unavailable','Optional triggered mana payment unavailable.',
+                             actor=controller,source=event['source'],cost=cost)
+                    continue
+                for item in self.players[controller].battlefield:
+                    if item.card.id in payment['sources']:item.tapped=True
+                self.players[controller].mana_pool=list(payment['pool'])
+                self.log('trigger_payment','Paid mana for triggered effect.',
+                         actor=controller,source=event['source'],cost=cost,
+                         manaSources=payment['sources'])
+                # Once paid, "If you do" is mandatory; don't offer a second
+                # unrelated choice when the underlying effect resolves.
+                event=dict(event,optional=False)
             if event.get('operation')=='pay_return_source':
                 controller=event['controller']
                 source=next((item for owner in self.players for item in owner.battlefield
@@ -5021,6 +5055,15 @@ class Simulator(AdvancedRules):
                     game=self.event_game('main')
                     source.counters+=game.counter_amount(source.card.id,amount)
                 message=f"{event['name']}: its surviving source receives {amount} counter(s)."
+            elif event.get('operation')=='equipped_attack_counter':
+                game=self.event_game('main')
+                target=game.battlefield.get(event['target'])
+                added=game.counter_amount(event['target'],event['amount']) if (
+                    target and target.entered_at==event['targetEntry'] and game.creature(target)) else 0
+                if added:
+                    target.counters+=added
+                    self.sync_events(game)
+                message=f"{event['name']}: attacking creature receives {added} counter(s)."
             elif event.get('operation')=='discard':
                 target=self.players[event['target']]
                 if target.hand:

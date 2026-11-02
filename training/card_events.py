@@ -124,6 +124,7 @@ class Definition:
     station: tuple = ()
     history_activation: tuple = ()
     equipment_attacks: tuple = ()
+    equipped_attack_counters: int = 0  # Equipped attacker receives counters on attack trigger resolution.
     pilot_bonus: int = 0
     attachment_scale: tuple = ()
     role_events: tuple = ()
@@ -186,6 +187,7 @@ class Definition:
     equipment_charge_scale: tuple = ()  # P/T per charge counter on the Equipment source.
     charge_on_life_gain: int = 0  # Each life-gain event triggers one charge-counter ability.
     equipment_planeswalker_cost: str = ''  # Alternative equip targeting a planeswalker.
+    equipment_token_cost: str = ''  # Alternative equip restricted to creature tokens.
     equipment_creature_conversion: bool = False  # Equipped permanent becomes non-planeswalker creature.
     combat_reattach: bool = False  # Optional start-of-combat Aura/Equipment movement.
     equipment_return_dying: bool = False  # Equipped creature dies -> return from graveyard.
@@ -495,6 +497,15 @@ def parse_card(card: dict) -> Definition:
     if activated and 'Creature' in types and (not activated[0].devotion or 'Enchantment' in types):
         program,ability=activated
         return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects,history_activation=ability,activations=program.activations,devotion=program.devotion)
+    from equipment_composition import equipped_attack_counters,token_equip_cost
+    counter_equipment=equipped_attack_counters(text,types,subtypes)
+    if counter_equipment:
+        return Definition(**base,abilities=frozenset(),attachment=counter_equipment[0],
+                          equipped_attack_counters=counter_equipment[1])
+    token_equipment=token_equip_cost(text,types,subtypes)
+    if token_equipment:
+        return Definition(**base,abilities=frozenset(),attachment=token_equipment[0],
+                          equipment_token_cost=token_equipment[1])
     equipped=equipped_attacks(text,types,subtypes)
     if equipped:return Definition(**base,abilities=frozenset(),attachment=equipped[0],equipment_attacks=equipped[1])
     bestow=parse_bestow(text,types)

@@ -89,6 +89,7 @@ class Effect:
     power_threshold: int = 0
     low_power_counters: int = 0
     return_source_type: str = ''
+    payment_cost: str = ''  # Optional triggered mana payment; checked at resolution.
 
 @dataclass(frozen=True)
 class Trigger:
@@ -413,6 +414,16 @@ def selector(text):
                     subtype='' if noun=='creature' else noun.split()[0])
 
 def effect(text):
+    # Payment is a gate on a complete independently parsed instruction.  Do
+    # not infer a free draw from "If you do" or discard any following text.
+    paid=re.fullmatch(r'you may pay ((?:\{(?:[0-9]+|[WUBRGC])\})+)\. If you do, (.+)',text)
+    if paid:
+        from dataclasses import replace
+        action=effect(paid[2])
+        if action and not action.optional and not action.payment_cost and action.operation in (
+                'draw_cards','gain_life','self_counter','create_treasures'):
+            return replace(action,optional=True,payment_cost=paid[1])
+        return None
     mandatory_damage=re.fullmatch(r'this creature deals ([1-9][0-9]*) damage to any target\.',text)
     if mandatory_damage:return Effect('damage_any_target',int(mandatory_damage[1]))
     any_target=re.fullmatch(r'you may have (?:it|this creature) deal ([1-9][0-9]*) damage to any target\.',text)
@@ -917,6 +928,7 @@ def event_data(trigger, source, subject):
             **({'deadSubtypes':sorted(subject.definition.subtypes)} if trigger.event in ('dies','graveyard') else {}),
             'amount':e.amount,'gain':e.gain,'controllerLoss':e.controller_loss,'event':trigger.event,
             'optional':e.optional,
+            **({'paymentCost':e.payment_cost} if e.payment_cost else {}),
             **({'minLands':trigger.lands_controlled_at_least} if trigger.lands_controlled_at_least else {}),
             **({'requiresBuffedCreature':True} if trigger.power_above_base_required else {}),
             **({'requiresOtherControlledSubtype':trigger.requires_other_controlled_subtype} if trigger.requires_other_controlled_subtype else {}),
