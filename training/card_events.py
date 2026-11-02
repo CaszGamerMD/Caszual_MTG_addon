@@ -108,6 +108,9 @@ class Definition:
     damage_replacement: object | None = None  # Continuous replacement applied to damage, not life loss.
     upkeep_damage_prevention: object | None = None  # Each upkeep: damage active player; prevent all life gain.
     shared_type_mana: object | None = None  # Any creature ETB: optional colorless mana by shared creature type.
+    cumulative_upkeep_mana: object | None = None  # Age counters on upkeep, then add mana for each.
+    land_sacrifice_tokens: object | None = None  # Mana + tap + sacrificial land produces typed token.
+    upkeep_token_entry_life: object | None = None  # Each upkeep tokens; other subtype entry life by toughness.
     self_pump: tuple = ()  # Mana cost, power, toughness until EOT.
     team_keyword_pump: tuple = ()  # Keyword, power, toughness, other only.
     devotion: tuple = ()
@@ -368,6 +371,21 @@ def parse_card(card: dict) -> Definition:
     shared_type_mana=parse_shared_type_mana(text,types)
     if shared_type_mana:
         return Definition(**base,abilities=frozenset(),shared_type_mana=shared_type_mana)
+    from cumulative_upkeep_mana import parse as parse_cumulative_upkeep_mana
+    upkeep_mana=parse_cumulative_upkeep_mana(text,types)
+    if upkeep_mana:
+        return Definition(**base,abilities=frozenset(),cumulative_upkeep_mana=upkeep_mana)
+    from land_sacrifice_tokens import parse as parse_land_sacrifice_tokens
+    land_sac_tokens=parse_land_sacrifice_tokens(text,types)
+    if land_sac_tokens:
+        return Definition(**base,abilities=frozenset(),
+                          static_effects=land_sac_tokens.static_effects,
+                          land_sacrifice_tokens=land_sac_tokens)
+    from upkeep_token_entry_life import parse as parse_upkeep_token_entry_life
+    upkeep_entry_life=parse_upkeep_token_entry_life(text,types)
+    if upkeep_entry_life:
+        return Definition(**base,abilities=frozenset(),
+                          upkeep_token_entry_life=upkeep_entry_life)
     # Whole-instruction grammar: choose a real keyword counter before entry.
     from keyword_counters import parse_entry_choice
     keyword_choices=parse_entry_choice(text,types)
@@ -1054,6 +1072,16 @@ class Game:
                           source=permanent.id,name=permanent.definition.name,controller=permanent.controller,
                           amount=permanent.definition.entry_attachment_counters)
             for watcher in list(self.battlefield.values()):
+                life_program=watcher.definition.upkeep_token_entry_life
+                if (life_program and watcher.id!=permanent.id and
+                        watcher.controller==permanent.controller and
+                        self.creature(permanent) and
+                        has_subtype(permanent.definition,life_program.entry_subtype)):
+                    self.emit('trigger',operation='gain_life_entrant_toughness',
+                        effect='gain life equal to entering creature toughness',
+                        source=watcher.id,name=watcher.definition.name,
+                        controller=watcher.controller,entering=permanent.id,
+                        lastToughness=self.stats(permanent)[1])
                 if watcher.definition.shared_type_mana and self.creature(permanent):
                     self.emit('trigger',operation='shared_type_mana',
                         effect='optional colorless mana equal to creatures sharing a type',
@@ -1177,6 +1205,12 @@ class Game:
         land_counts=land_counts or {}
         triggers = []
         for p in self.battlefield.values():
+            if p.definition.upkeep_token_entry_life:
+                spec=p.definition.upkeep_token_entry_life.token
+                triggers.append(dict(operation='create_tokens',
+                    effect='create tokens at beginning of each upkeep',
+                    source=p.id,name=p.definition.name,controller=p.controller,
+                    event='upkeep',tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords))))
             if p.definition.upkeep_damage_prevention:
                 triggers.append(dict(operation='upkeep_damage_player',
                     effect='damage active player at beginning of upkeep',
@@ -1186,12 +1220,16 @@ class Game:
             rule=p.definition.upkeep_token_rule
             if rule and (rule[0]=='each' or p.controller==self.turn_player):
                 if rule[1]!='enchanted' or self.enchanted(p):
-                    from dataclasses import asdict
                     triggers.append(dict(operation='upkeep_token_rule',effect='conditional upkeep tokens',
                         source=p.id,name=p.definition.name,controller=p.controller,event='upkeep',
                         condition=rule[1],countSubtype=rule[2],divisor=rule[3],
                         tokenSpec=dict(asdict(rule[4]),keywords=sorted(rule[4].keywords))))
             if p.controller != self.turn_player: continue
+            if p.definition.cumulative_upkeep_mana:
+                triggers.append(dict(operation='cumulative_upkeep_mana',
+                    effect='add mana for each age counter after placing one',
+                    source=p.id,name=p.definition.name,controller=p.controller,
+                    event='upkeep',symbol=p.definition.cumulative_upkeep_mana.symbol))
             if p.definition.upkeep_attachment_counters and p.attached_to in self.battlefield:
                 triggers.append(dict(operation='enchanted_counters',effect='put counters on enchanted creature',
                     source=p.id,name=p.definition.name,controller=p.controller,

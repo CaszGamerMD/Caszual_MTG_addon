@@ -274,6 +274,7 @@ class Permanent:
     temporary_land_subtype: str = ''
     class_level: int = 1
     lore_counters: int = 0
+    age_counters: int = 0
 
 
 @dataclass
@@ -1294,6 +1295,24 @@ class Simulator(AdvancedRules):
                         result.append(Candidate(source.card.id+':color-draw','activate_color_draw',source.card.id,
                             features=features(draw=2,cost=len(payment['sources'])),label='Draw per controlled color'))
             definition=source.card.event_definition
+            if definition and definition.land_sacrifice_tokens and not source.tapped:
+                game=self.event_game('main')
+                lands=[p for p in self.players[seat].battlefield
+                       if p.card.id in game.battlefield and
+                       'Land' in game.battlefield[p.card.id].definition.types]
+                program=definition.land_sacrifice_tokens
+                payment=self.payment(replace(source.card,mana_cost=program.cost),
+                    seat=seat,spell_cost=False,excluded_sources=(source.card.id,))
+                if lands and payment['paid'] and source.card.id in game.battlefield and (
+                    not game.creature(game.battlefield[source.card.id]) or
+                    not source.fresh or game.has(game.battlefield[source.card.id],'haste')):
+                    for land in lands:
+                        result.append(Candidate(source.card.id+':sac-land:'+land.card.id,
+                            'activate_land_sacrifice_tokens',source.card.id,
+                            features=features(power=program.token.power*program.token.amount,
+                                              cost=len(payment['sources'])+1),
+                            label='Sacrifice '+land.card.name+' for '+source.card.name,
+                            target_permanent=land.card.id))
             if definition and definition.team_keyword_pump and not source.tapped:
                 game=self.event_game('main');state=game.battlefield.get(source.card.id)
                 if state and (not game.creature(state) or not source.fresh or game.has(state,'haste')):
@@ -2114,6 +2133,40 @@ class Simulator(AdvancedRules):
         self.stack.priority=seat
         self.log('activate_tokens',f'Player {seat+1} activates {source.card.name}.',actor=seat,stackId=frame.id,
                  manaSources=payment['sources'],manaPool=list(self.players[seat].mana_pool))
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
+    def activate_land_sacrifice_tokens(self,seat,source_id,land_id):
+        """Pay mana, tap this permanent, sacrifice a land, then stack token creation."""
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
+        program=(source.card.event_definition.land_sacrifice_tokens
+                 if source and source.card.event_definition else None)
+        game=self.event_game('main')
+        state=game.battlefield.get(source_id)
+        if not program or not state or source.tapped or (
+                game.creature(state) and source.fresh and not game.has(state,'haste')):
+            raise ValueError('Tap-cost land sacrifice ability requires a ready source')
+        land=next((p for p in self.players[seat].battlefield if p.card.id==land_id),None)
+        land_state=game.battlefield.get(land_id)
+        if not land or not land_state or 'Land' not in land_state.definition.types:
+            raise ValueError('Must sacrifice a land you control')
+        payment=self.payment(replace(source.card,mana_cost=program.cost),seat=seat,
+                             spell_cost=False,excluded_sources=(source_id,))
+        if not payment['paid']:raise ValueError('Cannot pay land-sacrifice activation')
+        for permanent in self.players[seat].battlefield:
+            if permanent.card.id in payment['sources']:permanent.tapped=True
+        self.players[seat].mana_pool=list(payment['pool'])
+        source.tapped=True
+        self.send_to_destination(self.players[seat],land,snapshot=game)
+        spec=dict(asdict(program.token),keywords=sorted(program.token.keywords),
+                  artifact=program.artifact,enchantment=program.enchantment)
+        event=dict(operation='create_tokens',effect='create tokens',source=source_id,
+                   controller=seat,name=source.card.name,tokenSpec=spec)
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_land_sacrifice_tokens','Sacrifice a land as an activated ability cost.',
+                 actor=seat,source=source_id,sacrificed=land_id,stackId=frame.id)
+        self.resolve_entry_triggers([],source.card)
         if not self.manual_priority and not self._resolving_stack:self.drain_priority()
 
     def strip_ability_choices(self,seat):
@@ -3015,6 +3068,9 @@ class Simulator(AdvancedRules):
         if choice.kind=='activate_tokens':
             self.activate_tokens(seat,choice.card_id,choice.activation_index)
             return 'activate'
+        if choice.kind=='activate_land_sacrifice_tokens':
+            self.activate_land_sacrifice_tokens(seat,choice.card_id,choice.target_permanent)
+            return 'activate'
         if choice.kind=='activate_self_pump':
             self.activate_self_pump(seat,choice.card_id)
             return 'activate'
@@ -3766,6 +3822,35 @@ class Simulator(AdvancedRules):
                          actor=event['controller'],source=event['source'],
                          entering=event['entering'],amount=amount,color=event['symbol'],
                          enteredStillPresent=bool(entering),accepted=True)
+                continue
+            if event.get('operation')=='cumulative_upkeep_mana':
+                source=next((p for p in self.players[event['controller']].battlefield
+                             if p.card.id==event['source'] and not p.phased_out),None)
+                if source:
+                    game=self.event_game('main')
+                    source.age_counters+=game.counter_amount(source.card.id,1,counter_type='age')
+                    symbol=event['symbol']
+                    amount=source.age_counters
+                    # "Add {R}" is a positive upkeep instruction, not a
+                    # spendable mana cost. Each age counter repeats it once.
+                    self.players[event['controller']].mana_pool[mana_pool.COLORS.index(symbol)]+=amount
+                    self.log('cumulative_upkeep_mana','Upkeep adds one age counter and repeats mana instruction.',
+                             actor=event['controller'],source=event['source'],
+                             ageCounters=source.age_counters,color=symbol,amount=amount)
+                else:
+                    self.log('cumulative_upkeep_absent','Upkeep source left before resolution.',
+                             actor=event['controller'],source=event['source'])
+                continue
+            if event.get('operation')=='gain_life_entrant_toughness':
+                game=self.event_game('main')
+                entering=game.battlefield.get(event['entering'])
+                amount=max(0,game.stats(entering)[1] if entering and game.creature(entering)
+                           else event['lastToughness'])
+                self.gain_life(event['controller'],amount)
+                self.log('tribal_entry_toughness_life',
+                         'Controlled subtype entry gains life based on entrant toughness.',
+                         actor=event['controller'],source=event['source'],
+                         entering=event['entering'],amount=amount)
                 continue
             if event.get('operation')=='create_treasures':
                 self.create_treasures(event['controller'],event['amount'],False,card)
@@ -5580,7 +5665,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station","activate_loyalty","activate_conditional_draw",
-                           "history_tokens","activate_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_scaled_life","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_tribal_pump","activate_tap_damage","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
+                           "history_tokens","activate_tokens","activate_land_sacrifice_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_scaled_life","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_tribal_pump","activate_tap_damage","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
             self.turn_development[seat]=True
         return choice
 
@@ -5690,6 +5775,8 @@ class Simulator(AdvancedRules):
                 self.activate_equipment_attach(self.active,choice.card_id,choice.tap_ids[0],choice.target_permanent)
             elif choice.kind=='activate_tokens':
                 self.activate_tokens(self.active,choice.card_id,choice.activation_index)
+            elif choice.kind=='activate_land_sacrifice_tokens':
+                self.activate_land_sacrifice_tokens(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind=='activate_self_pump':
                 self.activate_self_pump(self.active,choice.card_id)
             elif choice.kind=='activate_team_keyword_pump':
@@ -6086,7 +6173,10 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                               event_definition.unique_entry_draw or
                               event_definition.damage_replacement or
                               event_definition.upkeep_damage_prevention or
-                              event_definition.shared_type_mana)
+                              event_definition.shared_type_mana or
+                              event_definition.cumulative_upkeep_mana)
+    allowed = allowed or bool(event_definition.land_sacrifice_tokens)
+    allowed = allowed or bool(event_definition.upkeep_token_entry_life)
     cost = definition.get("manaCost") or ""
     if (parsed["kind"] == "unsupported" and allowed and event_definition.supported
             and "Planeswalker" not in definition.get("types",[])  # Never promote partial loyalty Oracle text.
