@@ -193,6 +193,10 @@ class Definition:
     equipment_target_ability_discount: int = 0  # Reduces Equipment activations targeting this creature.
     unspent_mana_rule: tuple = ()  # Mana color retained; p/t multiplier and counted pool color.
     multikicker_rule: tuple = ()  # Additional mana cost and entering +1/+1 counters per payment.
+    squad_rule: str = ''  # Optional additional casting cost per token copy on ETB.
+    self_historic_cost_reduction: bool = False  # Sum mana values of controlled historic permanents, once each.
+    alliance_choices: tuple = ()  # ETB: counter, tapped Treasure, life; each mode once per turn.
+    attachment_combat_tokens: object | None = None  # Per attached Aura/Equipment, delayed end-step token exile.
     paid_regenerate_rule: tuple = ()  # Mana cost and "another target" subtype, with no tap cost.
     equipment_creature_conversion: bool = False  # Equipped permanent becomes non-planeswalker creature.
     combat_reattach: bool = False  # Optional start-of-combat Aura/Equipment movement.
@@ -253,6 +257,24 @@ def parse_card(card: dict) -> Definition:
                                                creature=True,subtype=subtype),
                               power=power,toughness=toughness,
                               source_counter_multiplier=True),))
+    from squad_anthem import parse as parse_squad_anthem
+    squad=parse_squad_anthem(text,types)
+    if squad:
+        return Definition(**base,abilities=frozenset(),squad_rule=squad[0],
+                          static_effects=squad[1])
+    from historic_equipment import parse as parse_historic_equipment
+    historic_equipment=parse_historic_equipment(text,types,subtypes)
+    if historic_equipment:
+        return Definition(**base,abilities=frozenset(),attachment=historic_equipment,
+                          self_historic_cost_reduction=True)
+    from alliance_choices import parse as parse_alliance_choices
+    alliance=parse_alliance_choices(text,types)
+    if alliance:
+        return Definition(**base,abilities=frozenset(),alliance_choices=alliance)
+    from attached_combat_tokens import parse as parse_attached_combat_tokens
+    attached_combat=parse_attached_combat_tokens(text,name,types)
+    if attached_combat:
+        return Definition(**base,abilities=frozenset(),attachment_combat_tokens=attached_combat)
     from paid_regeneration_pump import parse as parse_paid_regeneration_pump
     paid_regen=parse_paid_regeneration_pump(text,types)
     if paid_regen:
@@ -1150,6 +1172,13 @@ class Game:
                           source=permanent.id,name=permanent.definition.name,controller=permanent.controller,
                           amount=permanent.definition.entry_attachment_counters)
             for watcher in list(self.battlefield.values()):
+                if (watcher.definition.alliance_choices and watcher.id!=permanent.id
+                        and watcher.controller==permanent.controller and self.creature(permanent)):
+                    self.emit('trigger',operation='alliance_choice',
+                        effect='select a distinct Alliance mode for this turn',
+                        source=watcher.id,name=watcher.definition.name,
+                        controller=watcher.controller,sourceEntry=watcher.entered_at,
+                        options=watcher.definition.alliance_choices)
                 granted=watcher.definition.granted_equipment
                 if (granted and self.creature(permanent) and
                         has_subtype(permanent.definition,granted.entry_subtype)):
@@ -1335,9 +1364,22 @@ class Game:
 
     def begin_combat_triggers(self) -> list[dict]:
         """Snapshot controlled beginning-of-combat abilities before attackers are chosen."""
-        return [event_data(trigger,source,source)
+        triggers=[event_data(trigger,source,source)
                 for source in self.battlefield.values() if source.controller==self.turn_player
                 for trigger in source.definition.triggers if trigger.event=='begin_combat']
+        for source in self.battlefield.values():
+            spec=source.definition.attachment_combat_tokens
+            if not spec or source.controller!=self.turn_player:continue
+            count=sum(item.attached_to==source.id and
+                      item.definition.attachment and
+                      item.definition.attachment[0] in ('aura','equipment')
+                      for item in self.battlefield.values())
+            triggers.append(dict(operation='attached_combat_tokens',
+                source=source.id,sourceEntry=source.entered_at,
+                name=source.definition.name,controller=source.controller,
+                attachedAtStart=count,tokenSpec=dict(asdict(spec),keywords=sorted(spec.keywords)),
+                effect='create tokens per Aura or Equipment currently attached'))
+        return triggers
 
     def controlled_creature_above_base(self, controller: int) -> bool:
         # Current power includes counters and live continuous effects.

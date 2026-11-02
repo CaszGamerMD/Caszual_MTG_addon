@@ -1,6 +1,7 @@
 """Saved teaching-deck Oracle families tested as executable reusable blocks."""
 import sys
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -433,6 +434,292 @@ class TeachingDeckCompletionCycles(unittest.TestCase):
         self.drain(sim)
         self.assertIn(card,sim.players[0].graveyard)
         self.assertFalse(any(item.card.id==enemy.card.id for item in sim.players[1].battlefield))
+        sim.invariant()
+
+    def test_cycle_nine_squad_paid_cast_copies_full_live_elf_anthem(self):
+        definition=parse_card(self.raw('Galadhrim Brigade'))
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(definition.squad_rule,'{1}{G}')
+        self.assertEqual(len(definition.static_effects),1)
+        sim,cards=self.fixture(['Galadhrim Brigade'])
+        ally=self.token(sim,'ally-elf',subtypes=('Elf',),power=2,toughness=2)
+        nonelf=self.token(sim,'ally-human',subtypes=('Human',),power=2,toughness=2)
+        brigade=cards['Galadhrim Brigade']
+        offered={choice.squad_count for choice in sim.legal(0)
+                 if choice.card_id==brigade.id and choice.kind=='cast'}
+        self.assertTrue({0,1,2}<=offered)
+        sim.cast_spell(0,brigade,squad_count=2)
+        self.assertEqual(sim.stack.items[-1].payload[0]['squadCount'],2)
+        self.assertEqual(sim.effective_card(ally).power,2)
+        self.drain(sim)
+        sources=[item for item in sim.players[0].battlefield if item.card.name=='Galadhrim Brigade']
+        self.assertEqual(len(sources),3)
+        self.assertEqual(len([item for item in sources if item.card.is_token]),2)
+        self.assertEqual(sim.effective_card(ally).power,5)
+        self.assertEqual(sim.effective_card(nonelf).power,2)
+        self.assertTrue(all(sim.effective_card(item).power==4 for item in sources))
+        self.assertTrue(all(item.counters==0 for item in sources))
+        sim.invariant()
+
+    def test_cycle_nine_squad_trigger_survives_source_and_rejects_unknown_text(self):
+        raw=self.raw('Galadhrim Brigade')
+        raw['name']='Unseen Goblin Caravan'
+        raw['oracleText']=raw['oracleText'].replace('Other Elves','Other Goblins').replace(
+            'get +1/+1','get +2/+2')
+        definition=parse_card(raw)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(definition.static_effects[0].subject.subtype,'Goblin')
+        self.assertFalse(parse_card(dict(raw,oracleText=raw['oracleText']+'\nDraw a card.')).supported)
+        self.assertFalse(parse_card(dict(raw,oracleText=raw['oracleText'].replace('Squad {1}{G}','Squad two Goblins'))).supported)
+        sim,cards=self.fixture(['Galadhrim Brigade'])
+        ally=self.token(sim,'ally-elf',subtypes=('Elf',))
+        brigade=cards['Galadhrim Brigade']
+        sim.cast_spell(0,brigade,squad_count=2)
+        for _ in range(4):
+            if any(frame.payload[0].get('operation')=='squad_copies' for frame in sim.stack.items):break
+            sim.pass_priority(sim.stack.priority)
+        else:self.fail('Squad ETB trigger did not enter the stack after spell resolution')
+        source=next(item for item in sim.players[0].battlefield if item.card.id==brigade.id)
+        self.assertEqual(sim.effective_card(ally).power,3)
+        sim.send_to_destination(sim.players[0],source)
+        self.drain(sim)
+        copies=[item for item in sim.players[0].battlefield if item.card.name=='Galadhrim Brigade']
+        self.assertEqual(len(copies),2)
+        self.assertEqual(sim.effective_card(ally).power,4)
+        self.assertTrue(all(sim.effective_card(item).power==3 for item in copies))
+        sim.invariant()
+
+    def test_cycle_ten_historic_mana_values_reduce_spell_once_per_permanent(self):
+        definition=parse_card(self.raw('Excalibur, Sword of Eden'))
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertTrue(definition.self_historic_cost_reduction)
+        self.assertEqual(definition.attachment,
+                         ('equipment','{2}',frozenset({'vigilance'}),10,0,'equip:legendary_creature'))
+        sim,cards=self.fixture(['Excalibur, Sword of Eden'])
+        sword=cards['Excalibur, Sword of Eden']
+        self.assertEqual(sword.kind,'equipment')
+        self.assertFalse(sim.payment(sword,seat=0)['paid']) # Twelve mana, only ten lands.
+
+        def permanent(identifier,seat,types,subtypes=(),legendary=False,mana_value=0,phased=False):
+            definition=s.EventDefinition(identifier,frozenset(types),frozenset(subtypes),
+                                         legendary,2,2,frozenset(),mana_cost='{'+str(mana_value)+'}')
+            kind='creature' if 'Creature' in types else 'artifact' if 'Artifact' in types else 'enchantment'
+            card=s.Card(identifier,identifier,kind,mana_cost='{'+str(mana_value)+'}',
+                        printed_mana_value=mana_value,printed_types=tuple(types),
+                        event_definition=definition,legendary=legendary,is_token=True)
+            sim.enter_creature(card,sim.players[seat])
+            item=next(p for p in sim.players[seat].battlefield if p.card.id==identifier)
+            item.phased_out=phased
+            return item
+
+        both=permanent('dual-historic',0,('Artifact',),legendary=True,mana_value=3)
+        permanent('saga',0,('Enchantment',),('Saga',),mana_value=2)
+        hero=permanent('legend',0,('Creature',),legendary=True,mana_value=2)
+        permanent('nonhistoric',0,('Creature',),mana_value=9)
+        permanent('enemy-historic',1,('Artifact',),mana_value=20)
+        permanent('phased-out',0,('Artifact',),mana_value=6,phased=True)
+        self.assertTrue(sim.payment(sword,seat=0)['paid']) # 12 - (3+2+2) = 5.
+        sim.cast_spell(0,sword)
+        self.assertEqual(sum(item.tapped for item in sim.players[0].battlefield
+                             if item.card.kind=='land'),5)
+        self.drain(sim)
+        equipped=[item for item in sim.players[0].battlefield if item.card.id==sword.id]
+        self.assertEqual(len(equipped),1)
+        sim.activate_equip(0,sword.id,hero.card.id);self.drain(sim)
+        self.assertEqual(sim.effective_card(hero).power,12)
+        self.assertTrue(sim.event_game('main').has(sim.event_game('main').battlefield[hero.card.id],
+                                                 'vigilance'))
+        self.assertEqual(sum(item.tapped for item in sim.players[0].battlefield
+                             if item.card.kind=='land'),7)
+        sim.send_to_destination(sim.players[0],both)
+        self.assertEqual(sim.effective_card(hero).power,12) # Discount is casting-only.
+        sim.invariant()
+
+    def test_cycle_ten_legendary_equip_restriction_and_whole_text_rejection(self):
+        raw=self.raw('Excalibur, Sword of Eden')
+        renamed=dict(raw,name='Unknown Mythic Sabre',oracleText=raw['oracleText'].replace(
+            'gets +10/+0','gets +4/+2').replace('Equip legendary creature {2}',
+                                              'Equip legendary creature {1}{W}'))
+        definition=parse_card(renamed)
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(definition.attachment[1],'{1}{W}')
+        self.assertEqual(definition.attachment[3:5],(4,2))
+        self.assertFalse(parse_card(dict(renamed,oracleText=renamed['oracleText']+
+                                         '\nWhenever a spell resolves, draw a card.')).supported)
+        self.assertFalse(parse_card(dict(renamed,oracleText=renamed['oracleText'].replace(
+            'historic permanents','nonhistoric permanents'))).supported)
+        self.assertFalse(parse_card(dict(renamed,oracleText=renamed['oracleText'].replace(
+            'Equip legendary creature','Equip legendary planeswalker'))).supported)
+
+        sim,cards=self.fixture(['Excalibur, Sword of Eden'])
+        normal=self.token(sim,'ordinary',subtypes=('Elf',))
+        legendary_definition=s.EventDefinition('Unknown captain',frozenset({'Creature'}),
+            frozenset({'Goblin'}),True,2,2,frozenset())
+        legend_card=s.Card('captain','Unknown captain','creature','{1}{R}',
+                           '2;2;',2,2,event_definition=legendary_definition,
+                           legendary=True,is_token=True,printed_mana_value=2)
+        sim.enter_creature(legend_card,sim.players[0])
+        sword=self.put(sim,cards['Excalibur, Sword of Eden'])
+        offered={choice.target_permanent for choice in sim.equip_choices(0)
+                 if choice.card_id==sword.card.id and choice.kind=='equip'}
+        self.assertEqual(offered,{'captain'})
+        with self.assertRaises(ValueError):sim.activate_equip(0,sword.card.id,normal.card.id)
+        captain=next(p for p in sim.players[0].battlefield if p.card.id=='captain')
+        sim.activate_equip(0,sword.card.id,'captain')
+        original_captain=captain.card
+        captain.card=replace(captain.card,legendary=False,
+                             event_definition=replace(captain.card.event_definition,legendary=False))
+        self.drain(sim)
+        self.assertIsNone(sword.attached_to) # Lost legal target before Equip resolved.
+        captain.card=original_captain
+        sim.activate_equip(0,sword.card.id,'captain');self.drain(sim)
+        self.assertEqual(sword.attached_to,'captain')
+        sim.phase='attack'
+        with self.assertRaises(ValueError):sim.activate_equip(0,sword.card.id,normal.card.id)
+        sim.phase='main'
+        # An Equip restriction applies to activation, not attachment longevity.
+        captain.card=replace(captain.card,legendary=False,
+            event_definition=replace(captain.card.event_definition,legendary=False))
+        sim.state_based_actions()
+        self.assertEqual(sword.attached_to,'captain')
+        self.assertEqual(sim.effective_card(captain).power,12)
+        sim.invariant()
+
+    def test_cycle_eleven_alliance_three_distinct_modes_and_exhaustion(self):
+        definition=parse_card(self.raw('Gala Greeters'))
+        self.assertTrue(definition.supported,definition.reason)
+        self.assertEqual(definition.alliance_choices,(1,True,2))
+        sim,cards=self.fixture(['Gala Greeters'])
+        greeters=self.put(sim,cards['Gala Greeters'])
+        self.assertEqual(greeters.counters,0) # Does not trigger for itself.
+
+        def entrant(identifier,seat=0):
+            definition=s.EventDefinition(identifier,frozenset({'Creature'}),
+                frozenset({'Elf'}),False,1,1,frozenset())
+            card=s.Card(identifier,identifier,'creature',power=1,toughness=1,
+                        event_definition=definition,is_token=True)
+            pending=sim.enter_creature(card,sim.players[seat])
+            sim.resolve_entry_triggers(pending,card)
+            return card
+
+        entrant('enemy',seat=1);self.assertFalse(sim.stack.items)
+        entrant('first');self.assertEqual(greeters.counters,0)
+        self.assertEqual(sim.stack.items[-1].payload[0]['operation'],'alliance_choice')
+        self.drain(sim)
+        self.assertEqual(greeters.counters,1)
+        self.assertFalse([p for p in sim.players[0].battlefield if p.card.name=='Treasure'])
+        entrant('second');self.drain(sim)
+        treasures=[p for p in sim.players[0].battlefield if p.card.name=='Treasure']
+        self.assertEqual(len(treasures),1)
+        self.assertTrue(treasures[0].tapped)
+        with self.assertRaises(ValueError):sim.activate_treasure_mana(0,treasures[0].card.id,4)
+        entrant('third');self.drain(sim)
+        self.assertEqual(sim.players[0].life,42)
+        entrant('fourth');self.drain(sim)
+        self.assertEqual((greeters.counters,sim.players[0].life),(1,42))
+        self.assertEqual(len([p for p in sim.players[0].battlefield if p.card.name=='Treasure']),1)
+        self.assertTrue(any(e['kind']=='alliance_exhausted' for e in sim.events))
+        sim.invariant()
+
+    def test_cycle_eleven_alliance_resolution_choice_source_identity_and_rejection(self):
+        raw=self.raw('Gala Greeters')
+        renamed=dict(raw,name='Unknown Goblin Ally',oracleText=raw['oracleText'].replace(
+            'gain 2 life','gain 5 life'))
+        self.assertEqual(parse_card(renamed).alliance_choices,(1,True,5))
+        self.assertFalse(parse_card(dict(renamed,oracleText=renamed['oracleText']+
+                                         '\nWhenever you attack, draw a card.')).supported)
+        self.assertFalse(parse_card(dict(renamed,oracleText=renamed['oracleText'].replace(
+            'another creature you control enters','an opponent casts a creature'))).supported)
+        self.assertFalse(parse_card(dict(renamed,oracleText=renamed['oracleText'].replace(
+            'Create a tapped Treasure','Create an untapped Treasure'))).supported)
+
+        sim,cards=self.fixture(['Gala Greeters'])
+        greeters=self.put(sim,cards['Gala Greeters'])
+        creature=s.Card('guest','Guest','creature',power=1,toughness=1,
+            event_definition=s.EventDefinition('Guest',frozenset({'Creature'}),
+                frozenset(),False,1,1,frozenset()),is_token=True)
+        for identifier in ('guest','second-guest'):
+            card=replace(creature,id=identifier)
+            pending=sim.enter_creature(card,sim.players[0]);sim.resolve_entry_triggers(pending,card)
+        self.assertEqual(len([frame for frame in sim.stack.items
+                              if frame.payload[0].get('operation')=='alliance_choice']),2)
+        sim.send_to_destination(sim.players[0],greeters)
+        self.drain(sim)
+        self.assertEqual(len([p for p in sim.players[0].battlefield if p.card.name=='Treasure']),1)
+        self.assertIn(greeters.card,sim.players[0].graveyard)
+        # The returned same physical card starts a new choice history.
+        sim.players[0].graveyard.remove(greeters.card)
+        pending=sim.enter_creature(greeters.card,sim.players[0]);sim.resolve_entry_triggers(pending,greeters.card)
+        newcomer=next(p for p in sim.players[0].battlefield if p.card.id==greeters.card.id)
+        self.assertNotEqual(newcomer.entered_at,greeters.entered_at)
+        next_card=replace(creature,id='third-guest')
+        pending=sim.enter_creature(next_card,sim.players[0]);sim.resolve_entry_triggers(pending,next_card)
+        self.drain(sim)
+        self.assertEqual(newcomer.counters,1)
+        sim.invariant()
+
+    def test_cycle_twelve_valduk_uses_live_attachment_count_then_delayed_exile(self):
+        parsed=parse_card(self.raw('Valduk, Keeper of the Flame'))
+        self.assertTrue(parsed.supported,parsed.reason)
+        self.assertEqual(parsed.attachment_combat_tokens.subtypes,('Elemental',))
+        sim,cards=self.fixture(['Valduk, Keeper of the Flame',
+                                'Excalibur, Sword of Eden','Sword of Fire and Ice'])
+        valduk=self.put(sim,cards['Valduk, Keeper of the Flame'])
+        first=self.put(sim,cards['Excalibur, Sword of Eden'])
+        second=self.put(sim,cards['Sword of Fire and Ice'])
+        self.assertTrue(valduk.card.legendary)
+        sim.activate_equip(0,first.card.id,valduk.card.id);self.drain(sim)
+        sim.activate_equip(0,second.card.id,valduk.card.id);self.drain(sim)
+        self.ready(sim)
+        pending=sim.event_game('combat').begin_combat_triggers()
+        self.assertEqual(len([e for e in pending if e['operation']=='attached_combat_tokens']),1)
+        sim.resolve_entry_triggers(pending,valduk.card)
+        self.assertFalse(any(p.card.name=='Elemental' for p in sim.players[0].battlefield))
+        second.attached_to=None # Independent reattachment during the priority window.
+        self.drain(sim)
+        tokens=[p for p in sim.players[0].battlefield if p.card.name=='Elemental']
+        self.assertEqual(len(tokens),1) # Resolution uses one attached Equipment, not two.
+        self.assertEqual((tokens[0].card.power,tokens[0].card.toughness),(3,1))
+        self.assertEqual(tokens[0].card.event_definition.abilities,frozenset({'trample','haste'}))
+        self.assertEqual(sim.pending_token_exiles[0]['ids'],(tokens[0].card.id,))
+        sim.phase='end_step';sim._step()
+        self.assertIn(tokens[0],sim.players[0].battlefield) # Trigger uses the stack.
+        self.assertTrue(any(frame.payload[0].get('operation')=='delayed_exile_tokens'
+                            for frame in sim.stack.items))
+        self.drain(sim)
+        self.assertNotIn(tokens[0],sim.players[0].battlefield)
+        self.assertFalse(any(c.id==tokens[0].card.id for c in sim.players[0].exile))
+        self.assertEqual(sim.pending_token_exiles,[])
+        sim.invariant()
+
+    def test_cycle_twelve_valduk_last_known_attachment_count_and_whole_text(self):
+        raw=self.raw('Valduk, Keeper of the Flame')
+        renamed=dict(raw,name='Unknown Flamekeeper',oracleText=raw['oracleText'].replace(
+            'attached to Valduk','attached to this creature').replace('3/1 red Elemental',
+            '4/2 green Goblin'))
+        parsed=parse_card(renamed)
+        self.assertTrue(parsed.supported,parsed.reason)
+        self.assertEqual((parsed.attachment_combat_tokens.power,
+                          parsed.attachment_combat_tokens.toughness),(4,2))
+        self.assertEqual(parsed.attachment_combat_tokens.colors,('Green',))
+        self.assertFalse(parse_card(dict(renamed,oracleText=renamed['oracleText']+
+                                         '\nEach opponent loses the game.')).supported)
+        self.assertFalse(parse_card(dict(renamed,oracleText=renamed['oracleText'].replace(
+            'Exile those tokens','Return those tokens to your hand'))).supported)
+        self.assertFalse(parse_card(dict(renamed,oracleText=renamed['oracleText'].replace(
+            'attached to this creature','attached to an opponent'))).supported)
+
+        sim,cards=self.fixture(['Valduk, Keeper of the Flame','Sword of Fire and Ice'])
+        valduk=self.put(sim,cards['Valduk, Keeper of the Flame'])
+        sword=self.put(sim,cards['Sword of Fire and Ice'])
+        sim.activate_equip(0,sword.card.id,valduk.card.id);self.drain(sim)
+        self.ready(sim)
+        sim.resolve_entry_triggers(sim.event_game('combat').begin_combat_triggers(),valduk.card)
+        sim.send_to_destination(sim.players[0],valduk)
+        self.assertIsNone(sword.attached_to)
+        self.drain(sim)
+        self.assertEqual(len([p for p in sim.players[0].battlefield
+                              if p.card.name=='Elemental']),1) # Last known count at leave.
         sim.invariant()
 
 

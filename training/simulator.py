@@ -312,6 +312,7 @@ class Candidate:
     discard_id: str = ''
     modal_modes: tuple[int, ...] = ()
     kicker_count: int = 0
+    squad_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -454,6 +455,9 @@ class Simulator(AdvancedRules):
         self.token_sequence = 0
         self.effect_clock = 0
         self.once_per_turn_entries=set()
+        self.alliance_chosen={}  # (source permanent, entry incarnation) -> used mode names.
+        self.last_known_combat_attachments={}  # Last attached count when an attachment-token source leaves.
+        self.pending_token_exiles=[]  # Created token IDs, queued for the next beginning of end step.
         self.attacked_this_turn=set()
         self.library_random_sequence = 0
         self.log("setup", "Two independent agents use frozen policies; sandbox rules apply.")
@@ -934,6 +938,7 @@ class Simulator(AdvancedRules):
         self.entry_history.extend(dict(turn=self.turn,controller=controller,id=p.id,
             subtypes=sorted(p.definition.subtypes)) for p in entrants)
         player.battlefield.extend(Permanent(card,attached_to=attached_targets.get(card.id),bestowed=card.id in bestowed_targets,
+                                           entered_at=next(p.entered_at for p in entrants if p.id==card.id),
                                            chosen_subtype=chosen_types.get(card.id,''),
                                            keyword_counters=next(p.keyword_counters for p in entrants if p.id==card.id)) for card in cards)
         for token_id in game.battlefield.keys()-known-{card.id for card in cards}:
@@ -1196,6 +1201,10 @@ class Simulator(AdvancedRules):
                                 self.stack.push(ward['controller'],(ward,origin),ward['name'])
         self.stack.priority=self.active if priority is None else priority
         if not self.manual_priority:self.drain_priority()
+
+    def choose_alliance_mode(self,event,available):
+        """Deterministic diagnostic choice; callers may supply a player policy."""
+        return available[0]
 
     def drain_priority(self,empty_window=False):
         if self._draining_priority: return
@@ -2489,6 +2498,9 @@ class Simulator(AdvancedRules):
                 return paid_cache[key]
             for owner,target in self.creature_targets(seat,source.card):
                 if owner!=seat or source.attached_to==target.card.id:continue
+                if (len(definition.attachment)>5 and
+                        definition.attachment[5]=='equip:legendary_creature' and
+                        not game.battlefield[target.card.id].definition.legendary):continue
                 normal_paid=can_pay(cost,target)
                 token_paid=bool(target.card.is_token and token_cost and can_pay(token_cost,target))
                 if normal_paid or token_paid:
@@ -2523,6 +2535,10 @@ class Simulator(AdvancedRules):
             cost=source.card.event_definition.equipment_planeswalker_cost
         else:
             eligible=target in {p.card.id for owner,p in self.creature_targets(seat,source.card) if owner==seat}
+            attachment=source.card.event_definition.attachment
+            if (eligible and len(attachment)>5 and attachment[5]=='equip:legendary_creature'
+                    and not game.battlefield[target].definition.legendary):
+                eligible=False
             cost=source.card.event_definition.attachment[1]
             candidate=next((item for item in self.players[seat].battlefield if item.card.id==target),None)
             token_cost=source.card.event_definition.equipment_token_cost
@@ -3326,7 +3342,7 @@ class Simulator(AdvancedRules):
                         sacrifice_id=choice.tap_ids[0] if choice.tap_ids else None)
         return 'cast'
 
-    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None,modal_modes=(),exile_permission=False,zone_card=None,sacrifice_id=None,kicker_count=0):
+    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None,modal_modes=(),exile_permission=False,zone_card=None,sacrifice_id=None,kicker_count=0,squad_count=0):
         player=self.players[seat]
         if not card.instant and seat!=self.stack.priority: raise ValueError('Player lacks priority')
         if self.stack.items:
@@ -3388,17 +3404,24 @@ class Simulator(AdvancedRules):
         elif sacrifice_id is not None:
             raise ValueError('Spell has no additional sacrifice cost')
         multikicker=(card.event_definition.multikicker_rule if card.event_definition else ())
+        squad=(card.event_definition.squad_rule if card.event_definition else '')
         if type(kicker_count) is not int or not 0<=kicker_count<=1000:
             raise ValueError('Illegal multikicker count')
         if kicker_count and not multikicker:
             raise ValueError('Card does not support multikicker')
         if kicker_count and (bestow or rebound or flashback or exile_permission):
             raise ValueError('Unsupported alternate-cost multikicker composition')
+        if type(squad_count) is not int or not 0<=squad_count<=1000:
+            raise ValueError('Illegal Squad payment count')
+        if squad_count and (not squad or kicker_count or bestow or rebound or flashback or exile_permission):
+            raise ValueError('Unsupported Squad or alternate-cost composition')
         payment_card=replace(card,mana_cost=card.event_definition.bestow[0]) if bestow else card
         if rebound:payment_card=replace(payment_card,mana_cost='{0}')
         elif flashback:payment_card=replace(payment_card,mana_cost=card.flashback_cost)
         if kicker_count:
             payment_card=replace(payment_card,mana_cost=payment_card.mana_cost+multikicker[0]*kicker_count)
+        if squad_count:
+            payment_card=replace(payment_card,mana_cost=payment_card.mana_cost+squad*squad_count)
         payment=self.payment(payment_card,player.commander_casts if commander else 0,x=x,seat=seat)
         if not payment['paid']: raise ValueError('Cannot pay spell cost')
         for source in player.battlefield:
@@ -3409,7 +3432,7 @@ class Simulator(AdvancedRules):
         if exile_permission:self.exile_cast_permissions.pop(card.id,None)
         prior=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)
         self.stack.active=self.active
-        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'kickerCount':kicker_count,'keywordChoice':keyword_choice or (card.target_modifier[2][0] if card.target_modifier and card.target_modifier[2] else None),'modalModes':tuple(modal_modes),'fromHand':not rebound and not flashback and not commander and not exile_permission},card),card.name)
+        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'kickerCount':kicker_count,'squadCount':squad_count,'keywordChoice':keyword_choice or (card.target_modifier[2][0] if card.target_modifier and card.target_modifier[2] else None),'modalModes':tuple(modal_modes),'fromHand':not rebound and not flashback and not commander and not exile_permission},card),card.name)
         sacrifice_triggers=[]
         if additional:
             # Pay the sacrifice as part of casting, after mana abilities but
@@ -3594,6 +3617,9 @@ class Simulator(AdvancedRules):
             extra=(event.get('kickerCount',0)*card.event_definition.multikicker_rule[1]
                    if card.event_definition and card.event_definition.multikicker_rule else 0)
             triggers=self.enter_creature(card,p,entry_counters=extra)
+            if event.get('squadCount',0) and card.event_definition and card.event_definition.squad_rule:
+                triggers.append(dict(operation='squad_copies',controller=controller,
+                    source=card.id,name=card.name,amount=event['squadCount']))
             self.resolve_entry_triggers(triggers,card)
         elif card.kind=='mana_artifact': p.battlefield.append(Permanent(card))
         elif not event.get('copy'):
@@ -3786,7 +3812,7 @@ class Simulator(AdvancedRules):
                 if template is None: raise RuntimeError("Missing parsed token characteristics")
                 spec=game.replace_creature_token_spec(controller,dict(
                     power=template.power,toughness=template.toughness,
-                    colors=tuple(template.colors),subtypes=tuple(template.subtypes),
+                    colors=tuple(sorted(template.colors)),subtypes=tuple(sorted(template.subtypes)),
                     keywords=tuple(template.abilities),
                     land='Land' in template.types,enchantment='Enchantment' in template.types))
                 definition=replace(template,name=' '.join(spec['subtypes']),
@@ -3947,6 +3973,19 @@ class Simulator(AdvancedRules):
                     controller=event['controller'],amount=event['amount'])],card)
                 self.log('reflexive_trigger_queued','Paid X creates a new counter trigger.',
                          source=event['source'],actor=event['controller'],amount=event['amount'])
+                continue
+            if event.get('operation')=='squad_copies':
+                if not card.event_definition or not card.event_definition.squad_rule:
+                    raise ValueError('Squad requires a fully compiled source program')
+                copies=[]
+                for _ in range(event['amount']):
+                    self.token_sequence+=1
+                    copies.append(replace(card,id=f'token-{self.token_sequence}',is_token=True,
+                                          physical_id=''))
+                pending=self.enter_creatures(copies,self.players[event['controller']])
+                self.log('squad_copies','Squad creates a batch of copiable creature tokens.',
+                         actor=event['controller'],source=event['source'],amount=len(copies))
+                self.resolve_entry_triggers(pending,card)
                 continue
             if event.get('operation')=='equipment_hit_sequence':
                 targeted=next((step for step in event['steps']
@@ -4191,6 +4230,69 @@ class Simulator(AdvancedRules):
                 continue
             if event.get('operation')=='create_treasures':
                 self.create_treasures(event['controller'],event['amount'],False,card)
+                continue
+            if event.get('operation')=='alliance_choice':
+                key=(event['source'],event['sourceEntry'])
+                used=self.alliance_chosen.setdefault(key,set())
+                available=tuple(mode for mode in ('counter','treasure','life') if mode not in used)
+                if not available:
+                    self.log('alliance_exhausted','No unchosen Alliance mode remains this turn.',
+                             actor=event['controller'],source=event['source'])
+                    continue
+                mode=self.choose_alliance_mode(event,available)
+                if mode not in available:raise ValueError('Alliance mode was already chosen this turn')
+                used.add(mode)
+                count,tapped,life=event['options']
+                if mode=='counter':
+                    state=self.event_game('main').battlefield.get(event['source'])
+                    source=next((item for item in self.players[event['controller']].battlefield
+                                 if item.card.id==event['source'] and
+                                 item.entered_at==event['sourceEntry']),None)
+                    if state and source:
+                        source.counters+=self.event_game('main').counter_amount(source.card.id,count)
+                elif mode=='treasure':
+                    self.create_treasures(event['controller'],1,tapped,card)
+                else:self.gain_life(event['controller'],life)
+                self.log('alliance_mode','An available Alliance mode resolves.',
+                    actor=event['controller'],source=event['source'],mode=mode)
+                continue
+            if event.get('operation')=='attached_combat_tokens':
+                key=(event['source'],event['sourceEntry'])
+                game=self.event_game('main');source=game.battlefield.get(event['source'])
+                if source and source.entered_at==event['sourceEntry']:
+                    amount=sum(item.attached_to==source.id and
+                               item.definition.attachment and
+                               item.definition.attachment[0] in ('aura','equipment')
+                               for item in game.battlefield.values())
+                else:
+                    amount=self.last_known_combat_attachments.get(key,event['attachedAtStart'])
+                if amount:
+                    owner=self.players[event['controller']]
+                    old={p.card.id for p in owner.battlefield}
+                    spec=dict(event['tokenSpec'],amount=event['tokenSpec']['amount']*amount)
+                    self._resolve_entry_effects([dict(event,operation='create_tokens',tokenSpec=spec)],card)
+                    ids=tuple(p.card.id for p in owner.battlefield
+                              if p.card.id not in old and p.card.is_token)
+                    if ids:
+                        due=self.turn+(1 if self.phase in ('end_step','cleanup','end')
+                                       and self._end_step_triggers_queued else 0)
+                        self.pending_token_exiles.append(dict(turn=due,controller=event['controller'],
+                            source=event['source'],ids=ids))
+                self.log('attached_combat_tokens','Created temporary tokens per attached Aura or Equipment.',
+                         actor=event['controller'],source=event['source'],count=amount)
+                continue
+            if event.get('operation')=='delayed_exile_tokens':
+                removed=[]
+                for identifier in event['ids']:
+                    pair=next(((owner,item) for owner,player in enumerate(self.players)
+                               for item in player.battlefield if item.card.id==identifier
+                               and item.card.is_token),None)
+                    if pair:
+                        owner,item=pair
+                        self.send_to_destination(self.players[owner],item,to_exile=True)
+                        removed.append(identifier)
+                self.log('delayed_token_exile','Temporary combat tokens are exiled at the next end step.',
+                    actor=event['controller'],source=event['source'],removed=removed)
                 continue
             if event.get('operation')=='target_counter':
                 game=self.event_game('main');identifier=event['target']
@@ -5276,6 +5378,10 @@ class Simulator(AdvancedRules):
                     valid=bool(source and event['target'] in {p.card.id for owner,p in
                                  self.creature_targets(event['controller'],source.card)
                                  if owner==event['controller']})
+                    if (valid and len(source.card.event_definition.attachment)>5 and
+                            source.card.event_definition.attachment[5]=='equip:legendary_creature' and
+                            not game.battlefield[event['target']].definition.legendary):
+                        valid=False
                 if valid and source.attached_to!=event['target']:
                     source.attached_to=event['target']
                     self.effect_clock+=1;source.attachment_at=self.effect_clock
@@ -5598,6 +5704,12 @@ class Simulator(AdvancedRules):
         # must never be confused with one another.
         destination=self.players[self.card_owners.get(root(item.card),
             next(i for i,p in enumerate(self.players) if p is player))]
+        if item.card.event_definition and item.card.event_definition.attachment_combat_tokens:
+            self.last_known_combat_attachments[(item.card.id,item.entered_at)]=sum(
+                attached.attached_to==item.card.id and attached.card.event_definition is not None and
+                attached.card.event_definition.attachment and
+                attached.card.event_definition.attachment[0] in ('aura','equipment')
+                for owner in self.players for attached in owner.battlefield)
         to_graveyard=not (to_exile or to_hand or root(item.card)==destination.commander_id)
         if to_graveyard:
             # The Equipment's leave/death trigger sees its predeath attachment.
@@ -5837,6 +5949,18 @@ class Simulator(AdvancedRules):
                                   and bool(permanent.chosen_subtype)
                                   and (permanent.chosen_subtype.lower() in subtypes or
                                        card.event_definition and has_subtype(card.event_definition,permanent.chosen_subtype)))))
+            if card.event_definition and card.event_definition.self_historic_cost_reduction:
+                # A permanent qualifies once even when it is both legendary and
+                # an artifact (or a Saga). Use battlefield characteristics, but
+                # the card's printed mana value, not a reduced casting cost.
+                battlefield=self.event_game('main').battlefield
+                reduction+=sum((item.card.printed_mana_value if item.card.printed_mana_value is not None
+                                else library_effects.mana_value(item.card.mana_cost) or 0)
+                    for item in player.battlefield
+                    if item.card.id in battlefield and (
+                        'Artifact' in battlefield[item.card.id].definition.types or
+                        battlefield[item.card.id].definition.legendary or
+                        'Saga' in battlefield[item.card.id].definition.subtypes))
             cost=mana_pool.reduce_generic_cost(cost,reduction,x)
             # Class level 1 taxes opponents' spells only while the Class owner is active.
             if seat!=self.active:
@@ -5972,6 +6096,18 @@ class Simulator(AdvancedRules):
                                                   cost=len(payment['sources'])),
                                 label='Cast '+c.name+' kicked '+str(kicks)+' time(s)',
                                 kicker_count=kicks))
+                if c.event_definition and c.event_definition.squad_rule:
+                    extra_cost=c.event_definition.squad_rule
+                    for count in range(1,4):
+                        payment=self.payment(replace(c,mana_cost=c.mana_cost+extra_cost*count),
+                                             seat=seat)
+                        if payment['paid']:
+                            actions.append(Candidate(c.id+':squad:'+str(count),'cast',c.id,
+                                features=features(power=(count+1)*c.power,
+                                                  toughness=(count+1)*c.toughness,
+                                                  cost=len(payment['sources'])),
+                                label='Cast '+c.name+' with '+str(count)+' Squad copy/copies',
+                                squad_count=count))
                 if c.kind=='graveyard_return_spell' and self.payment(c)['paid']:
                     actions.extend(Candidate(c.id+':graveyard:'+target.id,'cast',c.id,
                         features=features(power=1),label='Return '+target.name,
@@ -6146,6 +6282,7 @@ class Simulator(AdvancedRules):
             from planeswalker_duration import beginning_of_turn
             beginning_of_turn(self,self.active)
             self.once_per_turn_entries.clear()
+            self.alliance_chosen.clear()
             self.attacked_this_turn.clear()
             self.stack.active=self.active;self.stack.priority=self.active
             self.land_played = False
@@ -6301,7 +6438,7 @@ class Simulator(AdvancedRules):
                         bestow=choice.kind=='bestow',flashback=choice.kind=='cast_flashback',
                          exile_permission=choice.kind=='cast_exile',
                          sacrifice_id=choice.tap_ids[0] if choice.tap_ids else None,
-                         kicker_count=choice.kicker_count)
+                         kicker_count=choice.kicker_count,squad_count=choice.squad_count)
         elif self.phase == "attack":
             choice = self.decide(self.active)
             if choice.kind=='attack_group':
@@ -6447,6 +6584,15 @@ class Simulator(AdvancedRules):
                 queue_end_step(self)
                 from planeswalker_phasing import queue_end_step as queue_phase_out
                 queue_phase_out(self)
+                due=[schedule for schedule in self.pending_token_exiles
+                     if schedule['turn']<=self.turn]
+                self.pending_token_exiles=[schedule for schedule in self.pending_token_exiles
+                                           if schedule['turn']>self.turn]
+                for schedule in due:
+                    self._waiting_triggers.append((dict(operation='delayed_exile_tokens',
+                        controller=schedule['controller'],source=schedule['source'],
+                        ids=schedule['ids'],name='Delayed token exile'),
+                        Card('delayed-exile','Delayed token exile','spell')))
                 self.resolve_entry_triggers([],Card('end-step','End step','spell'))
                 return True
             if self.stack.items:
@@ -6618,7 +6764,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                         "flying", "reach", "haste", "first strike", "double strike",
                         "vigilance", "lifelink", "deathtouch", "trample",
                         "defender", "indestructible", "changeling"} & event_definition.abilities)
-               or event_definition.unspent_mana_rule or event_definition.multikicker_rule or event_definition.paid_regenerate_rule or any(ability.startswith("protection from ")
+               or event_definition.unspent_mana_rule or event_definition.multikicker_rule or event_definition.squad_rule or event_definition.self_historic_cost_reduction or event_definition.alliance_choices or event_definition.attachment_combat_tokens or event_definition.paid_regenerate_rule or any(ability.startswith("protection from ")
                       for ability in event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.self_pump or event_definition.team_keyword_pump or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
     allowed = allowed or bool(event_definition.conditional_draw_activation or
                               event_definition.counted_pump_activation or

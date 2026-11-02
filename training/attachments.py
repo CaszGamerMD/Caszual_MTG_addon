@@ -33,10 +33,12 @@ def parse(text,types,subtypes):
     if restriction.startswith('land:'):prefix='Enchanted land'
     for line in lines:
         line=line.strip()
-        m=re.fullmatch(r'Equip ((?:\{(?:[0-9]{1,2}|[WUBRGC])\})+)',line)
+        m=re.fullmatch(r'Equip (legendary creature )?((?:\{(?:[0-9]{1,2}|[WUBRGC])\})+)',line)
         if m and mode=='equipment':
             if cost is not None:return None
-            cost=m[1];continue
+            cost=m[2]
+            if m[1]:restriction='equip:legendary_creature'
+            continue
         m=re.fullmatch((prefix if prefix=='Enchanted land' else prefix+' creature')+r' has (.+)\.',line)
         if m:
             keywords=_keyword_grants(m[1])
