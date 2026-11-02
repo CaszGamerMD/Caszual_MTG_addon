@@ -453,6 +453,7 @@ class Simulator(AdvancedRules):
         self.combat_damage_prevented_to_players=set()
         self._end_step_triggers_queued=False
         self.token_sequence = 0
+        self.die_sequence = 0  # Independent deterministic entropy, not library shuffle RNG.
         self.effect_clock = 0
         self.once_per_turn_entries=set()
         self.alliance_chosen={}  # (source permanent, entry incarnation) -> used mode names.
@@ -476,7 +477,7 @@ class Simulator(AdvancedRules):
                     continue
                 if self.diagnostic and card.kind == "mana_artifact" and len(card.mana_production)==6:
                     continue
-                if self.diagnostic and card.kind == "x_spell" and card.x_effect in ("tokens","draw","life"):
+                if self.diagnostic and card.kind == "x_spell" and card.x_effect in ("tokens","draw","life","wave"):
                     continue
                 if self.diagnostic and card.kind=='modifier_spell' and (card.target_modifier or card.modifier_program):
                     continue
@@ -1197,6 +1198,20 @@ class Simulator(AdvancedRules):
                     if not candidates:continue
                     chosen=max(candidates,key=lambda item:(self.effective_card(item).power,item.card.id))
                     event=dict(event,target=chosen.card.id)
+                if event.get('operation')=='attach_any_equipment':
+                    game=self.event_game('main')
+                    candidates=tuple(sorted((p for p in game.battlefield.values()
+                        if 'Equipment' in p.definition.subtypes
+                        and 'Artifact' in p.definition.types
+                        and 'Creature' not in p.definition.types
+                        and not game.has(p,'shroud')
+                        and (p.controller==controller or not game.has(p,'hexproof'))
+                        and not game.protected(p,event['sourceColors'])),key=lambda p:p.id))
+                    chosen=tuple(self.choose_multi_equipment_targets(event,candidates))
+                    if len(set(chosen))!=len(chosen) or not set(chosen).issubset({p.id for p in candidates}):
+                        raise ValueError('Illegal target Equipment selection')
+                    event=dict(event,targetEntries=tuple((identifier,game.battlefield[identifier].entered_at)
+                                                          for identifier in chosen))
                 if event.get('operation')=='create_chosen_role':
                     kind=self.choose_role_kind(event,event['roleOptions'])
                     if kind not in event['roleOptions']:
@@ -1225,6 +1240,14 @@ class Simulator(AdvancedRules):
     def choose_alliance_mode(self,event,available):
         """Deterministic diagnostic choice; callers may supply a player policy."""
         return available[0]
+
+    def choose_wave_permanents(self,event,candidates):
+        """Diagnostic may-choice: put all legal supported permanents into play."""
+        return tuple(c.id for c in candidates)
+
+    def choose_multi_equipment_targets(self,event,candidates):
+        """Diagnostic policy: take every legal Equipment; may choose none."""
+        return tuple(p.id for p in candidates)
 
     def drain_priority(self,empty_window=False):
         if self._draining_priority: return
@@ -3878,6 +3901,32 @@ class Simulator(AdvancedRules):
             return
         if card.kind=='x_spell':
             x=event['x']
+            if card.x_effect=='wave':
+                count=min(max(0,x),len(p.library))
+                revealed=[p.library.pop() for _ in range(count)]
+                permanent_kinds={'Land','Artifact','Creature','Enchantment','Planeswalker','Battle'}
+                permanent_card_kinds={'land','creature','vehicle','equipment','aura',
+                                      'artifact','mana_artifact','enchantment',
+                                      'planeswalker','station'}
+                candidates=[c for c in revealed
+                    if c.kind!='unsupported' and
+                    (c.kind in permanent_card_kinds or
+                     permanent_kinds.intersection(c.printed_types) or
+                     c.event_definition and permanent_kinds.intersection(c.event_definition.types))
+                    and (c.printed_mana_value if c.printed_mana_value is not None
+                         else library_effects.mana_value(c.mana_cost) or 0)<=x]
+                chosen=tuple(self.choose_wave_permanents(event,candidates))
+                if len(set(chosen))!=len(chosen) or not set(chosen).issubset({c.id for c in candidates}):
+                    raise ValueError('Illegal permanent choice from revealed cards')
+                played=[c for c in revealed if c.id in chosen]
+                p.graveyard.extend(c for c in revealed if c.id not in chosen)
+                if played:
+                    pending=self.enter_creatures(played,p)
+                    self.resolve_entry_triggers(pending,card)
+                self.log('wave_reveal','Variable library revelation and permanent selection resolves.',
+                         actor=controller,source=card.name,chosenX=x,
+                         revealed=[c.name for c in revealed],permanents=[c.name for c in played])
+                return
             card=replace(card,kind='token_spell' if card.x_effect=='tokens' else 'spell',
                          token_count=x if card.x_effect=='tokens' else 0,
                          draw=x if card.x_effect=='draw' else 0,life=x if card.x_effect=='life' else 0)
@@ -4012,6 +4061,35 @@ class Simulator(AdvancedRules):
                         effect='; then '.join(step['operation'] for step in steps),
                         source=item.card.id,controller=seat,name=item.card.name,
                         damagedPlayer=damaged_player,sourceColors=tuple(item.card.colors),steps=steps))
+        return events
+
+    def roll_die(self,sides):
+        if not 2<=sides<=1000:raise ValueError('Unsupported die size')
+        self.die_sequence+=1
+        return random.Random(f'{self.seed}:combat-die:{self.die_sequence}').randint(1,sides)
+
+    def equipped_combat_die_triggers(self,dealt):
+        """One event per damaging equipped creature per combat damage step.
+
+        Trample assigning positive damage to two recipients is still a single
+        combat-damage event for this source; compare the roll to total damage.
+        """
+        amounts={}
+        for event in dealt:
+            if event['amount']>0:
+                amounts[event['source']]=amounts.get(event['source'],0)+event['amount']
+        game=self.event_game('combat')
+        events=[]
+        for source_id,amount in amounts.items():
+            creature=game.battlefield.get(source_id)
+            if creature is None or not game.creature(creature):continue
+            for equipment in game.battlefield.values():
+                if equipment.attached_to==source_id and equipment.definition.equipped_combat_die:
+                    events.append(dict(operation='combat_die_counters',source=equipment.id,
+                        controller=equipment.controller,name=equipment.definition.name,
+                        host=source_id,hostEntry=creature.entered_at,
+                        sides=equipment.definition.equipped_combat_die,damage=amount,
+                        effect='roll a combat die and conditionally double counters'))
         return events
 
     def choose_optional_entry_bounce(self,event,candidates):
@@ -5209,6 +5287,53 @@ class Simulator(AdvancedRules):
                          actor=event['controller'],source=event['source'],drawn=event['amount'])
                 self.outcome()
                 continue
+            if event.get('operation')=='attach_any_equipment':
+                game=self.event_game('main')
+                host=game.battlefield.get(event['source'])
+                source_live=bool(host and host.entered_at==event['sourceEntry']
+                                 and game.creature(host))
+                moved=[];failed=[]
+                for equipment_id,equipment_entry in event['targetEntries']:
+                    equipment_state=game.battlefield.get(equipment_id)
+                    equipment=next((item for player in self.players for item in player.battlefield
+                                    if item.card.id==equipment_id),None)
+                    valid=bool(source_live and equipment_state and equipment and
+                        equipment_state.entered_at==equipment_entry and
+                        'Artifact' in equipment_state.definition.types and
+                        'Equipment' in equipment_state.definition.subtypes and
+                        'Creature' not in equipment_state.definition.types and
+                        not game.has(equipment_state,'shroud') and
+                        (equipment_state.controller==event['controller'] or
+                         not game.has(equipment_state,'hexproof')) and
+                        not game.protected(equipment_state,event['sourceColors']) and
+                        not game.protected(host,equipment_state.definition.colors))
+                    if not valid:
+                        failed.append(equipment_id)
+                        continue
+                    equipment.attached_to=event['source']
+                    self.effect_clock+=1;equipment.attachment_at=self.effect_clock
+                    moved.append(equipment_id)
+                self.log('multi_equipment_attach','Chosen Equipment targets attach without changing control.',
+                         actor=event['controller'],source=event['source'],attached=moved,
+                         illegal=failed,chosen=len(event['targetEntries']))
+                if moved:self.resolve_entry_triggers(self.state_based_actions(),card)
+                continue
+            if event.get('operation')=='combat_die_counters':
+                sides=event['sides'];result=self.roll_die(sides)
+                game=self.event_game('main')
+                host=game.battlefield.get(event['host'])
+                qualifies=result>event['damage'] or result==sides
+                added=0
+                if qualifies and host and host.entered_at==event['hostEntry']:
+                    added=game.counter_amount(host.id,host.counters)
+                    host.counters+=added
+                    self.sync_events(game)
+                self.log('combat_die_counters','Combat die compares to actual damage and may double counters.',
+                         actor=event['controller'],source=event['source'],host=event['host'],
+                         damage=event['damage'],sides=sides,roll=result,
+                         qualified=qualifies,added=added)
+                if added:self.resolve_entry_triggers(self.state_based_actions(),card)
+                continue
             if event.get('operation')=='attach_targeted_equipment':
                 game=self.event_game('main')
                 equipment=next((p for p in self.players[event['controller']].battlefield
@@ -5748,6 +5873,7 @@ class Simulator(AdvancedRules):
             or self.replace_regeneration(next(seat for seat,p in enumerate(self.players) if item in p.battlefield),item,game))]
         triggers=game.death_triggers([item.card.id for item in dead])
         triggers.extend(game.aura_damage_triggers(dealt,1-self.active))
+        triggers.extend(self.equipped_combat_die_triggers(dealt))
         if to_player and attacker:
             from planeswalker_emblems import combat_hit_events
             self._waiting_triggers.extend(combat_hit_events(self,(attacker.card.id,),self.active))
@@ -6677,6 +6803,7 @@ class Simulator(AdvancedRules):
                     dealt.append(dict(source=b.card.id,target=a.card.id,amount=defense_damage))
             if d['damage']>0:dealt.append(dict(source=a.card.id,target=None,amount=d['damage']))
             death_triggers.extend(game.aura_damage_triggers(dealt,1-self.active))
+            death_triggers.extend(self.equipped_combat_die_triggers(dealt))
             self.log("block", choice.label, actor=1-self.active,
                      blocker=b.card.id if b else None)
             if b:
@@ -6914,7 +7041,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                         "flying", "reach", "haste", "first strike", "double strike",
                         "vigilance", "lifelink", "deathtouch", "trample",
                         "defender", "indestructible", "changeling"} & event_definition.abilities)
-               or event_definition.unspent_mana_rule or event_definition.multikicker_rule or event_definition.squad_rule or event_definition.self_historic_cost_reduction or event_definition.alliance_choices or event_definition.attachment_combat_tokens or event_definition.equipment_mobilize or event_definition.equipped_untap_pump or event_definition.aura_transformation or event_definition.equipment_base_one_scale or event_definition.paid_regenerate_rule or any(ability.startswith("protection from ")
+               or event_definition.unspent_mana_rule or event_definition.multikicker_rule or event_definition.squad_rule or event_definition.self_historic_cost_reduction or event_definition.alliance_choices or event_definition.attachment_combat_tokens or event_definition.equipment_mobilize or event_definition.equipped_untap_pump or event_definition.aura_transformation or event_definition.equipment_base_one_scale or event_definition.multi_equipment_entrance or event_definition.equipped_combat_die or event_definition.paid_regenerate_rule or any(ability.startswith("protection from ")
                       for ability in event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.self_pump or event_definition.team_keyword_pump or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
     allowed = allowed or bool(event_definition.conditional_draw_activation or
                               event_definition.counted_pump_activation or

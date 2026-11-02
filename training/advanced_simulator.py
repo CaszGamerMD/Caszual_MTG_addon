@@ -422,6 +422,7 @@ class AdvancedRules:
     dead.append((state.controller,p))
   dead=[(owner,item) for owner,item in dead if not (self.replace_umbra_destruction(owner,item,g) or self.replace_regeneration(owner,item,g))]
   pending=g.aura_damage_triggers(dealt,1-self.active)
+  pending.extend(self.equipped_combat_die_triggers(dealt))
   if player_hits:
    from planeswalker_emblems import combat_hit_events
    self._waiting_triggers.extend(combat_hit_events(self,player_hits,self.active))

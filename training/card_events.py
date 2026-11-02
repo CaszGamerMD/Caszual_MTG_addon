@@ -203,6 +203,8 @@ class Definition:
     aura_entry_draw: int = 0  # Independent ETB draw trigger, survives the Aura leaving.
     equipment_base_one_scale: tuple = ()  # (power,toughness) per own creature with base P or T 1.
     equipment_tribal_entry_attach: tuple = ()  # Creature subtypes that trigger optional attachment.
+    multi_equipment_entrance: bool = False  # ETB/attack: attach any number of targeted Equipment to this creature.
+    equipped_combat_die: int = 0  # Equipped damage source rolls dN; max or roll > damage doubles counters.
     paid_regenerate_rule: tuple = ()  # Mana cost and "another target" subtype, with no tap cost.
     equipment_creature_conversion: bool = False  # Equipped permanent becomes non-planeswalker creature.
     combat_reattach: bool = False  # Optional start-of-combat Aura/Equipment movement.
@@ -249,6 +251,9 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from multi_equipment_entrance import parse as parse_multi_equipment_entrance
+    if parse_multi_equipment_entrance(text,name,types):
+        return Definition(**base,abilities=frozenset(),multi_equipment_entrance=True)
     from unspent_mana_programs import parse as parse_unspent_mana
     unspent=parse_unspent_mana(text,name,types)
     if unspent:
@@ -303,6 +308,12 @@ def parse_card(card: dict) -> Definition:
         return Definition(**base,abilities=frozenset(),attachment=('equipment',cost,frozenset(),0,0),
                           equipment_base_one_scale=(power_bonus,toughness_bonus),
                           equipment_tribal_entry_attach=tribes)
+    from dice_counter_equipment import parse as parse_dice_counter_equipment
+    dice_equip=parse_dice_counter_equipment(text,types,subtypes)
+    if dice_equip:
+        cost,sides=dice_equip
+        return Definition(**base,abilities=frozenset(),attachment=('equipment',cost,frozenset(),0,0),
+                          equipped_attack_counters=1,equipped_combat_die=sides)
     from paid_regeneration_pump import parse as parse_paid_regeneration_pump
     paid_regen=parse_paid_regeneration_pump(text,types)
     if paid_regen:
@@ -1197,6 +1208,11 @@ class Game:
                 self.emit('trigger',operation='draw_cards',effect='draw a card',
                           source=permanent.id,name=permanent.definition.name,
                           controller=permanent.controller,amount=permanent.definition.aura_entry_draw)
+            if permanent.definition.multi_equipment_entrance:
+                self.emit('trigger',operation='attach_any_equipment',
+                          source=permanent.id,name=permanent.definition.name,
+                          controller=permanent.controller,sourceEntry=permanent.entered_at,
+                          sourceColors=sorted(permanent.definition.colors),optional=True)
             if permanent.definition.linked_exile:
                 self.emit('trigger',operation='linked_exile_entry',
                           source=permanent.id,name=permanent.definition.name,
@@ -1669,6 +1685,11 @@ class Game:
                                       else 'damage the attacking flying creature'))
         if 'attacks' in a.definition.role_events:
             self.emit('trigger',**self.role_trigger(a))
+        if a.definition.multi_equipment_entrance:
+            self.emit('trigger',operation='attach_any_equipment',source=a.id,
+                      name=a.definition.name,controller=a.controller,
+                      sourceEntry=a.entered_at,
+                      sourceColors=sorted(a.definition.colors),optional=True)
         # A Sorcerer Role grants the enchanted CREATURE an attack trigger.
         # It is independent of the Aura after triggering and uses that creature's controller.
         for aura in self.battlefield.values():
