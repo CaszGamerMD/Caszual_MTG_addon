@@ -125,6 +125,7 @@ class Definition:
     history_activation: tuple = ()
     equipment_attacks: tuple = ()
     equipped_attack_counters: int = 0  # Equipped attacker receives counters on attack trigger resolution.
+    equipped_player_hit_life: tuple = ()  # Mode and amount of life loss on equipped player's combat hit.
     pilot_bonus: int = 0
     attachment_scale: tuple = ()
     role_events: tuple = ()
@@ -188,6 +189,7 @@ class Definition:
     charge_on_life_gain: int = 0  # Each life-gain event triggers one charge-counter ability.
     equipment_planeswalker_cost: str = ''  # Alternative equip targeting a planeswalker.
     equipment_token_cost: str = ''  # Alternative equip restricted to creature tokens.
+    equipment_target_ability_discount: int = 0  # Reduces Equipment activations targeting this creature.
     equipment_creature_conversion: bool = False  # Equipped permanent becomes non-planeswalker creature.
     combat_reattach: bool = False  # Optional start-of-combat Aura/Equipment movement.
     equipment_return_dying: bool = False  # Equipped creature dies -> return from graveyard.
@@ -206,7 +208,8 @@ def _only_static_keyword_program(program):
         program.token_replacements or program.token_action_triggers or program.token_leave_triggers or
         program.entry_counter_grants or program.attack_watchers or program.chosen_type_entry or
         program.chosen_type_identity or
-        program.opponent_life_gain_becomes_loss or program.prevent_combat_damage_to_attackers)
+        program.opponent_life_gain_becomes_loss or program.prevent_combat_damage_to_attackers
+        or program.equipment_target_ability_discount)
 
 def parse_card(card: dict) -> Definition:
     name = card.get("name", "")
@@ -497,7 +500,7 @@ def parse_card(card: dict) -> Definition:
     if activated and 'Creature' in types and (not activated[0].devotion or 'Enchantment' in types):
         program,ability=activated
         return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects,history_activation=ability,activations=program.activations,devotion=program.devotion)
-    from equipment_composition import equipped_attack_counters,token_equip_cost
+    from equipment_composition import equipped_attack_counters,token_equip_cost,equipped_combat_life
     counter_equipment=equipped_attack_counters(text,types,subtypes)
     if counter_equipment:
         return Definition(**base,abilities=frozenset(),attachment=counter_equipment[0],
@@ -506,6 +509,10 @@ def parse_card(card: dict) -> Definition:
     if token_equipment:
         return Definition(**base,abilities=frozenset(),attachment=token_equipment[0],
                           equipment_token_cost=token_equipment[1])
+    life_equipment=equipped_combat_life(text,types,subtypes)
+    if life_equipment:
+        return Definition(**base,abilities=frozenset(),attachment=life_equipment[0],
+                          equipped_player_hit_life=life_equipment[1])
     equipped=equipped_attacks(text,types,subtypes)
     if equipped:return Definition(**base,abilities=frozenset(),attachment=equipped[0],equipment_attacks=equipped[1])
     bestow=parse_bestow(text,types)
@@ -723,6 +730,10 @@ def parse_card(card: dict) -> Definition:
         program=None
     if program and 'changeling' in program.keywords and 'Creature' not in types:
         program=None
+    if program and 'Creature' not in types and any(
+            trigger.effect.operation=='reflexive_paid_self_counters'
+            for trigger in program.triggers):
+        program=None
     # The entry-time choice grammar must match the permanent type named by Oracle.
     if program and program.chosen_type_entry and not any(
         f"As this {kind.lower()} enters, choose a creature type." in text
@@ -744,7 +755,8 @@ def parse_card(card: dict) -> Definition:
                           token_action_triggers=program.token_action_triggers,token_leave_triggers=program.token_leave_triggers,
                           entry_counter_grants=program.entry_counter_grants,attack_watchers=program.attack_watchers,
                           chosen_type_entry=program.chosen_type_entry,
-                          chosen_type_identity=program.chosen_type_identity)
+                          chosen_type_identity=program.chosen_type_identity,
+                          equipment_target_ability_discount=program.equipment_target_ability_discount)
     attack_text=text.replace(name,'this creature') if name else text
     if ',' in name:
         short=name.split(',')[0]
@@ -1174,6 +1186,8 @@ class Game:
                             data.update(entryPower=self.stats(permanent)[0],entryAt=permanent.entered_at)
                         if trigger.effect.operation=='self_sacrifice_unless_bounce':
                             data['entryAt']=permanent.entered_at
+                        if trigger.effect.operation=='reflexive_paid_self_counters':
+                            data['sourceEntry']=watcher.entered_at
                         self.emit("trigger",**data)
                 # Batch-wide "one or more" entry abilities are not per-entrant.
                 # State is shared across event-kernel snapshots for one turn.

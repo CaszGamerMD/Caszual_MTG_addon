@@ -427,6 +427,7 @@ class AdvancedRules:
    self._waiting_triggers.extend(combat_hit_events(self,player_hits,self.active))
   from oracle_abilities import matches,event_data
   for identifier in player_hits:
+   pending.extend(self.equipped_player_hit_triggers(identifier,1,1-self.active))
    pending.extend(g.combat_draw_triggers(identifier))
    for watcher in g.battlefield.values():
     if not watcher.definition.enchantment_combat_copy or watcher.controller!=self.active:continue

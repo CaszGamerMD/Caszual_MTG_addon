@@ -55,3 +55,26 @@ def token_equip_cost(text, types, subtypes):
     if special is None:return None
     attachment=parse_attachment('\n'.join(rest),types,subtypes)
     return (attachment,special) if attachment else None
+
+
+def equipped_combat_life(text, types, subtypes):
+    """Damage-to-player triggers compose with a complete equipment program.
+
+    The life-loss instruction is queued when positive combat damage happens;
+    the target player's *current* life total is read on trigger resolution.
+    """
+    if 'Artifact' not in types or 'Equipment' not in subtypes:return None
+    life=None
+    remaining=[]
+    for line in text.splitlines():
+        match=re.fullmatch(
+            r'Whenever equipped creature deals combat damage to a player, '
+            r'that player loses (half their life, rounded up|[1-9][0-9]* life)\.',line.strip())
+        if match:
+            if life is not None:return None
+            life=('half',0) if match[1]=='half their life, rounded up' else (
+                'fixed',int(match[1].split()[0]))
+        else:remaining.append(line)
+    if life is None:return None
+    attachment=parse_attachment('\n'.join(remaining),types,subtypes)
+    return (attachment,life) if attachment else None

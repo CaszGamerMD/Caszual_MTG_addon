@@ -123,6 +123,7 @@ class Program:
     opponent_life_gain_becomes_loss: bool = False
     prevent_combat_damage_to_attackers: bool = False
     chosen_type_identity: bool = False  # Self gains the type selected as it enters.
+    equipment_target_ability_discount: int = 0  # Generic reduction only when an Equipment targets self.
 
 def static_effect(text):
     # Global keyword grants apply to both players, not just the controller.
@@ -377,6 +378,10 @@ KEYWORDS = {'flash','flying','first strike','double strike','lifelink','vigilanc
 def selector(text):
     # Unqualified 'a creature dies' sees any controller and every simultaneous death.
     if text=='a creature':return Selector(creature=True)
+    excluded=re.fullmatch(r'another non-([A-Z][a-z]+) creature you control',text)
+    if excluded:
+        return Selector(relation='controller',other=True,creature=True,
+                        excluded_subtype=excluded[1])
     # Landfall is a permanent-entry event, not a creature trigger.
     if text == 'a land you control': return Selector(relation='controller',permanent_type='Land')
     if text == 'this creature': return Selector(self_only=True,creature=True)
@@ -414,6 +419,10 @@ def selector(text):
                     subtype='' if noun=='creature' else noun.split()[0])
 
 def effect(text):
+    # "When you do" creates a *reflexive* trigger after a chosen X payment;
+    # unlike "If you do", its counter effect is separately respondable.
+    if text=='you may pay {X}. When you do, put X +1/+1 counters on this creature.':
+        return Effect('reflexive_paid_self_counters',0,optional=True,payment_cost='{X}')
     # Payment is a gate on a complete independently parsed instruction.  Do
     # not infer a free draw from "If you do" or discard any following text.
     paid=re.fullmatch(r'you may pay ((?:\{(?:[0-9]+|[WUBRGC])\})+)\. If you do, (.+)',text)
@@ -518,7 +527,7 @@ def compile_abilities(text, name=''):
             prefix=name.split(',',1)[0]
             text=re.sub(r'\b'+re.escape(prefix)+r"(?= deals\b)",'this creature',text)
             text=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= isn't a creature| enters| attacks|\'s power)",'this creature',text)
-    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0;cost_reductions=[];counter_replacements=[];token_replacements=[];token_action_triggers=[];token_leave_triggers=[];entry_counter_grants=[];attack_watchers=[];chosen_type_entry=False;chosen_type_identity=False;opponent_life_gain_becomes_loss=False;prevent_combat_damage_to_attackers=False
+    triggers=[]; keywords=set(); static_effects=[];activations=[];devotion=();life_multiplier=1;opponent_creatures_enter_tapped=False;life_addition=0;cost_reductions=[];counter_replacements=[];token_replacements=[];token_action_triggers=[];token_leave_triggers=[];entry_counter_grants=[];attack_watchers=[];chosen_type_entry=False;chosen_type_identity=False;opponent_life_gain_becomes_loss=False;prevent_combat_damage_to_attackers=False;equipment_target_ability_discount=0
     for line in text.splitlines():
         line=line.strip()
         if not line: continue
@@ -651,6 +660,13 @@ def compile_abilities(text, name=''):
         chosen_discount=re.fullmatch(r'Creature spells of the chosen type cost \{([1-9][0-9]*)\} less to cast\.',line)
         if chosen_discount:
             cost_reductions.append((('chosen_creature_type',),int(chosen_discount[1])))
+            continue
+        equipment_activation=re.fullmatch(
+            r'Activated abilities of Equipment you control that target this creature '
+            r'cost \{([1-9][0-9]*)\} less to activate\.',line)
+        if equipment_activation:
+            if equipment_target_ability_discount:return None
+            equipment_target_ability_discount=int(equipment_activation[1])
             continue
         discount=re.fullmatch(r'([A-Z][a-z]+(?: and [A-Za-z]+)?) spells you cast cost \{([1-9][0-9]*)\} less to cast\.',line)
         repeated=re.fullmatch(r'([A-Z][a-z]+) spells and ([A-Z][a-z]+) spells you cast cost \{([1-9][0-9]*)\} less to cast\.',line)
@@ -860,7 +876,7 @@ def compile_abilities(text, name=''):
                       or any(selector.chosen_subtype for selector,_ in entry_counter_grants)
                       or any('chosen_creature_type' in names for names,_ in cost_reductions))
     if chosen_type_entry != chosen_type_used:return None
-    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers),tuple(token_leave_triggers),tuple(entry_counter_grants),tuple(attack_watchers),chosen_type_entry,opponent_life_gain_becomes_loss,prevent_combat_damage_to_attackers,chosen_type_identity) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers or token_leave_triggers or entry_counter_grants or attack_watchers or chosen_type_identity or opponent_life_gain_becomes_loss or prevent_combat_damage_to_attackers or keywords else None
+    return Program(tuple(triggers),frozenset(keywords),tuple(static_effects),tuple(activations),devotion,life_multiplier,opponent_creatures_enter_tapped,life_addition,tuple(cost_reductions),tuple(counter_replacements),tuple(token_replacements),tuple(token_action_triggers),tuple(token_leave_triggers),tuple(entry_counter_grants),tuple(attack_watchers),chosen_type_entry,opponent_life_gain_becomes_loss,prevent_combat_damage_to_attackers,chosen_type_identity,equipment_target_ability_discount) if triggers or static_effects or activations or devotion or life_multiplier!=1 or opponent_creatures_enter_tapped or life_addition or cost_reductions or counter_replacements or token_replacements or token_action_triggers or token_leave_triggers or entry_counter_grants or attack_watchers or chosen_type_identity or opponent_life_gain_becomes_loss or prevent_combat_damage_to_attackers or equipment_target_ability_discount or keywords else None
 
 def matches(subject, source, entered, is_creature):
     return ((not subject.self_only or source.id==entered.id)
@@ -896,6 +912,7 @@ def cast_matches(trigger, source, spell, controller):
 def event_data(trigger, source, subject):
     e=trigger.effect
     labels={'return_controlled_land':'return a controlled land to its owner hand','gain_life':f'controller gains {e.amount} life','draw_cards':f'controller draws {e.amount} cards',
+            'reflexive_paid_self_counters':'optionally pay X to trigger X self counters',
             'reveal_creatures':f'reveal {e.amount} cards and put matching creatures onto the battlefield',
             'damage_board':f'deal {e.amount} damage to opposing player and board','lose_life':f'{e.recipient} loses {e.amount} life',
             'damage':f'deal {e.amount} damage to each opponent','scry':'scry','surveil':'surveil','mill_cards':'move top library cards to graveyards','discard':'damaged player discards a card',
