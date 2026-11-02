@@ -81,7 +81,7 @@ def equipped_combat_life(text, types, subtypes):
     return (attachment,life) if attachment else None
 
 
-_HIT_CONJUNCTION=re.compile(r' and (?=that player (?:mills |discards )|you (?:untap all lands |may return up to one target creature card ))')
+_HIT_CONJUNCTION=re.compile(r' and (?=that player (?:mills |discards )|you (?:untap all lands |may return up to one target creature card |draw ))')
 
 
 def _hit_atom(clause):
@@ -104,6 +104,12 @@ def _hit_atom(clause):
     if life:return ('gain_controller_life',int(life[1]),None)
     if clause=='you may return up to one target creature card from your graveyard to your hand':
         return ('return_optional_graveyard_creature',1,None)
+    hit=re.fullmatch(r'this Equipment deals ([1-9][0-9]*) damage to any target',clause)
+    if hit:return ('damage_equipment_target',int(hit[1]),None)
+    draw=re.fullmatch(r'you draw (a|one|two|three|four|[1-9][0-9]*) cards?',clause)
+    if draw:
+        words={'a':1,'one':1,'two':2,'three':3,'four':4}
+        return ('draw_cards',words[draw[1]] if draw[1] in words else int(draw[1]),None)
     return None
 
 

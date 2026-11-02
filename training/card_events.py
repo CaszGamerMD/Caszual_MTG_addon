@@ -9,7 +9,7 @@ from dataclasses import dataclass, field, asdict
 import re
 from attachments import parse as parse_attachment, parse_bestow, parse_equipment_removals, parse_with_intrinsic
 from attack_abilities import compile as compile_attacks
-from oracle_abilities import Trigger, StaticEffect, compile_abilities, matches, event_data, cast_matches
+from oracle_abilities import Trigger, StaticEffect, Selector, compile_abilities, matches, event_data, cast_matches
 from creature_types import has_subtype, has_any_subtype, shares_creature_type, valid_creature_choice
 
 
@@ -192,6 +192,8 @@ class Definition:
     equipment_token_cost: str = ''  # Alternative equip restricted to creature tokens.
     equipment_target_ability_discount: int = 0  # Reduces Equipment activations targeting this creature.
     unspent_mana_rule: tuple = ()  # Mana color retained; p/t multiplier and counted pool color.
+    multikicker_rule: tuple = ()  # Additional mana cost and entering +1/+1 counters per payment.
+    paid_regenerate_rule: tuple = ()  # Mana cost and "another target" subtype, with no tap cost.
     equipment_creature_conversion: bool = False  # Equipped permanent becomes non-planeswalker creature.
     combat_reattach: bool = False  # Optional start-of-combat Aura/Equipment movement.
     equipment_return_dying: bool = False  # Equipped creature dies -> return from graveyard.
@@ -241,6 +243,23 @@ def parse_card(card: dict) -> Definition:
     unspent=parse_unspent_mana(text,name,types)
     if unspent:
         return Definition(**base,abilities=frozenset(),unspent_mana_rule=unspent)
+    from multikicker_anthem import parse as parse_multikicker_anthem
+    multikicker=parse_multikicker_anthem(text,types)
+    if multikicker:
+        cost,counters,subtype,power,toughness=multikicker
+        return Definition(**base,abilities=frozenset(),multikicker_rule=(cost,counters),
+                          static_effects=(StaticEffect(
+                              subject=Selector(relation='controller',other=True,
+                                               creature=True,subtype=subtype),
+                              power=power,toughness=toughness,
+                              source_counter_multiplier=True),))
+    from paid_regeneration_pump import parse as parse_paid_regeneration_pump
+    paid_regen=parse_paid_regeneration_pump(text,types)
+    if paid_regen:
+        regen_cost,subtype,pump_cost,power,toughness,keyword=paid_regen
+        return Definition(**base,abilities=frozenset(),
+                          paid_regenerate_rule=(regen_cost,subtype),
+                          tribal_pump_activations=((pump_cost,subtype,power,toughness,keyword),))
     from saga_abilities import compile_saga, compile_transformed_creature
     saga_program=compile_saga(text,types,subtypes)
     if saga_program:
@@ -938,6 +957,8 @@ class Game:
                                    item.attached_to==p.id and
                                    item.definition.attachment[0] in effect.attachment_count_kinds
                                    for item in self.battlefield.values())
+                elif effect.source_counter_multiplier:
+                    multiplier=source.counters
                 elif effect.share_types:
                     multiplier=sum(other.id!=p.id and self.creature(other)
                                    and shares_creature_type(p.definition,other.definition)
@@ -1059,7 +1080,7 @@ class Game:
     def enter(self, permanent: Permanent):
         self.enter_batch([permanent])
 
-    def enter_batch(self, permanents):
+    def enter_batch(self, permanents, entry_counters=None):
         if len({p.id for p in permanents})!=len(permanents):raise IllegalAction('Duplicate permanent ID')
         for permanent in permanents:
             if permanent.id in self.battlefield: raise IllegalAction("Duplicate permanent ID")
@@ -1079,6 +1100,7 @@ class Game:
         # two permanents entering simultaneously cannot apply replacements
         # granted by either of the entering permanents.
         incumbents=tuple(self.battlefield.values())
+        extra_counters=entry_counters or {}
         entry_counters={}
         for permanent in permanents:
             if 'Creature' in permanent.definition.types and any(
@@ -1090,6 +1112,7 @@ class Game:
                           if matches(selector,source,permanent,True))
                 if permanent.controller in self.attacked_this_turn:
                     bonus+=permanent.definition.raid_entry_counters
+                bonus+=extra_counters.get(permanent.id,0)
                 if bonus:entry_counters[permanent.id]=bonus
             permanent.entered_at=self.timestamp()
             if 'Planeswalker' in permanent.definition.types and permanent.loyalty is None:permanent.loyalty=permanent.definition.loyalty

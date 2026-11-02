@@ -69,6 +69,7 @@ class StaticEffect:
     requires_keyword: str = ''  # Dynamic keyword filter on affected creature.
     requires_plus_one_counter: bool = False  # Live +1/+1 counters on target.
     attachment_count_kinds: tuple[str, ...] = ()  # Per attached Aura or Equipment, not merely attached state.
+    source_counter_multiplier: bool = False  # Per +1/+1 counter on the source, evaluated live.
 
 @dataclass(frozen=True)
 class Effect:

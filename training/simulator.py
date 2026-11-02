@@ -190,6 +190,7 @@ class Card:
     mana_count_rule: tuple = ()  # Live (color, creature subtype, controller/all) on resolution.
     scaled_damage_rule: tuple = ()  # (subtype, controller/all, target filter), quantity at resolution.
     token_definition: EventDefinition | None = None
+    reinforce_rule: tuple = ()  # From-hand discard ability: mana cost and +1/+1 counter count.
     token_tapped: bool = False
     is_token: bool = False
     colors: tuple[str, ...] = ()
@@ -310,6 +311,7 @@ class Candidate:
     blocks: tuple = ()
     discard_id: str = ''
     modal_modes: tuple[int, ...] = ()
+    kicker_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -870,9 +872,11 @@ class Simulator(AdvancedRules):
         # Human is a valid creature type when no existing controlled creature offers a choice.
         return min(counts,key=lambda kind:(-counts[kind],kind)) if counts else 'Human'
 
-    def enter_creature(self, card: Card, player: Player, attached_to=None, keyword_counter=None):
+    def enter_creature(self, card: Card, player: Player, attached_to=None, keyword_counter=None,
+                       entry_counters=0):
         return self.enter_creatures([card],player,attached_targets={card.id:attached_to} if attached_to else None,
-                                    keyword_choices={card.id:keyword_counter} if keyword_counter else None)
+                                    keyword_choices={card.id:keyword_counter} if keyword_counter else None,
+                                    entry_counter_counts={card.id:entry_counters} if entry_counters else None)
 
     def unique_entry_name_allowed(self,controller,entering_id,entering_name):
         """Intervening-if: no other controlled creature or graveyard creature card shares a name."""
@@ -885,7 +889,8 @@ class Simulator(AdvancedRules):
              card.event_definition is not None and 'Creature' in card.event_definition.types)
             for card in self.players[controller].graveyard)
 
-    def enter_creatures(self, cards, player: Player, bestowed_targets=None, attached_targets=None, keyword_choices=None):
+    def enter_creatures(self, cards, player: Player, bestowed_targets=None, attached_targets=None,
+                        keyword_choices=None, entry_counter_counts=None):
         game=self.event_game('main')
         game._next_token=self.token_sequence
         known=set(game.battlefield)
@@ -925,7 +930,7 @@ class Simulator(AdvancedRules):
                                            attached_to=attached_targets.get(card.id),chosen_subtype=chosen_types.get(card.id,''),
                                            keyword_counters=frozenset((keyword_choice,)) if keyword_choice else frozenset()))
         game.life_totals={seat:p.life for seat,p in enumerate(self.players)}
-        game.enter_batch(entrants)
+        game.enter_batch(entrants,entry_counters=entry_counter_counts)
         self.entry_history.extend(dict(turn=self.turn,controller=controller,id=p.id,
             subtypes=sorted(p.definition.subtypes)) for p in entrants)
         player.battlefield.extend(Permanent(card,attached_to=attached_targets.get(card.id),bestowed=card.id in bestowed_targets,
@@ -1127,6 +1132,20 @@ class Simulator(AdvancedRules):
                     kind,target=self.choose_damage_target(event,options)
                     if (kind,target) not in options:raise ValueError('Illegal damage trigger target')
                     event=dict(event,targetKind=kind,target=target)
+                if event.get('operation')=='equipment_hit_sequence':
+                    targeted=[step for step in event['steps']
+                              if step['operation']=='damage_equipment_target']
+                    if targeted:
+                        if len(targeted)!=1:raise ValueError('Only one target-bearing damage step supported')
+                        options=self.damage_trigger_targets(event)
+                        if not options:continue
+                        kind,target=self.choose_damage_target(event,options)
+                        if (kind,target) not in options:raise ValueError('Illegal equipment damage target')
+                        game=self.event_game('main')
+                        event=dict(event,steps=[dict(step,targetKind=kind,target=target,
+                            targetEntry=(game.battlefield[target].entered_at if kind=='permanent' else None))
+                            if step['operation']=='damage_equipment_target' else step
+                            for step in event['steps']])
                 if event.get('operation')=='combat_target_boost':
                     game=self.event_game('main')
                     candidates=[item for owner,item in self.creature_targets(controller,origin)
@@ -1170,6 +1189,11 @@ class Simulator(AdvancedRules):
                 if event.get('operation')=='damage_any_target' and event.get('targetKind')=='permanent':
                     for ward in self.target_triggers(item,event['target']):
                         self.stack.push(ward['controller'],(ward,origin),ward['name'])
+                if event.get('operation')=='equipment_hit_sequence':
+                    for step in event['steps']:
+                        if step['operation']=='damage_equipment_target' and step['targetKind']=='permanent':
+                            for ward in self.target_triggers(item,step['target']):
+                                self.stack.push(ward['controller'],(ward,origin),ward['name'])
         self.stack.priority=self.active if priority is None else priority
         if not self.manual_priority:self.drain_priority()
 
@@ -1633,6 +1657,48 @@ class Simulator(AdvancedRules):
                  actor=seat,source=source_id,subtype=subtype,stackId=frame.id)
         if not self.manual_priority and not self._resolving_stack:self.drain_priority()
 
+    def reinforce_choices(self,seat):
+        """A reinforce card in hand offers paid, targeted activation at priority."""
+        choices=[]
+        for card in self.players[seat].hand:
+            if not card.reinforce_rule:continue
+            cost,amount=card.reinforce_rule
+            payment=self.payment(replace(card,mana_cost=cost),seat=seat,spell_cost=False)
+            if not payment['paid']:continue
+            for owner,target in self.creature_targets(seat,card):
+                choices.append(Candidate(card.id+':reinforce:'+target.card.id,
+                    'activate_reinforce',card.id,features=features(power=amount,
+                        cost=len(payment['sources'])),label='Reinforce '+target.card.name,
+                    target_permanent=target.card.id))
+        return choices
+
+    def activate_reinforce(self,seat,card_id,target_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        player=self.players[seat]
+        card=next((c for c in player.hand if c.id==card_id and c.reinforce_rule),None)
+        if card is None:raise ValueError('Reinforce requires a supported card in hand')
+        game=self.event_game('main')
+        if target_id not in {p.card.id for _,p in self.creature_targets(seat,card)}:
+            raise ValueError('Illegal reinforce target')
+        cost,amount=card.reinforce_rule
+        payment=self.payment(replace(card,mana_cost=cost),seat=seat,spell_cost=False)
+        if not payment['paid']:raise ValueError('Cannot pay reinforce cost')
+        for item in player.battlefield:
+            if item.card.id in payment['sources']:item.tapped=True
+        player.mana_pool=list(payment['pool'])
+        player.hand.remove(card)
+        player.graveyard.append(card)
+        event=dict(operation='reinforce_counters',controller=seat,source=card.id,
+                   name=card.name,target=target_id,targetEntry=game.battlefield[target_id].entered_at,
+                   sourceColors=tuple(card.colors),amount=amount)
+        frame=self.stack.push(seat,(event,card),card.name+' reinforce ability')
+        self.stack.priority=seat
+        self.log('activate_reinforce','Mana and discard paid; reinforce awaits stack resolution.',
+                 actor=seat,source=card.id,targetPermanent=target_id,amount=amount)
+        for ward in self.target_triggers(frame,target_id):
+            self.stack.push(ward['controller'],(ward,card),ward['name'])
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
     def sacrifice_token_choices(self,seat):
         """Choose an actual creature for the sacrifice cost, not the effect."""
         game=self.event_game('main');choices=[]
@@ -1874,7 +1940,9 @@ class Simulator(AdvancedRules):
         self.resolve_entry_triggers(triggers,source.card)
 
     def regeneration_targets(self,seat,source):
-        subtype=source.card.event_definition.regenerate_subtype
+        definition=source.card.event_definition
+        subtype=definition.regenerate_subtype or (definition.paid_regenerate_rule[1]
+                                               if definition.paid_regenerate_rule else '')
         game=self.event_game('main')
         return tuple((owner,item) for owner,item in self.creature_targets(seat,source.card)
                      if item.card.id!=source.card.id and
@@ -1885,9 +1953,12 @@ class Simulator(AdvancedRules):
         game=self.event_game('main');choices=[]
         for source in self.players[seat].battlefield:
             definition=source.card.event_definition
-            if not definition or not definition.regenerate_subtype or source.tapped:continue
+            if not definition or not (definition.regenerate_subtype or definition.paid_regenerate_rule):continue
             state=game.battlefield.get(source.card.id)
-            if source.fresh and not (state and game.has(state,'haste')):continue
+            if not definition.paid_regenerate_rule:
+                if source.tapped or source.fresh and not (state and game.has(state,'haste')):continue
+            elif not self.payment(replace(source.card,mana_cost=definition.paid_regenerate_rule[0]),
+                                  seat=seat,spell_cost=False)['paid']:continue
             for owner,target in self.regeneration_targets(seat,source):
                 choices.append(Candidate(source.card.id+':regen:'+target.card.id,
                     'activate_regenerate',source.card.id,features=features(power=.2),
@@ -1897,19 +1968,34 @@ class Simulator(AdvancedRules):
     def activate_regenerate(self,seat,source_id,target_id):
         if self.stack.priority!=seat:raise ValueError('Player lacks priority')
         source=next((p for p in self.players[seat].battlefield if p.card.id==source_id),None)
-        if source is None or source.tapped or not source.card.event_definition or not source.card.event_definition.regenerate_subtype:
+        definition=source.card.event_definition if source else None
+        if not definition or not (definition.regenerate_subtype or definition.paid_regenerate_rule):
             raise ValueError('Illegal regeneration source')
         game=self.event_game('main');state=game.battlefield.get(source_id)
-        if source.fresh and not (state and game.has(state,'haste')):raise ValueError('Summoning sick regeneration source')
+        if not definition.paid_regenerate_rule:
+            if source.tapped:raise ValueError('Tapped regeneration source')
+            if source.fresh and not (state and game.has(state,'haste')):
+                raise ValueError('Summoning sick regeneration source')
         if target_id not in {p.card.id for _,p in self.regeneration_targets(seat,source)}:
             raise ValueError('Illegal regeneration target')
-        source.tapped=True
+        if definition.paid_regenerate_rule:
+            payment=self.payment(replace(source.card,mana_cost=definition.paid_regenerate_rule[0]),
+                                 seat=seat,spell_cost=False)
+            if not payment['paid']:raise ValueError('Cannot pay regeneration cost')
+            for item in self.players[seat].battlefield:
+                if item.card.id in payment['sources']:item.tapped=True
+            self.players[seat].mana_pool=list(payment['pool'])
+        else:source.tapped=True
         event=dict(operation='regenerate_shield',controller=seat,source=source_id,
-                   target=target_id,name=source.card.name,subtype=source.card.event_definition.regenerate_subtype,
+                   target=target_id,name=source.card.name,
+                   targetEntry=game.battlefield[target_id].entered_at,
+                   subtype=definition.regenerate_subtype or definition.paid_regenerate_rule[1],
                    sourceColors=sorted(source.card.colors))
         frame=self.stack.push(seat,(event,source.card),source.card.name+' regeneration ability')
-        self.log('activate_regenerate','Regeneration tap cost paid; ability waits on stack.',
+        self.log('activate_regenerate','Regeneration activation cost paid; ability waits on stack.',
                  actor=seat,source=source_id,targetPermanent=target_id,stackId=frame.id)
+        for ward in self.target_triggers(frame,target_id):
+            self.stack.push(ward['controller'],(ward,source.card),ward['name'])
         self.resolve_entry_triggers([],source.card)
 
     def replace_regeneration(self,owner,item,game):
@@ -3102,6 +3188,7 @@ class Simulator(AdvancedRules):
         actions.extend(self.sacrifice_choices(seat))
         actions.extend(self.sacrifice_token_choices(seat))
         actions.extend(self.tribal_pump_choices(seat))
+        actions.extend(self.reinforce_choices(seat))
         actions.extend(self.tap_damage_choices(seat))
         actions.extend(self.discard_token_choices(seat))
         actions.extend(self.sacrifice_team_choices(seat))
@@ -3200,6 +3287,9 @@ class Simulator(AdvancedRules):
         if choice.kind=='activate_tribal_pump':
             self.activate_tribal_pump(seat,choice.card_id,choice.activation_index)
             return 'activate'
+        if choice.kind=='activate_reinforce':
+            self.activate_reinforce(seat,choice.card_id,choice.target_permanent)
+            return 'activate'
         if choice.kind=='activate_sacrifice_tokens':
             self.activate_sacrifice_tokens(seat,choice.card_id,choice.tap_ids[0],choice.activation_index)
             return 'activate'
@@ -3236,7 +3326,7 @@ class Simulator(AdvancedRules):
                         sacrifice_id=choice.tap_ids[0] if choice.tap_ids else None)
         return 'cast'
 
-    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None,modal_modes=(),exile_permission=False,zone_card=None,sacrifice_id=None):
+    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None,modal_modes=(),exile_permission=False,zone_card=None,sacrifice_id=None,kicker_count=0):
         player=self.players[seat]
         if not card.instant and seat!=self.stack.priority: raise ValueError('Player lacks priority')
         if self.stack.items:
@@ -3297,9 +3387,18 @@ class Simulator(AdvancedRules):
                 raise ValueError('Additional sacrifice cost requires an eligible controlled permanent')
         elif sacrifice_id is not None:
             raise ValueError('Spell has no additional sacrifice cost')
+        multikicker=(card.event_definition.multikicker_rule if card.event_definition else ())
+        if type(kicker_count) is not int or not 0<=kicker_count<=1000:
+            raise ValueError('Illegal multikicker count')
+        if kicker_count and not multikicker:
+            raise ValueError('Card does not support multikicker')
+        if kicker_count and (bestow or rebound or flashback or exile_permission):
+            raise ValueError('Unsupported alternate-cost multikicker composition')
         payment_card=replace(card,mana_cost=card.event_definition.bestow[0]) if bestow else card
         if rebound:payment_card=replace(payment_card,mana_cost='{0}')
         elif flashback:payment_card=replace(payment_card,mana_cost=card.flashback_cost)
+        if kicker_count:
+            payment_card=replace(payment_card,mana_cost=payment_card.mana_cost+multikicker[0]*kicker_count)
         payment=self.payment(payment_card,player.commander_casts if commander else 0,x=x,seat=seat)
         if not payment['paid']: raise ValueError('Cannot pay spell cost')
         for source in player.battlefield:
@@ -3310,7 +3409,7 @@ class Simulator(AdvancedRules):
         if exile_permission:self.exile_cast_permissions.pop(card.id,None)
         prior=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)
         self.stack.active=self.active
-        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'keywordChoice':keyword_choice or (card.target_modifier[2][0] if card.target_modifier and card.target_modifier[2] else None),'modalModes':tuple(modal_modes),'fromHand':not rebound and not flashback and not commander and not exile_permission},card),card.name)
+        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'kickerCount':kicker_count,'keywordChoice':keyword_choice or (card.target_modifier[2][0] if card.target_modifier and card.target_modifier[2] else None),'modalModes':tuple(modal_modes),'fromHand':not rebound and not flashback and not commander and not exile_permission},card),card.name)
         sacrifice_triggers=[]
         if additional:
             # Pay the sacrifice as part of casting, after mana abilities but
@@ -3492,7 +3591,9 @@ class Simulator(AdvancedRules):
             self.resolve_entry_triggers(pending,card)
             return
         if card.kind in ('creature','vehicle','enchantment','planeswalker','station','artifact'):
-            triggers=self.enter_creature(card,p)
+            extra=(event.get('kickerCount',0)*card.event_definition.multikicker_rule[1]
+                   if card.event_definition and card.event_definition.multikicker_rule else 0)
+            triggers=self.enter_creature(card,p,entry_counters=extra)
             self.resolve_entry_triggers(triggers,card)
         elif card.kind=='mana_artifact': p.battlefield.append(Permanent(card))
         elif not event.get('copy'):
@@ -3799,7 +3900,7 @@ class Simulator(AdvancedRules):
                     events.append(dict(operation='equipment_hit_sequence',
                         effect='; then '.join(step['operation'] for step in steps),
                         source=item.card.id,controller=seat,name=item.card.name,
-                        damagedPlayer=damaged_player,steps=steps))
+                        damagedPlayer=damaged_player,sourceColors=tuple(item.card.colors),steps=steps))
         return events
 
     def choose_optional_entry_bounce(self,event,candidates):
@@ -3848,6 +3949,18 @@ class Simulator(AdvancedRules):
                          source=event['source'],actor=event['controller'],amount=event['amount'])
                 continue
             if event.get('operation')=='equipment_hit_sequence':
+                targeted=next((step for step in event['steps']
+                               if step['operation']=='damage_equipment_target'),None)
+                if targeted:
+                    kind,target=targeted['targetKind'],targeted['target']
+                    legal=(kind,target) in self.damage_trigger_targets(event)
+                    if kind=='permanent':
+                        state=self.event_game('main').battlefield.get(target)
+                        legal=legal and state is not None and state.entered_at==targeted['targetEntry']
+                    if not legal:
+                        self.log('equipment_hit_fizzle','All targets became illegal; entire triggered ability fizzles.',
+                                 actor=event['controller'],source=event['source'],target=target)
+                        continue
                 for step in event['steps']:
                     if step['operation']=='mill_damaged_player':
                         atom=dict(event,**step)
@@ -3858,10 +3971,16 @@ class Simulator(AdvancedRules):
                     elif step['operation']=='gain_controller_life':
                         atom=dict(event,**step)
                         atom['operation']='gain_equipment_life'
+                    elif step['operation']=='damage_equipment_target':
+                        atom=dict(event,**step)
+                        atom['operation']='damage_any_target'
                     else:
                         atom=dict(event,**step)
                     atom.pop('steps',None)
-                    self._resolve_entry_effects([atom],card)
+                    damage_source=(Card(event['source'],event['name'],'equipment',
+                        colors=tuple(event.get('sourceColors',())),printed_types=('Artifact',))
+                        if step['operation']=='damage_equipment_target' else card)
+                    self._resolve_entry_effects([atom],damage_source)
                     if self.finished:return
                 continue
             if event.get('operation')=='pay_return_source':
@@ -4359,6 +4478,7 @@ class Simulator(AdvancedRules):
             if event.get('operation')=='regenerate_shield':
                 game=self.event_game('main');target=game.battlefield.get(event['target'])
                 legal=bool(target and game.creature(target) and
+                           target.entered_at==event.get('targetEntry',target.entered_at) and
                            has_subtype(target.definition,event['subtype']) and
                            target.id!=event['source'] and not game.has(target,'shroud') and
                            (target.controller==event['controller'] or not game.has(target,'hexproof')) and
@@ -4369,6 +4489,20 @@ class Simulator(AdvancedRules):
                 self.log('regeneration_shield' if legal else 'regeneration_fizzle',
                          'Regeneration shield created.' if legal else 'Regeneration target is illegal.',
                          actor=event['controller'],targetPermanent=event['target'])
+                continue
+            if event.get('operation')=='reinforce_counters':
+                game=self.event_game('main');target=game.battlefield.get(event['target'])
+                legal=bool(target and target.entered_at==event['targetEntry'] and
+                           game.creature(target) and not game.has(target,'shroud') and
+                           (target.controller==event['controller'] or not game.has(target,'hexproof')) and
+                           not game.protected(target,event['sourceColors']))
+                added=game.counter_amount(target.id,event['amount']) if legal else 0
+                if added:
+                    target.counters+=added
+                    self.sync_events(game)
+                self.log('reinforce_counters' if legal else 'reinforce_fizzle',
+                         'Reinforce resolves after discarding its source as a cost.',
+                         actor=event['controller'],source=event['source'],target=event['target'],added=added)
                 continue
             if event.get('operation')=='land_team_counters':
                 game=self.event_game('main');seat=event['controller'];affected=[]
@@ -5794,6 +5928,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.sacrifice_choices(seat))
             actions.extend(self.sacrifice_token_choices(seat))
             actions.extend(self.tribal_pump_choices(seat))
+            actions.extend(self.reinforce_choices(seat))
             actions.extend(self.tap_damage_choices(seat))
             actions.extend(self.discard_token_choices(seat))
             actions.extend(self.sacrifice_team_choices(seat))
@@ -5824,6 +5959,19 @@ class Simulator(AdvancedRules):
                                           cost=len(self.payment(c,seat=seat).get('sources',[]))),
                         label='Cast exiled '+c.name))
             for c in p.hand:
+                if c.event_definition and c.event_definition.multikicker_rule:
+                    extra_cost=c.event_definition.multikicker_rule[0]
+                    # The agent samples affordable kick counts; explicit calls
+                    # support the full declared range of payable counts.
+                    for kicks in range(1,4):
+                        payment=self.payment(replace(c,mana_cost=c.mana_cost+extra_cost*kicks),
+                                             seat=seat)
+                        if payment['paid']:
+                            actions.append(Candidate(c.id+':kicked:'+str(kicks),'cast',c.id,
+                                features=features(power=c.power+kicks,toughness=c.toughness+kicks,
+                                                  cost=len(payment['sources'])),
+                                label='Cast '+c.name+' kicked '+str(kicks)+' time(s)',
+                                kicker_count=kicks))
                 if c.kind=='graveyard_return_spell' and self.payment(c)['paid']:
                     actions.extend(Candidate(c.id+':graveyard:'+target.id,'cast',c.id,
                         features=features(power=1),label='Return '+target.name,
@@ -6096,6 +6244,8 @@ class Simulator(AdvancedRules):
                 self.activate_aura_graveyard_return(self.active,choice.card_id)
             elif choice.kind=='activate_tribal_pump':
                 self.activate_tribal_pump(self.active,choice.card_id,choice.activation_index)
+            elif choice.kind=='activate_reinforce':
+                self.activate_reinforce(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind=='activate_sacrifice_tokens':
                 self.activate_sacrifice_tokens(self.active,choice.card_id,choice.tap_ids[0],choice.activation_index)
             elif choice.kind=='activate_sacrifice_mana':
@@ -6150,7 +6300,8 @@ class Simulator(AdvancedRules):
                         modal_modes=choice.modal_modes,target=choice.target_permanent or choice.target_stack,
                         bestow=choice.kind=='bestow',flashback=choice.kind=='cast_flashback',
                          exile_permission=choice.kind=='cast_exile',
-                         sacrifice_id=choice.tap_ids[0] if choice.tap_ids else None)
+                         sacrifice_id=choice.tap_ids[0] if choice.tap_ids else None,
+                         kicker_count=choice.kicker_count)
         elif self.phase == "attack":
             choice = self.decide(self.active)
             if choice.kind=='attack_group':
@@ -6467,7 +6618,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                         "flying", "reach", "haste", "first strike", "double strike",
                         "vigilance", "lifelink", "deathtouch", "trample",
                         "defender", "indestructible", "changeling"} & event_definition.abilities)
-               or event_definition.unspent_mana_rule or any(ability.startswith("protection from ")
+               or event_definition.unspent_mana_rule or event_definition.multikicker_rule or event_definition.paid_regenerate_rule or any(ability.startswith("protection from ")
                       for ability in event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.self_pump or event_definition.team_keyword_pump or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
     allowed = allowed or bool(event_definition.conditional_draw_activation or
                               event_definition.counted_pump_activation or
@@ -6501,12 +6652,15 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                   "event":event_definition}
     if parsed["kind"] == "unsupported":
         text = definition.get("oracleText", "")
-        token_spec = parse_token_creation(text)
-        if definition.get("types") == ["Sorcery"] and token_spec and rules.query("cost",cost)["supported"]:
+        from reinforce_spells import parse as parse_reinforce_spell
+        reinforce=parse_reinforce_spell(rule_text(text),set(definition.get('types') or ()))
+        token_spec=reinforce[0] if reinforce else parse_token_creation(text)
+        if (definition.get("types") == ["Sorcery"] or reinforce) and token_spec and rules.query("cost",cost)["supported"]:
             template = EventDefinition(" ".join(token_spec.subtypes),frozenset({"Creature"}|({"Land"} if token_spec.land else set())|({"Enchantment"} if token_spec.enchantment else set())),frozenset(token_spec.subtypes),
                 False,token_spec.power,token_spec.toughness,token_spec.keywords,colors=frozenset(token_spec.colors))
             parsed = {"kind":"token_spell", "token_count":token_spec.amount,
                       "token_definition":template,"token_tapped":token_spec.tapped}
+            if reinforce:parsed['reinforce_rule']=(reinforce[2],reinforce[1])
         else:
             parsed = diagnostic_land(definition, identity) or parsed
     from variable_damage_spells import parse as parse_variable_damage_spell
@@ -6748,6 +6902,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
         mana_count_rule=parsed.get('mana_count_rule',()),
         scaled_damage_rule=parsed.get('scaled_damage_rule',()),
         token_definition=parsed.get("token_definition"),token_tapped=parsed.get("token_tapped",False),
+        reinforce_rule=parsed.get('reinforce_rule',()),
         printed_types=tuple(definition.get('types',[])),
         printed_mana_value=library_effects.mana_value(cost) if definition.get('layout','normal') in ('normal','token') else None,
         colors=tuple(definition.get("colors") or []), legendary="Legendary" in (definition.get("superTypes") or []))
