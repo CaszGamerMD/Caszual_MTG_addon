@@ -401,6 +401,7 @@ class AdvancedRules:
     defender=self.players[1-self.active];defender.life-=amount;player_hits.append(source)
     self.record_player_damage(1-self.active,source,amount)
     card=live[source].card
+    self.record_toxic_combat_damage(card,1-self.active,amount)
     if root(card)==self.players[self.active].commander_id:defender.commander_damage[root(card)]=defender.commander_damage.get(root(card),0)+amount
    else:
     live[target].marked_damage+=amount

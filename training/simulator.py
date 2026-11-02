@@ -285,6 +285,7 @@ class Player:
     graveyard: list[Card] = field(default_factory=list)
     exile: list[Card] = field(default_factory=list)
     life: int = 40
+    poison_counters: int = 0
     failed_draw: bool = False
     mana_pool: list[int] = field(default_factory=lambda: [0]*6)
     command_zone: Card | None = None
@@ -557,7 +558,8 @@ class Simulator(AdvancedRules):
     def state(self) -> dict:
         return {"active": self.active, "turn": self.turn, "phase": self.phase,
                 "stack": self.stack.public(), "priority": self.stack.priority,
-                "players": [{"seat": i, "life": p.life, "handCount": len(p.hand),
+                "players": [{"seat": i, "life": p.life, "poisonCounters":p.poison_counters,
+                             "handCount": len(p.hand),
                              "libraryCount": len(p.library), "manaPool": list(p.mana_pool),
                              "battlefield": [self.display_permanent(x) for x in p.battlefield],
                              "commanderInZone": p.command_zone is not None,
@@ -601,7 +603,8 @@ class Simulator(AdvancedRules):
         amount=max(0,int(amount))
         if not amount:return 0
         sources=sorted(((permanent.card.id,owner,
-                         permanent.card.event_definition.damage_replacement)
+                         permanent.card.event_definition.damage_replacement,
+                         permanent.attached_to)
                         for owner,player in enumerate(self.players)
                         for permanent in player.battlefield
                         if not permanent.phased_out and permanent.card.event_definition
@@ -609,7 +612,7 @@ class Simulator(AdvancedRules):
                        # Affected-player diagnostic policy: life floors last,
                        # then stable IDs for other legal replacement orders.
                        key=lambda entry:(entry[2].operation=='floor',entry[0]))
-        for _,owner,program in sources:
+        for _,owner,program,attached_to in sources:
             if (program.operation=='floor' and target_permanent is None
                     and owner==target_seat):
                 amount=min(amount,max(0,self.players[target_seat].life-program.amount))
@@ -627,6 +630,11 @@ class Simulator(AdvancedRules):
                      'Creature' in source_card.event_definition.types))
                 if creature_source:
                     amount*=program.amount
+            elif (program.operation=='multiply' and
+                  program.source_filter=='attached_combat_creature' and
+                  program.target_filter=='any_target' and combat and source_card
+                  and attached_to==source_card.id):
+                amount*=program.amount
             elif (program.operation=='add' and
                   program.source_filter=='controlled_red_or_artifact' and
                   program.target_filter=='opponent_target' and
@@ -1224,6 +1232,39 @@ class Simulator(AdvancedRules):
             'creature','enchantment','artifact','equipment','vehicle','station','planeswalker')
                      and (not c.draw or c.draw<=len(self.players[seat].library))
                      and self.payment(c,seat=seat)['paid'])
+
+    def aura_graveyard_return_choices(self,seat):
+        choices=[]
+        for card in self.players[seat].graveyard:
+            program=card.event_definition.goad_damage_aura if card.event_definition else None
+            if not program:continue
+            payment=self.payment(replace(card,mana_cost=program.return_cost),
+                                 seat=seat,spell_cost=False)
+            if payment['paid']:
+                choices.append(Candidate(card.id+':return-from-graveyard',
+                    'activate_aura_graveyard_return',card.id,
+                    features=features(power=1,cost=len(payment['sources'])),
+                    label='Return '+card.name+' from graveyard'))
+        return choices
+
+    def activate_aura_graveyard_return(self,seat,card_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        card=next((c for c in self.players[seat].graveyard if c.id==card_id),None)
+        program=card.event_definition.goad_damage_aura if card and card.event_definition else None
+        if not program:raise ValueError('No legal graveyard Aura activation')
+        payment=self.payment(replace(card,mana_cost=program.return_cost),
+                             seat=seat,spell_cost=False)
+        if not payment['paid']:raise ValueError('Cannot pay graveyard return activation')
+        for permanent in self.players[seat].battlefield:
+            if permanent.card.id in payment['sources']:permanent.tapped=True
+        self.players[seat].mana_pool=list(payment['pool'])
+        event=dict(operation='aura_graveyard_return',source=card.id,name=card.name,
+                   controller=seat,effect='return source Aura from graveyard to hand')
+        frame=self.stack.push(seat,(event,card),card.name+' graveyard activation')
+        self.stack.priority=seat
+        self.log('activate_aura_graveyard_return','Graveyard return ability put on stack.',
+                 actor=seat,source=card.id,stackId=frame.id)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
 
     def color_draw_payment(self,seat,source):
         return self.payment(replace(source.card,mana_cost=source.card.color_draw_cost),seat=seat,
@@ -2437,27 +2478,44 @@ class Simulator(AdvancedRules):
         game=self.event_game('main')
         for source in self.players[seat].battlefield:
             definition=source.card.event_definition
-            if not definition or not definition.tap_damage_amount or source.tapped:continue
+            if source.tapped:continue
             state=game.battlefield.get(source.card.id)
             if not state or (source.fresh and game.creature(state) and
                              not game.has(state,'haste')):continue
+            grants=[('', '',definition.tap_damage_amount)] if definition and definition.tap_damage_amount else []
+            for owner in self.players:
+                for equipment in owner.battlefield:
+                    program=(equipment.card.event_definition.granted_equipment
+                             if equipment.card.event_definition else None)
+                    if equipment.attached_to==source.card.id and not equipment.phased_out and program:
+                        grants.append((equipment.card.id,program.activation_cost,program.damage))
             event=dict(controller=seat,sourceColors=source.card.colors)
-            for kind,target in self.damage_trigger_targets(event):
-                encoded=kind+':'+str(target)
-                options.append(Candidate(source.card.id+':tap-damage:'+encoded,
-                    'activate_tap_damage',source.card.id,
-                    features=features(damage=definition.tap_damage_amount
-                                      if (kind,target)==('player',1-seat) else 0),
-                    label='Tap '+source.card.name+' to damage '+encoded,
-                    target_permanent=encoded))
+            for equipment_id,cost,damage in grants:
+                payment=(self.payment(replace(source.card,mana_cost=cost),seat=seat,
+                                     spell_cost=False,excluded_sources=(source.card.id,))
+                         if cost else {'paid':True})
+                if not payment['paid']:continue
+                for kind,target in self.damage_trigger_targets(event):
+                    encoded=kind+':'+str(target)
+                    options.append(Candidate(source.card.id+':tap-damage:'+equipment_id+':'+encoded,
+                        'activate_tap_damage',source.card.id,
+                        features=features(damage=damage if (kind,target)==('player',1-seat) else 0),
+                        label='Tap '+source.card.name+' to damage '+encoded,
+                        tap_ids=(equipment_id,) if equipment_id else (),target_permanent=encoded))
         return options
 
-    def activate_tap_damage(self,seat,source_id,target):
+    def activate_tap_damage(self,seat,source_id,target,granted_by=''):
         if self.stack.priority!=seat:raise ValueError('Player lacks priority')
         source=next((item for item in self.players[seat].battlefield
                      if item.card.id==source_id),None)
         definition=source.card.event_definition if source else None
-        if not definition or not definition.tap_damage_amount or source.tapped:
+        program=next((item.card.event_definition.granted_equipment
+                      for owner in self.players for item in owner.battlefield
+                      if granted_by and item.card.id==granted_by and
+                      item.attached_to==source_id and not item.phased_out and
+                      item.card.event_definition and item.card.event_definition.granted_equipment),None)
+        amount=program.damage if program else (definition.tap_damage_amount if definition and not granted_by else 0)
+        if not amount or not source or source.tapped:
             raise ValueError('No available tap-damage activation')
         game=self.event_game('main')
         state=game.battlefield.get(source_id)
@@ -2470,11 +2528,18 @@ class Simulator(AdvancedRules):
         kind,raw_target=target.split(':',1)
         value=int(raw_target) if kind=='player' and raw_target.isdecimal() else raw_target
         if (kind,value) not in allowed:raise ValueError('Illegal damage target')
+        if program:
+            payment=self.payment(replace(source.card,mana_cost=program.activation_cost),
+                seat=seat,spell_cost=False,excluded_sources=(source_id,))
+            if not payment['paid']:raise ValueError('Cannot pay granted tap-damage cost')
+            for item in self.players[seat].battlefield:
+                if item.card.id in payment['sources']:item.tapped=True
+            self.players[seat].mana_pool=list(payment['pool'])
         source.tapped=True
         event=dict(operation='damage_any_target',effect='targeted tap-damage activation',
                    source=source_id,name=source.card.name,controller=seat,
                    sourceColors=list(source.card.colors),targetKind=kind,target=value,
-                   amount=definition.tap_damage_amount,optional=False)
+                   amount=amount,optional=False)
         frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
         self.stack.priority=seat
         self.log('activate_tap_damage','Tap cost paid and damage ability placed on stack.',
@@ -2677,6 +2742,15 @@ class Simulator(AdvancedRules):
         """
         if amount>0 and source_id:
             self.damage_to_players[seat].add(source_id)
+
+    def record_toxic_combat_damage(self,source_card: Card,target_seat: int,amount: int):
+        """Toxic adds poison on successful combat damage; life damage remains."""
+        program=source_card.event_definition.toxic if source_card.event_definition else 0
+        if amount<=0 or program<=0:return
+        self.players[target_seat].poison_counters+=program
+        self.log('toxic_damage','Combat-damaged player receives poison counters.',
+                 actor=target_seat,source=source_card.id,damage=amount,
+                 added=program,total=self.players[target_seat].poison_counters)
 
     def removal_targets(self,controller,source):
         """Only legal targets for an explicitly parsed targeted removal spell."""
@@ -2991,6 +3065,7 @@ class Simulator(AdvancedRules):
                 actions.append(replace(choice,features=features(power=.5 if useful else -100)))
         else:actions.extend(crews)
         actions.extend(self.special_choices(seat))
+        actions.extend(self.aura_graveyard_return_choices(seat))
         actions.extend(self.enchantment_copy_choices(seat))
         actions.extend(self.token_ability_choices(seat))
         actions.extend(self.conditional_draw_choices(seat))
@@ -3090,7 +3165,11 @@ class Simulator(AdvancedRules):
             self.activate_discard_tokens(seat,choice.card_id,choice.discard_id)
             return 'activate'
         if choice.kind=='activate_tap_damage':
-            self.activate_tap_damage(seat,choice.card_id,choice.target_permanent)
+            self.activate_tap_damage(seat,choice.card_id,choice.target_permanent,
+                                     choice.tap_ids[0] if choice.tap_ids else '')
+            return 'activate'
+        if choice.kind=='activate_aura_graveyard_return':
+            self.activate_aura_graveyard_return(seat,choice.card_id)
             return 'activate'
         if choice.kind=='activate_tribal_pump':
             self.activate_tribal_pump(seat,choice.card_id,choice.activation_index)
@@ -3851,6 +3930,14 @@ class Simulator(AdvancedRules):
                          'Controlled subtype entry gains life based on entrant toughness.',
                          actor=event['controller'],source=event['source'],
                          entering=event['entering'],amount=amount)
+                continue
+            if event.get('operation')=='aura_graveyard_return':
+                owner=self.players[event['controller']]
+                moving=next((c for c in owner.graveyard if c.id==event['source']),None)
+                if moving:
+                    owner.graveyard.remove(moving);owner.hand.append(moving)
+                self.log('aura_graveyard_return','Aura graveyard ability resolves.',
+                         actor=event['controller'],source=event['source'],returned=bool(moving))
                 continue
             if event.get('operation')=='create_treasures':
                 self.create_treasures(event['controller'],event['amount'],False,card)
@@ -4871,6 +4958,18 @@ class Simulator(AdvancedRules):
                 self.resolve_entry_triggers(pending,card)
                 if self.finished: return
                 continue
+            elif event.get('operation')=='tribal_equipment_attach':
+                source=next((p for p in self.players[event['controller']].battlefield
+                             if p.card.id==event['source']),None)
+                game=self.event_game('main');target=game.battlefield.get(event['entering'])
+                legal=bool(source and target and game.creature(target) and not source.phased_out)
+                if legal:
+                    source.attached_to=event['entering']
+                    self.effect_clock+=1;source.attachment_at=self.effect_clock
+                self.log('tribal_equipment_attach','Optional tribal auto-attachment resolves.',
+                         actor=event['controller'],source=event['source'],
+                         entering=event['entering'],attached=legal)
+                continue
             elif event.get('operation')=='attach':
                 source=next((p for p in self.players[event['controller']].battlefield if p.card.id==event['source']),None)
                 game=self.event_game('main')
@@ -4904,7 +5003,8 @@ class Simulator(AdvancedRules):
             elif event.get('operation')=='untap_self':
                 source=next((item for player in self.players for item in player.battlefield
                              if item.card.id==event['source']),None)
-                if source and source.card.event_definition and source.card.event_definition.death_untap_self:
+                if source and (event.get('grantedByEquipment') or
+                               source.card.event_definition and source.card.event_definition.death_untap_self):
                     source.tapped=False
                 self.log('untap_self','Death-triggered untap resolves.',
                          actor=event['controller'],source=event['source'],
@@ -5073,6 +5173,7 @@ class Simulator(AdvancedRules):
         if has(b,'lifelink'):self.gain_life(1-self.active,to_attacker)
         defender.life-=to_player
         if attacker:self.record_player_damage(1-self.active,attacker.card.id,to_player)
+        if attacker:self.record_toxic_combat_damage(attacker.card,1-self.active,to_player)
         if attacker and root(attacker.card)==active.commander_id and to_player:
             defender.commander_damage[root(attacker.card)]=defender.commander_damage.get(root(attacker.card),0)+to_player
         game=self.event_game('combat');dead=[]
@@ -5305,13 +5406,15 @@ class Simulator(AdvancedRules):
         self.log("draw", f"Player {seat + 1} draws one card.", actor=seat)
 
     def outcome(self):
-        dead = [p.life <= 0 or p.failed_draw or any(value >= 21 for value in p.commander_damage.values())
+        dead = [p.life <= 0 or p.poison_counters>=10 or p.failed_draw or any(value >= 21 for value in p.commander_damage.values())
                 for p in self.players]
         if any(dead):
             self.finished = True
             self.winner = None if all(dead) else (1 if dead[0] else 0)
             self.result = "draw" if self.winner is None else "win"
-            reasons = [["zero life" if p.life <= 0 else None, "failed draw" if p.failed_draw else None,
+            reasons = [["zero life" if p.life <= 0 else None,
+                        "ten poison counters" if p.poison_counters>=10 else None,
+                        "failed draw" if p.failed_draw else None,
                         "21 commander damage" if any(v >= 21 for v in p.commander_damage.values()) else None]
                        for p in self.players]
             self.log("result", "Draw." if self.winner is None else f"Player {self.winner + 1} wins.",
@@ -5486,6 +5589,7 @@ class Simulator(AdvancedRules):
                                for card in p.hand if card.modal_land_face is not None)
             if self.diagnostic: actions.extend(self.activation_choices(seat, {"crew","saddle"}))
             actions.extend(self.special_choices(seat))
+            actions.extend(self.aura_graveyard_return_choices(seat))
             from planeswalker_runtime import legal as legal_loyalty
             actions.extend(legal_loyalty(self,seat))
             actions.extend(self.enchantment_copy_choices(seat))
@@ -5665,7 +5769,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station","activate_loyalty","activate_conditional_draw",
-                           "history_tokens","activate_tokens","activate_land_sacrifice_tokens","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_scaled_life","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_tribal_pump","activate_tap_damage","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
+                           "history_tokens","activate_tokens","activate_land_sacrifice_tokens","activate_aura_graveyard_return","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_scaled_life","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_tribal_pump","activate_tap_damage","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
             self.turn_development[seat]=True
         return choice
 
@@ -5790,7 +5894,10 @@ class Simulator(AdvancedRules):
             elif choice.kind=='activate_discard_tokens':
                 self.activate_discard_tokens(self.active,choice.card_id,choice.discard_id)
             elif choice.kind=='activate_tap_damage':
-                self.activate_tap_damage(self.active,choice.card_id,choice.target_permanent)
+                self.activate_tap_damage(self.active,choice.card_id,choice.target_permanent,
+                                         choice.tap_ids[0] if choice.tap_ids else '')
+            elif choice.kind=='activate_aura_graveyard_return':
+                self.activate_aura_graveyard_return(self.active,choice.card_id)
             elif choice.kind=='activate_tribal_pump':
                 self.activate_tribal_pump(self.active,choice.card_id,choice.activation_index)
             elif choice.kind=='activate_sacrifice_tokens':
@@ -5958,6 +6065,7 @@ class Simulator(AdvancedRules):
             self.gain_life(self.active,d["gainA"])
             self.gain_life(1-self.active,d["gainB"])
             defender.life -= d["damage"]
+            self.record_toxic_combat_damage(a.card,1-self.active,d['damage'])
             if a.card.id == p.commander_id and d["damage"] > 0:
                 defender.commander_damage[a.card.id] = defender.commander_damage.get(a.card.id, 0) + d["damage"]
             if d["attackerDies"]:
@@ -6175,6 +6283,8 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                               event_definition.upkeep_damage_prevention or
                               event_definition.shared_type_mana or
                               event_definition.cumulative_upkeep_mana)
+    allowed = allowed or bool(event_definition.toxic)
+    allowed = allowed or bool(event_definition.granted_equipment)
     allowed = allowed or bool(event_definition.land_sacrifice_tokens)
     allowed = allowed or bool(event_definition.upkeep_token_entry_life)
     cost = definition.get("manaCost") or ""

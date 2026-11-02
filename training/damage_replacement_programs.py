@@ -19,6 +19,7 @@ class DamageReplacement:
         fixed=(self.operation,self.source_filter,self.target_filter,self.amount,self.intrinsic)
         if not (fixed in (
                 ('multiply','controlled_creature','any_target',2,''),
+                ('multiply','attached_combat_creature','any_target',2,''),
                 ('multiply','any','any_target',2,'flash'),
                 ('multiply','any','any_target',2,'')) or
                 (self.operation,self.source_filter,self.target_filter,self.intrinsic) in (

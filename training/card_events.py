@@ -109,6 +109,9 @@ class Definition:
     upkeep_damage_prevention: object | None = None  # Each upkeep: damage active player; prevent all life gain.
     shared_type_mana: object | None = None  # Any creature ETB: optional colorless mana by shared creature type.
     cumulative_upkeep_mana: object | None = None  # Age counters on upkeep, then add mana for each.
+    toxic: int = 0  # Additional poison counters on positive combat damage to a player.
+    granted_equipment: object | None = None  # Attaches to tribe; grants activated damage and death untap.
+    goad_damage_aura: object | None = None  # Goad, combat replacement for enchanted source, graveyard activation.
     land_sacrifice_tokens: object | None = None  # Mana + tap + sacrificial land produces typed token.
     upkeep_token_entry_life: object | None = None  # Each upkeep tokens; other subtype entry life by toughness.
     self_pump: tuple = ()  # Mana cost, power, toughness until EOT.
@@ -375,6 +378,23 @@ def parse_card(card: dict) -> Definition:
     upkeep_mana=parse_cumulative_upkeep_mana(text,types)
     if upkeep_mana:
         return Definition(**base,abilities=frozenset(),cumulative_upkeep_mana=upkeep_mana)
+    from toxic_programs import parse as parse_toxic
+    toxic=parse_toxic(text,types)
+    if toxic:
+        return Definition(**base,abilities=frozenset(),toxic=toxic)
+    from granted_equipment_abilities import parse as parse_granted_equipment
+    grant_equipment=parse_granted_equipment(text,types,subtypes)
+    if grant_equipment:
+        return Definition(**base,abilities=frozenset(),granted_equipment=grant_equipment,
+                          attachment=('equipment',grant_equipment.equip_cost,frozenset(),0,0))
+    from goad_damage_aura import parse as parse_goad_damage_aura
+    goad_aura=parse_goad_damage_aura(text,types,subtypes)
+    if goad_aura:
+        from damage_replacement_programs import DamageReplacement
+        return Definition(**base,abilities=frozenset(),goad_damage_aura=goad_aura,
+            attachment=('aura',None,frozenset(),0,0),
+            damage_replacement=DamageReplacement('multiply','attached_combat_creature',
+                                                 'any_target',2))
     from land_sacrifice_tokens import parse as parse_land_sacrifice_tokens
     land_sac_tokens=parse_land_sacrifice_tokens(text,types)
     if land_sac_tokens:
@@ -952,7 +972,9 @@ class Game:
         """Only an eligible creature can be required; the caller checks eligibility."""
         return self.creature(permanent) and (self.has(permanent,'must_attack') or permanent.definition.name=='Zurgo Helmsmasher' or any(
             effect.must_attack and matches(effect.subject,source,permanent,True)
-            for source in self.battlefield.values() for effect in self.static_effects(source)))
+            for source in self.battlefield.values() for effect in self.static_effects(source)) or
+            any(aura.attached_to==permanent.id and aura.definition.goad_damage_aura
+                for aura in self.battlefield.values()))
 
     def enchanted(self, permanent):
         return any(p.attached_to==permanent.id and 'Enchantment' in p.definition.types
@@ -1072,6 +1094,14 @@ class Game:
                           source=permanent.id,name=permanent.definition.name,controller=permanent.controller,
                           amount=permanent.definition.entry_attachment_counters)
             for watcher in list(self.battlefield.values()):
+                granted=watcher.definition.granted_equipment
+                if (granted and self.creature(permanent) and
+                        has_subtype(permanent.definition,granted.entry_subtype)):
+                    self.emit('trigger',operation='tribal_equipment_attach',
+                        effect='may attach equipment to entering creature',
+                        source=watcher.id,name=watcher.definition.name,
+                        controller=watcher.controller,entering=permanent.id,
+                        optional=True)
                 life_program=watcher.definition.upkeep_token_entry_life
                 if (life_program and watcher.id!=permanent.id and
                         watcher.controller==permanent.controller and
@@ -1289,6 +1319,14 @@ class Game:
                                  "dead":creature.id,"effect":"create tapped Squirrels",
                                  "amount":max(0,self.stats(creature)[0])})
         for watcher in self.battlefield.values():
+            granted=watcher.definition.granted_equipment
+            attached=self.battlefield.get(watcher.attached_to) if granted else None
+            if attached and self.creature(attached):
+                for creature in dead:
+                    triggers.append(dict(operation='untap_self',
+                        effect='equipped creature untaps when a creature dies',
+                        source=attached.id,name=attached.definition.name,
+                        controller=attached.controller,grantedByEquipment=watcher.id))
             if watcher.definition.death_untap_self:
                 for creature in dead:
                     triggers.append(dict(operation='untap_self',
