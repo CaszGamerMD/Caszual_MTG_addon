@@ -6,6 +6,7 @@ remain independent of the equipment's own stat/keyword grants and equip cost.
 import re
 
 from attachments import parse as parse_attachment
+from oracle_abilities import parse_token_creation
 
 
 def equipped_attack_counters(text, types, subtypes):
@@ -78,3 +79,52 @@ def equipped_combat_life(text, types, subtypes):
     if life is None:return None
     attachment=parse_attachment('\n'.join(remaining),types,subtypes)
     return (attachment,life) if attachment else None
+
+
+_HIT_CONJUNCTION=re.compile(r' and (?=that player (?:mills |discards )|you (?:untap all lands |may return up to one target creature card ))')
+
+
+def _hit_atom(clause):
+    token=re.fullmatch(r'you (create .+)',clause)
+    if token:
+        spec=parse_token_creation(token[1][0].upper()+token[1][1:]+'.')
+        return ('create_tokens',spec.amount,spec) if spec else None
+    mill=re.fullmatch(r'that player mills (a|one|two|three|four|five|six|seven|eight|nine|ten|[1-9][0-9]*) cards?',clause)
+    if mill:
+        words={'a':1,'one':1,'two':2,'three':3,'four':4,'five':5,'six':6,
+               'seven':7,'eight':8,'nine':9,'ten':10}
+        return ('mill_damaged_player',words[mill[1]] if mill[1] in words else int(mill[1]),None)
+    discard=re.fullmatch(r'that player discards (a|one|two|three|four|[1-9][0-9]*) cards?',clause)
+    if discard:
+        words={'a':1,'one':1,'two':2,'three':3,'four':4}
+        return ('discard_damaged_player',words[discard[1]] if discard[1] in words else int(discard[1]),None)
+    if clause=='you untap all lands you control':
+        return ('untap_controlled_lands',0,None)
+    life=re.fullmatch(r'you gain ([1-9][0-9]*) life',clause)
+    if life:return ('gain_controller_life',int(life[1]),None)
+    if clause=='you may return up to one target creature card from your graveyard to your hand':
+        return ('return_optional_graveyard_creature',1,None)
+    return None
+
+
+def equipped_combat_steps(text,types,subtypes):
+    """One combat-hit ability is a sequence of *fully* parsed atomic actions.
+
+    Separators are only recognized at the start of an independent instruction,
+    never in token colors, creature subtypes, or protection grants.
+    """
+    if 'Artifact' not in types or 'Equipment' not in subtypes:return None
+    steps=None;remaining=[]
+    for line in text.splitlines():
+        hit=re.fullmatch(r'Whenever equipped creature deals combat damage to a player, (.+)\.',line.strip())
+        if hit:
+            if steps is not None:return None
+            chunks=_HIT_CONJUNCTION.split(hit[1])
+            if len(chunks)>8:return None
+            actions=tuple(_hit_atom(chunk) for chunk in chunks)
+            if not all(actions):return None
+            steps=actions
+        else:remaining.append(line)
+    if not steps:return None
+    attachment=parse_attachment('\n'.join(remaining),types,subtypes)
+    return (attachment,steps) if attachment else None

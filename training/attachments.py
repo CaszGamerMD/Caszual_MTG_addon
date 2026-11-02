@@ -2,6 +2,18 @@
 import re
 from oracle_abilities import KEYWORDS
 
+
+def _keyword_grants(text):
+    # Oracle writes two different protections as "protection from green and
+    # from blue", where "from blue" is not an independent keyword. Restore
+    # the repeated noun *only* for this fully matched color phrase.
+    text=re.sub(
+        r'(protection from (?:white|blue|black|red|green)) and from '
+        r'(white|blue|black|red|green)(?=\b)',
+        r'\1 and protection from \2',text)
+    words=set(re.split(r', | and ',text.replace(', and ', ', ')))-{''}
+    return words if words and words<=KEYWORDS else None
+
 def parse(text,types,subtypes):
     mode='equipment' if 'Artifact' in types and 'Equipment' in subtypes else 'aura' if 'Enchantment' in types and 'Aura' in subtypes else ''
     if not mode:return None
@@ -27,13 +39,13 @@ def parse(text,types,subtypes):
             cost=m[1];continue
         m=re.fullmatch((prefix if prefix=='Enchanted land' else prefix+' creature')+r' has (.+)\.',line)
         if m:
-            keywords=set(re.split(r', | and ',m[1].replace(', and ', ', ')))
-            if not keywords<=KEYWORDS:return None
+            keywords=_keyword_grants(m[1])
+            if keywords is None:return None
             abilities.update(keywords);continue
         m=re.fullmatch(prefix+r' creature gets \+([0-9]+)/\+([0-9]+)(?: and has (.+))?\.',line) if prefix!='Enchanted land' else None
         if m:
-            keywords=set(re.split(r', | and ',(m[3] or '').replace(', and ', ', ')))-{''}
-            if not keywords<=KEYWORDS:return None
+            keywords=_keyword_grants(m[3]) if m[3] else set()
+            if keywords is None:return None
             abilities.update(keywords);power+=int(m[1]);toughness+=int(m[2]);continue
         return None
     if not abilities and not power and not toughness:return None

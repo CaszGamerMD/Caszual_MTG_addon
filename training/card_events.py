@@ -126,6 +126,7 @@ class Definition:
     equipment_attacks: tuple = ()
     equipped_attack_counters: int = 0  # Equipped attacker receives counters on attack trigger resolution.
     equipped_player_hit_life: tuple = ()  # Mode and amount of life loss on equipped player's combat hit.
+    equipped_player_hit_steps: tuple = ()  # Ordered, complete atomic combat-hit instructions.
     pilot_bonus: int = 0
     attachment_scale: tuple = ()
     role_events: tuple = ()
@@ -190,6 +191,7 @@ class Definition:
     equipment_planeswalker_cost: str = ''  # Alternative equip targeting a planeswalker.
     equipment_token_cost: str = ''  # Alternative equip restricted to creature tokens.
     equipment_target_ability_discount: int = 0  # Reduces Equipment activations targeting this creature.
+    unspent_mana_rule: tuple = ()  # Mana color retained; p/t multiplier and counted pool color.
     equipment_creature_conversion: bool = False  # Equipped permanent becomes non-planeswalker creature.
     combat_reattach: bool = False  # Optional start-of-combat Aura/Equipment movement.
     equipment_return_dying: bool = False  # Equipped creature dies -> return from graveyard.
@@ -235,6 +237,10 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from unspent_mana_programs import parse as parse_unspent_mana
+    unspent=parse_unspent_mana(text,name,types)
+    if unspent:
+        return Definition(**base,abilities=frozenset(),unspent_mana_rule=unspent)
     from saga_abilities import compile_saga, compile_transformed_creature
     saga_program=compile_saga(text,types,subtypes)
     if saga_program:
@@ -500,7 +506,7 @@ def parse_card(card: dict) -> Definition:
     if activated and 'Creature' in types and (not activated[0].devotion or 'Enchantment' in types):
         program,ability=activated
         return Definition(**base,abilities=program.keywords,triggers=program.triggers,static_effects=program.static_effects,history_activation=ability,activations=program.activations,devotion=program.devotion)
-    from equipment_composition import equipped_attack_counters,token_equip_cost,equipped_combat_life
+    from equipment_composition import equipped_attack_counters,token_equip_cost,equipped_combat_life,equipped_combat_steps
     counter_equipment=equipped_attack_counters(text,types,subtypes)
     if counter_equipment:
         return Definition(**base,abilities=frozenset(),attachment=counter_equipment[0],
@@ -513,6 +519,10 @@ def parse_card(card: dict) -> Definition:
     if life_equipment:
         return Definition(**base,abilities=frozenset(),attachment=life_equipment[0],
                           equipped_player_hit_life=life_equipment[1])
+    hit_equipment=equipped_combat_steps(text,types,subtypes)
+    if hit_equipment and hit_equipment[0]:
+        return Definition(**base,abilities=frozenset(),attachment=hit_equipment[0],
+                          equipped_player_hit_steps=hit_equipment[1])
     equipped=equipped_attacks(text,types,subtypes)
     if equipped:return Definition(**base,abilities=frozenset(),attachment=equipped[0],equipment_attacks=equipped[1])
     bestow=parse_bestow(text,types)

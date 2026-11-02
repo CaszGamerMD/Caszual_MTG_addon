@@ -741,9 +741,14 @@ class Simulator(AdvancedRules):
                     definition=replace(definition,
                         static_effects=definition.static_effects+(anthem,))
                 definition=replace(definition,mana_cost=card.mana_cost)
+                bonus_power=bonus_toughness=0
+                if definition.unspent_mana_rule:
+                    _,power_factor,toughness_factor,counted=definition.unspent_mana_rule
+                    unspent=self.players[seat].mana_pool[mana_pool.COLORS.index(counted)]
+                    bonus_power=unspent*power_factor;bonus_toughness=unspent*toughness_factor
                 game.battlefield[card.id] = EventPermanent(card.id, definition, seat, item.tapped,
-                    item.fresh, item.saddled, item.animated, counters=item.counters, token=item.card.is_token,temporary_power=item.temporary_power,
-                    temporary_toughness=item.temporary_toughness,temporary_abilities=item.temporary_abilities,attached_to=item.attached_to,
+                    item.fresh, item.saddled, item.animated, counters=item.counters, token=item.card.is_token,temporary_power=item.temporary_power+bonus_power,
+                    temporary_toughness=item.temporary_toughness+bonus_toughness,temporary_abilities=item.temporary_abilities,attached_to=item.attached_to,
                     entered_at=item.entered_at,attachment_at=item.attachment_at,lost_abilities=dict(item.lost_abilities),
                     temporary_ability_times=dict(item.temporary_ability_times),loyalty=item.loyalty,charge_counters=item.charge_counters,chosen_subtype=item.chosen_subtype,keyword_counters=item.keyword_counters,
                     attacking=(1-seat if self.group_combat and card.id in self.group_combat['attackers'] else None))
@@ -3767,17 +3772,43 @@ class Simulator(AdvancedRules):
         on the battlefield) when the resulting ability finally resolves.
         """
         if damage<=0:return []
-        return [dict(operation='equipment_hit_life',effect='combat damage life loss',
-                     source=item.card.id,controller=seat,name=item.card.name,
-                     damagedPlayer=damaged_player,lifeMode=item.card.event_definition.equipped_player_hit_life[0],
-                     amount=item.card.event_definition.equipped_player_hit_life[1])
-                for seat,owner in enumerate(self.players) for item in owner.battlefield
-                if item.attached_to==attacker_id and item.card.event_definition
-                and item.card.event_definition.equipped_player_hit_life]
+        events=[]
+        for seat,owner in enumerate(self.players):
+            for item in owner.battlefield:
+                definition=item.card.event_definition
+                if item.attached_to!=attacker_id or definition is None:continue
+                if definition.equipped_player_hit_life:
+                    mode,amount=definition.equipped_player_hit_life
+                    events.append(dict(operation='equipment_hit_life',effect='combat damage life loss',
+                        source=item.card.id,controller=seat,name=item.card.name,
+                        damagedPlayer=damaged_player,lifeMode=mode,amount=amount))
+                if definition.equipped_player_hit_steps:
+                    steps=[]
+                    for op,amount,spec in definition.equipped_player_hit_steps:
+                        atom=dict(operation=op,amount=amount)
+                        if spec:atom['tokenSpec']=dict(asdict(spec),keywords=sorted(spec.keywords))
+                        if op=='return_optional_graveyard_creature':
+                            candidates=[card for card in owner.graveyard
+                                        if card.kind=='creature' or card.event_definition
+                                        and 'Creature' in card.event_definition.types]
+                            target=self.choose_equipment_graveyard_target(seat,candidates)
+                            if target is not None and target not in candidates:
+                                raise ValueError('Illegal equipment graveyard target choice')
+                            atom['targetCreatureId']=target.id if target else None
+                        steps.append(atom)
+                    events.append(dict(operation='equipment_hit_sequence',
+                        effect='; then '.join(step['operation'] for step in steps),
+                        source=item.card.id,controller=seat,name=item.card.name,
+                        damagedPlayer=damaged_player,steps=steps))
+        return events
 
     def choose_optional_entry_bounce(self,event,candidates):
         """Deterministic legal choice; callers may supply a different decision policy."""
         return min(candidates,key=lambda item:item.card.id) if candidates else None
+
+    def choose_equipment_graveyard_target(self,seat,candidates):
+        """An optional targeted choice is made when the combat ability triggers."""
+        return min(candidates,key=lambda item:item.id) if candidates else None
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
@@ -3815,6 +3846,23 @@ class Simulator(AdvancedRules):
                     controller=event['controller'],amount=event['amount'])],card)
                 self.log('reflexive_trigger_queued','Paid X creates a new counter trigger.',
                          source=event['source'],actor=event['controller'],amount=event['amount'])
+                continue
+            if event.get('operation')=='equipment_hit_sequence':
+                for step in event['steps']:
+                    if step['operation']=='mill_damaged_player':
+                        atom=dict(event,**step)
+                        atom.update(operation='mill_cards',recipient='damaged player')
+                    elif step['operation']=='discard_damaged_player':
+                        atom=dict(event,**step)
+                        atom.update(operation='discard',target=event['damagedPlayer'])
+                    elif step['operation']=='gain_controller_life':
+                        atom=dict(event,**step)
+                        atom['operation']='gain_equipment_life'
+                    else:
+                        atom=dict(event,**step)
+                    atom.pop('steps',None)
+                    self._resolve_entry_effects([atom],card)
+                    if self.finished:return
                 continue
             if event.get('operation')=='pay_return_source':
                 controller=event['controller']
@@ -4541,6 +4589,33 @@ class Simulator(AdvancedRules):
                     self.send_to_destination(player,chosen,to_hand=True)
                     self.log('return_land',f'{chosen.card.name} returns to its owner hand.',actor=event['controller'],card=chosen.card.name)
                 continue
+            if event.get('operation')=='untap_controlled_lands':
+                controller=event['controller']
+                lands=[permanent for permanent in self.players[controller].battlefield
+                       if permanent.card.kind=='land' or permanent.card.event_definition
+                       and 'Land' in permanent.card.event_definition.types]
+                for land in lands:land.tapped=False
+                self.log('untap_lands','Untap all lands controlled by the triggered ability controller.',
+                         actor=controller,source=event['source'],amount=len(lands))
+                continue
+            if event.get('operation')=='gain_equipment_life':
+                self.gain_life(event['controller'],event['amount'])
+                self.log('equipment_life_gain','Equipped creature combat trigger gains life.',
+                         actor=event['controller'],source=event['source'],amount=event['amount'])
+                continue
+            if event.get('operation')=='return_optional_graveyard_creature':
+                owner=self.players[event['controller']]
+                identifier=event.get('targetCreatureId')
+                target=next((card for card in owner.graveyard if card.id==identifier
+                             and (card.kind=='creature' or card.event_definition
+                                  and 'Creature' in card.event_definition.types)),None) if identifier else None
+                if target:
+                    owner.graveyard.remove(target)
+                    owner.hand.append(target)
+                self.log('equipment_graveyard_return','Optional targeted creature return resolves.',
+                         actor=event['controller'],source=event['source'],target=identifier,
+                         returned=bool(target))
+                continue
             minimum=event.get('minLands',0)
             if minimum and self.controlled_land_count(event['controller'])<minimum:
                 self.log('condition_failed','Intervening upkeep land threshold no longer holds.',
@@ -4596,7 +4671,8 @@ class Simulator(AdvancedRules):
                 controller=event['controller'];scope=event.get('recipient','controller')
                 seats=([controller] if scope=='controller' else
                        [seat for seat in range(len(self.players)) if seat!=controller] if scope=='each opponent'
-                       else list(range(len(self.players))) if scope=='each player' else None)
+                       else list(range(len(self.players))) if scope=='each player'
+                       else [event['damagedPlayer']] if scope=='damaged player' else None)
                 if seats is None:raise ValueError('Unsupported mill recipient; cannot execute incomplete Oracle instruction.')
                 counts={}
                 for seat in seats:
@@ -5130,11 +5206,10 @@ class Simulator(AdvancedRules):
                 message=f"{event['name']}: damaged player loses {lost} life."
             elif event.get('operation')=='discard':
                 target=self.players[event['target']]
-                if target.hand:
-                    discarded=target.hand.pop()
-                    target.graveyard.append(discarded)
-                    message=f"{event['name']}: Player {event['target']+1} discards {discarded.name}."
-                else: message=f"{event['name']}: damaged player has no cards to discard."
+                count=min(max(0,int(event.get('amount',1))),len(target.hand))
+                discarded=[target.hand.pop() for _ in range(count)]
+                target.graveyard.extend(discarded)
+                message=f"{event['name']}: Player {event['target']+1} discards {count} card(s)."
             elif event.get("operation") == "add_counters":
                 game = self.event_game("main")
                 affected = []
@@ -5896,9 +5971,15 @@ class Simulator(AdvancedRules):
         if previous!=(self.active,"main" if self.phase=="land" else self.phase):
             for seat,player in enumerate(self.players):
                 if any(player.mana_pool):
-                    expired=list(player.mana_pool)
-                    player.mana_pool=[0]*6
-                    self.log("mana_empty","Unused mana empties at the step or phase boundary.",actor=seat,mana=expired)
+                    retained={p.card.event_definition.unspent_mana_rule[0]
+                              for p in player.battlefield if p.card.event_definition
+                              and p.card.event_definition.unspent_mana_rule}
+                    expired=[count if mana_pool.COLORS[i] not in retained else 0
+                             for i,count in enumerate(player.mana_pool)]
+                    player.mana_pool=[count if mana_pool.COLORS[i] in retained else 0
+                                      for i,count in enumerate(player.mana_pool)]
+                    if any(expired):
+                        self.log("mana_empty","Unused mana empties at the step or phase boundary.",actor=seat,mana=expired)
         return result
 
     def _step(self) -> bool:
@@ -6386,7 +6467,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                         "flying", "reach", "haste", "first strike", "double strike",
                         "vigilance", "lifelink", "deathtouch", "trample",
                         "defender", "indestructible", "changeling"} & event_definition.abilities)
-               or any(ability.startswith("protection from ")
+               or event_definition.unspent_mana_rule or any(ability.startswith("protection from ")
                       for ability in event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.self_pump or event_definition.team_keyword_pump or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
     allowed = allowed or bool(event_definition.conditional_draw_activation or
                               event_definition.counted_pump_activation or
