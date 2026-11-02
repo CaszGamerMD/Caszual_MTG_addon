@@ -197,6 +197,12 @@ class Definition:
     self_historic_cost_reduction: bool = False  # Sum mana values of controlled historic permanents, once each.
     alliance_choices: tuple = ()  # ETB: counter, tapped Treasure, life; each mode once per turn.
     attachment_combat_tokens: object | None = None  # Per attached Aura/Equipment, delayed end-step token exile.
+    equipment_mobilize: bool = False  # Attached creature gains power-counted Warrior attack tokens and delayed sacrifice.
+    equipped_untap_pump: tuple = ()  # Grant {mana}, {Q}: temporary P/T to equipped creature.
+    aura_transformation: tuple = ()  # Aura sets enchanted creature's color, subtype and base P/T, removing abilities.
+    aura_entry_draw: int = 0  # Independent ETB draw trigger, survives the Aura leaving.
+    equipment_base_one_scale: tuple = ()  # (power,toughness) per own creature with base P or T 1.
+    equipment_tribal_entry_attach: tuple = ()  # Creature subtypes that trigger optional attachment.
     paid_regenerate_rule: tuple = ()  # Mana cost and "another target" subtype, with no tap cost.
     equipment_creature_conversion: bool = False  # Equipped permanent becomes non-planeswalker creature.
     combat_reattach: bool = False  # Optional start-of-combat Aura/Equipment movement.
@@ -275,6 +281,28 @@ def parse_card(card: dict) -> Definition:
     attached_combat=parse_attached_combat_tokens(text,name,types)
     if attached_combat:
         return Definition(**base,abilities=frozenset(),attachment_combat_tokens=attached_combat)
+    from mobilize_equipment import parse as parse_mobilize_equipment
+    mobilize_equipment=parse_mobilize_equipment(text,types,subtypes)
+    if mobilize_equipment:
+        return Definition(**base,abilities=frozenset(),attachment=mobilize_equipment,
+                          equipment_mobilize=True)
+    from untap_equipment import parse as parse_untap_equipment
+    untap_equipment=parse_untap_equipment(text,types,subtypes)
+    if untap_equipment:
+        return Definition(**base,abilities=frozenset(),attachment=untap_equipment[0],
+                          equipped_untap_pump=untap_equipment[1])
+    from creature_transformation_aura import parse as parse_creature_transformation_aura
+    transformation=parse_creature_transformation_aura(text,types,subtypes)
+    if transformation:
+        return Definition(**base,abilities=frozenset(),attachment=('aura','creature',frozenset(),0,0),
+                          aura_transformation=transformation,aura_entry_draw=1)
+    from base_one_equipment import parse as parse_base_one_equipment
+    base_one=parse_base_one_equipment(text,types,subtypes)
+    if base_one:
+        cost,power_bonus,toughness_bonus,tribes=base_one
+        return Definition(**base,abilities=frozenset(),attachment=('equipment',cost,frozenset(),0,0),
+                          equipment_base_one_scale=(power_bonus,toughness_bonus),
+                          equipment_tribal_entry_attach=tribes)
     from paid_regeneration_pump import parse as parse_paid_regeneration_pump
     paid_regen=parse_paid_regeneration_pump(text,types)
     if paid_regen:
@@ -883,6 +911,7 @@ class Permanent:
     charge_counters: int = 0
     chosen_subtype: str = ''
     keyword_counters: frozenset[str] = frozenset()
+    ability_suppression_at: int = -1  # Live Aura loss in layer 6; later grants may survive.
 
 
 @dataclass
@@ -958,6 +987,12 @@ class Game:
                 count=p.counters+p.charge_counters+(p.loyalty or 0)
                 power,toughness=source.definition.attachment_counter_scale
                 power_bonus+=power*count;toughness_bonus+=toughness*count
+            if source.attached_to==p.id and source.definition.equipment_base_one_scale:
+                factor=sum(other.controller==source.controller and self.creature(other) and
+                           (other.definition.power==1 or other.definition.toughness==1)
+                           for other in self.battlefield.values())
+                power,toughness=source.definition.equipment_base_one_scale
+                power_bonus+=power*factor;toughness_bonus+=toughness*factor
             if source.attached_to==p.id and source.definition.attachment_scale:
                 power,toughness,types=source.definition.attachment_scale
                 count=sum(x.controller==source.controller and bool(set(types)&x.definition.types) for x in self.battlefield.values())
@@ -1042,7 +1077,7 @@ class Game:
             grants.append(p.entered_at)
         if ability=='haste' and (has_any_subtype(p.definition,('Mount','Vehicle'))):
             grants.extend(x.entered_at for x in self.battlefield.values() if x.controller==p.controller and x.definition.name=='Kolodin, Triumph Caster')
-        return bool(grants) and max(grants)>p.lost_abilities.get(ability,-1)
+        return bool(grants) and max(grants)>max(p.lost_abilities.get(ability,-1),p.ability_suppression_at)
 
     def must_attack(self, permanent):
         """Only an eligible creature can be required; the caller checks eligibility."""
@@ -1158,6 +1193,10 @@ class Game:
                           source=permanent.id,name=permanent.definition.name,
                           controller=permanent.controller,sourceEntry=permanent.entered_at,
                           sourceColors=sorted(permanent.definition.colors))
+            if permanent.definition.aura_entry_draw:
+                self.emit('trigger',operation='draw_cards',effect='draw a card',
+                          source=permanent.id,name=permanent.definition.name,
+                          controller=permanent.controller,amount=permanent.definition.aura_entry_draw)
             if permanent.definition.linked_exile:
                 self.emit('trigger',operation='linked_exile_entry',
                           source=permanent.id,name=permanent.definition.name,
@@ -1187,6 +1226,16 @@ class Game:
                         source=watcher.id,name=watcher.definition.name,
                         controller=watcher.controller,entering=permanent.id,
                         optional=True)
+                if (watcher.definition.equipment_tribal_entry_attach and
+                        watcher.controller==permanent.controller and
+                        self.creature(permanent) and any(
+                            has_subtype(permanent.definition,subtype)
+                            for subtype in watcher.definition.equipment_tribal_entry_attach)):
+                    self.emit('trigger',operation='tribal_equipment_attach',
+                        effect='may attach equipment to entering creature',
+                        source=watcher.id,name=watcher.definition.name,
+                        controller=watcher.controller,entering=permanent.id,
+                        optional=True,requireOwn=True)
                 life_program=watcher.definition.upkeep_token_entry_life
                 if (life_program and watcher.id!=permanent.id and
                         watcher.controller==permanent.controller and
@@ -1720,6 +1769,12 @@ class Game:
                 self.emit('trigger',operation='equipment_basic_search',source=equipment.id,
                           name=equipment.definition.name,controller=equipment.controller,
                           effect='optional tapped basic-land search on equipped attack')
+            if equipment.attached_to==a.id and equipment.definition.equipment_mobilize:
+                self.emit('trigger',operation='equipment_mobilize',source=equipment.id,
+                          name=equipment.definition.name,controller=a.controller,
+                          attacker=a.id,attackerEntry=a.entered_at,
+                          lastPower=self.stats(a)[0],
+                          effect='create tapped and attacking Warriors equal to attacker power')
         # Tokens enter tapped; they do not trigger 'whenever this attacks' abilities.
         for equipment in list(self.battlefield.values()):
             if equipment.definition.name != "Andúril, Flame of the West" or equipment.attached_to != a.id:

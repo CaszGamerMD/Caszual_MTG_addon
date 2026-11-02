@@ -458,6 +458,7 @@ class Simulator(AdvancedRules):
         self.alliance_chosen={}  # (source permanent, entry incarnation) -> used mode names.
         self.last_known_combat_attachments={}  # Last attached count when an attachment-token source leaves.
         self.pending_token_exiles=[]  # Created token IDs, queued for the next beginning of end step.
+        self.pending_token_sacrifices=[]  # Mobilize's independent next-end-step token sacrifice.
         self.attacked_this_turn=set()
         self.library_random_sequence = 0
         self.log("setup", "Two independent agents use frozen policies; sandbox rules apply.")
@@ -767,6 +768,25 @@ class Simulator(AdvancedRules):
                 target=game.battlefield[equipment.attached_to]
                 types=(set(target.definition.types)|{'Creature'})-{'Planeswalker'}
                 target.definition=replace(target.definition,types=frozenset(types))
+        # Continuous Aura effects are rebuilt from physical cards on every
+        # snapshot; removing an Aura therefore restores printed characteristics.
+        # Layer 4 changes types, layer 5 changes color, layer 6 removes abilities
+        # (with timestamp ordering for later grants), and layer 7b sets base P/T.
+        transformations=sorted((a for a in game.battlefield.values()
+                                if a.definition.aura_transformation and a.attached_to in game.battlefield),
+                               key=lambda a:max(a.entered_at,a.attachment_at))
+        for aura in transformations:
+            target=game.battlefield[aura.attached_to]
+            color,subtype,power,toughness=aura.definition.aura_transformation
+            original=target.definition
+            # Losing *all* abilities also removes printed static, triggered,
+            # activated and characteristic-defining programs, not just keywords.
+            # Grants from other later permanents are still computed separately.
+            target.definition=EventDefinition(original.name,frozenset({'Creature'}),
+                frozenset({subtype}),original.legendary,power,toughness,frozenset(),
+                colors=frozenset({color}),mana_cost=original.mana_cost)
+            target.ability_suppression_at=max(target.ability_suppression_at,
+                                              aura.entered_at,aura.attachment_at)
         self.apply_land_type_effects(game)
         return game
 
@@ -1352,7 +1372,14 @@ class Simulator(AdvancedRules):
 
     def token_ability_choices(self,seat):
         result=[]
+        visible=self.event_game('main')
         for source in self.players[seat].battlefield:
+            state=visible.battlefield.get(source.card.id)
+            if state is not None and state.ability_suppression_at>=0:
+                # The transformed creature's own printed activated abilities
+                # are gone until the Aura leaves. Equipment grants are gathered
+                # independently in untap_pump_choices below.
+                continue
             ability=source.card.event_definition.graveyard_exile_activation if source.card.event_definition else ()
             if ability:
                 cost,_=ability
@@ -1426,7 +1453,58 @@ class Simulator(AdvancedRules):
                               if p.card.event_definition)
                     result.append(Candidate(source.card.id+':tribal-tap','activate_tribal_tokens',source.card.id,
                         features=features(power=count*spec.power,cost=0),label='Activate '+source.card.name))
-        return result
+        return result+self.untap_pump_choices(seat)
+
+    def untap_pump_choices(self,seat):
+        """{Q} belongs to the equipped creature, including if its controller differs."""
+        choices=[];game=self.event_game('main')
+        for player in self.players:
+            for equipment in player.battlefield:
+                program=(equipment.card.event_definition.equipped_untap_pump
+                         if equipment.card.event_definition else ())
+                if not program or equipment.phased_out:continue
+                for creature in self.players[seat].battlefield:
+                    if creature.card.id!=equipment.attached_to or not creature.tapped or creature.phased_out:continue
+                    state=game.battlefield.get(creature.card.id)
+                    if not state or not game.creature(state) or creature.fresh and not game.has(state,'haste'):
+                        continue
+                    paid=self.payment(replace(creature.card,mana_cost=program[0]),seat=seat,spell_cost=False)
+                    if paid['paid']:
+                        choices.append(Candidate(equipment.card.id+':untap:'+creature.card.id,
+                            'activate_untap_pump',equipment.card.id,
+                            features=features(power=program[1],toughness=program[2],
+                                              cost=len(paid['sources'])),
+                            label='Untap '+creature.card.name+' to pump',
+                            target_permanent=creature.card.id))
+        return choices
+
+    def activate_untap_pump(self,seat,equipment_id,creature_id):
+        if self.stack.priority!=seat:raise ValueError('Player lacks priority')
+        equipment=next((item for player in self.players for item in player.battlefield
+                        if item.card.id==equipment_id),None)
+        creature=next((item for item in self.players[seat].battlefield
+                       if item.card.id==creature_id),None)
+        program=(equipment.card.event_definition.equipped_untap_pump
+                 if equipment and equipment.card.event_definition else ())
+        game=self.event_game('main');state=game.battlefield.get(creature_id)
+        if (not equipment or equipment.phased_out or not creature or not creature.tapped or
+                creature.phased_out or equipment.attached_to!=creature_id or not program or
+                not state or not game.creature(state) or
+                creature.fresh and not game.has(state,'haste')):
+            raise ValueError('Illegal untap-symbol activation')
+        paid=self.payment(replace(creature.card,mana_cost=program[0]),seat=seat,spell_cost=False)
+        if not paid['paid']:raise ValueError('Cannot pay untap-symbol activation')
+        for item in self.players[seat].battlefield:
+            if item.card.id in paid['sources']:item.tapped=True
+        self.players[seat].mana_pool=list(paid['pool'])
+        creature.tapped=False # {Q} is paid now; even a countered ability stays paid.
+        event=dict(operation='untap_pump',source=creature_id,sourceEntry=creature.entered_at,
+            controller=seat,name=creature.card.name,power=program[1],toughness=program[2])
+        frame=self.stack.push(seat,(event,creature.card),creature.card.name+' untap pump')
+        self.stack.priority=seat
+        self.log('activate_untap_pump','Pay mana and untap a creature for its granted ability.',
+                 actor=seat,source=creature_id,equipment=equipment_id,stackId=frame.id)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
 
     def conditional_draw_choices(self,seat):
         game=self.event_game('main');result=[]
@@ -2349,6 +2427,10 @@ class Simulator(AdvancedRules):
     def choose_optional_combat_reattach(self,event):
         return True
 
+    def choose_optional_tribal_equipment_attach(self,event):
+        """Diagnostic policy accepts this may-trigger; callers can decline."""
+        return True
+
     def combat_reattach_triggers(self):
         """Optional beginning-of-each-combat attach targeting, once per source."""
         game=self.event_game('combat');result=[]
@@ -3253,6 +3335,9 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_strip':
             self.activate_strip(seat,choice.card_id,choice.activation_index)
+            return 'activate'
+        if choice.kind=='activate_untap_pump':
+            self.activate_untap_pump(seat,choice.card_id,choice.target_permanent)
             return 'activate'
         if choice.kind=='activate_graveyard_exile':
             self.activate_graveyard_exile(seat,choice.card_id,choice.target_permanent)
@@ -4293,6 +4378,51 @@ class Simulator(AdvancedRules):
                         removed.append(identifier)
                 self.log('delayed_token_exile','Temporary combat tokens are exiled at the next end step.',
                     actor=event['controller'],source=event['source'],removed=removed)
+                continue
+            if event.get('operation')=='equipment_mobilize':
+                game=self.event_game('main')
+                attacker=game.battlefield.get(event['attacker'])
+                amount=max(0,game.stats(attacker)[0] if attacker and
+                           attacker.entered_at==event['attackerEntry'] else event['lastPower'])
+                if amount:
+                    owner=self.players[event['controller']]
+                    before={p.card.id for p in owner.battlefield}
+                    spec=dict(amount=amount,power=1,toughness=1,colors=['Red'],
+                              subtypes=['Warrior'],keywords=[],tapped=True,attacking=True)
+                    self._resolve_entry_effects([dict(event,operation='create_tokens',tokenSpec=spec)],card)
+                    created=tuple(p.card.id for p in owner.battlefield
+                                  if p.card.id not in before and p.card.is_token)
+                    if created:
+                        due=self.turn+(1 if self.phase in ('end_step','cleanup','end')
+                                       and self._end_step_triggers_queued else 0)
+                        self.pending_token_sacrifices.append(dict(turn=due,
+                            controller=event['controller'],source=event['source'],ids=created))
+                self.log('equipment_mobilize','Mobilize creates temporary attacking Warriors.',
+                    actor=event['controller'],source=event['source'],attacker=event['attacker'],
+                    amount=amount)
+                continue
+            if event.get('operation')=='delayed_sacrifice_tokens':
+                game=self.event_game('main')
+                victims=[item for item in self.players[event['controller']].battlefield
+                         if item.card.id in event['ids'] and item.card.is_token]
+                ids=[item.card.id for item in victims]
+                pending=(game.death_triggers(ids) if ids else [])
+                if ids:pending.extend(game.token_action_events('sacrifice',event['controller'],len(ids)))
+                for item in victims:
+                    self.send_to_destination(self.players[event['controller']],item,snapshot=game)
+                self.log('delayed_token_sacrifice','Mobilize Warriors are sacrificed at the next end step.',
+                    actor=event['controller'],source=event['source'],sacrificed=ids)
+                self.resolve_entry_triggers(pending,card)
+                continue
+            if event.get('operation')=='untap_pump':
+                game=self.event_game('main');state=game.battlefield.get(event['source'])
+                legal=bool(state and state.entered_at==event['sourceEntry']
+                           and game.creature(state))
+                if legal:
+                    state.temporary_power+=event['power'];state.temporary_toughness+=event['toughness']
+                    self.sync_events(game)
+                self.log('untap_pump','Untap-symbol pump resolves on the original creature incarnation.',
+                    actor=event['controller'],source=event['source'],resolved=legal)
                 continue
             if event.get('operation')=='target_counter':
                 game=self.event_game('main');identifier=event['target']
@@ -5357,7 +5487,10 @@ class Simulator(AdvancedRules):
                 source=next((p for p in self.players[event['controller']].battlefield
                              if p.card.id==event['source']),None)
                 game=self.event_game('main');target=game.battlefield.get(event['entering'])
-                legal=bool(source and target and game.creature(target) and not source.phased_out)
+                legal=bool(source and target and game.creature(target) and not source.phased_out
+                           and (not event.get('requireOwn') or target.controller==event['controller']))
+                if legal and event.get('optional'):
+                    legal=self.choose_optional_tribal_equipment_attach(event)
                 if legal:
                     source.attached_to=event['entering']
                     self.effect_clock+=1;source.attachment_at=self.effect_clock
@@ -5772,6 +5905,12 @@ class Simulator(AdvancedRules):
                 else:
                     effective=self.effective_card(item)
                     if effective:event['lastPower']=effective.power
+            if (event.get('operation')=='equipment_mobilize' and
+                    event.get('attacker')==item.card.id and
+                    event.get('attackerEntry')==item.entered_at):
+                game=snapshot or self.event_game('main')
+                state=game.battlefield.get(item.card.id)
+                if state and game.creature(state):event['lastPower']=game.stats(state)[0]
         for owner_index,owner in enumerate(self.players):
             for attached in list(owner.battlefield):
                 if attached.attached_to==item.card.id:
@@ -6348,6 +6487,8 @@ class Simulator(AdvancedRules):
                 self.activate_enchantment_copy(self.active,choice.card_id,choice.target_stack)
             elif choice.kind=='activate_strip':
                 self.activate_strip(self.active,choice.card_id,choice.activation_index)
+            elif choice.kind=='activate_untap_pump':
+                self.activate_untap_pump(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind=='activate_graveyard_exile':
                 self.activate_graveyard_exile(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind=='activate_color_draw':
@@ -6593,6 +6734,15 @@ class Simulator(AdvancedRules):
                         controller=schedule['controller'],source=schedule['source'],
                         ids=schedule['ids'],name='Delayed token exile'),
                         Card('delayed-exile','Delayed token exile','spell')))
+                due_sacrifice=[entry for entry in self.pending_token_sacrifices
+                               if entry['turn']<=self.turn]
+                self.pending_token_sacrifices=[entry for entry in self.pending_token_sacrifices
+                                               if entry['turn']>self.turn]
+                for schedule in due_sacrifice:
+                    self._waiting_triggers.append((dict(operation='delayed_sacrifice_tokens',
+                        controller=schedule['controller'],source=schedule['source'],
+                        ids=schedule['ids'],name='Delayed token sacrifice'),
+                        Card('delayed-sacrifice','Delayed token sacrifice','spell')))
                 self.resolve_entry_triggers([],Card('end-step','End step','spell'))
                 return True
             if self.stack.items:
@@ -6764,7 +6914,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                         "flying", "reach", "haste", "first strike", "double strike",
                         "vigilance", "lifelink", "deathtouch", "trample",
                         "defender", "indestructible", "changeling"} & event_definition.abilities)
-               or event_definition.unspent_mana_rule or event_definition.multikicker_rule or event_definition.squad_rule or event_definition.self_historic_cost_reduction or event_definition.alliance_choices or event_definition.attachment_combat_tokens or event_definition.paid_regenerate_rule or any(ability.startswith("protection from ")
+               or event_definition.unspent_mana_rule or event_definition.multikicker_rule or event_definition.squad_rule or event_definition.self_historic_cost_reduction or event_definition.alliance_choices or event_definition.attachment_combat_tokens or event_definition.equipment_mobilize or event_definition.equipped_untap_pump or event_definition.aura_transformation or event_definition.equipment_base_one_scale or event_definition.paid_regenerate_rule or any(ability.startswith("protection from ")
                       for ability in event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.self_pump or event_definition.team_keyword_pump or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
     allowed = allowed or bool(event_definition.conditional_draw_activation or
                               event_definition.counted_pump_activation or
