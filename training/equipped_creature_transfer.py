@@ -8,7 +8,11 @@ def parse(text, name, types):
     lines=text.splitlines()
     if len(lines)!=2 or lines[0]!="Trample, haste":
         return None
-    self_ref=r"(?:this creature|"+re.escape(name)+r")"
+    # Oracle often abbreviates a legendary name at the comma: "Rhuk".
+    aliases=[name]
+    if "," in name:
+        aliases.append(name.split(",",1)[0])
+    self_ref=r"(?:"+ "|".join([r"this creature"]+[re.escape(value) for value in aliases])+r")"
     trigger=(r"Whenever an equipped creature you control other than "+self_ref+
              r" attacks or dies, you may attach all Equipment attached to that creature to "+
              self_ref+r"\.")
