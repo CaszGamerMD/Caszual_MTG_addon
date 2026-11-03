@@ -89,6 +89,40 @@ class GreatHengeChecks(unittest.TestCase):
         self.assertEqual(len(player.hand),before_hand+1)
         sim.invariant()
 
+    def test_old_entry_trigger_does_not_counter_same_card_after_reentry(self):
+        sim,cards=self.fixture(['The Great Henge','Elvish Mystic'])
+        self.put(sim,cards['The Great Henge'])
+        player=sim.players[0]
+        creature=cards['Elvish Mystic']
+        player.hand.remove(creature)
+
+        first_pending=sim.enter_creature(creature,player)
+        first_entry=next(p for p in player.battlefield if p.card.id==creature.id).entered_at
+        sim.resolve_entry_triggers(first_pending,creature)
+        self.assertEqual(len(sim.stack.items),1)
+
+        # The first trigger still resolves, but its "it" is the object from
+        # the first entry. Move that object away before the ability resolves.
+        first_object=next(p for p in player.battlefield if p.card.id==creature.id)
+        sim.send_to_destination(player,first_object)
+        self.assertTrue(any(c.id==creature.id for c in player.graveyard))
+
+        # Re-enter the same physical card (same id, new battlefield object).
+        player.graveyard.remove(creature)
+        player.hand.append(creature)
+        player.hand.remove(creature)
+        second_pending=sim.enter_creature(creature,player)
+        second_object=next(p for p in player.battlefield if p.card.id==creature.id)
+        self.assertNotEqual(second_object.entered_at,first_entry)
+        sim.resolve_entry_triggers(second_pending,creature)
+        self.assertEqual(len(sim.stack.items),2)
+
+        before_hand=len(player.hand)
+        self.drain(sim)
+        self.assertEqual(second_object.counters,1)
+        self.assertEqual(len(player.hand),before_hand+2)
+        sim.invariant()
+
     def test_queued_entry_trigger_survives_henge_leaving(self):
         sim,cards=self.fixture(['The Great Henge','Elvish Mystic'])
         henge=self.put(sim,cards['The Great Henge'])
