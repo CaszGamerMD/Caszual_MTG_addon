@@ -214,6 +214,8 @@ class Definition:
     enchantment_combat_copy: bool = False  # Once-per-turn enchantment token copy on damage.
     saga_chapter_scale: tuple = ()  # Chapter I and II P/T per artifact/enchantment.
     self_artifact_enchantment_scale: tuple = ()  # Self static P/T count on transformed face.
+    self_greatest_power_cost_reduction: bool = False  # This spell discounts itself by greatest controlled creature power.
+    scaled_mana_life_gain: int = 0  # Life gained as part of a fixed colored tap-mana activation.
 
 
 def _only_static_keyword_program(program):
@@ -782,6 +784,29 @@ def parse_card(card: dict) -> Definition:
         if program:
             fields={key:value for key,value in vars(program).items() if key!='keywords'}
             return Definition(**base,abilities=program.keywords,pilot_bonus=int(match[1]),**fields)
+    # Independently parse a self-cost reduction and a fixed mana/life tap
+    # activation, then require every remaining Oracle instruction to compile.
+    from greatest_power_discount import parse as parse_greatest_power_discount
+    remaining=parse_greatest_power_discount(text)
+    self_greatest_power=remaining is not None
+    if remaining is None:
+        remaining=text
+    from creature_mana import parse_fixed_life
+    fixed_life=parse_fixed_life(remaining,types)
+    fixed_life_rule=''
+    life_gain=0
+    if fixed_life:
+        fixed_life_rule,life_gain,remaining=fixed_life
+    if self_greatest_power or fixed_life:
+        program=compile_abilities(remaining,name) if remaining else None
+        if remaining and program is None:
+            return Definition(**base,abilities=frozenset(),supported=False,
+                              reason='Unparsed rules remaining after cost/mana fragments')
+        parts=dict(vars(program)) if program else {}
+        keywords=parts.pop('keywords',frozenset())
+        return Definition(**base,abilities=keywords,
+            self_greatest_power_cost_reduction=self_greatest_power,
+            scaled_mana_tap=fixed_life_rule,scaled_mana_life_gain=life_gain,**parts)
     # Compose an independently parsed self-power mana activation with every
     # remaining Oracle ability. Neither fragment can swallow unknown text.
     from creature_mana import parse_counted

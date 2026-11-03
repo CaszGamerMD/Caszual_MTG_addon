@@ -13,6 +13,29 @@ def parse_fixed(text, types):
         return None
     return 'fixed:'+symbols[0]+':'+str(len(symbols))
 
+def parse_fixed_life(text, types):
+    """Parse fixed colored tap-mana followed by a life-gain instruction.
+
+    Returns (mana_rule, life_gain, remaining_text). Unknown activation costs,
+    mixed-color outputs and extra instructions are not consumed.
+    """
+    if not set(types).intersection({'Creature','Artifact','Enchantment','Land','Planeswalker'}):
+        return None
+    lines=[line.strip() for line in text.splitlines() if line.strip()]
+    pattern=r'\{T\}: Add ((?:\{[WUBRG]\})+)\. You gain ([1-9][0-9]*) life\.'
+    found=[(index,re.fullmatch(pattern,line)) for index,line in enumerate(lines)]
+    found=[(index,match) for index,match in found if match]
+    if len(found)!=1:
+        return None
+    index,match=found[0]
+    symbols=re.findall(r'\{([WUBRG])\}',match[1])
+    if not symbols or len(set(symbols))!=1:
+        return None
+    rule='fixed:'+symbols[0]+':'+str(len(symbols))
+    remaining='\n'.join(line for i,line in enumerate(lines) if i!=index)
+    return rule,int(match[2]),remaining
+
+
 def parse_counted(text, types):
     """Consume one subtype/creature-count mana clause; preserve all other lines."""
     if not {'Creature','Land'}.intersection(types):

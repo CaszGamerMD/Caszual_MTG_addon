@@ -21,7 +21,7 @@ _SEP = re.compile(
 _SAFE = frozenset((
     "draw_cards", "gain_life", "lose_life", "self_counter",
     "create_tokens", "create_treasures", "scry", "surveil",
-    "mill_cards",
+    "mill_cards", "entered_counter",
 ))
 
 

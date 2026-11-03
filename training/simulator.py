@@ -2294,8 +2294,13 @@ class Simulator(AdvancedRules):
         amount=max(values)
         source.tapped=True
         self.players[seat].mana_pool[color]+=amount
+        life_gain=source.card.event_definition.scaled_mana_life_gain
+        if life_gain:
+            self.gain_life(seat,life_gain)
+            self.resolve_entry_triggers([],source.card)
         self.log('activate_scaled_mana','Player taps a permanent for one chosen color of scaled mana.',
-                 actor=seat,source=source_id,color=mana_pool.COLORS[color],amount=amount)
+                 actor=seat,source=source_id,color=mana_pool.COLORS[color],amount=amount,
+                 lifeGain=life_gain)
 
     def activate_tribal_tokens(self,seat,source_id):
         if self.stack.priority!=seat:raise ValueError('Player lacks priority')
@@ -5715,6 +5720,15 @@ class Simulator(AdvancedRules):
                     game=self.event_game('main')
                     source.counters+=game.counter_amount(source.card.id,event['amount'])
                 message=f"{event['name']}: paid X counter trigger resolves on its surviving source."
+            elif event.get('operation')=='entered_counter':
+                game=self.event_game('main')
+                target=game.battlefield.get(event.get('entered'))
+                added=game.counter_amount(event['entered'],event['amount']) if (
+                    target and target.entered_at==event.get('enteredEntry') and game.creature(target)) else 0
+                if added:
+                    target.counters+=added
+                    self.sync_events(game)
+                message=f"{event['name']}: entering creature receives {added} +1/+1 counter(s)."
             elif event.get('operation')=='self_counter':
                 if event.get('optional') and not self.choose_optional_self_counter(event):
                     message=f"{event['name']}: its controller declines the counter."
@@ -6261,6 +6275,12 @@ class Simulator(AdvancedRules):
                                   and bool(permanent.chosen_subtype)
                                   and (permanent.chosen_subtype.lower() in subtypes or
                                        card.event_definition and has_subtype(card.event_definition,permanent.chosen_subtype)))))
+            if card.event_definition and card.event_definition.self_greatest_power_cost_reduction:
+                battlefield=self.event_game('main')
+                reduction+=max((battlefield.stats(permanent)[0]
+                                for permanent in battlefield.battlefield.values()
+                                if permanent.controller==seat and battlefield.creature(permanent)),
+                               default=0)
             if card.event_definition and card.event_definition.self_historic_cost_reduction:
                 # A permanent qualifies once even when it is both legendary and
                 # an artifact (or a Saga). Use battlefield characteristics, but
@@ -7088,7 +7108,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                         "flying", "reach", "haste", "first strike", "double strike",
                         "vigilance", "lifelink", "deathtouch", "trample",
                         "defender", "indestructible", "changeling"} & event_definition.abilities)
-               or event_definition.unspent_mana_rule or event_definition.multikicker_rule or event_definition.squad_rule or event_definition.self_historic_cost_reduction or event_definition.alliance_choices or event_definition.attachment_combat_tokens or event_definition.equipment_mobilize or event_definition.equipped_untap_pump or event_definition.aura_transformation or event_definition.equipment_base_one_scale or event_definition.multi_equipment_entrance or event_definition.equipped_combat_die or event_definition.paid_regenerate_rule or any(ability.startswith("protection from ")
+               or event_definition.unspent_mana_rule or event_definition.multikicker_rule or event_definition.squad_rule or event_definition.self_historic_cost_reduction or event_definition.self_greatest_power_cost_reduction or event_definition.scaled_mana_life_gain or event_definition.alliance_choices or event_definition.attachment_combat_tokens or event_definition.equipment_mobilize or event_definition.equipped_untap_pump or event_definition.aura_transformation or event_definition.equipment_base_one_scale or event_definition.multi_equipment_entrance or event_definition.equipped_combat_die or event_definition.paid_regenerate_rule or any(ability.startswith("protection from ")
                       for ability in event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.self_pump or event_definition.team_keyword_pump or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
     allowed = allowed or bool(event_definition.conditional_draw_activation or
                               event_definition.counted_pump_activation or

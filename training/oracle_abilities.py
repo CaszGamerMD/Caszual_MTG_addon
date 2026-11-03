@@ -386,6 +386,8 @@ def selector(text):
     # Landfall is a permanent-entry event, not a creature trigger.
     if text == 'a land you control': return Selector(relation='controller',permanent_type='Land')
     if text == 'this creature': return Selector(self_only=True,creature=True)
+    if text == 'a nontoken creature you control':
+        return Selector(relation='controller',creature=True,nontoken=True)
     if text=='another creature you control of the chosen type':
         return Selector(relation='controller',other=True,creature=True,chosen_subtype=True)
     if text in ('this land','this artifact','this enchantment','this permanent'):return Selector(self_only=True)
@@ -461,6 +463,10 @@ def effect(text):
     if target_counter:
         number={'a':1,'one':1,'two':2,'three':3}.get(target_counter[1])
         return Effect('target_counter',number if number is not None else int(target_counter[1]))
+    entering_counter=re.fullmatch(r'put (a|one|two|three|[1-9][0-9]*) \+1/\+1 counters? on it\.',text)
+    if entering_counter:
+        number={'a':1,'one':1,'two':2,'three':3}.get(entering_counter[1])
+        return Effect('entered_counter',number if number is not None else int(entering_counter[1]))
     treasure=re.fullmatch(r'create (a|one|two|three|[1-9][0-9]*) Treasure tokens?\.',text)
     if treasure:
         number={'a':1,'one':1,'two':2,'three':3}.get(treasure[1])
@@ -866,6 +872,10 @@ def compile_abilities(text, name=''):
         action=effect(clause)
         if subject is None or action is None: return None
         event='dies' if m[2]=='dies' else 'enters'
+        action_parts=action.steps if action.operation=='ordered_effects' else (action,)
+        if any(part.operation=='entered_counter' for part in action_parts):
+            if event!='enters' or not subject.creature or not subject.nontoken:
+                return None
         if (action.operation=='create_tokens' or
                 (action.operation=='ordered_effects' and
                  any(part.operation=='create_tokens' for part in action.steps))) and not subject.self_only:
@@ -931,6 +941,7 @@ def event_data(trigger, source, subject):
             'return_graveyard':'controller may return target subtype card from graveyard to hand',
             'exile_top_cast_permission':'exile the top library card and grant a temporary matching creature cast permission',
             'self_counter':'put +1/+1 counters on the source',
+            'entered_counter':'put +1/+1 counters on the entering creature',
             'combat_target_boost':'target enchanted or enchantment creature gets a temporary bonus and keyword',
             'optional_put_hand_permanent':'controller may put a matching permanent card from hand onto the battlefield',
             'opponent_loss_tapped_creatures':'each opponent loses life equal to controlled tapped creatures'}
@@ -952,6 +963,7 @@ def event_data(trigger, source, subject):
             **({'requiresOtherControlledSubtype':trigger.requires_other_controlled_subtype} if trigger.requires_other_controlled_subtype else {}),
             **({'tokenSpec':dict(asdict(e.token),keywords=sorted(e.token.keywords))} if e.token else {}),
             **({'libraryFilter':e.library_filter} if e.library_filter else {}),
+            **({'enteredEntry':subject.entered_at} if trigger.event=='enters' else {}),
             **({'steps':[dict(operation=step.operation,amount=step.amount,
                 recipient=step.recipient,gain=step.gain,
                 optional=step.optional,controllerLoss=step.controller_loss,
