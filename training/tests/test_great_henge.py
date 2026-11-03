@@ -53,6 +53,15 @@ class GreatHengeChecks(unittest.TestCase):
         self.assertEqual(len(plan['sources']),3)
         sim.invariant()
 
+    def test_negative_greatest_power_does_not_increase_cost(self):
+        sim,cards=self.fixture(['The Great Henge'])
+        creature=self.token(sim,'negative-power',power=1,toughness=2)
+        creature.temporary_power=-3
+        plan=sim.payment(cards['The Great Henge'],seat=0)
+        self.assertTrue(plan['paid'])
+        self.assertEqual(len(plan['sources']),9)  # A negative greatest power is no reduction.
+        sim.invariant()
+
     def test_artifact_tap_adds_two_green_and_gains_two_life(self):
         sim,cards=self.fixture(['The Great Henge'])
         source=self.put(sim,cards['The Great Henge'])

@@ -6297,10 +6297,10 @@ class Simulator(AdvancedRules):
                                        card.event_definition and has_subtype(card.event_definition,permanent.chosen_subtype)))))
             if card.event_definition and card.event_definition.self_greatest_power_cost_reduction:
                 battlefield=self.event_game('main')
-                reduction+=max((battlefield.stats(permanent)[0]
-                                for permanent in battlefield.battlefield.values()
-                                if permanent.controller==seat and battlefield.creature(permanent)),
-                               default=0)
+                reduction+=max(0,max((battlefield.stats(permanent)[0]
+                                      for permanent in battlefield.battlefield.values()
+                                      if permanent.controller==seat and battlefield.creature(permanent)),
+                                     default=0))
             if card.event_definition and card.event_definition.self_historic_cost_reduction:
                 # A permanent qualifies once even when it is both legendary and
                 # an artifact (or a Saga). Use battlefield characteristics, but
