@@ -199,6 +199,14 @@ def static_effect(text):
     opposing=re.fullmatch(r'Creatures your opponents control get ([+-][0-9]+)/([+-][0-9]+)\.',text)
     if opposing:
         return StaticEffect(Selector(relation='opponent',creature=True),int(opposing[1]),int(opposing[2]))
+    attacking_keywords=re.fullmatch(
+        r'Attacking creatures you control have (.+)\.',text)
+    if attacking_keywords:
+        traits={part.strip() for part in re.split(r', | and ',attacking_keywords[1])}
+        if not traits or not traits<=KEYWORDS-{'flash'}:return None
+        subject=Selector(relation='controller',creature=True,attacking=True)
+        return tuple(StaticEffect(subject,0,0,grant=trait)
+                     for trait in sorted(traits))
     attacking_anthem=re.fullmatch(
         r'Attacking (?:non-([A-Z][a-z]+) )?creatures you control get \+([0-9]+)/\+([0-9]+) and have (.+)\.',text)
     if attacking_anthem:
