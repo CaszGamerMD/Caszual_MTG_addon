@@ -1245,6 +1245,10 @@ class Simulator(AdvancedRules):
         """Diagnostic may-choice: put all legal supported permanents into play."""
         return tuple(c.id for c in candidates)
 
+    def choose_equipment_transfer(self,event,available):
+        """Diagnostic may-choice, evaluated when the ability resolves."""
+        return True
+
     def choose_multi_equipment_targets(self,event,candidates):
         """Diagnostic policy: take every legal Equipment; may choose none."""
         return tuple(p.id for p in candidates)
@@ -5287,6 +5291,43 @@ class Simulator(AdvancedRules):
                          actor=event['controller'],source=event['source'],drawn=event['amount'])
                 self.outcome()
                 continue
+            if event.get('operation')=='transfer_equipment':
+                game=self.event_game('main')
+                host=game.battlefield.get(event['source'])
+                live=bool(host and host.entered_at==event['sourceEntry'] and game.creature(host))
+                origin=game.battlefield.get(event['other'])
+                if (event['triggerKind']=='attacks' and origin
+                        and origin.entered_at==event['otherEntry']):
+                    entries=game.attached_equipment_entries(origin.id)
+                else:
+                    entries=event.get('lastAttachedEntries',event['attachedEntries'])
+                consent=self.choose_equipment_transfer(event,entries)
+                if type(consent) is not bool:
+                    raise ValueError('Equipment transfer choice must be boolean')
+                moved=[];illegal=[]
+                if live and consent:
+                    for equipment_id,equipment_entry in entries:
+                        state=game.battlefield.get(equipment_id)
+                        equipment=next((item for player in self.players for item in player.battlefield
+                                        if item.card.id==equipment_id),None)
+                        if not (state and equipment and state.entered_at==equipment_entry
+                                and 'Artifact' in state.definition.types
+                                and 'Equipment' in state.definition.subtypes
+                                and 'Creature' not in state.definition.types
+                                and not game.protected(host,state.definition.colors)):
+                            illegal.append(equipment_id)
+                            continue
+                        equipment.attached_to=event['source']
+                        self.effect_clock+=1
+                        equipment.attachment_at=self.effect_clock
+                        moved.append(equipment_id)
+                self.log('equipment_transfer',
+                    'Optional transfer attaches all eligible Equipment without changing control.',
+                    actor=event['controller'],source=event['source'],other=event['other'],
+                    triggerKind=event['triggerKind'],moved=moved,illegal=illegal,
+                    accepted=consent,hostPresent=live)
+                if moved:self.resolve_entry_triggers(self.state_based_actions(),card)
+                continue
             if event.get('operation')=='attach_any_equipment':
                 game=self.event_game('main')
                 host=game.battlefield.get(event['source'])
@@ -6031,6 +6072,12 @@ class Simulator(AdvancedRules):
                 else:
                     effective=self.effective_card(item)
                     if effective:event['lastPower']=effective.power
+            if (event.get('operation')=='transfer_equipment' and
+                    event.get('triggerKind')=='attacks' and
+                    event.get('other')==item.card.id and
+                    event.get('otherEntry')==item.entered_at):
+                game=snapshot or self.event_game('main')
+                event['lastAttachedEntries']=game.attached_equipment_entries(item.card.id)
             if (event.get('operation')=='equipment_mobilize' and
                     event.get('attacker')==item.card.id and
                     event.get('attackerEntry')==item.entered_at):

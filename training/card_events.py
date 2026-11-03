@@ -204,6 +204,7 @@ class Definition:
     equipment_base_one_scale: tuple = ()  # (power,toughness) per own creature with base P or T 1.
     equipment_tribal_entry_attach: tuple = ()  # Creature subtypes that trigger optional attachment.
     multi_equipment_entrance: bool = False  # ETB/attack: attach any number of targeted Equipment to this creature.
+    equipped_creature_transfer: bool = False  # Other equipped own creature attacks/dies: transfer its Equipment here.
     equipped_combat_die: int = 0  # Equipped damage source rolls dN; max or roll > damage doubles counters.
     paid_regenerate_rule: tuple = ()  # Mana cost and "another target" subtype, with no tap cost.
     equipment_creature_conversion: bool = False  # Equipped permanent becomes non-planeswalker creature.
@@ -251,6 +252,10 @@ def parse_card(card: dict) -> Definition:
                 colors=frozenset(card.get("colors") or []),mana_cost=card.get("manaCost") or "",loyalty=loyalty)
     if ("Creature" in types or "Vehicle" in subtypes or "Spacecraft" in subtypes) and not dynamic_pt and any(card.get(stat) in (None, "") for stat in ("power", "toughness")):
         return Definition(**base, abilities=frozenset(), supported=False, reason="Missing or invalid fixed power/toughness")
+    from equipped_creature_transfer import parse as parse_equipped_creature_transfer
+    transfer_keywords=parse_equipped_creature_transfer(text,name,types)
+    if transfer_keywords is not None:
+        return Definition(**base,abilities=transfer_keywords,equipped_creature_transfer=True)
     from multi_equipment_entrance import parse as parse_multi_equipment_entrance
     if parse_multi_equipment_entrance(text,name,types):
         return Definition(**base,abilities=frozenset(),multi_equipment_entrance=True)
@@ -1479,6 +1484,7 @@ class Game:
             raise IllegalAction("Death trigger batch requires creatures")
         triggers = []
         for creature in dead:
+            triggers.extend(self.equipment_transfer_triggers(creature,"dies"))
             if creature.definition.name == "Nested Shambler":
                 triggers.append({"source":creature.id,"name":"Nested Shambler","controller":creature.controller,
                                  "dead":creature.id,"effect":"create tapped Squirrels",
@@ -1664,6 +1670,23 @@ class Game:
         for value in multipliers:amount*=value
         return amount
 
+    def attached_equipment_entries(self, creature_id):
+        """Capture Equipment instances before a creature changes zones."""
+        return tuple(sorted((item.id,item.entered_at) for item in self.battlefield.values()
+            if item.attached_to==creature_id and "Artifact" in item.definition.types
+            and "Equipment" in item.definition.subtypes))
+
+    def equipment_transfer_triggers(self, creature, reason):
+        attached=self.attached_equipment_entries(creature.id)
+        if not attached:return []
+        return [dict(operation="transfer_equipment",effect="may move all attached Equipment",
+            name=watcher.definition.name,source=watcher.id,sourceEntry=watcher.entered_at,
+            controller=watcher.controller,other=creature.id,otherEntry=creature.entered_at,
+            triggerKind=reason,attachedEntries=attached,optional=True)
+            for watcher in self.battlefield.values()
+            if watcher.definition.equipped_creature_transfer
+            and watcher.id!=creature.id and watcher.controller==creature.controller]
+
     def attack(self, attacker_id: str, defending_player: int, defer=False):
         a = self.battlefield[attacker_id]
         if self.phase != "combat" or a.controller != self.turn_player or defending_player not in (0,1) or defending_player == a.controller:
@@ -1673,6 +1696,8 @@ class Game:
         if not self.has(a,"vigilance"): a.tapped = True
         a.attacking = defending_player
         self.emit("attacks", id=a.id, defending=defending_player)
+        for trigger in self.equipment_transfer_triggers(a,"attacks"):
+            self.emit("trigger",**trigger)
         if self.has(a,'flying'):
             for source in tuple(self.battlefield.values()):
                 for relation,operation,amount in source.definition.attack_watchers:

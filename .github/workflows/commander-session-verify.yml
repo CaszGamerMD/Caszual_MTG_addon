@@ -31,6 +31,8 @@ jobs:
         run: python training/diagnostic_coverage.py
       - name: Rank and audit whole Oracle families
         run: python training/question_batches.py --decks training/decks/*.json --focal-id 5189995 --out training/reports/question-batches-current.json
+      - name: Verify equipment-transfer learning cycle
+        run: python -m unittest discover -s training/tests -p test_deck_completion_wave6.py -v
       - name: Full standalone Python rules and viewer regression suite
         run: python -m unittest discover -s training/tests -v
       - name: Upload fresh deck coverage
