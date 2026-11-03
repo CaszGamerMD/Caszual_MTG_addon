@@ -216,6 +216,7 @@ class Definition:
     self_artifact_enchantment_scale: tuple = ()  # Self static P/T count on transformed face.
     self_greatest_power_cost_reduction: bool = False  # This spell discounts itself by greatest controlled creature power.
     scaled_mana_life_gain: int = 0  # Life gained as part of a fixed colored tap-mana activation.
+    graveyard_cast_alternate: tuple = ()  # (alternate mana cost, other graveyard cards to exile).
 
 
 def _only_static_keyword_program(program):
@@ -718,6 +719,11 @@ def parse_card(card: dict) -> Definition:
         normalized=re.sub(r'\b'+re.escape(name.split(',')[0])+r"(?= enters| attacks| isn't a creature|\'s power)",'this creature',normalized)
     attack_lines=[line for line in normalized.splitlines() if line.startswith('Whenever this creature attacks')]
     other_lines=[line for line in normalized.splitlines() if not line.startswith('Whenever this creature attacks')]
+    from graveyard_alternate_cast import parse as parse_graveyard_alternate
+    graveyard_alternate=parse_graveyard_alternate('\n'.join(other_lines),types)
+    if graveyard_alternate:
+        alternate_cost,alternate_exile_count,remaining=graveyard_alternate
+        other_lines=remaining.splitlines() if remaining else []
     entry_program=compile_abilities('\n'.join(other_lines)) if other_lines else None
     attacks=compile_attacks('\n'.join(attack_lines)) if attack_lines else None
     if attacks and 'Creature' in types and (not other_lines or
@@ -727,7 +733,9 @@ def parse_card(card: dict) -> Definition:
             static_effects=entry_program.static_effects if entry_program else (),
             activations=entry_program.activations if entry_program else (),
             devotion=entry_program.devotion if entry_program else (),
-            crew=attacks[1],saddle=attacks[2],attack_effects=attacks[3])
+            crew=attacks[1],saddle=attacks[2],attack_effects=attacks[3],
+            graveyard_cast_alternate=((alternate_cost,alternate_exile_count)
+                                      if graveyard_alternate else ()))
     # An enchantment-sourced activated/triggered ability on the stack is a
     # distinct target from a spell. The entire second instruction is required.
     # Reminder text was already removed by rule_text().
@@ -1747,7 +1755,14 @@ class Game:
                 self.emit('trigger',operation='scry',effect='scry 1 from Sorcerer Role',
                           source=a.id,name=a.definition.name,controller=a.controller,amount=1)
         for operation,power,toughness,keyword in a.definition.attack_effects:
-            if operation=='counter' and defer:
+            if operation=='attack_tokens':
+                spec=dict(asdict(keyword),keywords=sorted(keyword.keywords))
+                if keyword.attacking:spec['attacking']=defending_player
+                self.emit('trigger',operation='create_tokens',source=a.id,
+                          name=a.definition.name,controller=a.controller,
+                          effect='create tapped and attacking tokens on attack',
+                          tokenSpec=spec)
+            elif operation=='counter' and defer:
                 self.emit('trigger',operation='self_counter',source=a.id,name=a.definition.name,controller=a.controller,effect='add counter',amount=power)
             elif operation=='counter':
                 a.counters+=self.counter_amount(a.id,power)
