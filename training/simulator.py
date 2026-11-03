@@ -3459,7 +3459,7 @@ class Simulator(AdvancedRules):
                         sacrifice_id=choice.tap_ids[0] if choice.tap_ids else None)
         return 'cast'
 
-    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None,modal_modes=(),exile_permission=False,zone_card=None,sacrifice_id=None,kicker_count=0,squad_count=0):
+    def cast_spell(self,seat,card,x=None,commander=False,target=None,bestow=False,rebound=False,flashback=False,keyword_choice=None,modal_modes=(),exile_permission=False,zone_card=None,sacrifice_id=None,kicker_count=0,squad_count=0,graveyard_alternate=False,graveyard_exile_ids=()):
         player=self.players[seat]
         if not card.instant and seat!=self.stack.priority: raise ValueError('Player lacks priority')
         if self.stack.items:
@@ -3469,11 +3469,25 @@ class Simulator(AdvancedRules):
         if rebound and self._rebound_permission!=(seat,root(card)):raise ValueError('No rebound casting permission')
         if flashback and (commander or rebound or bestow or not card.flashback_cost):
             raise ValueError('No supported flashback permission')
+        alternate=card.event_definition.graveyard_cast_alternate if card.event_definition else ()
+        if graveyard_alternate:
+            if (not alternate or commander or rebound or flashback or bestow or exile_permission):
+                raise ValueError('No supported graveyard alternate-cost permission')
+            alternate_cost,exile_count=alternate
+            available={item.id:item for item in player.graveyard
+                       if item.id!=card.id and not item.is_token}
+            if (not isinstance(graveyard_exile_ids,(tuple,list)) or
+                    len(graveyard_exile_ids)!=exile_count or
+                    len(set(graveyard_exile_ids))!=exile_count or
+                    any(identifier not in available for identifier in graveyard_exile_ids)):
+                raise ValueError('Alternate graveyard cost requires the exact number of other cards')
+        elif graveyard_exile_ids:
+            raise ValueError('No graveyard cards may be exiled without the alternate cost')
         if exile_permission:
             if commander or rebound or flashback or bestow or card not in self.permitted_exile_cards(seat):
                 raise ValueError('No valid exile casting permission')
             casting_zone=next(p.exile for p in self.players if card in p.exile)
-        else:casting_zone=player.exile if rebound else player.graveyard if flashback else player.hand
+        else:casting_zone=player.exile if rebound else player.graveyard if (flashback or graveyard_alternate) else player.hand
         if not commander and (zone_card or card) not in casting_zone: raise ValueError('Card not in casting zone')
         if bestow and (not card.event_definition or not card.event_definition.bestow):raise ValueError('Card has no supported bestow ability')
         if (card.kind=='aura' or bestow) and target not in {p.card.id for _,p in
@@ -3526,15 +3540,16 @@ class Simulator(AdvancedRules):
             raise ValueError('Illegal multikicker count')
         if kicker_count and not multikicker:
             raise ValueError('Card does not support multikicker')
-        if kicker_count and (bestow or rebound or flashback or exile_permission):
+        if kicker_count and (bestow or rebound or flashback or exile_permission or graveyard_alternate):
             raise ValueError('Unsupported alternate-cost multikicker composition')
         if type(squad_count) is not int or not 0<=squad_count<=1000:
             raise ValueError('Illegal Squad payment count')
-        if squad_count and (not squad or kicker_count or bestow or rebound or flashback or exile_permission):
+        if squad_count and (not squad or kicker_count or bestow or rebound or flashback or exile_permission or graveyard_alternate):
             raise ValueError('Unsupported Squad or alternate-cost composition')
         payment_card=replace(card,mana_cost=card.event_definition.bestow[0]) if bestow else card
         if rebound:payment_card=replace(payment_card,mana_cost='{0}')
         elif flashback:payment_card=replace(payment_card,mana_cost=card.flashback_cost)
+        elif graveyard_alternate:payment_card=replace(payment_card,mana_cost=alternate_cost)
         if kicker_count:
             payment_card=replace(payment_card,mana_cost=payment_card.mana_cost+multikicker[0]*kicker_count)
         if squad_count:
@@ -3544,12 +3559,17 @@ class Simulator(AdvancedRules):
         for source in player.battlefield:
             if source.card.id in payment['sources']:source.tapped=True
         player.mana_pool=list(payment['pool'])
+        if graveyard_alternate:
+            for identifier in graveyard_exile_ids:
+                exiled=next(item for item in player.graveyard if item.id==identifier)
+                player.graveyard.remove(exiled)
+                player.exile.append(exiled)
         if commander:player.command_zone=None;player.commander_casts+=1
         else:casting_zone.remove(zone_card or card)
         if exile_permission:self.exile_cast_permissions.pop(card.id,None)
         prior=sum(e['kind']=='cast' and e['turn']==self.turn for e in self.events)
         self.stack.active=self.active
-        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'kickerCount':kicker_count,'squadCount':squad_count,'keywordChoice':keyword_choice or (card.target_modifier[2][0] if card.target_modifier and card.target_modifier[2] else None),'modalModes':tuple(modal_modes),'fromHand':not rebound and not flashback and not commander and not exile_permission},card),card.name)
+        frame=self.stack.push(seat,({'operation':'spell','controller':seat,'x':x,'target':target,'bestow':bestow,'flashback':flashback,'graveyardAlternate':graveyard_alternate,'graveyardExileIds':tuple(graveyard_exile_ids),'kickerCount':kicker_count,'squadCount':squad_count,'keywordChoice':keyword_choice or (card.target_modifier[2][0] if card.target_modifier and card.target_modifier[2] else None),'modalModes':tuple(modal_modes),'fromHand':not rebound and not flashback and not graveyard_alternate and not commander and not exile_permission},card),card.name)
         sacrifice_triggers=[]
         if additional:
             # Pay the sacrifice as part of casting, after mana abilities but
@@ -3562,7 +3582,7 @@ class Simulator(AdvancedRules):
                 sacrifice_triggers.extend(snapshot.token_action_events('sacrifice',seat,1))
             self.send_to_destination(player,victim,snapshot=snapshot)
         self.log('cast',f'Player {seat+1} casts {card.name}.',actor=seat,card=card.name,
-                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,bestow=bestow,rebound=rebound,flashback=flashback,exilePermission=exile_permission,targetStack=target if card.kind=='counter_spell' else None,
+                 manaSources=payment['sources'],manaPool=list(player.mana_pool),commander=commander,xValue=x,bestow=bestow,rebound=rebound,flashback=flashback,graveyardAlternate=graveyard_alternate,exiledOtherCards=list(graveyard_exile_ids),exilePermission=exile_permission,targetStack=target if card.kind=='counter_spell' else None,
                  targetPermanent=target if card.kind in ('removal_spell','modifier_spell','modal_target_spell') else None)
         self.stack.priority=seat
         self.log('stack_push',f'{card.name} goes on the stack.',stackId=frame.id,controller=seat)
@@ -6401,6 +6421,20 @@ class Simulator(AdvancedRules):
                              cost=len(self.payment(c, p.commander_casts).get("sources", []))),
                     "Cast commander " + c.name))
             for c in p.graveyard:
+                alternate=c.event_definition.graveyard_cast_alternate if c.event_definition else ()
+                if alternate:
+                    alternate_cost,exile_count=alternate
+                    others=sorted((item for item in p.graveyard
+                                   if item.id!=c.id and not item.is_token),
+                                  key=lambda item:(item.printed_mana_value or 0,item.id))
+                    payment=self.payment(replace(c,mana_cost=alternate_cost),seat=seat)
+                    if len(others)>=exile_count and payment['paid']:
+                        exiled=tuple(item.id for item in others[:exile_count])
+                        actions.append(Candidate(c.id+':graveyard-alternate',
+                            'cast_graveyard_alternate',c.id,
+                            features=features(power=c.power,toughness=c.toughness,
+                                              cost=len(payment['sources'])+exile_count),
+                            label='Cast '+c.name+' from graveyard',tap_ids=exiled))
                 if c.flashback_cost and c.kind=='token_spell':
                     payment=self.payment(replace(c,mana_cost=c.flashback_cost),seat=seat)
                     if payment['paid']:
@@ -6741,7 +6775,7 @@ class Simulator(AdvancedRules):
                 self.activate_transport(self.active,choice.kind,choice.card_id,choice.tap_ids)
             else:
                 card = (p.command_zone if choice.kind == "cast_commander" else
-                        next(c for c in (p.graveyard if choice.kind == "cast_flashback" else self.permitted_exile_cards(self.active) if choice.kind=="cast_exile" else p.hand)
+                        next(c for c in (p.graveyard if choice.kind in ("cast_flashback","cast_graveyard_alternate") else self.permitted_exile_cards(self.active) if choice.kind=="cast_exile" else p.hand)
                              if c.id == choice.card_id))
                 if card is None: raise RuntimeError("Commander is no longer in command zone")
                 if choice.kind in ("land","land_back"):
@@ -6772,6 +6806,8 @@ class Simulator(AdvancedRules):
                         bestow=choice.kind=='bestow',flashback=choice.kind=='cast_flashback',
                          exile_permission=choice.kind=='cast_exile',
                          sacrifice_id=choice.tap_ids[0] if choice.tap_ids else None,
+                         graveyard_alternate=choice.kind=='cast_graveyard_alternate',
+                         graveyard_exile_ids=choice.tap_ids if choice.kind=='cast_graveyard_alternate' else (),
                          kicker_count=choice.kicker_count,squad_count=choice.squad_count)
         elif self.phase == "attack":
             choice = self.decide(self.active)
@@ -7108,7 +7144,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                         "flying", "reach", "haste", "first strike", "double strike",
                         "vigilance", "lifelink", "deathtouch", "trample",
                         "defender", "indestructible", "changeling"} & event_definition.abilities)
-               or event_definition.unspent_mana_rule or event_definition.multikicker_rule or event_definition.squad_rule or event_definition.self_historic_cost_reduction or event_definition.self_greatest_power_cost_reduction or event_definition.scaled_mana_life_gain or event_definition.alliance_choices or event_definition.attachment_combat_tokens or event_definition.equipment_mobilize or event_definition.equipped_untap_pump or event_definition.aura_transformation or event_definition.equipment_base_one_scale or event_definition.multi_equipment_entrance or event_definition.equipped_combat_die or event_definition.paid_regenerate_rule or any(ability.startswith("protection from ")
+               or event_definition.unspent_mana_rule or event_definition.multikicker_rule or event_definition.squad_rule or event_definition.self_historic_cost_reduction or event_definition.self_greatest_power_cost_reduction or event_definition.scaled_mana_life_gain or event_definition.graveyard_cast_alternate or event_definition.alliance_choices or event_definition.attachment_combat_tokens or event_definition.equipment_mobilize or event_definition.equipped_untap_pump or event_definition.aura_transformation or event_definition.equipment_base_one_scale or event_definition.multi_equipment_entrance or event_definition.equipped_combat_die or event_definition.paid_regenerate_rule or any(ability.startswith("protection from ")
                       for ability in event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.self_pump or event_definition.team_keyword_pump or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
     allowed = allowed or bool(event_definition.conditional_draw_activation or
                               event_definition.counted_pump_activation or
