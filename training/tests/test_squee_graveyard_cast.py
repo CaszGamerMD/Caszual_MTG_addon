@@ -103,6 +103,7 @@ class SqueeChecks(unittest.TestCase):
         player=sim.players[0]
         player.graveyard.remove(card)
         player.hand.append(card)
+        player.hand.remove(card)
         sim.manual_priority=False
         pending=sim.enter_creature(card,player)
         sim.resolve_entry_triggers(pending,card)
