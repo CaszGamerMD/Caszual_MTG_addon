@@ -87,7 +87,12 @@ _HIT_CONJUNCTION=re.compile(r', then (?=proliferate$)| and (?=that player (?:mil
 def _hit_atom(clause):
     token=re.fullmatch(r'you (create .+)',clause)
     if token:
-        spec=parse_token_creation(token[1][0].upper()+token[1][1:]+'.')
+        instruction=token[1][0].upper()+token[1][1:]
+        # Clause matching is case-normalized; restore proper case for creature subtypes.
+        instruction=re.sub(
+            r'(?<=\d/\d )(?:white|blue|black|red|green|colorless)(?: and (?:white|blue|black|red|green))? ([a-z]+(?: [a-z]+)*)(?= (?:land |enchantment )?creature tokens?)',
+            lambda match: match[0][:-len(match[1])]+match[1].title(),instruction)
+        spec=parse_token_creation(instruction+'.')
         return ('create_tokens',spec.amount,spec) if spec else None
     mill=re.fullmatch(r'that player mills (a|one|two|three|four|five|six|seven|eight|nine|ten|[1-9][0-9]*) cards?',clause)
     if mill:
@@ -104,7 +109,7 @@ def _hit_atom(clause):
     if life:return ('gain_controller_life',int(life[1]),None)
     if clause=='you may return up to one target creature card from your graveyard to your hand':
         return ('return_optional_graveyard_creature',1,None)
-    hit=re.fullmatch(r'this Equipment deals ([1-9][0-9]*) damage to any target',clause)
+    hit=re.fullmatch(r'this equipment deals ([1-9][0-9]*) damage to any target',clause)
     if hit:return ('damage_equipment_target',int(hit[1]),None)
     draw=re.fullmatch(r'you draw (a|one|two|three|four|[1-9][0-9]*) cards?',clause)
     if draw:
