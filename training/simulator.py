@@ -293,6 +293,8 @@ class Player:
     commander_id: str = ""
     commander_casts: int = 0
     commander_damage: dict[str, int] = field(default_factory=dict)
+    speed: int | None = None
+    speed_increase_turn: int = -1
 
 
 @dataclass(frozen=True)
@@ -672,6 +674,22 @@ class Simulator(AdvancedRules):
                     amount+=program.amount
         return amount
 
+    def lose_life(self, seat: int, amount: int, reason: str = 'life_loss'):
+        """Apply life loss and the inherent Start Your Engines trigger once per turn."""
+        if amount < 0: raise ValueError('Life loss amount must be nonnegative')
+        if not amount: return
+        self.players[seat].life -= amount
+        controller=self.active
+        if seat != controller:
+            player=self.players[controller]
+            if player.speed is not None and player.speed < 4 and player.speed_increase_turn != self.turn:
+                before=player.speed
+                player.speed=min(4,player.speed+1)
+                player.speed_increase_turn=self.turn
+                self.log('speed_increased',
+                    f'Player {controller+1} increases speed from {before} to {player.speed}.',
+                    actor=controller,reason=reason,opponent=seat,oldSpeed=before,newSpeed=player.speed)
+
     def gain_life(self, seat: int, amount: int):
         """Track life gained, independent of damage/losses and total life change."""
         if amount<0:raise ValueError('Life gain amount must be nonnegative')
@@ -688,7 +706,7 @@ class Simulator(AdvancedRules):
         if amount and any(p.card.event_definition and
                           p.card.event_definition.opponent_life_gain_becomes_loss
                           for p in self.players[1-seat].battlefield):
-            self.players[seat].life-=amount
+            self.lose_life(seat,amount,'life_gain_replacement')
             self.log('life_replacement','Opposing life-gain replacement turns gain into loss.',
                      actor=seat,original=amount,gained=0,lost=amount)
             return
@@ -714,6 +732,13 @@ class Simulator(AdvancedRules):
 
     def event_game(self, phase: str) -> EventGame:
         """Adapt public battlefield state to the shared type-aware event kernel."""
+        for seat, player in enumerate(self.players):
+            if player.speed is None and any(
+                    not item.phased_out and item.card.event_definition and
+                    'start_your_engines' in item.card.event_definition.abilities
+                    for item in player.battlefield):
+                player.speed=1
+                self.log('speed_started',f'Player {seat+1} starts at speed 1.',actor=seat,speed=1)
         game = EventGame(turn_player=self.active, phase=phase,clock=self.effect_clock,
                          life_totals={seat:player.life for seat,player in enumerate(self.players)},
                          once_per_turn_entries=self.once_per_turn_entries,
@@ -4510,7 +4535,7 @@ class Simulator(AdvancedRules):
                            bool(types.intersection(state.definition.subtypes))
                            for state in game.battlefield.values())
                 for target in range(len(self.players)):
-                    if target!=event['controller']:self.players[target].life-=amount
+                    if target!=event['controller']:self.lose_life(target,amount,'triggered_life_loss')
                 self.gain_life(event['controller'],amount)
                 self.log('attack_subtype_drain','Attack trigger drains for other matching creatures.',
                          actor=event['controller'],source=event['source'],amount=amount,
@@ -5110,7 +5135,7 @@ class Simulator(AdvancedRules):
                 amount=event['amount'];legal=False
                 if kind=='player' and isinstance(target,int) and 0<=target<len(self.players):
                     amount=self.replaced_damage(amount,card,event['controller'],target)
-                    self.players[target].life-=amount;legal=True
+                    self.lose_life(target,amount,'targeted_damage');legal=True
                 elif kind=='permanent':
                     state=game.battlefield.get(target)
                     item=next((p for player in self.players for p in player.battlefield if p.card.id==target),None)
@@ -5338,7 +5363,7 @@ class Simulator(AdvancedRules):
                            game.creature(game.battlefield[item.card.id])
                            for item in self.players[controller].battlefield)
                 for opponent in range(len(self.players)):
-                    if opponent!=controller:self.players[opponent].life-=amount
+                    if opponent!=controller:self.lose_life(opponent,amount,'attack_trigger_life_loss')
                 self.log('end_step_life_loss','Tapped creatures determine end-step life loss.',
                          actor=controller,source=event['source'],amount=amount)
                 self.outcome()
@@ -5793,7 +5818,8 @@ class Simulator(AdvancedRules):
                 spec=game.replace_creature_token_spec(event['controller'],event["tokenSpec"])
                 owner=self.players[event["controller"]]
                 pending=[]
-                owner.life -= event.get("controllerLoss",0)
+                self.lose_life(event['controller'],event.get("controllerLoss",0),
+                               'token_creation_life_loss')
                 created=game.token_amount(event['controller'],spec['amount'])
                 event=dict(event,tokenSpec=dict(spec,amount=created))
                 tokens=[]
@@ -5930,7 +5956,7 @@ class Simulator(AdvancedRules):
                 lost=(current+1)//2 if event['lifeMode']=='half' else event['amount']
                 if event['lifeMode'] not in ('half','fixed'):
                     raise ValueError('Unknown equipped combat life-loss block')
-                self.players[target].life-=lost
+                self.lose_life(target,lost,'equipment_combat_life_loss')
                 message=f"{event['name']}: damaged player loses {lost} life."
             elif event.get('operation')=='discard':
                 target=self.players[event['target']]
@@ -5958,7 +5984,7 @@ class Simulator(AdvancedRules):
                     self.pause('Cannot apply board damage without planeswalker loyalty',card);return
                 opponent=1-event['controller'];amount=event['amount']
                 player_amount=self.replaced_damage(amount,card,event['controller'],opponent)
-                self.players[opponent].life-=player_amount
+                self.lose_life(opponent,player_amount,'damage')
                 self.record_player_damage(opponent,event.get('source'),player_amount)
                 prevented={item.card.id for _,item in targets if game.protected(game.battlefield[item.card.id],event.get('sourceColors',card.colors))}
                 dealt_to={}
@@ -5993,7 +6019,7 @@ class Simulator(AdvancedRules):
             elif event.get("operation") == "damage":
                 target = 1-event["controller"]
                 amount=self.replaced_damage(event['amount'],card,event['controller'],target)
-                self.players[target].life -= amount
+                self.lose_life(target,amount,'damage')
                 self.record_player_damage(target,event.get("source"),amount)
                 if amount>0:
                     game=self.event_game('main')
@@ -6004,7 +6030,7 @@ class Simulator(AdvancedRules):
             elif event.get('operation')=='upkeep_damage_player':
                 target=event['targetPlayer']
                 amount=self.replaced_damage(event['amount'],card,event['controller'],target)
-                self.players[target].life-=amount
+                self.lose_life(target,amount,'upkeep_damage')
                 self.record_player_damage(target,event['source'],amount)
                 if amount>0:
                     game=self.event_game('main')
@@ -6023,7 +6049,7 @@ class Simulator(AdvancedRules):
                     raise ValueError('Unsupported life-loss recipient')
                 targets=([source] if recipient=='self' else
                          [seat for seat in range(len(self.players)) if seat!=source])
-                for target in targets:self.players[target].life-=event['amount']
+                for target in targets:self.lose_life(target,event['amount'],'life_loss_effect')
                 self.gain_life(source,event.get("gain",0))
                 message = f"{event['name']} triggers: {recipient} loses {event['amount']} life."
             elif event.get("effect") == "scry":
@@ -6081,7 +6107,7 @@ class Simulator(AdvancedRules):
         active=self.players[self.active];defender=self.players[1-self.active]
         if has(a,'lifelink'):self.gain_life(self.active,to_blocker+to_player)
         if has(b,'lifelink'):self.gain_life(1-self.active,to_attacker)
-        defender.life-=to_player
+        self.lose_life(1-self.active,to_player,'combat_damage')
         if attacker:self.record_player_damage(1-self.active,attacker.card.id,to_player)
         if attacker:self.record_toxic_combat_damage(attacker.card,1-self.active,to_player)
         if attacker and root(attacker.card)==active.commander_id and to_player:
@@ -6380,6 +6406,8 @@ class Simulator(AdvancedRules):
                 options=tuple(tuple(int(i==color) for i in range(6)) for color in range(6) if mask&(1<<color))
             elif item.card.kind=='mana_artifact': options=(item.card.mana_production,)
             elif definition and definition.scaled_mana_tap:
+                if definition.scaled_mana_requires_max_speed and self.players[seat].speed != 4:
+                    continue
                 game=self.event_game('main');state=game.battlefield.get(item.card.id)
                 if state is None or (game.creature(state) and item.fresh and not game.has(state,'haste')):continue
                 if definition.scaled_mana_tap.startswith('fixed:'):
@@ -7075,7 +7103,7 @@ class Simulator(AdvancedRules):
             for item in regenerated:item.marked_damage=0
             self.gain_life(self.active,d["gainA"])
             self.gain_life(1-self.active,d["gainB"])
-            defender.life -= d["damage"]
+            self.lose_life(1-self.active,d["damage"],'group_combat_damage')
             self.record_toxic_combat_damage(a.card,1-self.active,d['damage'])
             if a.card.id == p.commander_id and d["damage"] > 0:
                 defender.commander_damage[a.card.id] = defender.commander_damage.get(a.card.id, 0) + d["damage"]
