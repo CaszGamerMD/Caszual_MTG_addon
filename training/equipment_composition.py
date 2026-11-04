@@ -118,6 +118,10 @@ def _hit_atom(clause):
         return ('counter_controlled_creature',amount,None)
     if clause=='proliferate':
         return ('proliferate',0,None)
+    blink=re.fullmatch(
+        r'exile up to one target creature you own, then search your library for a basic land card\. '
+        r'put both cards onto the battlefield under your control, then shuffle',clause)
+    if blink:return ('blink_owned_creature_basic_search',1,None)
     return None
 
 
@@ -137,6 +141,8 @@ def equipped_combat_steps(text,types,subtypes):
             if len(chunks)>8:return None
             actions=tuple(_hit_atom(chunk) for chunk in chunks)
             if not all(actions):return None
+            if sum(action[0] in ('damage_equipment_target','blink_owned_creature_basic_search')
+                   for action in actions)>1:return None
             steps=actions
         else:remaining.append(line)
     if not steps:return None

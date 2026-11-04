@@ -925,6 +925,7 @@ class Simulator(AdvancedRules):
         bestowed_targets=bestowed_targets or {}
         attached_targets=dict(attached_targets or {},**bestowed_targets)
         for card in cards:
+            if card.is_token:self.card_owners.setdefault(root(card),controller)
             definition=card.event_definition
             if definition is None:
                 definition=EventDefinition(card.name,frozenset(card.printed_types or (('Land',) if card.kind=='land' else ('Creature',))),frozenset(card.land_subtypes),card.legendary,
@@ -1172,6 +1173,24 @@ class Simulator(AdvancedRules):
                             targetEntry=(game.battlefield[target].entered_at if kind=='permanent' else None))
                             if step['operation']=='damage_equipment_target' else step
                             for step in event['steps']])
+                    blink_steps=[step for step in event['steps']
+                                 if step['operation']=='blink_owned_creature_basic_search']
+                    if blink_steps:
+                        if len(blink_steps)!=1:
+                            raise ValueError('Only one owned-creature Equipment blink target is supported')
+                        source_colors=tuple(event.get('sourceColors') or ('colorless',))
+                        source=Card(event['source'],event['name'],'equipment',
+                                    colors=source_colors,printed_types=('Artifact',))
+                        candidates=[pair for pair in self.creature_targets(controller,source)
+                                    if self.card_owners.get(root(pair[1].card),pair[0])==controller]
+                        chosen=self.choose_equipment_owned_creature_target(event,candidates)
+                        if chosen is not None and chosen not in candidates:
+                            raise ValueError('Illegal owned-creature Equipment target choice')
+                        event=dict(event,steps=[dict(step,
+                            target=chosen[1].card.id if chosen else None,
+                            targetEntry=chosen[1].entered_at if chosen else None)
+                            if step['operation']=='blink_owned_creature_basic_search' else step
+                            for step in event['steps']])
                 if event.get('operation')=='combat_target_boost':
                     game=self.event_game('main')
                     candidates=[item for owner,item in self.creature_targets(controller,origin)
@@ -1232,6 +1251,9 @@ class Simulator(AdvancedRules):
                 if event.get('operation')=='equipment_hit_sequence':
                     for step in event['steps']:
                         if step['operation']=='damage_equipment_target' and step['targetKind']=='permanent':
+                            for ward in self.target_triggers(item,step['target']):
+                                self.stack.push(ward['controller'],(ward,origin),ward['name'])
+                        if step['operation']=='blink_owned_creature_basic_search' and step.get('target') is not None:
                             for ward in self.target_triggers(item,step['target']):
                                 self.stack.push(ward['controller'],(ward,origin),ward['name'])
         self.stack.priority=self.active if priority is None else priority
@@ -4089,7 +4111,8 @@ class Simulator(AdvancedRules):
                     events.append(dict(operation='equipment_hit_sequence',
                         effect='; then '.join(step['operation'] for step in steps),
                         source=item.card.id,controller=seat,name=item.card.name,
-                        damagedPlayer=damaged_player,sourceColors=tuple(item.card.colors),steps=steps))
+                        damagedPlayer=damaged_player,
+                        sourceColors=(tuple(item.card.colors) or ('colorless',)),steps=steps))
         return events
 
     def put_counter_on_controlled_creature(self, seat, amount):
@@ -4142,6 +4165,47 @@ class Simulator(AdvancedRules):
         self.outcome()
         return tuple(permanents),tuple(players)
 
+    def resolve_equipment_blink_basic_land(self,event,step):
+        """Resolve the optional owned-creature blink and mandatory basic search."""
+        seat=event['controller']
+        returned=None
+        target_id=step.get('target')
+        if target_id is not None:
+            located=next(((owner,item) for owner,player in enumerate(self.players)
+                          for item in player.battlefield if item.card.id==target_id),None)
+            if located is None:
+                raise RuntimeError('Legal Equipment blink target disappeared during resolution')
+            current_controller,target=located
+            target_root=root(target.card)
+            snapshot=self.event_game('main')
+            self.send_to_destination(self.players[current_controller],target,
+                                     snapshot=snapshot,to_exile=True)
+            card_owner=self.card_owners.get(target_root,current_controller)
+            exile_zone=self.players[card_owner].exile
+            returned=next((candidate for candidate in exile_zone
+                           if root(candidate)==target_root),None)
+            if returned is not None:
+                exile_zone.remove(returned)
+
+        player=self.players[seat]
+        basic=next((candidate for candidate in player.library
+                    if candidate.kind=='land' and candidate.basic_land),None)
+        if basic is not None:
+            player.library.remove(basic)
+            # Both cards are present before the returned creature's ETB
+            # triggers are put on the stack, matching the simultaneous entry.
+            player.battlefield.append(Permanent(basic))
+        pending=self.enter_creature(returned,player) if returned is not None else []
+        self.library_random_sequence+=1
+        random.Random(str(self.seed)+':library:'+str(self.library_random_sequence)).shuffle(player.library)
+        self.log('equipment_blink_search',
+                 'Equipment combat trigger returns an owned creature and searches for an untapped basic land.',
+                 actor=seat,returnedCreature=returned.name if returned else None,
+                 basicLand=basic.name if basic else None,found=basic is not None,
+                 selectedTarget=target_id)
+        if returned is not None:
+            self.resolve_entry_triggers(pending,returned)
+
     def roll_die(self,sides):
         if not 2<=sides<=1000:raise ValueError('Unsupported die size')
         self.die_sequence+=1
@@ -4178,6 +4242,29 @@ class Simulator(AdvancedRules):
     def choose_equipment_graveyard_target(self,seat,candidates):
         """An optional targeted choice is made when the combat ability triggers."""
         return min(candidates,key=lambda item:item.id) if candidates else None
+
+    def choose_equipment_owned_creature_target(self,event,candidates):
+        """Optional target choice for 'a creature you own'; policy prefers power."""
+        return max(candidates,key=lambda pair:(self.effective_card(pair[1]).power,
+                                               pair[1].card.id),default=None)
+
+    def equipment_owned_creature_target_is_legal(self,event,step):
+        target_id=step.get('target')
+        game=self.event_game('main')
+        state=game.battlefield.get(target_id)
+        if state is None or state.entered_at!=step.get('targetEntry') or not game.creature(state):
+            return False
+        located=next(((seat,item) for seat,player in enumerate(self.players)
+                      for item in player.battlefield if item.card.id==target_id),None)
+        if located is None:return False
+        current_controller,target=located
+        if self.card_owners.get(root(target.card),current_controller)!=event['controller']:
+            return False
+        source=Card(event['source'],event['name'],'equipment',
+                    colors=tuple(event.get('sourceColors') or ('colorless',)),
+                    printed_types=('Artifact',))
+        return any(item.card.id==target_id
+                   for _,item in self.creature_targets(event['controller'],source))
 
     def _resolve_entry_effects(self, triggers: list[dict], card: Card):
         for event in triggers:
@@ -4231,13 +4318,19 @@ class Simulator(AdvancedRules):
                 continue
             if event.get('operation')=='equipment_hit_sequence':
                 targeted=next((step for step in event['steps']
-                               if step['operation']=='damage_equipment_target'),None)
+                               if step['operation']=='damage_equipment_target' or
+                               step['operation']=='blink_owned_creature_basic_search' and
+                               step.get('target') is not None),None)
                 if targeted:
-                    kind,target=targeted['targetKind'],targeted['target']
-                    legal=(kind,target) in self.damage_trigger_targets(event)
-                    if kind=='permanent':
-                        state=self.event_game('main').battlefield.get(target)
-                        legal=legal and state is not None and state.entered_at==targeted['targetEntry']
+                    target=targeted.get('target')
+                    if targeted['operation']=='damage_equipment_target':
+                        kind=targeted['targetKind']
+                        legal=(kind,target) in self.damage_trigger_targets(event)
+                        if kind=='permanent':
+                            state=self.event_game('main').battlefield.get(target)
+                            legal=legal and state is not None and state.entered_at==targeted['targetEntry']
+                    else:
+                        legal=self.equipment_owned_creature_target_is_legal(event,targeted)
                     if not legal:
                         self.log('equipment_hit_fizzle','All targets became illegal; entire triggered ability fizzles.',
                                  actor=event['controller'],source=event['source'],target=target)
@@ -4261,6 +4354,10 @@ class Simulator(AdvancedRules):
                         continue
                     elif step['operation']=='proliferate':
                         self.proliferate_supported_counters(event['controller'])
+                        if self.finished:return
+                        continue
+                    elif step['operation']=='blink_owned_creature_basic_search':
+                        self.resolve_equipment_blink_basic_land(event,step)
                         if self.finished:return
                         continue
                     else:
