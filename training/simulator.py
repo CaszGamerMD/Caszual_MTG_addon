@@ -1466,6 +1466,111 @@ class Simulator(AdvancedRules):
                  source=source_id,targetCard=target_id,targetZoneOwner=owner,stackId=frame.id)
         if not self.manual_priority and not self._resolving_stack:self.drain_priority()
 
+    def modal_activation_choices(self,seat):
+        """Generate legal target/mode combinations for a choose-one tap ability."""
+        from itertools import combinations
+        result=[]
+        game=self.event_game('main')
+        for source in self.players[seat].battlefield:
+            definition=source.card.event_definition
+            activation=definition.modal_activation if definition else None
+            if activation is None or source.tapped:
+                continue
+            state=game.battlefield.get(source.card.id)
+            if state is None or (game.creature(state) and source.fresh and not game.has(state,'haste')):
+                continue
+            payment=self.payment(replace(source.card,mana_cost=activation.cost),
+                                 seat=seat,spell_cost=False,excluded_sources=(source.card.id,))
+            if not payment['paid']:
+                continue
+            for index,mode in enumerate(activation.modes):
+                if mode.operation in ('counter_creature','damage_flying_creature'):
+                    for owner in self.players:
+                        for target in owner.battlefield:
+                            target_state=game.battlefield.get(target.card.id)
+                            if target_state is None or not game.creature(target_state):
+                                continue
+                            if mode.operation=='damage_flying_creature' and not game.has(target_state,'flying'):
+                                continue
+                            result.append(Candidate(
+                                source.card.id+':mode:'+str(index)+':'+target.card.id,
+                                'activate_modal_mode',source.card.id,
+                                features=features(power=mode.amount if mode.operation=='damage_flying_creature' else 1,
+                                                  cost=len(payment['sources'])),
+                                label='Activate '+source.card.name+' mode '+str(index+1),
+                                target_permanent=target.card.id,activation_index=index))
+                elif mode.operation=='gain_life':
+                    result.append(Candidate(source.card.id+':mode:'+str(index),
+                        'activate_modal_mode',source.card.id,
+                        features=features(life=mode.amount,cost=len(payment['sources'])),
+                        label='Activate '+source.card.name+' mode '+str(index+1),
+                        activation_index=index))
+                elif mode.operation=='bottom_graveyard_cards':
+                    cards=[card for card in self.players[seat].graveyard if not card.is_token]
+                    maximum=min(mode.amount,len(cards))
+                    result.append(Candidate(source.card.id+':mode:'+str(index)+':none',
+                        'activate_modal_mode',source.card.id,
+                        features=features(cost=len(payment['sources'])),
+                        label='Activate '+source.card.name+' mode '+str(index+1),
+                        activation_index=index))
+                    for count in range(1,maximum+1):
+                        for selected in combinations(cards,count):
+                            ids=tuple(card.id for card in selected)
+                            result.append(Candidate(source.card.id+':mode:'+str(index)+':'+':'.join(ids),
+                                'activate_modal_mode',source.card.id,
+                                features=features(draw=count,cost=len(payment['sources'])),
+                                label='Activate '+source.card.name+' mode '+str(index+1),
+                                tap_ids=ids,activation_index=index))
+        return result
+
+    def activate_modal_mode(self,seat,source_id,index,target_id='',graveyard_ids=()):
+        if self.stack.priority!=seat:
+            raise ValueError('Player lacks priority')
+        source=next((item for item in self.players[seat].battlefield
+                     if item.card.id==source_id),None)
+        definition=source.card.event_definition if source else None
+        activation=definition.modal_activation if definition else None
+        if activation is None or not 0<=index<len(activation.modes) or source.tapped:
+            raise ValueError('Illegal modal activation')
+        mode=activation.modes[index]
+        game=self.event_game('main')
+        state=game.battlefield.get(source_id)
+        if state is None or (game.creature(state) and source.fresh and not game.has(state,'haste')):
+            raise ValueError('Tap ability source is not ready')
+        if mode.operation in ('counter_creature','damage_flying_creature'):
+            target=game.battlefield.get(target_id)
+            if target is None or not game.creature(target):
+                raise ValueError('Modal ability requires a legal creature target')
+            if mode.operation=='damage_flying_creature' and not game.has(target,'flying'):
+                raise ValueError('Damage mode requires a creature with flying')
+        elif mode.operation=='bottom_graveyard_cards':
+            legal={card.id for card in self.players[seat].graveyard if not card.is_token}
+            if (len(graveyard_ids)>mode.amount or len(set(graveyard_ids))!=len(graveyard_ids)
+                    or any(identifier not in legal for identifier in graveyard_ids)):
+                raise ValueError('Illegal graveyard target selection')
+        elif target_id or graveyard_ids:
+            raise ValueError('This modal mode has no targets')
+        payment=self.payment(replace(source.card,mana_cost=activation.cost),
+                             seat=seat,spell_cost=False,excluded_sources=(source_id,))
+        if not payment['paid']:
+            raise ValueError('Cannot pay modal activation cost')
+        for permanent in self.players[seat].battlefield:
+            if permanent.card.id in payment['sources']:
+                permanent.tapped=True
+        source.tapped=True
+        self.players[seat].mana_pool=list(payment['pool'])
+        event=dict(operation='modal_activated_mode',mode=mode.operation,amount=mode.amount,
+                   source=source_id,name=source.card.name,controller=seat,
+                   target=target_id,graveyardIds=tuple(graveyard_ids),
+                   sourceColors=tuple(source.card.colors))
+        frame=self.stack.push(seat,(event,source.card),source.card.name+' activated ability')
+        self.stack.priority=seat
+        self.log('activate_modal_mode','A choose-one tap ability is activated.',actor=seat,
+                 source=source_id,mode=mode.operation,target=target_id,
+                 graveyardTargets=list(graveyard_ids),stackId=frame.id)
+        if not self.manual_priority and not self._resolving_stack:
+            self.drain_priority()
+
     def token_ability_choices(self,seat):
         result=[]
         visible=self.event_game('main')
@@ -3384,6 +3489,7 @@ class Simulator(AdvancedRules):
         actions.extend(self.aura_graveyard_return_choices(seat))
         actions.extend(self.enchantment_copy_choices(seat))
         actions.extend(self.token_ability_choices(seat))
+        actions.extend(self.modal_activation_choices(seat))
         actions.extend(self.conditional_draw_choices(seat))
         actions.extend(self.counted_pump_choices(seat))
         actions.extend(self.equipment_attach_choices(seat))
@@ -3462,6 +3568,10 @@ class Simulator(AdvancedRules):
             return 'activate'
         if choice.kind=='activate_tokens':
             self.activate_tokens(seat,choice.card_id,choice.activation_index)
+            return 'activate'
+        if choice.kind=='activate_modal_mode':
+            self.activate_modal_mode(seat,choice.card_id,choice.activation_index,
+                                     choice.target_permanent,choice.tap_ids)
             return 'activate'
         if choice.kind=='activate_land_sacrifice_tokens':
             self.activate_land_sacrifice_tokens(seat,choice.card_id,choice.target_permanent)
@@ -4570,6 +4680,44 @@ class Simulator(AdvancedRules):
                 else:
                     self.log('junk_exile_empty','Junk ability finds no card in the library.',
                         actor=event['controller'],token=event['source'])
+                continue
+            if event.get('operation')=='modal_activated_mode':
+                mode=event['mode'];controller=event['controller']
+                if mode=='gain_life':
+                    self.gain_life(controller,event['amount'])
+                    self.log('modal_gain_life','Modal activation gains life.',actor=controller,
+                             source=event['source'],amount=event['amount'])
+                elif mode=='counter_creature':
+                    game=self.event_game('main');target=game.battlefield.get(event['target'])
+                    if target is not None and game.creature(target):
+                        added=game.counter_amount(target.id,event['amount'])
+                        target.counters+=added;self.sync_events(game)
+                        self.log('modal_counter','Modal activation adds +1/+1 counters.',
+                                 actor=controller,source=event['source'],target=target.id,amount=added)
+                    else:
+                        self.log('modal_fizzle','Modal activation target is no longer a creature.',
+                                 actor=controller,source=event['source'])
+                elif mode=='damage_flying_creature':
+                    game=self.event_game('main');target=game.battlefield.get(event['target'])
+                    if target is not None and game.creature(target) and game.has(target,'flying'):
+                        self._resolve_entry_effects([dict(operation='damage_any_target',
+                            source=event['source'],name=event['name'],controller=controller,
+                            amount=event['amount'],targetKind='permanent',target=target.id,
+                            sourceColors=event['sourceColors'])],card)
+                    else:
+                        self.log('modal_fizzle','Modal damage target is no longer a flying creature.',
+                                 actor=controller,source=event['source'])
+                elif mode=='bottom_graveyard_cards':
+                    player=self.players[controller]
+                    selected=[next((item for item in player.graveyard
+                                    if item.id==identifier),None)
+                              for identifier in event['graveyardIds']]
+                    moved=[item for item in selected if item is not None]
+                    for item in moved:player.graveyard.remove(item)
+                    # Index zero is the library bottom; order is immaterial.
+                    for item in reversed(moved):player.library.insert(0,item)
+                    self.log('modal_bottom_graveyard','Selected graveyard cards are put on the bottom of the library.',
+                             actor=controller,source=event['source'],cards=[item.id for item in moved])
                 continue
             if event.get('operation')=='attack_subtype_drain':
                 # This is a triggered ability, not combat damage. X is set
@@ -6666,6 +6814,7 @@ class Simulator(AdvancedRules):
             actions.extend(self.class_level_choices(seat))
             actions.extend(self.equip_choices(seat))
             actions.extend(self.token_ability_choices(seat))
+        actions.extend(self.modal_activation_choices(seat))
             actions.extend(self.conditional_draw_choices(seat))
             actions.extend(self.counted_pump_choices(seat))
             actions.extend(self.equipment_attach_choices(seat))
@@ -6883,7 +7032,7 @@ class Simulator(AdvancedRules):
         self.decisions.append({"seat": seat, "turn": self.turn, "phase": self.phase,
                                "action": choice.kind, "xValue": choice.x_value, "features": list(choice.features)})
         if choice.kind in ("cast","cast_commander","cast_flashback","bestow","equip","station","activate_loyalty","activate_conditional_draw",
-                           "history_tokens","activate_tokens","activate_land_sacrifice_tokens","activate_aura_graveyard_return","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_scaled_life","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_tribal_pump","activate_tap_damage","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
+                           "history_tokens","activate_tokens","activate_modal_mode","activate_land_sacrifice_tokens","activate_aura_graveyard_return","activate_self_pump","activate_team_keyword_pump","activate_strip","activate_tribal_tokens","activate_scaled_mana","activate_scaled_life","activate_sacrifice_mana","activate_sacrifice_boost","activate_sacrifice_tokens","activate_tribal_pump","activate_tap_damage","activate_land_counters","activate_land_animation","activate_regenerate","activate_sacrifice_team","activate_sacrifice_protection","activate_discard_tokens"):
             self.turn_development[seat]=True
         return choice
 
@@ -7002,6 +7151,9 @@ class Simulator(AdvancedRules):
                 self.activate_equipment_attach(self.active,choice.card_id,choice.tap_ids[0],choice.target_permanent)
             elif choice.kind=='activate_tokens':
                 self.activate_tokens(self.active,choice.card_id,choice.activation_index)
+            elif choice.kind=='activate_modal_mode':
+                self.activate_modal_mode(self.active,choice.card_id,choice.activation_index,
+                                         choice.target_permanent,choice.tap_ids)
             elif choice.kind=='activate_junk':
                 self.activate_junk(self.active,choice.card_id)
             elif choice.kind=='activate_land_sacrifice_tokens':
@@ -7426,6 +7578,7 @@ def import_diagnostic_card(rules: RulesBridge, definition: dict, seat: int,
                       for ability in event_definition.abilities) or any(k.startswith('block_power_below_') for k in event_definition.abilities) or "Planeswalker" in event_definition.types or event_definition.role_events or event_definition.modal_role_choices or event_definition.animate_land_ability or event_definition.enchanted_draw or event_definition.life_multiplier!=1 or event_definition.life_addition or event_definition.opponent_life_gain_becomes_loss or event_definition.prevent_combat_damage_to_attackers or event_definition.cost_reductions or event_definition.counter_replacements or event_definition.entry_counter_grants or event_definition.attack_watchers or event_definition.token_replacements or event_definition.token_action_triggers or event_definition.token_leave_triggers or event_definition.opponent_creatures_enter_tapped or event_definition.linked_exile or event_definition.tribal_tap_tokens or event_definition.scaled_mana_tap or event_definition.sacrifice_ability or event_definition.mentor or event_definition.attack_nontoken_tokens or event_definition.modal_attack_tokens or event_definition.prevents_opponent_sacrifice or event_definition.sacrifice_team_boost or event_definition.sacrifice_protection or event_definition.attack_group_draw or event_definition.discard_token_ability or event_definition.regenerate_subtype or event_definition.entry_keyword_choices or event_definition.dynamic_pt_color or event_definition.combat_limits or event_definition.upkeep_token_rule or event_definition.land_type_effect or event_definition.additional_land_plays or event_definition.end_step_life_distribution or event_definition.equipment_basic_search or event_definition.station or event_definition.history_activation or event_definition.crew is not None or event_definition.saddle is not None or event_definition.graveyard_exile_activation or event_definition.class_program or event_definition.self_pump or event_definition.team_keyword_pump or event_definition.constellation_counter or event_definition.enchantment_combat_copy or event_definition.saga_chapter_scale or event_definition.self_artifact_enchantment_scale) or "Vehicle" in definition.get("subTypes", []))
     allowed = allowed or bool(event_definition.conditional_draw_activation or
                               event_definition.counted_pump_activation or
+                              event_definition.modal_activation or
                               event_definition.attach_equipment_activation or
                               event_definition.entry_group_modifier or
                               event_definition.entry_top_library_search or

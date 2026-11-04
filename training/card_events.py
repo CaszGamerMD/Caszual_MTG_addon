@@ -218,6 +218,7 @@ class Definition:
     scaled_mana_life_gain: int = 0  # Life gained as part of a fixed colored tap-mana activation.
     scaled_mana_requires_max_speed: bool = False  # Max speed — prefix gates the complete mana ability.
     junk_token_activation: bool = False  # Junk: tap and sacrifice to exile/play the top card this turn.
+    modal_activation: object | None = None  # Costed tap ability with target/mode choices.
     graveyard_cast_alternate: tuple = ()  # (alternate mana cost, other graveyard cards to exile).
 
 
@@ -858,6 +859,17 @@ def parse_card(card: dict) -> Definition:
         keywords=parts.pop('keywords',frozenset())
         return Definition(**base,abilities=keywords,
                           scaled_mana_tap='power:'+power_mana.symbol,**parts)
+    from targeted_mode_activations import parse as parse_targeted_mode_activation
+    modal_activation=parse_targeted_mode_activation(text,types,name)
+    if modal_activation:
+        program=(compile_abilities(modal_activation.remaining_text,name)
+                 if modal_activation.remaining_text else None)
+        if modal_activation.remaining_text and program is None:
+            return Definition(**base,abilities=frozenset(),supported=False,
+                              reason='Unparsed rules remaining beside modal activation')
+        parts=dict(vars(program)) if program else {}
+        keywords=parts.pop('keywords',frozenset())
+        return Definition(**base,abilities=keywords,modal_activation=modal_activation,**parts)
     program = compile_abilities(text,name)
     if program and any(trigger.effect.operation=='pay_return_source' and
                        trigger.effect.return_source_type not in types for trigger in program.triggers):
