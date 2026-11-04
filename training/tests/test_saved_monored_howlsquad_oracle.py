@@ -63,6 +63,14 @@ class SavedHowlsquadOracleChecks(unittest.TestCase):
         self.assertEqual(changed.event_definition.triggers[0].effect.token,
                          token)
 
+    def test_start_your_engines_keyword_is_not_dependent_on_max_speed_mana(self):
+        raw = dict(self.raw, name='Unfamiliar Starting Line', types=['Enchantment'],
+                   subTypes=[], power='', toughness='',
+                   oracleText='Start your engines!')
+        card = self.parse(raw, 'standalone-start-engines')
+        self.assertEqual(card.kind, 'enchantment')
+        self.assertIn('start_your_engines', card.event_definition.abilities)
+
     def test_unknown_extra_text_still_rejects_the_complete_card(self):
         raw = dict(self.raw, oracleText=self.raw['oracleText'] + '\nGoblins can fly to the moon.')
         self.assertEqual(self.parse(raw, 'unknown-howlsquad-text').kind, 'unsupported')
