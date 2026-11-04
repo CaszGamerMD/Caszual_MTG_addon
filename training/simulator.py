@@ -4092,6 +4092,56 @@ class Simulator(AdvancedRules):
                         damagedPlayer=damaged_player,sourceColors=tuple(item.card.colors),steps=steps))
         return events
 
+    def put_counter_on_controlled_creature(self, seat, amount):
+        """Resolve a non-targeted creature choice for an Equipment hit effect."""
+        if seat not in range(len(self.players)) or amount<=0:
+            raise ValueError('Invalid Equipment counter instruction')
+        game=self.event_game('main')
+        candidates=[permanent for permanent in game.battlefield.values()
+                    if permanent.controller==seat and game.creature(permanent)]
+        chosen=max(candidates,key=lambda permanent:(game.stats(permanent)[0],permanent.id),
+                   default=None)
+        if chosen is None:
+            self.log('equipment_hit_counter','No creature was available for the non-targeted counter instruction.',
+                     actor=seat,amount=0)
+            return 0
+        added=game.counter_amount(chosen.id,amount)
+        chosen.counters+=added
+        self.sync_events(game)
+        self.log('equipment_hit_counter','A controlled creature was chosen as the trigger resolved.',
+                 actor=seat,targetPermanent=chosen.id,amount=added)
+        return added
+
+    def proliferate_supported_counters(self, seat):
+        """Diagnostic choice: proliferate all modeled +1/+1 and poison counters.
+
+        Proliferate permits any number of permanents and/or players. The policy
+        chooses every permanent with a modeled +1/+1 counter and every player
+        with poison counters; other counter families may legally be left
+        unchosen by this diagnostic policy.
+        """
+        if seat not in range(len(self.players)):
+            raise ValueError('Invalid proliferate controller')
+        game=self.event_game('main')
+        permanents=[]
+        for permanent in game.battlefield.values():
+            if permanent.counters<=0:
+                continue
+            added=game.counter_amount(permanent.id,1)
+            if added:
+                permanent.counters+=added
+                permanents.append(permanent.id)
+        players=[]
+        for player_seat,player in enumerate(self.players):
+            if player.poison_counters>0:
+                player.poison_counters+=1
+                players.append(player_seat)
+        self.sync_events(game)
+        self.log('proliferate','The diagnostic choice proliferates modeled +1/+1 and poison counters.',
+                 actor=seat,permanents=permanents,players=players)
+        self.outcome()
+        return tuple(permanents),tuple(players)
+
     def roll_die(self,sides):
         if not 2<=sides<=1000:raise ValueError('Unsupported die size')
         self.die_sequence+=1
@@ -4205,6 +4255,14 @@ class Simulator(AdvancedRules):
                     elif step['operation']=='damage_equipment_target':
                         atom=dict(event,**step)
                         atom['operation']='damage_any_target'
+                    elif step['operation']=='counter_controlled_creature':
+                        self.put_counter_on_controlled_creature(event['controller'],step['amount'])
+                        if self.finished:return
+                        continue
+                    elif step['operation']=='proliferate':
+                        self.proliferate_supported_counters(event['controller'])
+                        if self.finished:return
+                        continue
                     else:
                         atom=dict(event,**step)
                     atom.pop('steps',None)

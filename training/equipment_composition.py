@@ -81,7 +81,7 @@ def equipped_combat_life(text, types, subtypes):
     return (attachment,life) if attachment else None
 
 
-_HIT_CONJUNCTION=re.compile(r' and (?=that player (?:mills |discards )|you (?:untap all lands |may return up to one target creature card |draw ))')
+_HIT_CONJUNCTION=re.compile(r', then (?=proliferate$)| and (?=that player (?:mills |discards )|you (?:untap all lands |may return up to one target creature card |draw ))')
 
 
 def _hit_atom(clause):
@@ -110,6 +110,14 @@ def _hit_atom(clause):
     if draw:
         words={'a':1,'one':1,'two':2,'three':3,'four':4}
         return ('draw_cards',words[draw[1]] if draw[1] in words else int(draw[1]),None)
+    counter=re.fullmatch(
+        r'put (a|one|two|three|four|[1-9][0-9]*) \\+1/\\+1 counters? on a creature you control',clause)
+    if counter:
+        words={'a':1,'one':1,'two':2,'three':3,'four':4}
+        amount=words[counter[1]] if counter[1] in words else int(counter[1])
+        return ('counter_controlled_creature',amount,None)
+    if clause=='proliferate':
+        return ('proliferate',0,None)
     return None
 
 
