@@ -74,6 +74,7 @@ jobs:
           python -m unittest discover -s training/tests -p test_mill_language.py -v
           python -m unittest discover -s training/tests -p test_surveil_language.py -v
           python -m unittest discover -s training/tests -p test_enchantment_abilities.py -v
+          python -m unittest discover -s training/tests -p test_cast_triggers.py -v
           python -m unittest discover -s training/tests -p test_modal_faces.py -v
           python -m unittest discover -s training/tests -p test_halvar_rules.py -v
           python -m unittest discover -s training/tests -p test_constellation_copy.py -v
