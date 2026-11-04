@@ -49,5 +49,34 @@ class AttackingKeywordChecks(unittest.TestCase):
             'Attacking creatures you control become invincible.'))
 
 
+    def test_other_controlled_subtype_keyword_grant_is_scoped_and_continuous(self):
+        program=compile_abilities('Other Goblins you control have haste.')
+        self.assertIsNotNone(program)
+        effect=program.static_effects[0]
+        self.assertTrue(effect.subject.other)
+        self.assertEqual(effect.subject.subtype,'Goblin')
+        self.assertEqual(effect.grant,'haste')
+        source=Definition('Unfamiliar banner',frozenset({'Enchantment'}),
+            frozenset(),False,0,0,frozenset(),static_effects=program.static_effects)
+        goblin=Definition('Unfamiliar Goblin',frozenset({'Creature'}),
+            frozenset({'Goblin'}),False,2,2,frozenset())
+        elf=Definition('Unfamiliar Elf',frozenset({'Creature'}),
+            frozenset({'Elf'}),False,2,2,frozenset())
+        game=Game()
+        game.battlefield['banner']=Permanent('banner',source,0)
+        ally=Permanent('ally',goblin,0,fresh=True)
+        rival=Permanent('rival',goblin,1,fresh=True)
+        wrong=Permanent('wrong',elf,0,fresh=True)
+        for permanent in (ally,rival,wrong):
+            game.battlefield[permanent.id]=permanent
+        self.assertTrue(game.has(ally,'haste'))
+        self.assertFalse(game.has(rival,'haste'))
+        self.assertFalse(game.has(wrong,'haste'))
+        game.battlefield.pop('banner')
+        self.assertFalse(game.has(ally,'haste'))
+        self.assertIsNone(compile_abilities(
+            'Other Goblins you control have invincible.'))
+
+
 if __name__=='__main__':
     unittest.main()
