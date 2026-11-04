@@ -180,3 +180,13 @@ class CastTriggerChecks(unittest.TestCase):
         self.assertFalse(cast_matches(trigger,source,ordinary,0))
         self.assertFalse(cast_matches(trigger,source,aura,1))
         self.assertIsNone(compile_abilities(oracle+'\\nWhenever you blink, draw a card.'))
+        saved=dict(self.lookup['Mister Gutsy'])
+        first_line=s.import_diagnostic_card(self.rules,
+            dict(saved,oracleText=oracle),0,'mister-gutsy-cast-only',{'Red'})
+        self.assertEqual(first_line.kind,'creature')
+        # The real card remains fail-closed until its separate Junk-token death
+        # ability is implemented; recognizing one clause must not skip the other.
+        complete=s.import_diagnostic_card(self.rules,saved,0,
+            'mister-gutsy-complete',{'Red'})
+        self.assertEqual(complete.kind,'unsupported')
+
