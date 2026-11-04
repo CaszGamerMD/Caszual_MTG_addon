@@ -155,6 +155,14 @@ def static_effect(text):
     if global_subtype:
         return StaticEffect(Selector(creature=True,subtype=global_subtype[1]),
                             int(global_subtype[2]),int(global_subtype[3]))
+    other_subtype_keyword=re.fullmatch(
+        r'Other ([A-Z][a-z]+) creatures you control have ([a-z ]+)\\.',text)
+    if other_subtype_keyword:
+        ability=other_subtype_keyword[2]
+        if ability not in KEYWORDS-{'flash'}:return None
+        return StaticEffect(Selector(relation='controller',other=True,
+                                     creature=True,subtype=other_subtype_keyword[1]),
+                            0,0,grant=ability)
     # A subtype-qualified anthem with "you control" is not global and
     # includes its own source when that source has the subtype.
     controlled_subtype=re.fullmatch(
