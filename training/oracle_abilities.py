@@ -764,6 +764,12 @@ def compile_abilities(text, name=''):
                 return None
             triggers.append(Trigger('gain_life',Selector(self_only=True),action))
             continue
+        death_counters=re.fullmatch(
+            r'When this creature dies, create X Junk tokens?, where X is the number of \+1/\+1 counters on it\.',line)
+        if death_counters:
+            triggers.append(Trigger('dies',Selector(self_only=True,creature=True),
+                                    Effect('death_counter_junk_tokens',0)))
+            continue
         death_power=re.fullmatch(
             r'When this creature dies, create X ((?:tapped )?[0-9]+/[1-9][0-9]* (?:white|blue|black|red|green|colorless)(?: and (?:white|blue|black|red|green))? [A-Z][a-z]+(?: [A-Z][a-z]+)* creature tokens?(?: with [a-z, ]+)?), where X is its power\.',line)
         if death_power:
@@ -975,6 +981,7 @@ def event_data(trigger, source, subject):
             'add_counters':f'put {e.amount} +1/+1 counters on each {e.counter_subtype or "creature"} you control',
             'create_treasures':f'create {e.amount} Treasure tokens',
             'death_power_tokens':'create creature tokens equal to last-known source power',
+            'death_counter_junk_tokens':'create Junk tokens equal to last-known +1/+1 counters',
             'create_tokens':f'create {e.amount} creature tokens',
             'opponent_optional_basic_search':'each opponent may find a tapped basic land and shuffle',
             'optional_subtype_search_hand':'controller may tutor a subtype card to hand and shuffle',
