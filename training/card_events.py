@@ -217,6 +217,7 @@ class Definition:
     self_greatest_power_cost_reduction: bool = False  # This spell discounts itself by greatest controlled creature power.
     scaled_mana_life_gain: int = 0  # Life gained as part of a fixed colored tap-mana activation.
     scaled_mana_requires_max_speed: bool = False  # Max speed — prefix gates the complete mana ability.
+    junk_token_activation: bool = False  # Junk: tap and sacrifice to exile/play the top card this turn.
     graveyard_cast_alternate: tuple = ()  # (alternate mana cost, other graveyard cards to exile).
 
 
@@ -1548,6 +1549,8 @@ class Game:
                         event=event_data(trigger,watcher,creature)
                         if trigger.effect.operation=='death_power_tokens':
                             event['lastPower']=max(0,self.stats(creature)[0])
+                        if trigger.effect.operation=='death_counter_junk_tokens':
+                            event['lastCounters']=max(0,creature.counters)
                         if trigger.effect.operation=='pay_return_source':
                             event['sourceEntry']=watcher.entered_at
                         if trigger.effect.operation=='damage_any_target':
