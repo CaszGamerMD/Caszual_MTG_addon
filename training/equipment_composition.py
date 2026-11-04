@@ -111,7 +111,7 @@ def _hit_atom(clause):
         words={'a':1,'one':1,'two':2,'three':3,'four':4}
         return ('draw_cards',words[draw[1]] if draw[1] in words else int(draw[1]),None)
     counter=re.fullmatch(
-        r'put (a|one|two|three|four|[1-9][0-9]*) \\+1/\\+1 counters? on a creature you control',clause)
+        r'put (a|one|two|three|four|[1-9][0-9]*) \+1/\+1 counters? on a creature you control',clause)
     if counter:
         words={'a':1,'one':1,'two':2,'three':3,'four':4}
         amount=words[counter[1]] if counter[1] in words else int(counter[1])

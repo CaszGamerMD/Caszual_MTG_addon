@@ -34,7 +34,7 @@ class EquipmentProliferateChecks(unittest.TestCase):
         self.assertEqual(renamed.event_definition.equipped_player_hit_steps,
                          card.event_definition.equipped_player_hit_steps)
 
-        raw['oracleText']+='\\nDraw an extra card.'
+        raw['oracleText']+='\nDraw an extra card.'
         self.assertEqual(s.import_diagnostic_card(self.rules,raw,0,'unsupported-truth-justice',{'Red'}).kind,
                          'unsupported')
 
