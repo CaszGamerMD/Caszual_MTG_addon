@@ -216,6 +216,7 @@ class Definition:
     self_artifact_enchantment_scale: tuple = ()  # Self static P/T count on transformed face.
     self_greatest_power_cost_reduction: bool = False  # This spell discounts itself by greatest controlled creature power.
     scaled_mana_life_gain: int = 0  # Life gained as part of a fixed colored tap-mana activation.
+    scaled_mana_requires_max_speed: bool = False  # Max speed — prefix gates the complete mana ability.
     graveyard_cast_alternate: tuple = ()  # (alternate mana cost, other graveyard cards to exile).
 
 
@@ -822,10 +823,14 @@ def parse_card(card: dict) -> Definition:
     if counted_mana:
         mana_rule,remaining=counted_mana
         program=compile_abilities(remaining,name) if remaining else None
-        if not remaining or _only_static_keyword_program(program):
-            return Definition(**base,abilities=program.keywords if program else frozenset(),
-                static_effects=program.static_effects if program else (),
-                scaled_mana_tap=mana_rule)
+        if (not remaining or program is not None) and not (
+                program and 'changeling' in program.keywords and 'Creature' not in types):
+            parts=dict(vars(program)) if program else {}
+            keywords=parts.pop('keywords',frozenset())
+            return Definition(**base,abilities=keywords,
+                scaled_mana_tap=mana_rule.removeprefix('max_speed:'),
+                scaled_mana_requires_max_speed=mana_rule.startswith('max_speed:'),
+                **parts)
     from creature_life import parse_counted as parse_counted_life
     counted_life=parse_counted_life(text,types)
     if counted_life:
