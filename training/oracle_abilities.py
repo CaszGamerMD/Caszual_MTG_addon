@@ -779,6 +779,14 @@ def compile_abilities(text, name=''):
             triggers.append(Trigger('cast',Selector(relation='controller',spell_type='subtype',
                                                      subtype=subtype_casting[1]),action))
             continue
+        casting_pair=re.fullmatch(
+            r'Whenever you cast an? (Aura or Equipment) spell, (.+)',line)
+        if casting_pair:
+            action=effect(casting_pair[2])
+            if action is None:return None
+            triggers.append(Trigger('cast',Selector(relation='controller',
+                spell_type='aura_or_equipment'),action))
+            continue
         casting=re.fullmatch(r'Whenever you cast (?:a|an) (?:(enchantment|artifact|creature|instant|sorcery|planeswalker|noncreature) )?spell, (.+)',line)
         if casting:
             action=effect(casting[2])
@@ -926,6 +934,8 @@ def cast_matches(trigger, source, spell, controller):
         definition=getattr(spell,'event_definition',None)
         return bool(definition and has_subtype(definition,trigger.subject.subtype))
     if kind=='noncreature':return 'Creature' not in types
+    if kind=='aura_or_equipment':
+        return bool(types.intersection({'Aura','Equipment'}))
     return kind.title() in types
 
 def event_data(trigger, source, subject):
