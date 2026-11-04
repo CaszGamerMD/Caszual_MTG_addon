@@ -1,6 +1,7 @@
 """Generic cast events, type filters and ordered Oracle effect regression."""
 import sys
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import simulator as s
@@ -162,3 +163,20 @@ class CastTriggerChecks(unittest.TestCase):
             self.assertEqual(trigger.effect.operation,'ordered_effects')
             self.assertEqual([part.operation for part in trigger.effect.steps],['gain_life','draw_cards'])
         self.assertIsNone(compile_abilities('Whenever you cast an enchantment spell, draw a card and do something unknown.'))
+
+    def test_aura_or_equipment_cast_trigger_is_a_type_union(self):
+        oracle=('Whenever you cast an Aura or Equipment spell, '
+                'put a +1/+1 counter on this creature.')
+        program=compile_abilities(oracle,name='Mister Gutsy')
+        self.assertIsNotNone(program)
+        trigger=program.triggers[0]
+        self.assertEqual(trigger.event,'cast')
+        source=SimpleNamespace(controller=0)
+        aura=self.spell('aura',kind='enchantment',printed=('Enchantment','Aura'))
+        equipment=self.spell('equipment',kind='artifact',printed=('Artifact','Equipment'))
+        ordinary=s.Card('ordinary','Ordinary spell','sorcery',printed_types=('Sorcery',))
+        self.assertTrue(cast_matches(trigger,source,aura,0))
+        self.assertTrue(cast_matches(trigger,source,equipment,0))
+        self.assertFalse(cast_matches(trigger,source,ordinary,0))
+        self.assertFalse(cast_matches(trigger,source,aura,1))
+        self.assertIsNone(compile_abilities(oracle+'\\nWhenever you blink, draw a card.'))
