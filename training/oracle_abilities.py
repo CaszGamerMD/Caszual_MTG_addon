@@ -1,5 +1,5 @@
 """Strict, composable Oracle grammar. No card-name dispatch or guessed remainder."""
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, replace
 import re
 from creature_types import has_subtype, has_any_subtype
 
@@ -571,6 +571,9 @@ def compile_abilities(text, name=''):
         if line=='Changeling':
             keywords.add('changeling')
             continue
+        if line=='Start your engines!':
+            keywords.add('start_your_engines')
+            continue
         if line in ('As this enchantment enters, choose a creature type.',
                     'As this artifact enters, choose a creature type.',
                     'As this creature enters, choose a creature type.'):
@@ -820,6 +823,17 @@ def compile_abilities(text, name=''):
             action=effect(endstep_any[1])
             if action is None:return None
             triggers.append(Trigger('end_step',Selector(self_only=True),action))
+            continue
+        combat_attack_tokens=re.fullmatch(
+            r'At the beginning of combat on your turn, (create .+ creature token)\. '
+            r'That token attacks this combat if able\.',line)
+        if combat_attack_tokens:
+            spec=parse_token_creation(combat_attack_tokens[1][0].upper()+
+                                      combat_attack_tokens[1][1:]+'.')
+            if not spec or spec.amount!=1:return None
+            spec=replace(spec,must_attack_this_combat=True)
+            triggers.append(Trigger('begin_combat',Selector(self_only=True),
+                                    Effect('create_tokens',spec.amount,token=spec)))
             continue
         combat_tokens=re.fullmatch(r'At the beginning of combat on your turn, (create .+)',line)
         if combat_tokens:
