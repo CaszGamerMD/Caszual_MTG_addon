@@ -41,12 +41,13 @@ def parse_counted(text, types):
     if not {'Creature','Land'}.intersection(types):
         return None
     lines=[line.strip() for line in text.splitlines() if line.strip()]
-    pattern=r'\{T\}: Add \{([WUBRG])\} for each ([A-Z][a-z]+|creature) (you control|on the battlefield)\.'
+    pattern=r'(Max speed — )?\{T\}: Add \{([WUBRG])\} for each ([A-Z][a-z]+|creature) (you control|on the battlefield)\.'
     found=[(index,re.fullmatch(pattern,line)) for index,line in enumerate(lines)]
     found=[(index,match) for index,match in found if match]
     if len(found)!=1:
         return None
     index,match=found[0]
-    kind='Creature' if match[2]=='creature' else match[2]
-    scope='controller' if match[3]=='you control' else 'all'
-    return 'count:'+match[1]+':'+kind+':'+scope, '\n'.join(line for i,line in enumerate(lines) if i!=index)
+    kind='Creature' if match[3]=='creature' else match[3]
+    scope='controller' if match[4]=='you control' else 'all'
+    prefix='max_speed:' if match[1] else ''
+    return prefix+'count:'+match[2]+':'+kind+':'+scope, '\n'.join(line for i,line in enumerate(lines) if i!=index)
