@@ -1348,14 +1348,36 @@ class Simulator(AdvancedRules):
             self.stack.priority=self.active
         return status
 
+    def play_exiled_land(self, seat: int, card: Card):
+        """Play a Junk-exiled land as the special action it grants, not as a spell."""
+        player=self.players[seat]
+        if (seat!=self.active or seat!=self.stack.priority or
+                self.phase not in ('main','second_main') or self.stack.items):
+            raise ValueError('Exiled land may be played only at normal land timing')
+        if self.land_plays_this_turn>=self.land_play_limit(seat):
+            raise ValueError('No land plays remain')
+        if (card.kind!='land' or card not in player.exile or
+                card not in self.permitted_exile_cards(seat)):
+            raise ValueError('No permission to play this exiled land')
+        player.exile.remove(card)
+        self.exile_cast_permissions.pop(card.id,None)
+        pending=self.enter_creature(card,player)
+        self.land_played=True
+        self.land_plays_this_turn+=1
+        self.log('land_exile','Player plays a land exiled by Junk.',actor=seat,card=card.name)
+        self.resolve_entry_triggers(pending,card)
+
     def permitted_exile_cards(self,seat):
         result=[]
         for owner in self.players:
             for card in owner.exile:
                 permission=self.exile_cast_permissions.get(card.id)
                 if not permission or permission[0]!=seat or self.turn>permission[1]:continue
-                if 'Creature' not in card.printed_types or permission[2] not in card.land_subtypes:continue
-                if card.kind=='creature':result.append(card)
+                if permission[2]:
+                    if 'Creature' not in card.printed_types or permission[2] not in card.land_subtypes:
+                        continue
+                    if card.kind!='creature':continue
+                result.append(card)
         return result
 
     def response_choices(self,seat):
@@ -1475,6 +1497,11 @@ class Simulator(AdvancedRules):
                         result.append(Candidate(source.card.id+':color-draw','activate_color_draw',source.card.id,
                             features=features(draw=2,cost=len(payment['sources'])),label='Draw per controlled color'))
             definition=source.card.event_definition
+            if (definition and definition.junk_token_activation and source.card.is_token
+                    and not source.tapped and self.active==seat and
+                    self.phase in ('main','second_main') and not self.stack.items):
+                result.append(Candidate(source.card.id+':junk','activate_junk',source.card.id,
+                    features=features(draw=1),label='Activate Junk'))
             if definition and definition.land_sacrifice_tokens and not source.tapped:
                 game=self.event_game('main')
                 lands=[p for p in self.players[seat].battlefield
@@ -4525,6 +4552,25 @@ class Simulator(AdvancedRules):
             if event.get('operation')=='death_power_tokens':
                 event=dict(event,operation='create_tokens',
                            tokenSpec=dict(event['tokenSpec'],amount=max(0,event['lastPower'])))
+            if event.get('operation')=='death_counter_junk_tokens':
+                event=dict(event,operation='create_junk_tokens',
+                           amount=max(0,event.get('lastCounters',0)))
+            if event.get('operation')=='create_junk_tokens':
+                self.create_junk_tokens(event['controller'],event['amount'],card)
+                continue
+            if event.get('operation')=='junk_exile_top':
+                player=self.players[event['controller']]
+                if player.library:
+                    exiled=player.library.pop()
+                    player.exile.append(exiled)
+                    self.exile_cast_permissions[exiled.id]=(event['controller'],self.turn,'')
+                    self.log('junk_exile','Junk ability exiles the top card; it may be played this turn.',
+                        actor=event['controller'],token=event['source'],card=exiled.name,
+                        permissionExpiresTurn=self.turn)
+                else:
+                    self.log('junk_exile_empty','Junk ability finds no card in the library.',
+                        actor=event['controller'],token=event['source'])
+                continue
             if event.get('operation')=='attack_subtype_drain':
                 # This is a triggered ability, not combat damage. X is set
                 # on resolution using the current battlefield and source ID.
@@ -6195,6 +6241,47 @@ class Simulator(AdvancedRules):
         self.log('treasure_mana','Sacrificed a Treasure for one mana of the chosen color.',
                  actor=seat,source=token_id,color=mana_pool.COLORS[color])
 
+    def activate_junk(self, seat: int, token_id: str):
+        """Tap and sacrifice a Junk token as a sorcery-speed activation cost."""
+        if (self.stack.priority!=seat or self.active!=seat or
+                self.phase not in ('main','second_main') or self.stack.items):
+            raise ValueError('Junk may be activated only as a sorcery')
+        token=next((p for p in self.players[seat].battlefield if p.card.id==token_id),None)
+        definition=token.card.event_definition if token else None
+        if (token is None or token.tapped or not token.card.is_token or not definition or
+                not definition.junk_token_activation or 'Artifact' not in definition.types or
+                'Junk' not in definition.subtypes):
+            raise ValueError('Illegal Junk token activation')
+        snapshot=self.event_game('main')
+        triggers=snapshot.token_action_events('sacrifice',seat,1)
+        token.tapped=True
+        self.send_to_destination(self.players[seat],token,snapshot=snapshot)
+        event=dict(operation='junk_exile_top',effect='exile the top card and play it this turn',
+                   source=token_id,name='Junk',controller=seat,expiryTurn=self.turn)
+        frame=self.stack.push(seat,(event,token.card),'Junk activated ability')
+        self.stack.priority=seat
+        self.log('activate_junk','Junk token is tapped and sacrificed as an activation cost.',
+                 actor=seat,token=token_id,stackId=frame.id)
+        self.resolve_entry_triggers(triggers,token.card)
+        if not self.manual_priority and not self._resolving_stack:self.drain_priority()
+
+    def create_junk_tokens(self, seat, amount, source):
+        """Create real artifact Junk tokens with their printed sorcery-speed ability."""
+        game=self.event_game('main')
+        created=game.token_amount(seat,amount)
+        tokens=[]
+        for _ in range(created):
+            self.token_sequence+=1
+            definition=EventDefinition('Junk',frozenset({'Artifact'}),frozenset({'Junk'}),
+                False,0,0,frozenset(),junk_token_activation=True)
+            tokens.append(Card(f'token-{self.token_sequence}','Junk','artifact',
+                               event_definition=definition,is_token=True))
+        pending=list(self.enter_creatures(tokens,self.players[seat])) if tokens else []
+        if created:pending.extend(self.event_game('main').token_action_events('create',seat,created))
+        self.log('junk_creation','Create Junk artifact tokens.',actor=seat,
+                 source=source.name,created=created)
+        self.resolve_entry_triggers(pending,source)
+
     def sacrifice_token(self, seat: int, token_id: str):
         """Execute a token sacrifice AFTER a legal ability has paid its cost.
 
@@ -6626,7 +6713,11 @@ class Simulator(AdvancedRules):
                                       cost=len(payment.get('sources',[]))),
                             label='Flashback '+c.name))
             for c in self.permitted_exile_cards(seat):
-                if self.payment(c,seat=seat)['paid']:
+                if c.kind=='land':
+                    if self.land_plays_this_turn<self.land_play_limit(seat):
+                        actions.append(Candidate(c.id+':exile-land','land_exile',c.id,
+                            features=features(power=1),label='Play exiled '+c.name))
+                elif not c.instant and self.payment(c,seat=seat)['paid']:
                     actions.append(Candidate(c.id+':exile','cast_exile',c.id,
                         features=features(power=c.power,toughness=c.toughness,
                                           cost=len(self.payment(c,seat=seat).get('sources',[]))),
@@ -6911,6 +7002,8 @@ class Simulator(AdvancedRules):
                 self.activate_equipment_attach(self.active,choice.card_id,choice.tap_ids[0],choice.target_permanent)
             elif choice.kind=='activate_tokens':
                 self.activate_tokens(self.active,choice.card_id,choice.activation_index)
+            elif choice.kind=='activate_junk':
+                self.activate_junk(self.active,choice.card_id)
             elif choice.kind=='activate_land_sacrifice_tokens':
                 self.activate_land_sacrifice_tokens(self.active,choice.card_id,choice.target_permanent)
             elif choice.kind=='activate_self_pump':
@@ -6958,7 +7051,7 @@ class Simulator(AdvancedRules):
                 self.activate_transport(self.active,choice.kind,choice.card_id,choice.tap_ids)
             else:
                 card = (p.command_zone if choice.kind == "cast_commander" else
-                        next(c for c in (p.graveyard if choice.kind in ("cast_flashback","cast_graveyard_alternate") else self.permitted_exile_cards(self.active) if choice.kind=="cast_exile" else p.hand)
+                        next(c for c in (p.graveyard if choice.kind in ("cast_flashback","cast_graveyard_alternate") else self.permitted_exile_cards(self.active) if choice.kind in ("cast_exile","land_exile") else p.hand)
                              if c.id == choice.card_id))
                 if card is None: raise RuntimeError("Commander is no longer in command zone")
                 if choice.kind in ("land","land_back"):
@@ -6979,6 +7072,8 @@ class Simulator(AdvancedRules):
                     self.log("land", f"Player {self.active + 1} plays {played.name}.", card=played.name,
                              modalBack=choice.kind=="land_back")
                     self.resolve_entry_triggers(pending,played)
+                elif choice.kind=='land_exile':
+                    self.play_exiled_land(self.active,card)
                 elif choice.kind=='cast_modal_back':
                     if card.modal_spell_face is None:raise ValueError('Missing legal modal spell face')
                     back=replace(card.modal_spell_face,modal_front_face=card,physical_id=root(card))
