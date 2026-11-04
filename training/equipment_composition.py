@@ -139,7 +139,7 @@ def equipped_combat_steps(text,types,subtypes):
             if steps is not None:return None
             chunks=_HIT_CONJUNCTION.split(hit[1])
             if len(chunks)>8:return None
-            actions=tuple(_hit_atom(chunk) for chunk in chunks)
+            actions=tuple(_hit_atom(chunk.lower()) for chunk in chunks)
             if not all(actions):return None
             if sum(action[0] in ('damage_equipment_target','blink_owned_creature_basic_search')
                    for action in actions)>1:return None

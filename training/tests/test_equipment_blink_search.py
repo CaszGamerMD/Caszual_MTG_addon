@@ -1,6 +1,7 @@
 """Sword of Hearth and Home exercises the owned-creature Equipment target path."""
 import sys
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
@@ -25,6 +26,15 @@ class EquipmentBlinkSearchChecks(unittest.TestCase):
         return next(item.payload[0] for item in sim.stack.items
                     if item.payload[0].get('operation')=='equipment_hit_sequence')
 
+    def put_basic_land_in_library(self,sim):
+        placeholder=next(item for item in sim.players[0].battlefield
+                          if item.card.kind=='land' and item.card.name=='Mana')
+        sim.players[0].battlefield.remove(placeholder)
+        basic=replace(placeholder.card,name='Forest',basic_land=True,
+                      land_subtypes=('Forest',),printed_types=('Basic','Land'))
+        sim.players[0].library.append(basic)
+        return basic
+
     def test_real_renamed_and_unknown_text(self):
         raw=dict(self.lookup['Sword of Hearth and Home'])
         card=s.import_diagnostic_card(self.rules,raw,0,'sword-hearth-home',{'Red'})
@@ -48,8 +58,7 @@ class EquipmentBlinkSearchChecks(unittest.TestCase):
         owned=self.put(sim,cards['Elvish Mystic'])
         sim.players[0].battlefield.remove(owned)
         sim.players[1].battlefield.append(owned)
-        basic=next(card for card in sim.players[0].library
-                   if card.kind=='land' and card.basic_land)
+        basic=self.put_basic_land_in_library(sim)
         basic_id=basic.id
         sim.choose_equipment_owned_creature_target=lambda event,candidates: next(
             (pair for pair in candidates if pair[0]==1),None)
@@ -78,8 +87,7 @@ class EquipmentBlinkSearchChecks(unittest.TestCase):
         owned=self.put(sim,cards['Elvish Mystic'])
         sim.players[0].battlefield.remove(owned)
         sim.players[1].battlefield.append(owned)
-        basic=next(card for card in sim.players[0].library
-                   if card.kind=='land' and card.basic_land)
+        basic=self.put_basic_land_in_library(sim)
         basic_id=basic.id
         sim.choose_equipment_owned_creature_target=lambda event,candidates: next(
             (pair for pair in candidates if pair[0]==1),None)
@@ -99,8 +107,7 @@ class EquipmentBlinkSearchChecks(unittest.TestCase):
         sim,cards=self.fixture(['Sword of Hearth and Home'])
         attacker=self.token(sim,'hearth-no-target-attacker',power=2,toughness=2)
         sword=self.put(sim,cards['Sword of Hearth and Home'])
-        basic=next(card for card in sim.players[0].library
-                   if card.kind=='land' and card.basic_land)
+        basic=self.put_basic_land_in_library(sim)
         basic_id=basic.id
         sim.choose_equipment_owned_creature_target=lambda event,candidates: None
         sim.activate_equip(0,sword.card.id,attacker.card.id)
